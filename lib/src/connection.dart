@@ -70,11 +70,22 @@ class PostgreSQLConnection {
     _transitionToState(new PostgreSQLConnectionStateClosed());
   }
 
-
-  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
+  Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
     var readySQL = PostgreSQLFormatString.substitute(fmtString, substitutionValues);
 
     var query = new _SQLQuery(readySQL);
+    query.returnAffectedRowCount = true;
+    _transitionToState(_connectionState.executeQuery(query));
+
+    return query.future;
+  }
+
+  Future<dynamic> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
+    var readySQL = PostgreSQLFormatString.substitute(fmtString, substitutionValues);
+
+    // For execute, we need not describe nor cache the request.
+    var query = new _SQLQuery(readySQL);
+    query.returnAffectedRowCount = true;
     _transitionToState(_connectionState.executeQuery(query));
 
     return query.future;

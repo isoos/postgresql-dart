@@ -3,6 +3,7 @@ part of postgres;
 class _SQLQuery {
   _SQLQuery(this.statement);
 
+  bool returnAffectedRowCount = false;
   Completer<dynamic> onComplete = new Completer();
   Future<dynamic> get future => onComplete.future;
 
@@ -26,8 +27,7 @@ class _SQLQuery {
   }
 
   void finish() {
-    print("${rows.map((r) => r.toList())}");
-    onComplete.complete();
+    onComplete.complete(rows.map((row) => row.toList()).toList());
   }
 }
 
@@ -58,7 +58,7 @@ class _FieldDescription {
     columnID = byteData.getUint16(offset); offset += 2;
     typeID = byteData.getUint32(offset); offset += 4;
     dataTypeSize = byteData.getUint16(offset); offset += 2;
-    typeModifier = byteData.getUint32(offset); offset += 4;
+    typeModifier = byteData.getInt32(offset); offset += 4;
     formatCode = byteData.getUint16(offset); offset += 2;
 
     return offset;

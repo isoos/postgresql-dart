@@ -12,8 +12,6 @@ enum PostgreSQLDataType {
 
 class PostgreSQLCodec {
   static const int TypeBool = 16;
-  static const int TypeByteArray = 17;
-  static const int TypeCharacter = 18;
   static const int TypeInt8 = 20;
   static const int TypeInt2 = 21;
   static const int TypeInt4 = 23;
@@ -23,8 +21,6 @@ class PostgreSQLCodec {
   static const int TypeDate = 1082;
   static const int TypeTimestamp = 1114;
   static const int TypeTimestampZ = 1184;
-  static const int TypeJSON = 114;
-  static const int TypeJSONB = 3802;
 
   static final RegExp escapeExpression = new RegExp(r"['\r\n\\]");
 
@@ -183,7 +179,7 @@ class PostgreSQLCodec {
   static dynamic decodeValue(ByteData value, int dbTypeCode) {
     switch (dbTypeCode) {
       case TypeBool:
-        return value.getInt8(0) == 116; // 116 = 't'
+        return value.getInt8(0) != 0;
       case TypeInt2:
         return value.getInt16(0);
       case TypeInt4:
@@ -200,14 +196,10 @@ class PostgreSQLCodec {
         return new DateTime(2000).add(new Duration(microseconds: value.getInt64(0)));
 
       case TypeDate:
-        return new DateTime(2000).add(new Duration(seconds: value.getInt32(0)));
-
-      case TypeJSON:
-      case TypeJSONB:
-        return JSON.decode(new String.fromCharCodes(value.buffer.asUint8List()));
+        return new DateTime(2000).add(new Duration(days: value.getInt32(0)));
 
       default:
-        return new String.fromCharCodes(value.buffer.asUint8List());
+        return new String.fromCharCodes(value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));
     }
   }
 }
