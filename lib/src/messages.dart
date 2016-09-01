@@ -116,6 +116,7 @@ class _RowDescriptionMessage extends _Message {
 
 class _DataRowMessage extends _Message {
   List<ByteData> values = [];
+
   void readBytes(Uint8List bytes) {
     var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
     var offset = 0;
@@ -134,14 +135,42 @@ class _DataRowMessage extends _Message {
         offset += dataSize;
       }
     }
-
   }
+
+  String toString() => "Data Row Message: ${values}";
 }
 
 class _CommandCompleteMessage extends _Message {
-  void readBytes(Uint8List bytes) {
+  void readBytes(Uint8List bytes) {}
 
+  String toString() => "Command Complete Message";
+}
+
+class _ParseCompleteMessage extends _Message {
+  void readBytes(Uint8List bytes) {}
+}
+
+class _BindCompleteMessage extends _Message {
+  void readBytes(Uint8List bytes) {}
+}
+
+class _ParameterDescriptionMessage extends _Message {
+  List<int> objectIDs;
+
+  void readBytes(Uint8List bytes) {
+    var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
+
+    var offset = 0;
+    var count = view.getUint16(0); offset += 2;
+
+    objectIDs = [];
+    for (var i = 0; i < count; i++) {
+      var v = view.getUint32(offset); offset += 4;
+      objectIDs.add(v);
+    }
   }
+
+  String toString() => "Parameter Description Message: $objectIDs";
 }
 
 class _UnknownMessage extends _Message {

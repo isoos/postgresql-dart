@@ -181,7 +181,6 @@ class PostgreSQLCodec {
   }
 
   static dynamic decodeValue(ByteData value, int dbTypeCode) {
-    print("${value.lengthInBytes} $dbTypeCode");
     switch (dbTypeCode) {
       case TypeBool:
         return value.getInt8(0) == 116; // 116 = 't'
@@ -198,8 +197,10 @@ class PostgreSQLCodec {
 
       case TypeTimestamp:
       case TypeTimestampZ:
+        return new DateTime(2000).add(new Duration(microseconds: value.getInt64(0)));
+
       case TypeDate:
-        return decodeDateTime(new String.fromCharCodes(value.buffer.asUint8List()), dbTypeCode);
+        return new DateTime(2000).add(new Duration(seconds: value.getInt32(0)));
 
       case TypeJSON:
       case TypeJSONB:
@@ -208,23 +209,5 @@ class PostgreSQLCodec {
       default:
         return new String.fromCharCodes(value.buffer.asUint8List());
     }
-  }
-
-  static DateTime decodeDateTime(String value, int pgType, {bool isUtcTimeZone, getConnectionName()}) {
-    var formattedValue = value;
-
-    if (value.endsWith(' BC')) {
-      formattedValue = '-' + value.substring(0, value.length - 3);
-    }
-
-    if (pgType == TypeTimestamp) {
-      formattedValue += 'Z';
-    } else if (pgType == TypeTimestampZ) {
-      // PG will return the timestamp in the connection's timezone. The resulting DateTime.parse will handle accordingly.
-    } else if (pgType == TypeDate) {
-      formattedValue = formattedValue + 'T00:00:00Z';
-    }
-
-    return DateTime.parse(formattedValue);
   }
 }

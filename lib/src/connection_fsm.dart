@@ -137,12 +137,52 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
   PostgreSQLConnectionState executeQuery(_SQLQuery q) {
     connection._queryQueue.add(q);
 
-    var buffer = new ByteData(6 + q.statement.length);
+// Parse, Describe, Bind, Exec, Sync altogether
+    var paramCount = 0;
+
+    var parseLength = 8 + q.statement.length;
+    var describeLength = 1 + 5; // The +1 is the prepared statement name
+    var bindLength = 1 + 1 + 14 + 4 * paramCount; // The 1 + 1 are for the empty strings for specifying no portal and no prepared statement
+    var execLength = 8 + 1; // The 1 is the name of the portal as empty string
+    var syncLength = 4;
+    var buffer = new ByteData(5 + parseLength + describeLength + bindLength + execLength + syncLength);
+
     var offset = 0;
 
-    buffer.setUint8(offset, PostgreSQLConnection.QueryIdentifier); offset += 1;
-    buffer.setUint32(offset, q.statement.length + 5); offset += 4;
-    offset = _applyStringToBuffer(q.statement, buffer, offset);
+    // Parse
+    buffer.setUint8(offset, PostgreSQLConnection.ParseIdentifier); offset += 1;
+    buffer.setUint32(offset, parseLength); offset += 4;
+    offset = _applyStringToBuffer("", buffer, offset); // Name of prepared statement
+    offset = _applyStringToBuffer(q.statement, buffer, offset); // Query string
+    buffer.setUint16(offset, 0); offset += 2; // Specifying types - may add this in the future, for now indicating we want the backend to infer.
+
+    // Describe
+    buffer.setUint8(offset, PostgreSQLConnection.DescribeIdentifier); offset += 1;
+    buffer.setUint32(offset, describeLength); offset += 4;
+    buffer.setUint8(offset, 83); offset += 1;
+    offset = _applyStringToBuffer("", buffer, offset); // Name of prepared statement
+
+    // Bind
+    buffer.setUint8(offset, PostgreSQLConnection.BindIdentifier); offset += 1;
+    buffer.setUint32(offset, bindLength); offset += 4;
+    offset = _applyStringToBuffer("", buffer, offset); // Name of portal - currently unnamed portal.
+    offset = _applyStringToBuffer("", buffer, offset); // Name of prepared statement.
+    buffer.setUint16(offset, 1); offset += 2; // Apply format code for all parameters by indicating 1
+    buffer.setUint16(offset, 1); offset += 2; // Specify format code for all params in binary
+    buffer.setUint16(offset, 0); offset += 2; // Number of parameters specified by query
+    // for each param, length of param value and value un binary
+    buffer.setUint16(offset, 1); offset += 2; // Apply format code for all result values by indicating 1
+    buffer.setUint16(offset, 1); offset += 2; // Specify format code for all result values in binary
+
+    // Exec
+    buffer.setUint8(offset, PostgreSQLConnection.ExecuteIdentifier); offset += 1;
+    buffer.setUint32(offset, execLength); offset += 4;
+    offset = _applyStringToBuffer("", buffer, offset); // Portal name
+    buffer.setUint32(offset, 0); offset += 4; // Row limit
+
+    // Sync
+    buffer.setUint8(offset, PostgreSQLConnection.SyncIdentifier); offset += 1;
+    buffer.setUint32(offset, 4); offset += 4;
 
     connection._socket.add(buffer.buffer.asUint8List());
 

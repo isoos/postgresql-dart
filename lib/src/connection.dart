@@ -2,8 +2,14 @@ part of postgres;
 
 class PostgreSQLConnection {
   static const int ProtocolVersion = 196608;
-  static const int PasswordIdentifier = 112;
+
+  static const int BindIdentifier = 66;
+  static const int DescribeIdentifier = 68;
+  static const int ExecuteIdentifier = 69;
+  static const int ParseIdentifier = 80;
   static const int QueryIdentifier = 81;
+  static const int SyncIdentifier = 83;
+  static const int PasswordIdentifier = 112;
 
   PostgreSQLConnection(this.host, this.port, this.databaseName, {this.username: null, this.password: null, this.timeoutInSeconds: 30, this.timeZone: "UTC", this.useSSL: false}) {
     _connectionState = new PostgreSQLConnectionStateClosed();
@@ -32,10 +38,15 @@ class PostgreSQLConnection {
   int _secretKey;
   List<int> _salt;
 
-  // Values that persist across sessions if applicable
+  bool _hasConnectedPreviously = false;
   PostgreSQLConnectionState _connectionState;
 
   Future open() async {
+    if (_hasConnectedPreviously) {
+      throw new PostgreSQLConnectionException("Attempting to reopen a closed connection. Create a new instance instead.");
+    }
+
+    _hasConnectedPreviously = true;
     settings = {};
     _queryQueue = [];
     _connectionFinishedOpening = new Completer();

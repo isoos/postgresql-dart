@@ -13,5 +13,7 @@ void main() {
     await conn.open();
 
     await conn.execute("select 1");
+
+    await conn.execute("select * from t");
   });
 }

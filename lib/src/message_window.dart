@@ -2,6 +2,8 @@ part of postgres;
 
 class _MessageFrame {
   static Map<int, Function> _messageTypeMap = {
+    49 : () => new _ParseCompleteMessage(),
+    50 : () => new _BindCompleteMessage(),
     67 : () => new _CommandCompleteMessage(),
     68 : () => new _DataRowMessage(),
     69 : () => new _ErrorResponseMessage(),
@@ -13,6 +15,7 @@ class _MessageFrame {
     84 : () => new _RowDescriptionMessage(),
 
     90 : () => new _ReadyForQueryMessage(),
+    116 : () => new _ParameterDescriptionMessage()
   };
 
   BytesBuilder _inputBuffer = new BytesBuilder(copy: false);
@@ -83,6 +86,7 @@ class _MessageFramer {
   void addBytes(Uint8List bytes) {
     var offsetIntoBytesRead = 0;
 
+    print("Receiving $bytes");
      do {
       offsetIntoBytesRead += messageInProgress.addBytes(new Uint8List.view(bytes.buffer, offsetIntoBytesRead));
 

@@ -15,10 +15,10 @@ class _SQLQuery {
 
   void addRow(List<ByteData> rawRowData) {
     var iterator = fieldDescriptions.iterator;
+
     var lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
 
-      print("${iterator.current.formatCode}");
       return PostgreSQLCodec.decodeValue(bd, iterator.current.typeID);
     });
 
@@ -26,7 +26,6 @@ class _SQLQuery {
   }
 
   void finish() {
-    print("Completing?");
     print("${rows.map((r) => r.toList())}");
     onComplete.complete();
   }
