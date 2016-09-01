@@ -28,11 +28,11 @@ class PostgreSQLConnection {
   String timeZone;
 
   // Values for specific connection session
-  Map<String, String> settings = null;
+  Map<String, String> settings = {};
   Socket _socket;
   Completer _connectionFinishedOpening;
-  _MessageFramer _framer;
-  List<_SQLQuery> _queryQueue;
+  _MessageFramer _framer = new _MessageFramer();
+  List<_SQLQuery> _queryQueue = [];
   _SQLQuery get _queryInTransit => _queryQueue.first;
   int _processID;
   int _secretKey;
@@ -47,8 +47,6 @@ class PostgreSQLConnection {
     }
 
     _hasConnectedPreviously = true;
-    settings = {};
-    _queryQueue = [];
     _connectionFinishedOpening = new Completer();
 
     if (useSSL) {
@@ -71,35 +69,20 @@ class PostgreSQLConnection {
   }
 
   Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
-    var readySQL = PostgreSQLFormatString.substitute(fmtString, substitutionValues);
+    var query = new _SQLQuery(fmtString, substitutionValues);
 
-    var query = new _SQLQuery(readySQL);
-    query.returnAffectedRowCount = true;
     _transitionToState(_connectionState.executeQuery(query));
 
     return query.future;
   }
 
-  Future<dynamic> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
-    var readySQL = PostgreSQLFormatString.substitute(fmtString, substitutionValues);
+  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
+    var query = new _SQLQuery(fmtString, substitutionValues);
+    query.onlyReturnAffectedRowCount = true;
 
-    // For execute, we need not describe nor cache the request.
-    var query = new _SQLQuery(readySQL);
-    query.returnAffectedRowCount = true;
     _transitionToState(_connectionState.executeQuery(query));
 
     return query.future;
-  }
-
-  void _cleanup() {
-    _processID = null;
-    _secretKey = null;
-    _salt = null;
-    _queryQueue = null;
-    _socket = null;
-    _connectionFinishedOpening = null;
-    _framer = null;
-    settings = null;
   }
 
   void _transitionToState(PostgreSQLConnectionState newState) {

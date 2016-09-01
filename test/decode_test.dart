@@ -4,13 +4,19 @@ import 'package:test/test.dart';
 void main() {
   var connection = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
   setUpAll(() async {
-    print("opening");
     await connection.open();
 
-    print("open");
-    await connection.execute("CREATE TEMPORARY TABLE t (i int, s serial, bi bigint, bs bigserial, bl boolean, si smallint, t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz)");
-    await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) VALUES (-2147483648, -9223372036854775808, TRUE, -32768, 'string', 10.0, 10.0, '1983-11-06', '1983-11-06 06:00:00.000000', '1983-11-06 06:00:00.000000')");
-    await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) VALUES (2147483647, 9223372036854775807, FALSE, 32767, 'a significantly longer string to the point where i doubt this actually matters', 10.25, 10.125, '2183-11-06', '2183-11-06 00:00:00.111111', '2183-11-06 00:00:00.999999')");
+  });
+
+  test("Create some tables and insert some rows via execute", () async {
+    var i = await connection.execute("CREATE TEMPORARY TABLE t (i int, s serial, bi bigint, bs bigserial, bl boolean, si smallint, t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz)");
+    expect(i, 0);
+
+    i = await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) VALUES (-2147483648, -9223372036854775808, TRUE, -32768, 'string', 10.0, 10.0, '1983-11-06', '1983-11-06 06:00:00.000000', '1983-11-06 06:00:00.000000')");
+    expect(i, 1);
+
+    i = await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) VALUES (2147483647, 9223372036854775807, FALSE, 32767, 'a significantly longer string to the point where i doubt this actually matters', 10.25, 10.125, '2183-11-06', '2183-11-06 00:00:00.111111', '2183-11-06 00:00:00.999999')");
+    expect(i, 1);
   });
 
   test("Fetch em", () async {

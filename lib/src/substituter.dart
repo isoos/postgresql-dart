@@ -1,9 +1,13 @@
 part of postgres;
 
+typedef String SQLReplaceIdentifierFunction(String identifier, int index);
+
 class PostgreSQLFormatString {
   static int _AtSignCodeUnit = "@".codeUnitAt(0);
 
-  static substitute(String fmtString, Map<String, dynamic> values) {
+  static String substitute(String fmtString, Map<String, dynamic> values, {SQLReplaceIdentifierFunction replace: null}) {
+    replace ??= (id, index) => PostgreSQLCodec.encode(values[id]);
+
     var items = <PostgreSQLFormatStringToken>[];
     PostgreSQLFormatStringToken lastPtr = null;
     var iterator = new RuneIterator(fmtString);
@@ -53,6 +57,7 @@ class PostgreSQLFormatString {
       iterator.moveNext();
     }
 
+    var idx = 1;
     return items.map((t) {
       if (t.type == PostgreSQLFormatStringTokenType.text) {
         return t.buffer;
@@ -64,7 +69,9 @@ class PostgreSQLFormatString {
           throw new PostgreSQLFormatStringException("Format string specified identifier with name $key, but key was not present in values. Format string: $fmtString Values: $values");
         }
 
-        return PostgreSQLCodec.encode(values[key]);
+        var val = replace(key, idx);
+        idx ++;
+        return val;
       }
     }).join("");
   }

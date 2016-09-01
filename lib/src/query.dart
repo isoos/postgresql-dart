@@ -1,9 +1,10 @@
 part of postgres;
 
 class _SQLQuery {
-  _SQLQuery(this.statement);
+  _SQLQuery(this.statement, this.substitutionValues);
 
-  bool returnAffectedRowCount = false;
+  Map<String, dynamic> substitutionValues;
+  bool onlyReturnAffectedRowCount = false;
   Completer<dynamic> onComplete = new Completer();
   Future<dynamic> get future => onComplete.future;
 
@@ -12,9 +13,13 @@ class _SQLQuery {
 
   List<_FieldDescription> fieldDescriptions;
   List<Iterable<dynamic>> rows = [];
-
+  int rowCount = 0;
 
   void addRow(List<ByteData> rawRowData) {
+    if (onlyReturnAffectedRowCount) {
+      return;
+    }
+
     var iterator = fieldDescriptions.iterator;
 
     var lazyDecodedData = rawRowData.map((bd) {
@@ -26,7 +31,12 @@ class _SQLQuery {
     rows.add(lazyDecodedData);
   }
 
-  void finish() {
+  void finish(int rowsAffected) {
+    if (onlyReturnAffectedRowCount) {
+      onComplete.complete(rowsAffected);
+      return;
+    }
+
     onComplete.complete(rows.map((row) => row.toList()).toList());
   }
 }

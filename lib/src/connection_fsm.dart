@@ -26,15 +26,9 @@ abstract class PostgreSQLConnectionState {
 }
 
 class PostgreSQLConnectionStateClosed extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState onEnter() {
-    connection._cleanup();
-
-    return this;
-  }
 }
 
 class PostgreSQLConnectionStateSocketConnected extends PostgreSQLConnectionState {
-
   PostgreSQLConnectionState onEnter() {
     var variableLength = (connection.username?.length ?? 0)
         + connection.databaseName.length
@@ -50,6 +44,7 @@ class PostgreSQLConnectionStateSocketConnected extends PostgreSQLConnectionState
       offset = _applyStringToBuffer("user", buffer, offset);
       offset = _applyStringToBuffer(connection.username, buffer, offset);
     }
+
     offset = _applyStringToBuffer("database", buffer, offset);
     offset = _applyStringToBuffer(connection.databaseName, buffer, offset);
 
@@ -117,7 +112,6 @@ class PostgreSQLConnectionStateAuthenticating extends PostgreSQLConnectionState 
 
 class PostgreSQLConnectionStateAuthenticated extends PostgreSQLConnectionState {
   PostgreSQLConnectionState onMessage(_Message message) {
-
     if (message is _ParameterStatusMessage) {
       connection.settings[message.name] = message.value;
     } else if (message is _BackendKeyMessage) {
@@ -137,7 +131,46 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
   PostgreSQLConnectionState executeQuery(_SQLQuery q) {
     connection._queryQueue.add(q);
 
-// Parse, Describe, Bind, Exec, Sync altogether
+    if (q.onlyReturnAffectedRowCount) {
+      sendSimpleQuery(q);
+    } else {
+      sendExtendedQuery(q);
+    }
+
+    return new PostgreSQLConnectionStateBusy();
+  }
+
+  PostgreSQLConnectionState onEnter() {
+    connection._connectionFinishedOpening?.complete();
+    connection._connectionFinishedOpening = null;
+
+    if (connection._queryQueue.isNotEmpty) {
+      return executeQuery(connection._queryQueue.first);
+    }
+
+    return this;
+  }
+
+  PostgreSQLConnectionState onMessage(_Message message) {
+    return this;
+  }
+
+  void sendSimpleQuery(_SQLQuery q) {
+    var sqlString = PostgreSQLFormatString.substitute(q.statement, q.substitutionValues);
+    var len = 5 + sqlString.length;
+
+    var buffer = new ByteData(1 + len);
+    var offset = 0;
+
+    buffer.setUint8(offset, PostgreSQLConnection.QueryIdentifier); offset += 1;
+    buffer.setUint32(offset, len); offset += 4;
+    offset = _applyStringToBuffer(sqlString, buffer, offset);
+
+    connection._socket.add(buffer.buffer.asUint8List());
+  }
+
+  void sendExtendedQuery(_SQLQuery q) {
+    // Parse, Describe, Bind, Exec, Sync altogether
     var paramCount = 0;
 
     var parseLength = 8 + q.statement.length;
@@ -185,35 +218,22 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
     buffer.setUint32(offset, 4); offset += 4;
 
     connection._socket.add(buffer.buffer.asUint8List());
-
-    return new PostgreSQLConnectionStateBusy();
-  }
-
-  PostgreSQLConnectionState onEnter() {
-    connection._connectionFinishedOpening?.complete();
-    connection._connectionFinishedOpening = null;
-
-    if (connection._queryQueue.isNotEmpty) {
-      return executeQuery(connection._queryQueue.first);
-    }
-
-    return this;
-  }
-
-  PostgreSQLConnectionState onMessage(_Message message) {
-    return this;
   }
 }
 
 class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState onMessage(_Message message) {
+  PostgreSQLConnectionState onErrorResponse(_Message message) {
+    _ErrorResponseMessage msg = message;
+    return this;
+  }
 
+  PostgreSQLConnectionState onMessage(_Message message) {
     if (message is _ReadyForQueryMessage) {
       if (message.state == _ReadyForQueryMessage.StateIdle) {
         return new PostgreSQLConnectionStateIdle();
       }
     } else if (message is _CommandCompleteMessage) {
-      connection._queryInTransit.finish();
+      connection._queryInTransit.finish(message.rowsAffected);
     } else if (message is _RowDescriptionMessage) {
       connection._queryInTransit.fieldDescriptions = message.fieldDescriptions;
     } else if (message is _DataRowMessage) {

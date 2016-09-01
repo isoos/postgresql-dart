@@ -141,9 +141,21 @@ class _DataRowMessage extends _Message {
 }
 
 class _CommandCompleteMessage extends _Message {
-  void readBytes(Uint8List bytes) {}
+  int rowsAffected;
 
-  String toString() => "Command Complete Message";
+  static RegExp identifierExpression = new RegExp(r"[A-Z ]*");
+  void readBytes(Uint8List bytes) {
+    var str = new String.fromCharCodes(bytes.sublist(0, bytes.length - 1));
+
+    var match = identifierExpression.firstMatch(str);
+    if (match.end < str.length) {
+      rowsAffected = int.parse(str.split(" ").last);
+    } else {
+      rowsAffected = 0;
+    }
+  }
+
+  String toString() => "Command Complete Message: $rowsAffected";
 }
 
 class _ParseCompleteMessage extends _Message {
