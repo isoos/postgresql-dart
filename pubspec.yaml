@@ -1,0 +1,14 @@
+name: postgres
+description: A library to connect and query PostgreSQL databases.
+version: 0.0.1
+author: stable|kernel
+homepage: https://github.com/stablekernel/dart-postgres
+
+environment:
+  sdk: '>=1.0.0 <2.0.0'
+
+dependencies:
+  crypto: "^2.0.0"
+
+dev_dependencies:
+  test: '>=0.12.0 <0.13.0'
