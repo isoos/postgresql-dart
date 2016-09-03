@@ -1,10 +1,10 @@
 part of postgres;
 
-abstract class _Message {
+abstract class _ServerMessage {
   void readBytes(Uint8List bytes);
 }
 
-class _ErrorResponseMessage implements _Message {
+class _ErrorResponseMessage implements _ServerMessage {
   List<String> errorMessages;
   void readBytes(Uint8List bytes) {
     var lastByteRemovedList = new Uint8List.view(bytes.buffer, bytes.offsetInBytes, bytes.length - 1);
@@ -25,7 +25,7 @@ class _ErrorResponseMessage implements _Message {
   String toString() => errorMessages.join(" ");
 }
 
-class _AuthenticationMessage implements _Message {
+class _AuthenticationMessage implements _ServerMessage {
   static const int KindOK = 0;
   static const int KindKerberosV5 = 2;
   static const int KindClearTextPassword = 3;
@@ -56,7 +56,7 @@ class _AuthenticationMessage implements _Message {
   }
 }
 
-class _ParameterStatusMessage extends _Message {
+class _ParameterStatusMessage extends _ServerMessage {
   String name;
   String value;
 
@@ -68,7 +68,7 @@ class _ParameterStatusMessage extends _Message {
   String toString() => "Parameter Message: $name $value";
 }
 
-class _ReadyForQueryMessage extends _Message {
+class _ReadyForQueryMessage extends _ServerMessage {
   static const String StateIdle = "I";
   static const String StateTransaction = "T";
   static const String StateTransactionError = "E";
@@ -82,7 +82,7 @@ class _ReadyForQueryMessage extends _Message {
   String toString() => "Ready Message: $state";
 }
 
-class _BackendKeyMessage extends _Message {
+class _BackendKeyMessage extends _ServerMessage {
   int processID;
   int secretKey;
 
@@ -95,7 +95,7 @@ class _BackendKeyMessage extends _Message {
   String toString() => "Backend Key Message: $processID $secretKey";
 }
 
-class _RowDescriptionMessage extends _Message {
+class _RowDescriptionMessage extends _ServerMessage {
   List<_FieldDescription> fieldDescriptions;
 
   void readBytes(Uint8List bytes) {
@@ -114,7 +114,7 @@ class _RowDescriptionMessage extends _Message {
   String toString() => "RowDescription Message: $fieldDescriptions";
 }
 
-class _DataRowMessage extends _Message {
+class _DataRowMessage extends _ServerMessage {
   List<ByteData> values = [];
 
   void readBytes(Uint8List bytes) {
@@ -140,7 +140,7 @@ class _DataRowMessage extends _Message {
   String toString() => "Data Row Message: ${values}";
 }
 
-class _CommandCompleteMessage extends _Message {
+class _CommandCompleteMessage extends _ServerMessage {
   int rowsAffected;
 
   static RegExp identifierExpression = new RegExp(r"[A-Z ]*");
@@ -158,15 +158,15 @@ class _CommandCompleteMessage extends _Message {
   String toString() => "Command Complete Message: $rowsAffected";
 }
 
-class _ParseCompleteMessage extends _Message {
+class _ParseCompleteMessage extends _ServerMessage {
   void readBytes(Uint8List bytes) {}
 }
 
-class _BindCompleteMessage extends _Message {
+class _BindCompleteMessage extends _ServerMessage {
   void readBytes(Uint8List bytes) {}
 }
 
-class _ParameterDescriptionMessage extends _Message {
+class _ParameterDescriptionMessage extends _ServerMessage {
   List<int> objectIDs;
 
   void readBytes(Uint8List bytes) {
@@ -185,7 +185,7 @@ class _ParameterDescriptionMessage extends _Message {
   String toString() => "Parameter Description Message: $objectIDs";
 }
 
-class _UnknownMessage extends _Message {
+class _UnknownMessage extends _ServerMessage {
   Uint8List bytes;
   int code;
 

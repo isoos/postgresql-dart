@@ -41,6 +41,24 @@ class _SQLQuery {
   }
 }
 
+class _ParameterValue {
+  _ParameterValue.binary(this.postgresType, ByteData valueBytes) {
+    isBinary = true;
+    bytes = valueBytes.buffer.asUint8List();
+    length = bytes.length;
+  }
+
+  _ParameterValue.text(String valueString) {
+    isBinary = false;
+    bytes = valueString.codeUnits;
+    length = bytes.length;
+  }
+
+  bool isBinary;
+  int postgresType;
+  Uint8List bytes;
+  int length;
+}
 
 class _FieldDescription {
   String fieldName;

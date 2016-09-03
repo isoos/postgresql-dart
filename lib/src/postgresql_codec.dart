@@ -9,7 +9,6 @@ enum PostgreSQLDataType {
   timestampWithoutTimezone, timestampWithTimezone
 }
 
-
 class PostgreSQLCodec {
   static const int TypeBool = 16;
   static const int TypeInt8 = 20;
@@ -20,7 +19,7 @@ class PostgreSQLCodec {
   static const int TypeFloat8 = 701;
   static const int TypeDate = 1082;
   static const int TypeTimestamp = 1114;
-  static const int TypeTimestampZ = 1184;
+  static const int TypeTimestampTZ = 1184;
 
   static final RegExp escapeExpression = new RegExp(r"['\r\n\\]");
 
@@ -61,6 +60,56 @@ class PostgreSQLCodec {
       default:
         return encodeDefault(value);
     }
+  }
+
+  static Uint8List encodeBinary(dynamic value, int postgresType) {
+    Uint8List outBuffer = null;
+
+    if (postgresType == TypeBool) {
+      var bd = new ByteData(1);
+      bd.setUint8(0, value ? 1 : 0);
+      outBuffer = bd.buffer.asUint8List();
+    } else if (postgresType == TypeInt8) {
+      var bd = new ByteData(8);
+      bd.setInt64(0, value);
+      outBuffer = bd.buffer.asUint8List();
+    } else if (postgresType == TypeInt2) {
+      var bd = new ByteData(2);
+      bd.setInt16(0, value);
+      outBuffer = bd.buffer.asUint8List();
+    } else if (postgresType == TypeInt4) {
+      var bd = new ByteData(4);
+      bd.setInt32(0, value);
+      outBuffer = bd.buffer.asUint8List();
+    } else if (postgresType == TypeText) {
+      String val = value;
+      outBuffer = val.codeUnits;
+    } else if (postgresType == TypeFloat4) {
+      var bd = new ByteData(4);
+      bd.setFloat32(0, value);
+      outBuffer = bd.buffer.asUint8List();
+    } else if (postgresType == TypeFloat8) {
+      var bd = new ByteData(8);
+      bd.setFloat64(0, value);
+      outBuffer = bd.buffer.asUint8List();
+    } else if (postgresType == TypeDate) {
+      DateTime dt = value;
+      var bd = new ByteData(4);
+      bd.setInt32(0, dt.difference(new DateTime(2000)).inDays);
+      outBuffer = bd.buffer.asUint8List();
+    } else if (postgresType == TypeTimestamp) {
+      DateTime dt = value;
+      var bd = new ByteData(8);
+      bd.setInt32(0, dt.difference(new DateTime(2000)).inMicroseconds);
+      outBuffer = bd.buffer.asUint8List();
+    } else if (postgresType == TypeTimestampTZ) {
+      DateTime dt = value;
+      var bd = new ByteData(8);
+      bd.setInt32(0, dt.difference(new DateTime(2000)).inMicroseconds);
+      outBuffer = bd.buffer.asUint8List();
+    }
+
+    return outBuffer;
   }
 
   static String encodeString(String text) {
@@ -192,7 +241,7 @@ class PostgreSQLCodec {
         return value.getFloat64(0);
 
       case TypeTimestamp:
-      case TypeTimestampZ:
+      case TypeTimestampTZ:
         return new DateTime(2000).add(new Duration(microseconds: value.getInt64(0)));
 
       case TypeDate:

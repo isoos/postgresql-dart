@@ -61,7 +61,7 @@ class _MessageFrame {
     return bytes.length;
   }
 
-  _Message get message {
+  _ServerMessage get message {
     var msgMaker = _messageTypeMap[type];
     if (msgMaker == null) {
       msgMaker = () {
@@ -71,7 +71,7 @@ class _MessageFrame {
       };
     }
 
-    _Message msg = msgMaker();
+    _ServerMessage msg = msgMaker();
 
     msg.readBytes(data);
 

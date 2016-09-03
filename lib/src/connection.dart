@@ -1,16 +1,6 @@
 part of postgres;
 
 class PostgreSQLConnection {
-  static const int ProtocolVersion = 196608;
-
-  static const int BindIdentifier = 66;
-  static const int DescribeIdentifier = 68;
-  static const int ExecuteIdentifier = 69;
-  static const int ParseIdentifier = 80;
-  static const int QueryIdentifier = 81;
-  static const int SyncIdentifier = 83;
-  static const int PasswordIdentifier = 112;
-
   PostgreSQLConnection(this.host, this.port, this.databaseName, {this.username: null, this.password: null, this.timeoutInSeconds: 30, this.timeZone: "UTC", this.useSSL: false}) {
     _connectionState = new PostgreSQLConnectionStateClosed();
     _connectionState.connection = this;
@@ -136,14 +126,4 @@ class PostgreSQLConnectionException implements Exception {
   final String message;
 
   String toString() => message;
-}
-
-int _applyStringToBuffer(String string, ByteData buffer, int offset) {
-  var postStringOffset = string.codeUnits.fold(offset, (idx, unit) {
-    buffer.setInt8(idx, unit);
-    return idx + 1;
-  });
-
-  buffer.setInt8(postStringOffset, 0);
-  return postStringOffset + 1;
 }
