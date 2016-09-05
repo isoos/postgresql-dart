@@ -5,24 +5,25 @@ abstract class _ServerMessage {
 }
 
 class _ErrorResponseMessage implements _ServerMessage {
-  List<String> errorMessages;
+  PostgreSQLException generatedException;
+  List<_ErrorField> fields = [new _ErrorField()];
+
   void readBytes(Uint8List bytes) {
     var lastByteRemovedList = new Uint8List.view(bytes.buffer, bytes.offsetInBytes, bytes.length - 1);
 
-    errorMessages = lastByteRemovedList.fold(<_ErrorField>[new _ErrorField()], (List<_ErrorField> errorList, byte) {
+    lastByteRemovedList.forEach((byte) {
       if (byte != 0) {
-        errorList.last.add(byte);
-        return errorList;
+        fields.last.add(byte);
+        return;
       }
 
-      errorList.add(new _ErrorField());
-      return errorList;
-    })
-    .map((buf) => buf.toString())
-    .toList();
+      fields.add(new _ErrorField());
+    });
+
+    generatedException = new PostgreSQLException._(fields);
   }
 
-  String toString() => errorMessages.join(" ");
+  String toString() => generatedException.toString();
 }
 
 class _AuthenticationMessage implements _ServerMessage {
@@ -192,7 +193,6 @@ class _UnknownMessage extends _ServerMessage {
   void readBytes(Uint8List bytes) {
     this.bytes = bytes;
   }
-
 
   String toString() => "Unknown message: $code $bytes";
 }

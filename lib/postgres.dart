@@ -15,11 +15,5 @@ part 'src/connection.dart';
 part 'src/message_window.dart';
 part 'src/connection_fsm.dart';
 part 'src/query.dart';
+part 'src/exceptions.dart';
 
-class PostgreSQLException implements Exception {
-  PostgreSQLException(this.message);
-
-  final String message;
-
-  String toString() => message;
-}

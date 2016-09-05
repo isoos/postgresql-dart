@@ -97,19 +97,3 @@ class _FieldDescription {
   }
 }
 
-class _ErrorField {
-  int identificationToken;
-
-  String get text => _buffer.toString();
-  StringBuffer _buffer = new StringBuffer();
-
-  void add(int byte) {
-    if (identificationToken == null) {
-      identificationToken = byte;
-    } else {
-      _buffer.writeCharCode(byte);
-    }
-  }
-
-  String toString() => text;
-}

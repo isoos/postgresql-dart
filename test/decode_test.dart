@@ -5,7 +5,6 @@ void main() {
   var connection = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
   setUpAll(() async {
     await connection.open();
-
   });
 
   test("Create some tables and insert some rows via execute", () async {

@@ -6,6 +6,8 @@ class PostgreSQLConnection {
     _connectionState.connection = this;
   }
 
+  // Add flag for debugging that captures stack trace prior to execution
+
   // Values to be configured
   String host;
   int port;
@@ -13,14 +15,12 @@ class PostgreSQLConnection {
   String username;
   String password;
   bool useSSL;
-
   int timeoutInSeconds;
   String timeZone;
 
-  // Values for specific connection session
   Map<String, String> settings = {};
+
   Socket _socket;
-  Completer _connectionFinishedOpening;
   _MessageFramer _framer = new _MessageFramer();
   List<_SQLQuery> _queryQueue = [];
   _SQLQuery get _queryInTransit => _queryQueue.first;
@@ -33,11 +33,10 @@ class PostgreSQLConnection {
 
   Future open() async {
     if (_hasConnectedPreviously) {
-      throw new PostgreSQLConnectionException("Attempting to reopen a closed connection. Create a new instance instead.");
+      throw new PostgreSQLException("Attempting to reopen a closed connection. Create a new instance instead.");
     }
 
     _hasConnectedPreviously = true;
-    _connectionFinishedOpening = new Completer();
 
     if (useSSL) {
       _socket = await SecureSocket.connect(host, port).timeout(new Duration(seconds: timeoutInSeconds));
@@ -50,18 +49,23 @@ class PostgreSQLConnection {
 
     _transitionToState(new PostgreSQLConnectionStateSocketConnected());
 
-    return await _connectionFinishedOpening.future;
+    return await _connectionState.pendingOperation?.future;
   }
 
   Future close() async {
-    await _socket.close();
     _transitionToState(new PostgreSQLConnectionStateClosed());
+
+    await _socket.close();
+
+    _queryQueue.forEach((q) {
+      q.onComplete.completeError(new PostgreSQLException("Connection closed."));
+    });
   }
 
   Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
     var query = new _SQLQuery(fmtString, substitutionValues);
 
-    _transitionToState(_connectionState.executeQuery(query));
+    _transitionToState(_connectionState.queueQuery(query));
 
     return query.future;
   }
@@ -70,7 +74,7 @@ class PostgreSQLConnection {
     var query = new _SQLQuery(fmtString, substitutionValues);
     query.onlyReturnAffectedRowCount = true;
 
-    _transitionToState(_connectionState.executeQuery(query));
+    _transitionToState(_connectionState.queueQuery(query));
 
     return query.future;
   }
@@ -89,11 +93,12 @@ class PostgreSQLConnection {
   void _readData(List<int> bytes) {
     _framer.addBytes(bytes);
 
-    try {
-      while (_framer.hasMessage) {
-        var msg = _framer.popMessage().message;
+    while (_framer.hasMessage) {
+      var msg = _framer.popMessage().message;
 
-        print("$msg");
+      print("$msg");
+
+      try {
         var newState = null;
         if (msg is _ErrorResponseMessage) {
           newState = _connectionState.onErrorResponse(msg);
@@ -104,26 +109,19 @@ class PostgreSQLConnection {
         if (newState != _connectionState) {
           _transitionToState(newState);
         }
+      } on Exception catch (e) {
+        _handleSocketError(e);
       }
-    } on Exception catch (e) {
-      _handleSocketError(e);
     }
   }
 
   void _handleSocketError(dynamic error) {
-    _connectionFinishedOpening?.completeError(error);
     _socket.destroy();
+    _connectionState.completeWaitingEvent(null, error: error);
     _transitionToState(new PostgreSQLConnectionStateClosed());
   }
 
   void _handleSocketClosed() {
     _transitionToState(new PostgreSQLConnectionStateClosed());
   }
-}
-
-class PostgreSQLConnectionException implements Exception {
-  PostgreSQLConnectionException(this.message);
-  final String message;
-
-  String toString() => message;
 }
