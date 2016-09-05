@@ -52,9 +52,7 @@ class _AuthenticationMessage implements _ServerMessage {
     }
   }
 
-  String toString() {
-    return "Authentication: $type";
-  }
+  String toString() => "Authentication: $type";
 }
 
 class _ParameterStatusMessage extends _ServerMessage {
@@ -161,10 +159,13 @@ class _CommandCompleteMessage extends _ServerMessage {
 
 class _ParseCompleteMessage extends _ServerMessage {
   void readBytes(Uint8List bytes) {}
+
+  String toString() => "Parse Complete Message";
 }
 
 class _BindCompleteMessage extends _ServerMessage {
   void readBytes(Uint8List bytes) {}
+  String toString() => "Bind Complete Message";
 }
 
 class _ParameterDescriptionMessage extends _ServerMessage {

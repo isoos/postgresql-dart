@@ -9,7 +9,6 @@ class _SQLQuery {
   Future<dynamic> get future => onComplete.future;
 
   String statement;
-  StreamController<dynamic> controller = new StreamController();
 
   List<_FieldDescription> fieldDescriptions;
   List<Iterable<dynamic>> rows = [];
@@ -42,15 +41,15 @@ class _SQLQuery {
 }
 
 class _ParameterValue {
-  _ParameterValue.binary(this.postgresType, ByteData valueBytes) {
+  _ParameterValue.binary(dynamic value, this.postgresType) {
     isBinary = true;
-    bytes = valueBytes.buffer.asUint8List();
+    bytes = PostgreSQLCodec.encodeBinary(value, this.postgresType)?.buffer?.asUint8List();
     length = bytes.length;
   }
 
-  _ParameterValue.text(String valueString) {
+  _ParameterValue.text(dynamic value) {
     isBinary = false;
-    bytes = valueString.codeUnits;
+    bytes = new Uint8List.fromList(PostgreSQLCodec.encode(value).codeUnits);
     length = bytes.length;
   }
 

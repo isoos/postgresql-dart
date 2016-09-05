@@ -23,7 +23,7 @@ class PostgreSQLConnection {
   Socket _socket;
   _MessageFramer _framer = new _MessageFramer();
   List<_SQLQuery> _queryQueue = [];
-  _SQLQuery get _queryInTransit => _queryQueue.first;
+
   int _processID;
   int _secretKey;
   List<int> _salt;
@@ -57,9 +57,10 @@ class PostgreSQLConnection {
 
     await _socket.close();
 
-    _queryQueue.forEach((q) {
+    _queryQueue?.forEach((q) {
       q.onComplete.completeError(new PostgreSQLException("Connection closed."));
     });
+    _queryQueue = null;
   }
 
   Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
@@ -80,6 +81,10 @@ class PostgreSQLConnection {
   }
 
   void _transitionToState(PostgreSQLConnectionState newState) {
+    if (newState == _connectionState) {
+      return;
+    }
+
     _connectionState.onExit();
 
     _connectionState = newState;
@@ -99,15 +104,10 @@ class PostgreSQLConnection {
       print("$msg");
 
       try {
-        var newState = null;
         if (msg is _ErrorResponseMessage) {
-          newState = _connectionState.onErrorResponse(msg);
+          _transitionToState(_connectionState.onErrorResponse(msg));
         } else {
-          newState = _connectionState.onMessage(msg);
-        }
-
-        if (newState != _connectionState) {
-          _transitionToState(newState);
+          _transitionToState(_connectionState.onMessage(msg));
         }
       } on Exception catch (e) {
         _handleSocketError(e);

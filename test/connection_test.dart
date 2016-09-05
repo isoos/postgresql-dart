@@ -6,9 +6,14 @@ import 'dart:mirrors';
 
 void main() {
   group("Normal behavior", () {
+    PostgreSQLConnection conn = null;
+
+    tearDown(() async {
+      await conn?.close();
+    });
 
     test("Connect with md5 auth required", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
       await conn.open();
 
       expect(await conn.execute("select 1"), equals(1));
@@ -28,13 +33,25 @@ void main() {
       expect(await conn.query("select 1"), equals([[1]]));
       expect(await conn.query("select 2"), equals([[2]]));
       expect(await conn.query("select 3"), equals([[3]]));
+      expect(await conn.query("select 4"), equals([[4]]));
+      expect(await conn.query("select 5"), equals([[5]]));
     });
 
-    test("Issuing multiple queries without awaiting are returned in order", () async {
+    test("Issuing multiple queries without awaiting are returned with appropriate values", () async {
       var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
       await conn.open();
-    });
 
+      var futures = [
+        conn.query("select 1"),
+        conn.query("select 2"),
+        conn.query("select 3"),
+        conn.query("select 4"),
+        conn.query("select 5")
+      ];
+      var results = await Future.wait(futures);
+
+      expect(results, [[[1]], [[2]], [[3]], [[4]], [[5]]]);
+    });
 
     test("Closing idle connection succeeds, closes underlying socket", () async {
       var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
@@ -45,23 +62,13 @@ void main() {
       var socketMirror = reflect(conn).type.declarations.values.firstWhere((DeclarationMirror dm) => dm.simpleName.toString().contains("_socket"));
       Socket underlyingSocket = reflect(conn).getField(socketMirror.simpleName).reflectee;
       expect(await underlyingSocket.done, isNotNull);
+
+      conn = null;
     });
 
-    test("Closing connection while busy succeeds, queued queries are all accounted for, closes underlying socket", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
-      await conn.open();
+    test("Closing connection while busy succeeds, queued queries are all accounted for (canceled), closes underlying socket", () async {
 
-      var futureValue = conn.execute("select 1");
-      await conn.close();
-
-      var value = await futureValue;
-      expect(value, 1);
-
-      var socketMirror = reflect(conn).type.declarations.values.firstWhere((DeclarationMirror dm) => dm.simpleName.toString().contains("_socket"));
-      Socket underlyingSocket = reflect(conn).getField(socketMirror.simpleName).reflectee;
-      expect(await underlyingSocket.done, isNotNull);
     });
-
   });
 
   group("Unintended user-error situations", () {
@@ -70,7 +77,7 @@ void main() {
       conn.open();
 
       try {
-        conn.execute("select 1");
+        await conn.execute("select 1");
         expect(true, false);
       } on PostgreSQLException catch (e) {
         expect(e.message, contains("connection is not open"));
@@ -126,7 +133,7 @@ Future expectConnectionIsInvalid(PostgreSQLConnection conn) async {
     await conn.execute("select 1");
     expect(true, false);
   } on PostgreSQLException catch (e) {
-    expect(e.message, contains("connection has already closed"));
+    expect(e.message, contains("connection is not open"));
   }
 
   try {

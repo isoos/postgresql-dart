@@ -165,15 +165,13 @@ class PostgreSQLConnectionStateAuthenticated extends PostgreSQLConnectionState {
 
 class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
   PostgreSQLConnectionState queueQuery(_SQLQuery q) {
-    connection._queryQueue.add(q);
-
     if (q.onlyReturnAffectedRowCount) {
       sendSimpleQuery(q);
     } else {
       sendExtendedQuery(q);
     }
 
-    return new PostgreSQLConnectionStateBusy();
+    return new PostgreSQLConnectionStateBusy(q);
   }
 
   PostgreSQLConnectionState onEnter() {
@@ -199,8 +197,12 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
 
   void sendExtendedQuery(_SQLQuery q) {
     var parameterList = <_ParameterValue>[];
-    var replaceFunc = (String identifier, int index, String dataTypeSpecifier) {
-      parameterList.add(q.substitutionValues[identifier]);
+    var replaceFunc = (PostgreSQLFormatIdentifier identifier, int index) {
+      if (identifier._dataType != null) {
+        parameterList.add(new _ParameterValue.binary(q.substitutionValues[identifier.name], identifier.typeCode));
+      } else {
+        parameterList.add(new _ParameterValue.text(q.substitutionValues[identifier.name]));
+      }
 
       return "\$$index";
     };
@@ -223,8 +225,12 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
  */
 
 class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
+  PostgreSQLConnectionStateBusy(this.query);
+
+  _SQLQuery query;
+
   PostgreSQLConnectionState onEnter() {
-    pendingOperation = connection._queryInTransit.onComplete;
+    pendingOperation = query.onComplete;
     return this;
   }
 
@@ -234,18 +240,18 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
         return new PostgreSQLConnectionStateIdle();
       }
     } else if (message is _CommandCompleteMessage) {
-      connection._queryInTransit.finish(message.rowsAffected);
+      query.finish(message.rowsAffected);
     } else if (message is _RowDescriptionMessage) {
-      connection._queryInTransit.fieldDescriptions = message.fieldDescriptions;
+      query.fieldDescriptions = message.fieldDescriptions;
     } else if (message is _DataRowMessage) {
-      connection._queryInTransit.addRow(message.values);
+      query.addRow(message.values);
     }
 
     return this;
   }
 
   void onExit() {
-    connection._queryQueue.removeAt(0);
+    connection._queryQueue.remove(query);
   }
 }
 

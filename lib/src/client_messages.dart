@@ -35,11 +35,12 @@ abstract class _ClientMessage {
   }
 
   static Uint8List aggregateBytes(List<_ClientMessage> messages) {
-    var totalLength = messages.fold(0, (total, next) => total + next);
+    var totalLength = messages.fold(0, (total, _ClientMessage next) => total + next.length);
     var buffer = new ByteData(totalLength);
 
     var offset = 0;
     messages.fold(offset, (inOffset, msg) => msg.applyToBuffer(buffer, inOffset));
+
     return buffer.buffer.asUint8List();
   }
 }
@@ -127,13 +128,13 @@ class _QueryMessage extends _ClientMessage {
 }
 
 class _ParseMessage extends _ClientMessage {
-  _ParseMessage (this.statement, {this.statementName});
+  _ParseMessage (this.statement, {this.statementName: ""});
 
   String statementName = "";
   String statement;
 
   int get length {
-    return 8 + statement.length + statementName.length;
+    return 9 + statement.length + statementName.length;
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
@@ -148,12 +149,12 @@ class _ParseMessage extends _ClientMessage {
 }
 
 class _DescribeMessage extends _ClientMessage {
-  _DescribeMessage({this.statementName});
+  _DescribeMessage({this.statementName: ""});
 
   String statementName = "";
 
   int get length {
-    return 6 + statementName.length;
+    return 7 + statementName.length;
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
@@ -167,15 +168,32 @@ class _DescribeMessage extends _ClientMessage {
 }
 
 class _BindMessage extends _ClientMessage {
-  _BindMessage(this.parameters, {this.statementName});
+  _BindMessage(this.parameters, {this.statementName: ""}) {
+    typeSpecCount = parameters.where((p) => p.isBinary).length;
+  }
 
   List<_ParameterValue> parameters;
   String statementName = "";
 
+  int typeSpecCount;
   int _cachedLength;
   int get length {
     if (_cachedLength == null) {
-      _cachedLength = 0;
+      var inputParameterElementCount = typeSpecCount;
+      if (typeSpecCount == parameters.length || typeSpecCount == 0) {
+        inputParameterElementCount = 1;
+      }
+
+      _cachedLength = 15;
+      _cachedLength += statementName.length;
+      _cachedLength += inputParameterElementCount * 2;
+      _cachedLength += parameters.fold(0, (len, _ParameterValue paramValue) {
+        if (paramValue.bytes == null) {
+          return len + 4;
+        } else {
+          return len + 4 + paramValue.length;
+        }
+      });
     }
     return _cachedLength;
   }
@@ -189,10 +207,9 @@ class _BindMessage extends _ClientMessage {
 
     // OK, if we have no specified types at all, we can use 0. If we have all specified types, we can use 1. If we have a mix, we have to individually
     // call out each type.
-    var typeSpecCount = parameters.where((p) => p.isBinary).length;
     if (typeSpecCount == parameters.length) {
-      buffer.setUint16(offset, _ClientMessage.FormatBinary); offset += 2; // Apply following format code for all parameters by indicating 1
-      buffer.setUint16(offset, 1); offset += 2; // Specify format code for all params is BINARY
+      buffer.setUint16(offset, 1); offset += 2; // Apply following format code for all parameters by indicating 1
+      buffer.setUint16(offset, _ClientMessage.FormatBinary); offset += 2; // Specify format code for all params is BINARY
     } else if (typeSpecCount == 0) {
       buffer.setUint16(offset, 1); offset += 2; // Apply following format code for all parameters by indicating 1
       buffer.setUint16(offset, _ClientMessage.FormatText); offset += 2; // Specify format code for all params is TEXT
@@ -207,11 +224,15 @@ class _BindMessage extends _ClientMessage {
     // This must be the number of $n's in the query.
     buffer.setUint16(offset, parameters.length); offset += 2; // Number of parameters specified by query
     parameters.forEach((p) {
-      buffer.setUint32(offset, p.length); offset += 4;
-      offset = p.bytes.fold(offset, (inOffset, byte) {
-        buffer.setUint8(inOffset, byte);
-        return inOffset + 1;
-      });
+      if (p.bytes == null) {
+        buffer.setInt32(offset, -1); offset += 4;
+      } else {
+        buffer.setInt32(offset, p.length); offset += 4;
+        offset = p.bytes.fold(offset, (inOffset, byte) {
+          buffer.setUint8(inOffset, byte);
+          return inOffset + 1;
+        });
+      }
     });
 
     // Result columns - we always want binary for all of them, so specify 1:1.
@@ -226,7 +247,7 @@ class _ExecuteMessage extends _ClientMessage {
   _ExecuteMessage();
 
   int get length {
-    return 11;
+    return 10;
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
@@ -249,6 +270,7 @@ class _SyncMessage extends _ClientMessage {
   int applyToBuffer(ByteData buffer, int offset) {
     buffer.setUint8(offset, _ClientMessage.SyncIdentifier); offset += 1;
     buffer.setUint32(offset, 4); offset += 4;
+
     return offset;
   }
 }

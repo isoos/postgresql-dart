@@ -1,6 +1,6 @@
 part of postgres;
 
-typedef String SQLReplaceIdentifierFunction(String identifier, int index, String dataTypeSpecifier);
+typedef String SQLReplaceIdentifierFunction(PostgreSQLFormatIdentifier identifier, int index);
 
 class PostgreSQLFormat {
   static int _AtSignCodeUnit = "@".codeUnitAt(0);
@@ -47,7 +47,7 @@ class PostgreSQLFormat {
   }
 
   static String substitute(String fmtString, Map<String, dynamic> values, {SQLReplaceIdentifierFunction replace: null}) {
-    replace ??= (id, index, spec) => PostgreSQLCodec.encode(values[id]);
+    replace ??= (spec, index) => PostgreSQLCodec.encode(values[id]);
 
     var items = <PostgreSQLFormatToken>[];
     PostgreSQLFormatToken lastPtr = null;
@@ -109,7 +109,7 @@ class PostgreSQLFormat {
           throw new PostgreSQLFormatException("Format string specified identifier with name ${identifier.name}, but key was not present in values. Format string: $fmtString Values: $values");
         }
 
-        var val = replace(identifier.name, idx, identifier._dataType);
+        var val = replace(identifier, idx);
         idx ++;
         return val;
       }

@@ -63,6 +63,10 @@ class PostgreSQLCodec {
   }
 
   static Uint8List encodeBinary(dynamic value, int postgresType) {
+    if (value == null) {
+      return null;
+    }
+
     Uint8List outBuffer = null;
 
     if (postgresType == TypeBool) {
@@ -83,7 +87,7 @@ class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeText) {
       String val = value;
-      outBuffer = val.codeUnits;
+      outBuffer = new Uint8List.fromList(val.codeUnits);
     } else if (postgresType == TypeFloat4) {
       var bd = new ByteData(4);
       bd.setFloat32(0, value);
@@ -95,17 +99,18 @@ class PostgreSQLCodec {
     } else if (postgresType == TypeDate) {
       DateTime dt = value;
       var bd = new ByteData(4);
-      bd.setInt32(0, dt.difference(new DateTime(2000)).inDays);
+      bd.setInt32(0, dt.toUtc().difference(new DateTime.utc(2000)).inDays);
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeTimestamp) {
       DateTime dt = value;
       var bd = new ByteData(8);
-      bd.setInt32(0, dt.difference(new DateTime(2000)).inMicroseconds);
+      var diff = dt.toUtc().difference(new DateTime.utc(2000));
+      bd.setInt64(0, diff.inMicroseconds);
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeTimestampTZ) {
       DateTime dt = value;
       var bd = new ByteData(8);
-      bd.setInt32(0, dt.difference(new DateTime(2000)).inMicroseconds);
+      bd.setInt64(0, dt.toUtc().difference(new DateTime.utc(2000)).inMicroseconds);
       outBuffer = bd.buffer.asUint8List();
     }
 
@@ -242,10 +247,10 @@ class PostgreSQLCodec {
 
       case TypeTimestamp:
       case TypeTimestampTZ:
-        return new DateTime(2000).add(new Duration(microseconds: value.getInt64(0)));
+       return new DateTime.utc(2000).add(new Duration(microseconds: value.getInt64(0)));
 
       case TypeDate:
-        return new DateTime(2000).add(new Duration(days: value.getInt32(0)));
+        return new DateTime.utc(2000).add(new Duration(days: value.getInt32(0)));
 
       default:
         return new String.fromCharCodes(value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));

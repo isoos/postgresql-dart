@@ -1,7 +1,49 @@
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
+import 'dart:typed_data';
 
 void main() {
+
+  test("Binary encode/decode inverse", () {
+    expectInverse(true, PostgreSQLCodec.TypeBool);
+    expectInverse(false, PostgreSQLCodec.TypeBool);
+
+    expectInverse(-1, PostgreSQLCodec.TypeInt2);
+    expectInverse(0, PostgreSQLCodec.TypeInt2);
+    expectInverse(1, PostgreSQLCodec.TypeInt2);
+
+    expectInverse(-1, PostgreSQLCodec.TypeInt4);
+    expectInverse(0, PostgreSQLCodec.TypeInt4);
+    expectInverse(1, PostgreSQLCodec.TypeInt4);
+
+    expectInverse(-1, PostgreSQLCodec.TypeInt8);
+    expectInverse(0, PostgreSQLCodec.TypeInt8);
+    expectInverse(1, PostgreSQLCodec.TypeInt8);
+
+    expectInverse("", PostgreSQLCodec.TypeText);
+    expectInverse("foo", PostgreSQLCodec.TypeText);
+    expectInverse("foo\n", PostgreSQLCodec.TypeText);
+    expectInverse("foo\nbar;", PostgreSQLCodec.TypeText);
+
+    expectInverse(-1.0, PostgreSQLCodec.TypeFloat4);
+    expectInverse(0.0, PostgreSQLCodec.TypeFloat4);
+    expectInverse(1.0, PostgreSQLCodec.TypeFloat4);
+
+    expectInverse(-1.0, PostgreSQLCodec.TypeFloat8);
+    expectInverse(0.0, PostgreSQLCodec.TypeFloat8);
+    expectInverse(1.0, PostgreSQLCodec.TypeFloat8);
+
+    expectInverse(new DateTime.utc(2016, 10, 1), PostgreSQLCodec.TypeDate);
+    expectInverse(new DateTime.utc(1920, 10, 1), PostgreSQLCodec.TypeDate);
+    expectInverse(new DateTime.utc(2020, 10, 5), PostgreSQLCodec.TypeDate);
+
+    expectInverse(new DateTime.utc(1920, 10, 1), PostgreSQLCodec.TypeTimestamp);
+    expectInverse(new DateTime.utc(2020, 10, 5), PostgreSQLCodec.TypeTimestamp);
+
+    expectInverse(new DateTime.utc(1920, 10, 1), PostgreSQLCodec.TypeTimestampTZ);
+    expectInverse(new DateTime.utc(2020, 10, 5), PostgreSQLCodec.TypeTimestampTZ);
+  });
+
   test("Escape strings", () {
     expect(PostgreSQLCodec.encode('bob'), equals("E'bob'"));
     expect(PostgreSQLCodec.encode('bo\nb'), equals(r"E'bo\nb'"));
@@ -79,4 +121,10 @@ void main() {
     expect(PostgreSQLCodec.encode(true, dataType: PostgreSQLDataType.boolean), "TRUE");
     expect(PostgreSQLCodec.encode(false, dataType: PostgreSQLDataType.boolean), "FALSE");
   });
+}
+
+expectInverse(dynamic value, int dataType) {
+  var encodedValue = PostgreSQLCodec.encodeBinary(value, dataType);
+  var decodedValue = PostgreSQLCodec.decodeValue(new ByteData.view(encodedValue.buffer), dataType);
+  expect(decodedValue, value);
 }
