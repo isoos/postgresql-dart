@@ -239,7 +239,6 @@ class _BindMessage extends _ClientMessage {
     buffer.setUint16(offset, 1); offset += 2; // Apply format code for all result values by indicating 1
     buffer.setUint16(offset, 1); offset += 2; // Specify format code for all result values in binary
 
-    print("${buffer.buffer.asUint8List()}");
     return offset;
   }
 }

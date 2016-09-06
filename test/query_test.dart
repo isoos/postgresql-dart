@@ -121,7 +121,12 @@ void main() {
     });
 
     test("Can supply null for values (text)", () async {
+      var results = await connection.query("INSERT INTO n (i1, i2) values (@i1, @i2:int4) returning i1, i2", substitutionValues: {
+        "i1" : null,
+        "i2" : 1,
+      });
 
+      expect(results, [[null, 1]]);
     });
 
     test("Overspecifying parameters does not impact query (text)", () async {

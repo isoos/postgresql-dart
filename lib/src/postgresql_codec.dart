@@ -233,7 +233,7 @@ class PostgreSQLCodec {
 
   static String encodeDefault(dynamic value, {bool escapeStrings: true}) {
     if (value == null) {
-      return 'null';
+      return "null";
     }
 
     if (value is int) {

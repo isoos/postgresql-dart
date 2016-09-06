@@ -49,8 +49,10 @@ class _ParameterValue {
 
   _ParameterValue.text(dynamic value) {
     isBinary = false;
-    bytes = new Uint8List.fromList(PostgreSQLCodec.encode(value, escapeStrings: false).codeUnits);
-    length = bytes.length;
+    if (value != null) {
+      bytes = new Uint8List.fromList(PostgreSQLCodec.encode(value, escapeStrings: false).codeUnits);
+    }
+    length = bytes?.length;
   }
 
   bool isBinary;

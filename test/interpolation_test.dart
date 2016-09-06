@@ -33,12 +33,9 @@ void main() {
   });
 
   test("String identifiers get escaped", () {
-    var result = PostgreSQLFormat.substitute("@id:text @foo", {"id" : "1';2", "foo" : r"3\4"});
-    expect(result, r"E'1\';2' E'3\\4'");
-  });
+    var result = PostgreSQLFormat.substitute("@id:text @foo", {"id" : "1';select", "foo" : "3\\4"});
 
-  test("String identifiers get escaped, 2", () {
-    var result = PostgreSQLFormat.substitute("@id:text @foo", {"id" : "\\'", "foo" : r"3\4"});
-    expect(result, r" E'\\'''  E'3\\4'");
+    //                         '  1  '  '  ;  s   e   l   e   c  t   '  sp  sp  E  '  3  \  \  4  '
+    expect(result.codeUnits, [39,49,39,39,59,115,101,108,101,99,116,39, 32, 32,69,39,51,92,92,52,39]);
   });
 }
