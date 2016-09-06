@@ -12,13 +12,14 @@ class PostgreSQLFormat {
     "float4" : PostgreSQLCodec.TypeFloat4,
     "float8" : PostgreSQLCodec.TypeFloat8,
     "boolean" : PostgreSQLCodec.TypeBool,
+    "date" : PostgreSQLCodec.TypeDate,
     "timestamp" : PostgreSQLCodec.TypeTimestamp,
     "timestamptz" : PostgreSQLCodec.TypeTimestampTZ
   };
 
-  static String id(String name, {PostgreSQLDataType dt: null}) {
-    if (dt != null) {
-      return "@$name:${dataTypeStringForDataType(dt)}";
+  static String id(String name, {PostgreSQLDataType type: null}) {
+    if (type != null) {
+      return "@$name:${dataTypeStringForDataType(type)}";
     }
 
     return "@$name";
@@ -37,6 +38,7 @@ class PostgreSQLFormat {
       case PostgreSQLDataType.boolean: return "boolean";
       case PostgreSQLDataType.timestampWithoutTimezone: return "timestamp";
       case PostgreSQLDataType.timestampWithTimezone: return "timestamptz";
+      case PostgreSQLDataType.date: return "date";
     }
 
     return null;
@@ -106,7 +108,7 @@ class PostgreSQLFormat {
         var identifier = new PostgreSQLFormatIdentifier(t.buffer.toString());
 
         if (!values.containsKey(identifier.name)) {
-          throw new PostgreSQLFormatException("Format string specified identifier with name ${identifier.name}, but key was not present in values. Format string: $fmtString Values: $values");
+          throw new PostgreSQLFormatException("Format string specified identifier with name ${identifier.name}, but key was not present in values. Format string: $fmtString");
         }
 
         var val = replace(identifier, idx);

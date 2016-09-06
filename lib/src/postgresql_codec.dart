@@ -6,7 +6,7 @@ enum PostgreSQLDataType {
   serial, bigSerial,
   real, double,
   boolean,
-  timestampWithoutTimezone, timestampWithTimezone
+  timestampWithoutTimezone, timestampWithTimezone, date
 }
 
 class PostgreSQLCodec {
@@ -21,23 +21,14 @@ class PostgreSQLCodec {
   static const int TypeTimestamp = 1114;
   static const int TypeTimestampTZ = 1184;
 
-  static final RegExp escapeExpression = new RegExp(r"['\r\n\\]");
-
-  static const Map<int, String> escapeCharacters = const {
-    39 : r"\'",
-    13 : r"\r",
-    10 : r"\n",
-    92 : r"\\"
-  };
-
-  static String encode(dynamic value, {PostgreSQLDataType dataType: null}) {
+  static String encode(dynamic value, {PostgreSQLDataType dataType: null, bool escapeStrings: true}) {
     if (value == null) {
       return "null";
     }
 
     switch (dataType) {
       case PostgreSQLDataType.text:
-        return encodeString(value.toString());
+        return encodeString(value.toString(), escapeStrings);
 
       case PostgreSQLDataType.integer:
       case PostgreSQLDataType.smallInteger:
@@ -55,10 +46,11 @@ class PostgreSQLCodec {
 
       case PostgreSQLDataType.timestampWithoutTimezone:
       case PostgreSQLDataType.timestampWithTimezone:
+      case PostgreSQLDataType.date:
         return encodeDateTime(value);
 
       default:
-        return encodeDefault(value);
+        return encodeDefault(value, escapeStrings: escapeStrings);
     }
   }
 
@@ -117,11 +109,49 @@ class PostgreSQLCodec {
     return outBuffer;
   }
 
-  static String encodeString(String text) {
-    var escaped = text.replaceAllMapped(escapeExpression,
-        (m) => escapeCharacters[text.codeUnitAt(m.start)]);
+  static String encodeString(String text, bool escapeStrings) {
+    if (!escapeStrings) {
+      return text;
+    }
 
-    return "E'$escaped'";
+    var backslashCodeUnit = r"\".codeUnitAt(0);
+    var quoteCodeUnit = r"'".codeUnitAt(0);
+
+    var quoteCount = 0;
+    var backslashCount = 0;
+    var it = new RuneIterator(text);
+    while (it.moveNext()) {
+      if (it.current == backslashCodeUnit) {
+        backslashCount ++;
+      } else if (it.current == quoteCodeUnit) {
+        quoteCount ++;
+      }
+    }
+
+    var buf = new StringBuffer();
+
+    if (backslashCount > 0) {
+      buf.write(" E");
+    }
+
+    buf.write("'");
+
+    if (quoteCount == 0 && backslashCount == 0) {
+      buf.write(text);
+    } else {
+      text.codeUnits.forEach((i) {
+        if (i == quoteCodeUnit || i == backslashCodeUnit) {
+          buf.writeCharCode(i);
+          buf.writeCharCode(i);
+        } else {
+          buf.writeCharCode(i);
+        }
+      });
+    }
+
+    buf.write("'");
+
+    return buf.toString();
   }
 
   static String encodeNumber(dynamic value) {
@@ -201,7 +231,7 @@ class PostgreSQLCodec {
     return "'$string'";
   }
 
-  static String encodeDefault(dynamic value) {
+  static String encodeDefault(dynamic value, {bool escapeStrings: true}) {
     if (value == null) {
       return 'null';
     }
@@ -215,7 +245,7 @@ class PostgreSQLCodec {
     }
 
     if (value is String) {
-      return encodeString(value);
+      return encodeString(value, escapeStrings);
     }
 
     if (value is DateTime) {
@@ -230,6 +260,10 @@ class PostgreSQLCodec {
   }
 
   static dynamic decodeValue(ByteData value, int dbTypeCode) {
+    if (value == null) {
+      return null;
+    }
+
     switch (dbTypeCode) {
       case TypeBool:
         return value.getInt8(0) != 0;

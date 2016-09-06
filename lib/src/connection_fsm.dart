@@ -33,7 +33,7 @@ abstract class PostgreSQLConnectionState {
 
   }
 
-  void completeWaitingEvent(dynamic data, {PostgreSQLException error, StackTrace trace}) {
+  void completeWaitingEvent(dynamic data, {dynamic error, StackTrace trace}) {
     var p = pendingOperation;
     pendingOperation = null;
 
@@ -165,16 +165,28 @@ class PostgreSQLConnectionStateAuthenticated extends PostgreSQLConnectionState {
 
 class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
   PostgreSQLConnectionState queueQuery(_SQLQuery q) {
-    if (q.onlyReturnAffectedRowCount) {
-      sendSimpleQuery(q);
-    } else {
-      sendExtendedQuery(q);
+    try {
+      if (q.onlyReturnAffectedRowCount) {
+        sendSimpleQuery(q);
+      } else {
+        sendExtendedQuery(q);
+      }
+
+      return new PostgreSQLConnectionStateBusy(q);
+    } catch (e, st) {
+      q.onComplete.completeError(e, st);
+      connection._queryQueue.remove(q);
     }
 
-    return new PostgreSQLConnectionStateBusy(q);
+    if (connection._queryQueue.isNotEmpty) {
+      return queueQuery(connection._queryQueue.first);
+    }
+
+    return this;
   }
 
   PostgreSQLConnectionState onEnter() {
+    // This is for waiters on 'open'. If not in the process of opening, then this just no-ops.
     completeWaitingEvent(null);
 
     if (connection._queryQueue.isNotEmpty) {

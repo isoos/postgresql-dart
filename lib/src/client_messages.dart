@@ -1,7 +1,7 @@
 part of postgres;
 
 abstract class _ClientMessage {
-  static const int FormatText = 1;
+  static const int FormatText = 0;
   static const int FormatBinary = 1;
 
   static const int ProtocolVersion = 196608;
@@ -179,7 +179,7 @@ class _BindMessage extends _ClientMessage {
   int _cachedLength;
   int get length {
     if (_cachedLength == null) {
-      var inputParameterElementCount = typeSpecCount;
+      var inputParameterElementCount = parameters.length;
       if (typeSpecCount == parameters.length || typeSpecCount == 0) {
         inputParameterElementCount = 1;
       }
@@ -239,6 +239,7 @@ class _BindMessage extends _ClientMessage {
     buffer.setUint16(offset, 1); offset += 2; // Apply format code for all result values by indicating 1
     buffer.setUint16(offset, 1); offset += 2; // Specify format code for all result values in binary
 
+    print("${buffer.buffer.asUint8List()}");
     return offset;
   }
 }

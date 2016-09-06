@@ -6,6 +6,9 @@ void main() {
   setUpAll(() async {
     await connection.open();
   });
+  tearDownAll(() async {
+    await connection.close();
+  });
 
   test("Create some tables and insert some rows via execute", () async {
     var i = await connection.execute("CREATE TEMPORARY TABLE t (i int, s serial, bi bigint, bs bigserial, bl boolean, si smallint, t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz)");
@@ -34,9 +37,9 @@ void main() {
     expect(row1[7], equals(10.0));
     expect(row1[8] is double, true);
     expect(row1[8], equals(10.0));
-    expect(row1[9], equals(new DateTime(1983, 11, 6)));
-    expect(row1[10], equals(new DateTime(1983, 11, 6, 6)));
-    expect(row1[11], equals(new DateTime(1983, 11, 6, 6)));
+    expect(row1[9], equals(new DateTime.utc(1983, 11, 6)));
+    expect(row1[10], equals(new DateTime.utc(1983, 11, 6, 6)));
+    expect(row1[11], equals(new DateTime.utc(1983, 11, 6, 6)));
 
     expect(row2[0], equals(2147483647));
     expect(row2[1], equals(2));
@@ -49,9 +52,9 @@ void main() {
     expect(row2[7], equals(10.25));
     expect(row2[8] is double, true);
     expect(row2[8], equals(10.125));
-    expect(row2[9], equals(new DateTime(2183, 11, 6)));
-    expect(row2[10], equals(new DateTime(2183, 11, 6, 0, 0, 0, 111, 111)));
-    expect(row2[11], equals(new DateTime(2183, 11, 6, 0, 0, 0, 999, 999)));
+    expect(row2[9], equals(new DateTime.utc(2183, 11, 6)));
+    expect(row2[10], equals(new DateTime.utc(2183, 11, 6, 0, 0, 0, 111, 111)));
+    expect(row2[11], equals(new DateTime.utc(2183, 11, 6, 0, 0, 0, 999, 999)));
   });
 
   test("Timezone concerns", () {

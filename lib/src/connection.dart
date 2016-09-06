@@ -86,7 +86,6 @@ class PostgreSQLConnection {
     if (newState == _connectionState) {
       return;
     }
-
     _connectionState.onExit();
 
     _connectionState = newState;

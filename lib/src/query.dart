@@ -44,12 +44,12 @@ class _ParameterValue {
   _ParameterValue.binary(dynamic value, this.postgresType) {
     isBinary = true;
     bytes = PostgreSQLCodec.encodeBinary(value, this.postgresType)?.buffer?.asUint8List();
-    length = bytes.length;
+    length = bytes?.length ?? 0;
   }
 
   _ParameterValue.text(dynamic value) {
     isBinary = false;
-    bytes = new Uint8List.fromList(PostgreSQLCodec.encode(value).codeUnits);
+    bytes = new Uint8List.fromList(PostgreSQLCodec.encode(value, escapeStrings: false).codeUnits);
     length = bytes.length;
   }
 

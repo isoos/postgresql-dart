@@ -33,7 +33,12 @@ void main() {
   });
 
   test("String identifiers get escaped", () {
-    var result = PostgreSQLFormat.substitute("@id:text @foo", {"id" : "1';2", "foo" : "3\\4"});
-    expect(result, r"E'1\';2' E'3\4'");
+    var result = PostgreSQLFormat.substitute("@id:text @foo", {"id" : "1';2", "foo" : r"3\4"});
+    expect(result, r"E'1\';2' E'3\\4'");
+  });
+
+  test("String identifiers get escaped, 2", () {
+    var result = PostgreSQLFormat.substitute("@id:text @foo", {"id" : "\\'", "foo" : r"3\4"});
+    expect(result, r" E'\\'''  E'3\\4'");
   });
 }
