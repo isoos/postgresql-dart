@@ -3,7 +3,6 @@ import 'package:test/test.dart';
 import 'dart:typed_data';
 
 void main() {
-
   test("Binary encode/decode inverse", () {
     expectInverse(true, PostgreSQLCodec.TypeBool);
     expectInverse(false, PostgreSQLCodec.TypeBool);
@@ -23,7 +22,7 @@ void main() {
     expectInverse("", PostgreSQLCodec.TypeText);
     expectInverse("foo", PostgreSQLCodec.TypeText);
     expectInverse("foo\n", PostgreSQLCodec.TypeText);
-    expectInverse("foo\nbar;", PostgreSQLCodec.TypeText);
+    expectInverse("foo\nbar;s", PostgreSQLCodec.TypeText);
 
     expectInverse(-1.0, PostgreSQLCodec.TypeFloat4);
     expectInverse(0.0, PostgreSQLCodec.TypeFloat4);
@@ -35,13 +34,13 @@ void main() {
 
     expectInverse(new DateTime.utc(2016, 10, 1), PostgreSQLCodec.TypeDate);
     expectInverse(new DateTime.utc(1920, 10, 1), PostgreSQLCodec.TypeDate);
-    expectInverse(new DateTime.utc(2020, 10, 5), PostgreSQLCodec.TypeDate);
+    expectInverse(new DateTime.utc(2120, 10, 5), PostgreSQLCodec.TypeDate);
 
     expectInverse(new DateTime.utc(1920, 10, 1), PostgreSQLCodec.TypeTimestamp);
-    expectInverse(new DateTime.utc(2020, 10, 5), PostgreSQLCodec.TypeTimestamp);
+    expectInverse(new DateTime.utc(2120, 10, 5), PostgreSQLCodec.TypeTimestamp);
 
     expectInverse(new DateTime.utc(1920, 10, 1), PostgreSQLCodec.TypeTimestampTZ);
-    expectInverse(new DateTime.utc(2020, 10, 5), PostgreSQLCodec.TypeTimestampTZ);
+    expectInverse(new DateTime.utc(2120, 10, 5), PostgreSQLCodec.TypeTimestampTZ);
   });
 
   test("Escape strings", () {

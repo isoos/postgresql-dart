@@ -118,9 +118,8 @@ class PostgreSQLCodec {
   }
 
   static String encodeString(String text) {
-    var escaped = text.replaceAllMapped(escapeExpression, (m) {
-      return escapeCharacters[text.codeUnitAt(m.start)];
-    });
+    var escaped = text.replaceAllMapped(escapeExpression,
+        (m) => escapeCharacters[text.codeUnitAt(m.start)]);
 
     return "E'$escaped'";
   }

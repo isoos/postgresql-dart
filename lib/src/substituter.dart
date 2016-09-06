@@ -47,7 +47,7 @@ class PostgreSQLFormat {
   }
 
   static String substitute(String fmtString, Map<String, dynamic> values, {SQLReplaceIdentifierFunction replace: null}) {
-    replace ??= (spec, index) => PostgreSQLCodec.encode(values[id]);
+    replace ??= (spec, index) => PostgreSQLCodec.encode(values[spec.name]);
 
     var items = <PostgreSQLFormatToken>[];
     PostgreSQLFormatToken lastPtr = null;
