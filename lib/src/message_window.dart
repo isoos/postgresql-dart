@@ -86,7 +86,6 @@ class _MessageFramer {
   void addBytes(Uint8List bytes) {
     var offsetIntoBytesRead = 0;
 
-    print("Receiving $bytes");
      do {
       offsetIntoBytesRead += messageInProgress.addBytes(new Uint8List.view(bytes.buffer, offsetIntoBytesRead));
 

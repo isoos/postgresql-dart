@@ -230,6 +230,7 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
   _SQLQuery query;
 
   PostgreSQLConnectionState onEnter() {
+    connection._queryQueue.add(query);
     pendingOperation = query.onComplete;
     return this;
   }

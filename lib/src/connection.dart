@@ -49,18 +49,20 @@ class PostgreSQLConnection {
 
     _transitionToState(new PostgreSQLConnectionStateSocketConnected());
 
-    return await _connectionState.pendingOperation?.future;
+    return await _connectionState.pendingOperation.future.timeout(new Duration(seconds: timeoutInSeconds), onTimeout: () {
+      _connectionState = new PostgreSQLConnectionStateClosed();
+      _socket.destroy();
+
+      throw new PostgreSQLException("Timed out trying to connect to database $host:$port/$databaseName.");
+    });
   }
 
   Future close() async {
-    _transitionToState(new PostgreSQLConnectionStateClosed());
+    _connectionState = new PostgreSQLConnectionStateClosed();
 
     await _socket.close();
 
-    _queryQueue?.forEach((q) {
-      q.onComplete.completeError(new PostgreSQLException("Connection closed."));
-    });
-    _queryQueue = null;
+    cancelCurrentQueries();
   }
 
   Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
@@ -96,12 +98,15 @@ class PostgreSQLConnection {
 
 
   void _readData(List<int> bytes) {
+    // Note that the way this method works, if a query is in-flight, and we move to the closed state
+    // manually, the delivery of the bytes from the socket is sent to the 'Closed State',
+    // and the state node managing delivering data to the query no longer exists. Therefore,
+    // as soon as a close occurs, we detach the data stream from anything that actually does
+    // anything with that data.
     _framer.addBytes(bytes);
 
     while (_framer.hasMessage) {
       var msg = _framer.popMessage().message;
-
-      print("$msg");
 
       try {
         if (msg is _ErrorResponseMessage) {
@@ -116,12 +121,22 @@ class PostgreSQLConnection {
   }
 
   void _handleSocketError(dynamic error) {
+    _connectionState = new PostgreSQLConnectionStateClosed();
     _socket.destroy();
-    _connectionState.completeWaitingEvent(null, error: error);
-    _transitionToState(new PostgreSQLConnectionStateClosed());
+
+    cancelCurrentQueries();
   }
 
   void _handleSocketClosed() {
-    _transitionToState(new PostgreSQLConnectionStateClosed());
+    _connectionState = new PostgreSQLConnectionStateClosed();
+
+    cancelCurrentQueries();
+  }
+
+  void cancelCurrentQueries() {
+    _queryQueue?.forEach((q) {
+      q.onComplete.completeError(new PostgreSQLException("Connection closed."));
+    });
+    _queryQueue = null;
   }
 }

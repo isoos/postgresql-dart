@@ -14,6 +14,7 @@ void main() {
 
     test("Connect with md5 auth required", () async {
       conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+
       await conn.open();
 
       expect(await conn.execute("select 1"), equals(1));
@@ -67,11 +68,35 @@ void main() {
     });
 
     test("Closing connection while busy succeeds, queued queries are all accounted for (canceled), closes underlying socket", () async {
+      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      await conn.open();
 
+      var futures = [
+        conn.query("select 1"),
+        conn.query("select 2"),
+        conn.query("select 3"),
+        conn.query("select 4"),
+        conn.query("select 5")
+      ];
+
+      await conn.close();
+
+      try {
+        await Future.wait(futures);
+        expect(true, false);
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("Connection closed"));
+      }
     });
   });
 
   group("Unintended user-error situations", () {
+    PostgreSQLConnection conn = null;
+
+    tearDown(() async {
+      await conn?.close();
+    });
+
     test("Sending queries to opening connection triggers error", () async {
       var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
       conn.open();
@@ -98,11 +123,40 @@ void main() {
     });
 
     test("A query error maintains connectivity, allows future queries", () async {
+      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      await conn.open();
 
+      await conn.execute("CREATE TEMPORARY TABLE t (i int unique)");
+      await conn.execute("INSERT INTO t (i) VALUES (1)");
+      try {
+        await conn.execute("INSERT INTO t (i) VALUES (1)");
+        expect(true, false);
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("duplicate key value violates"));
+      }
+
+      await conn.execute("INSERT INTO t (i) VALUES (2)");
     });
 
     test("A query error maintains connectivity, continues processing pending queries", () async {
+      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      await conn.open();
 
+      await conn.execute("CREATE TEMPORARY TABLE t (i int unique)");
+
+      await conn.execute("INSERT INTO t (i) VALUES (1)");
+      conn.execute("INSERT INTO t (i) VALUES (1)").catchError((err) {
+        // ignore
+      });
+
+      var futures = [
+        conn.query("select 1"),
+        conn.query("select 2"),
+        conn.query("select 3"),
+      ];
+      var results = await Future.wait(futures);
+
+      expect(results, [[[1]], [[2]], [[3]]]);
     });
   });
 
@@ -116,14 +170,6 @@ void main() {
       } on SocketException {}
 
       await expectConnectionIsInvalid(conn);
-    });
-
-    test("Pending queries during startup get appropriate error response if connection fails", () async {
-
-    });
-
-    test("Connection lost while pending queries exist gracefully errors out pending queries.", () async {
-
     });
   });
 }
