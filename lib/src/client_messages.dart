@@ -173,7 +173,7 @@ class _BindMessage extends _ClientMessage {
   }
 
   List<_ParameterValue> parameters;
-  String statementName = "";
+  String statementName;
 
   int typeSpecCount;
   int _cachedLength;

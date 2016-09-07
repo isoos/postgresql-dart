@@ -22,7 +22,9 @@ class PostgreSQLConnection {
 
   Socket _socket;
   _MessageFramer _framer = new _MessageFramer();
-  List<_SQLQuery> _queryQueue = [];
+  List<_Query> _queryQueue = [];
+  Map<String, _QueryCache> _reuseMap = {};
+  int _reuseCounter = 0;
 
   int _processID;
   int _secretKey;
@@ -65,8 +67,9 @@ class PostgreSQLConnection {
     cancelCurrentQueries();
   }
 
-  Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
-    var query = new _SQLQuery(fmtString, substitutionValues);
+  Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null, bool allowReuse: true}) async {
+    var query = new _Query(fmtString, substitutionValues)
+      ..allowReuse = allowReuse;
 
     _transitionToState(_connectionState.queueQuery(query));
 
@@ -74,7 +77,7 @@ class PostgreSQLConnection {
   }
 
   Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
-    var query = new _SQLQuery(fmtString, substitutionValues);
+    var query = new _Query(fmtString, substitutionValues);
     query.onlyReturnAffectedRowCount = true;
 
     _transitionToState(_connectionState.queueQuery(query));
@@ -94,7 +97,6 @@ class PostgreSQLConnection {
     _connectionState = _connectionState.onEnter();
     _connectionState.connection = this;
   }
-
 
   void _readData(List<int> bytes) {
     // Note that the way this method works, if a query is in-flight, and we move to the closed state
@@ -137,5 +139,17 @@ class PostgreSQLConnection {
       q.onComplete.completeError(new PostgreSQLException("Connection closed."));
     });
     _queryQueue = null;
+  }
+
+  void cacheQuery(_Query query, _QueryCache cache) {
+    _reuseMap[query.statement] = cache;
+  }
+
+  String _generateNextQueryIdentifier() {
+    var string = "$_reuseCounter".padLeft(12, "0");
+
+    _reuseCounter ++;
+
+    return string;
   }
 }

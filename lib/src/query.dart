@@ -1,18 +1,17 @@
 part of postgres;
 
-class _SQLQuery {
-  _SQLQuery(this.statement, this.substitutionValues);
+class _Query {
+  _Query(this.statement, this.substitutionValues);
 
-  Map<String, dynamic> substitutionValues;
   bool onlyReturnAffectedRowCount = false;
+  bool allowReuse = false;
+  String statement;
+  Map<String, dynamic> substitutionValues;
   Completer<dynamic> onComplete = new Completer();
   Future<dynamic> get future => onComplete.future;
 
-  String statement;
-
   List<_FieldDescription> fieldDescriptions;
   List<Iterable<dynamic>> rows = [];
-  int rowCount = 0;
 
   void addRow(List<ByteData> rawRowData) {
     if (onlyReturnAffectedRowCount) {
@@ -20,7 +19,6 @@ class _SQLQuery {
     }
 
     var iterator = fieldDescriptions.iterator;
-
     var lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
 
@@ -38,6 +36,16 @@ class _SQLQuery {
 
     onComplete.complete(rows.map((row) => row.toList()).toList());
   }
+
+  String toString() => statement;
+}
+
+class _QueryCache {
+  _QueryCache(this.preparedStatementName, this.orderedParameters);
+
+  String preparedStatementName;
+  List<PostgreSQLFormatIdentifier> orderedParameters;
+  List<_FieldDescription> fieldDescriptions;
 }
 
 class _ParameterValue {

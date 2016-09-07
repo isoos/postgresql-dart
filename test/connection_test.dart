@@ -5,7 +5,7 @@ import 'dart:async';
 import 'dart:mirrors';
 
 void main() {
-  group("Normal behavior", () {
+  group("Connection lifecycle", () {
     PostgreSQLConnection conn = null;
 
     tearDown(() async {
@@ -21,41 +21,14 @@ void main() {
     });
 
     test("Connect with no auth required", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
       await conn.open();
 
       expect(await conn.execute("select 1"), equals(1));
     });
 
-    test("Issuing multiple queries and awaiting between each one successfully returns the right value", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
-      await conn.open();
-
-      expect(await conn.query("select 1"), equals([[1]]));
-      expect(await conn.query("select 2"), equals([[2]]));
-      expect(await conn.query("select 3"), equals([[3]]));
-      expect(await conn.query("select 4"), equals([[4]]));
-      expect(await conn.query("select 5"), equals([[5]]));
-    });
-
-    test("Issuing multiple queries without awaiting are returned with appropriate values", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
-      await conn.open();
-
-      var futures = [
-        conn.query("select 1"),
-        conn.query("select 2"),
-        conn.query("select 3"),
-        conn.query("select 4"),
-        conn.query("select 5")
-      ];
-      var results = await Future.wait(futures);
-
-      expect(results, [[[1]], [[2]], [[3]], [[4]], [[5]]]);
-    });
-
     test("Closing idle connection succeeds, closes underlying socket", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
       await conn.open();
 
       await conn.close();
@@ -68,15 +41,15 @@ void main() {
     });
 
     test("Closing connection while busy succeeds, queued queries are all accounted for (canceled), closes underlying socket", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
       await conn.open();
 
       var futures = [
-        conn.query("select 1"),
-        conn.query("select 2"),
-        conn.query("select 3"),
-        conn.query("select 4"),
-        conn.query("select 5")
+        conn.query("select 1", allowReuse: false),
+        conn.query("select 2", allowReuse: false),
+        conn.query("select 3", allowReuse: false),
+        conn.query("select 4", allowReuse: false),
+        conn.query("select 5", allowReuse: false)
       ];
 
       await conn.close();
@@ -87,6 +60,41 @@ void main() {
       } on PostgreSQLException catch (e) {
         expect(e.message, contains("Connection closed"));
       }
+    });
+  });
+
+  group("Successful queries over time", () {
+    PostgreSQLConnection conn = null;
+
+    setUp(() async {
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      await conn.open();
+    });
+
+    tearDown(() async {
+      await conn?.close();
+    });
+
+    test("Issuing multiple queries and awaiting between each one successfully returns the right value", () async {
+      expect(await conn.query("select 1", allowReuse: false), equals([[1]]));
+      expect(await conn.query("select 2", allowReuse: false), equals([[2]]));
+      expect(await conn.query("select 3", allowReuse: false), equals([[3]]));
+      expect(await conn.query("select 4", allowReuse: false), equals([[4]]));
+      expect(await conn.query("select 5", allowReuse: false), equals([[5]]));
+    });
+
+    test("Issuing multiple queries without awaiting are returned with appropriate values", () async {
+      var futures = [
+        conn.query("select 1", allowReuse: false),
+        conn.query("select 2", allowReuse: false),
+        conn.query("select 3", allowReuse: false),
+        conn.query("select 4", allowReuse: false),
+        conn.query("select 5", allowReuse: false)
+      ];
+
+      var results = await Future.wait(futures);
+
+      expect(results, [[[1]], [[2]], [[3]], [[4]], [[5]]]);
     });
   });
 
@@ -150,9 +158,9 @@ void main() {
       });
 
       var futures = [
-        conn.query("select 1"),
-        conn.query("select 2"),
-        conn.query("select 3"),
+        conn.query("select 1", allowReuse: false),
+        conn.query("select 2", allowReuse: false),
+        conn.query("select 3", allowReuse: false),
       ];
       var results = await Future.wait(futures);
 

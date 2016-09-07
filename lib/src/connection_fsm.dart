@@ -4,7 +4,7 @@ abstract class PostgreSQLConnectionState {
   PostgreSQLConnection connection;
   Completer pendingOperation;
 
-  PostgreSQLConnectionState queueQuery(_SQLQuery query) {
+  PostgreSQLConnectionState queueQuery(_Query query) {
     connection._queryQueue.add(query);
 
     return this;
@@ -52,7 +52,7 @@ abstract class PostgreSQLConnectionState {
  */
 
 class PostgreSQLConnectionStateClosed extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_SQLQuery query) {
+  PostgreSQLConnectionState queueQuery(_Query query) {
     throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
   }
 
@@ -66,7 +66,7 @@ class PostgreSQLConnectionStateClosed extends PostgreSQLConnectionState {
  */
 
 class PostgreSQLConnectionStateSocketConnected extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_SQLQuery query) {
+  PostgreSQLConnectionState queueQuery(_Query query) {
     throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
   }
 
@@ -104,7 +104,7 @@ class PostgreSQLConnectionStateSocketConnected extends PostgreSQLConnectionState
  */
 
 class PostgreSQLConnectionStateAuthenticating extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_SQLQuery query) {
+  PostgreSQLConnectionState queueQuery(_Query query) {
     throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
   }
 
@@ -138,7 +138,7 @@ class PostgreSQLConnectionStateAuthenticating extends PostgreSQLConnectionState 
  */
 
 class PostgreSQLConnectionStateAuthenticated extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_SQLQuery query) {
+  PostgreSQLConnectionState queueQuery(_Query query) {
     throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
   }
 
@@ -164,20 +164,27 @@ class PostgreSQLConnectionStateAuthenticated extends PostgreSQLConnectionState {
  */
 
 class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_SQLQuery q) {
+  PostgreSQLConnectionState queueQuery(_Query q) {
+    connection._queryQueue.add(q);
+
+    return processQuery(q);
+  }
+
+  PostgreSQLConnectionState processQuery(_Query q) {
     try {
       if (q.onlyReturnAffectedRowCount) {
         sendSimpleQuery(q);
-      } else {
-        sendExtendedQuery(q);
+        return new PostgreSQLConnectionStateBusy(q);
       }
 
-      return new PostgreSQLConnectionStateBusy(q);
+      var cache = sendExtendedQuery(q);
+      return new PostgreSQLConnectionStateBusy(q, cacheToBuild: cache);
     } catch (e, st) {
       q.onComplete.completeError(e, st);
       connection._queryQueue.remove(q);
     }
 
+    // If there was an exception, try moving on to the next query.
     if (connection._queryQueue.isNotEmpty) {
       return queueQuery(connection._queryQueue.first);
     }
@@ -190,7 +197,7 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
     completeWaitingEvent(null);
 
     if (connection._queryQueue.isNotEmpty) {
-      return queueQuery(connection._queryQueue.first);
+      return processQuery(connection._queryQueue.first);
     }
 
     return this;
@@ -200,35 +207,67 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
     return this;
   }
 
-  void sendSimpleQuery(_SQLQuery q) {
+  void sendSimpleQuery(_Query q) {
     var sqlString = PostgreSQLFormat.substitute(q.statement, q.substitutionValues);
     var queryMessage = new _QueryMessage(sqlString);
 
     connection._socket.add(queryMessage.asBytes());
   }
 
-  void sendExtendedQuery(_SQLQuery q) {
-    var parameterList = <_ParameterValue>[];
-    var replaceFunc = (PostgreSQLFormatIdentifier identifier, int index) {
-      if (identifier._dataType != null) {
-        parameterList.add(new _ParameterValue.binary(q.substitutionValues[identifier.name], identifier.typeCode));
-      } else {
-        parameterList.add(new _ParameterValue.text(q.substitutionValues[identifier.name]));
+  _QueryCache sendExtendedQuery(_Query q) {
+    List<_ParameterValue> parameterList;
+    _QueryCache toCache = null;
+    String statementName = "";
+    var messages = <_ClientMessage>[];
+
+    var cacheQuery = connection._reuseMap[q.statement];
+    if (q.allowReuse && cacheQuery != null) {
+      q.fieldDescriptions = cacheQuery.fieldDescriptions;
+      statementName = cacheQuery.preparedStatementName;
+      parameterList = cacheQuery.orderedParameters
+          .map((identifier) => encodeParameter(identifier, q.substitutionValues))
+          .toList();
+    } else {
+      var formatIdentifiers = <PostgreSQLFormatIdentifier>[];
+      var replaceFunc = (PostgreSQLFormatIdentifier identifier, int index) {
+        formatIdentifiers.add(identifier);
+
+        return "\$$index";
+      };
+
+      var sqlString = PostgreSQLFormat.substitute(q.statement, q.substitutionValues, replace: replaceFunc);
+      parameterList = formatIdentifiers
+          .map((id) => encodeParameter(id, q.substitutionValues))
+          .toList();
+
+      if (q.allowReuse) {
+        statementName = connection._generateNextQueryIdentifier();
+        toCache = new _QueryCache(statementName, formatIdentifiers);
       }
+      messages.addAll([
+        new _ParseMessage(sqlString, statementName: statementName),
+        new _DescribeMessage(statementName: statementName),
+      ]);
+    }
 
-      return "\$$index";
-    };
-
-    var sqlString = PostgreSQLFormat.substitute(q.statement, q.substitutionValues, replace: replaceFunc);
-    var bytes = _ClientMessage.aggregateBytes([
-      new _ParseMessage(sqlString),
-      new _DescribeMessage(),
-      new _BindMessage(parameterList),
+    messages.addAll([
+      new _BindMessage(parameterList, statementName: statementName),
       new _ExecuteMessage(),
       new _SyncMessage()
     ]);
+    var bytes = _ClientMessage.aggregateBytes(messages);
 
     connection._socket.add(bytes);
+
+    return toCache;
+  }
+
+  _ParameterValue encodeParameter(PostgreSQLFormatIdentifier identifier, Map<String, dynamic> substitutionValues) {
+    if (identifier._dataType != null) {
+      return new _ParameterValue.binary(substitutionValues[identifier.name], identifier.typeCode);
+    } else {
+      return new _ParameterValue.text(substitutionValues[identifier.name]);
+    }
   }
 }
 
@@ -237,12 +276,12 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
  */
 
 class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
-  PostgreSQLConnectionStateBusy(this.query);
+  PostgreSQLConnectionStateBusy(this.query, {this.cacheToBuild: null});
 
-  _SQLQuery query;
+  _Query query;
+  _QueryCache cacheToBuild;
 
   PostgreSQLConnectionState onEnter() {
-    connection._queryQueue.add(query);
     pendingOperation = query.onComplete;
     return this;
   }
@@ -256,6 +295,7 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
       query.finish(message.rowsAffected);
     } else if (message is _RowDescriptionMessage) {
       query.fieldDescriptions = message.fieldDescriptions;
+      cacheToBuild?.fieldDescriptions = message.fieldDescriptions;
     } else if (message is _DataRowMessage) {
       query.addRow(message.values);
     }
@@ -265,6 +305,10 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
 
   void onExit() {
     connection._queryQueue.remove(query);
+
+    if (cacheToBuild != null) {
+      connection.cacheQuery(query, cacheToBuild);
+    }
   }
 }
 
