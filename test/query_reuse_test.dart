@@ -1,5 +1,6 @@
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
+import 'dart:async';
 
 String sid(String id, PostgreSQLDataType dt) => PostgreSQLFormat.id(id, type: dt);
 
@@ -217,12 +218,64 @@ void main() {
       expect(results, [[3, 4]]);
     });
 
-    test("Call query multiple times, mixing in other named queries and unnamed queries, succeeds", () async {
+    test("Call query multiple times, mixing in other named queries, succeeds", () async {
+      var results = await connection.query("select i1, i2 from t where i1 > @i1", substitutionValues: {
+        "i1" : 1
+      });
+      expect(results, [[2, 3], [3, 4]]);
 
+      results = await connection.query("select i1,i2 from t where i2 < @i2", substitutionValues: {
+        "i2" : 1
+      });
+      expect(results, []);
+
+      results = await connection.query("select i1, i2 from t where i1 > @i1", substitutionValues: {
+        "i1" : 2
+      });
+      expect(results, [[3, 4]]);
+
+      results = await connection.query("select i1,i2 from t where i2 < @i2", substitutionValues: {
+        "i2" : 2
+      });
+      expect(results, [[0, 1]]);
+
+      results = await connection.query("select i1, i2 from t where i1 > @i1", substitutionValues: {
+        "i1" : 2
+      });
+      expect(results, [[3, 4]]);
     });
 
-    test("Call a bunch of named and unnamed queries without awaiting, still process correcty", () async {
+    test("Call a bunch of named and unnamed queries without awaiting, still process correctly", () async {
+      var futures = [
+        connection.query("select i1, i2 from t where i1 > @i1", substitutionValues: {
+          "i1" : 1
+        }),
+        connection.execute("select 1"),
+        connection.query("select i1,i2 from t where i2 < @i2", substitutionValues: {
+          "i2" : 1
+        }),
+        connection.query("select i1, i2 from t where i1 > @i1", substitutionValues: {
+          "i1" : 2
+        }),
+        connection.query("select 1", allowReuse: false),
+        connection.query("select i1,i2 from t where i2 < @i2", substitutionValues: {
+          "i2" : 2
+        }),
+        connection.query("select i1, i2 from t where i1 > @i1", substitutionValues: {
+          "i1" : 2
+        })
+      ];
 
+      var results = await Future.wait(futures);
+      expect(results, [[[2, 3], [3, 4]], 1, [], [[3, 4]], [[1]], [[0, 1]], [[3, 4]]]);
+    });
+
+    test("Make a prepared query that has no parameters", () async {
+      var results = await connection.query("select 1");
+      expect(results, [[1]]);
+
+      results = await connection.query("select 1");
+      expect(results, [[1]]);
     });
   });
 
