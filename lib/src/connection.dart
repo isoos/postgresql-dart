@@ -70,7 +70,7 @@ class PostgreSQLConnection {
   }
 
   Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null, bool allowReuse: true}) async {
-    var query = new _Query(fmtString, substitutionValues)
+    var query = new _Query<List<List<dynamic>>>(fmtString, substitutionValues)
       ..allowReuse = allowReuse;
 
     _transitionToState(_connectionState.queueQuery(query));
@@ -79,7 +79,7 @@ class PostgreSQLConnection {
   }
 
   Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
-    var query = new _Query(fmtString, substitutionValues);
+    var query = new _Query<int>(fmtString, substitutionValues);
     query.onlyReturnAffectedRowCount = true;
 
     _transitionToState(_connectionState.queueQuery(query));

@@ -1,14 +1,14 @@
 part of postgres;
 
-class _Query {
+class _Query<T> {
   _Query(this.statement, this.substitutionValues);
 
   bool onlyReturnAffectedRowCount = false;
   bool allowReuse = false;
   String statement;
   Map<String, dynamic> substitutionValues;
-  Completer<dynamic> onComplete = new Completer();
-  Future<dynamic> get future => onComplete.future;
+  Completer<T> onComplete = new Completer();
+  Future<T> get future => onComplete.future;
 
   List<_FieldDescription> fieldDescriptions;
   List<Iterable<dynamic>> rows = [];
