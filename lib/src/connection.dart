@@ -18,6 +18,8 @@ class PostgreSQLConnection {
   int timeoutInSeconds;
   String timeZone;
 
+  bool get isClosed => _connectionState is PostgreSQLConnectionStateClosed;
+
   Map<String, String> settings = {};
 
   Socket _socket;

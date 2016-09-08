@@ -125,7 +125,7 @@ class _DataRowMessage extends _ServerMessage {
       var dataSize = view.getInt32(offset); offset += 4;
 
       if (dataSize == 0) {
-        continue;
+        values.add(new ByteData(0));
       } else if (dataSize == -1) {
         values.add(null);
       } else {

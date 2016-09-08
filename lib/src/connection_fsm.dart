@@ -215,51 +215,53 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
   }
 
   _QueryCache sendExtendedQuery(_Query q) {
-    List<_ParameterValue> parameterList;
-    _QueryCache toCache = null;
-    String statementName = "";
-    var messages = <_ClientMessage>[];
-
     var cacheQuery = connection._reuseMap[q.statement];
     if (q.allowReuse && cacheQuery != null) {
       q.fieldDescriptions = cacheQuery.fieldDescriptions;
-      statementName = cacheQuery.preparedStatementName;
-      parameterList = cacheQuery.orderedParameters
-          .map((identifier) => encodeParameter(identifier, q.substitutionValues))
-          .toList();
-    } else {
-      var formatIdentifiers = <PostgreSQLFormatIdentifier>[];
-      var replaceFunc = (PostgreSQLFormatIdentifier identifier, int index) {
-        formatIdentifiers.add(identifier);
+      executeCachedQuery(cacheQuery, q.substitutionValues);
 
-        return "\$$index";
-      };
-
-      var sqlString = PostgreSQLFormat.substitute(q.statement, q.substitutionValues, replace: replaceFunc);
-      parameterList = formatIdentifiers
-          .map((id) => encodeParameter(id, q.substitutionValues))
-          .toList();
-
-      if (q.allowReuse) {
-        statementName = connection._generateNextQueryIdentifier();
-        toCache = new _QueryCache(statementName, formatIdentifiers);
-      }
-      messages.addAll([
-        new _ParseMessage(sqlString, statementName: statementName),
-        new _DescribeMessage(statementName: statementName),
-      ]);
+      return null;
     }
 
-    messages.addAll([
+    String statementName = (q.allowReuse ? connection._generateNextQueryIdentifier() : "");
+    var formatIdentifiers = <PostgreSQLFormatIdentifier>[];
+    var replaceFunc = (PostgreSQLFormatIdentifier identifier, int index) {
+      formatIdentifiers.add(identifier);
+
+      return "\$$index";
+    };
+
+    var sqlString = PostgreSQLFormat.substitute(q.statement, q.substitutionValues, replace: replaceFunc);
+    var parameterList = formatIdentifiers
+        .map((id) => encodeParameter(id, q.substitutionValues))
+        .toList();
+
+    var messages = [
+      new _ParseMessage(sqlString, statementName: statementName),
+      new _DescribeMessage(statementName: statementName),
+      new _BindMessage(parameterList, statementName: statementName),
+      new _ExecuteMessage(),
+      new _SyncMessage()
+    ];
+
+    connection._socket.add(_ClientMessage.aggregateBytes(messages));
+
+    return (q.allowReuse ? new _QueryCache(statementName, formatIdentifiers) :  null);
+  }
+
+  void executeCachedQuery(_QueryCache cacheQuery, Map<String, dynamic> substitutionValues) {
+    var statementName = cacheQuery.preparedStatementName;
+    var parameterList = cacheQuery.orderedParameters
+        .map((identifier) => encodeParameter(identifier, substitutionValues))
+        .toList();
+
+    var bytes = _ClientMessage.aggregateBytes([
       new _BindMessage(parameterList, statementName: statementName),
       new _ExecuteMessage(),
       new _SyncMessage()
     ]);
-    var bytes = _ClientMessage.aggregateBytes(messages);
 
     connection._socket.add(bytes);
-
-    return toCache;
   }
 
   _ParameterValue encodeParameter(PostgreSQLFormatIdentifier identifier, Map<String, dynamic> substitutionValues) {
