@@ -40,6 +40,8 @@ void main() {
         "tsz" : new DateTime.utc(2000, 3)
       });
 
+      expect(hasCachedQueryNamed(connection, insertQueryString), true);
+
       var expectedRow1 = [1, 1, 2, 1, true, 3, "foobar", 5.0, 6.0, new DateTime.utc(2000), new DateTime.utc(2000, 2), new DateTime.utc(2000, 3)];
       expect(results, [expectedRow1]);
 
@@ -56,11 +58,15 @@ void main() {
         "tsz" : new DateTime.utc(2001, 3)
       });
 
+      expect(hasCachedQueryNamed(connection, insertQueryString), true);
+
       var expectedRow2 = [2, 2, 3, 2, false, 4, "barfoo", 6.0, 7.0, new DateTime.utc(2001), new DateTime.utc(2001, 2), new DateTime.utc(2001, 3)];
       expect(results, [expectedRow2]);
 
       results = await connection.query("select i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t");
       expect(results, [expectedRow1, expectedRow2]);
+
+      expect(hasCachedQueryNamed(connection, "select i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t"), true);
 
       results = await connection.query("select i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t where i < @i", substitutionValues: {
         "i" : 0
@@ -76,6 +82,8 @@ void main() {
         "i" : 5
       });
       expect(results, [expectedRow1, expectedRow2]);
+
+      expect(hasCachedQueryNamed(connection, insertQueryString), true);
     });
 
     test("Call query multiple times without type data succeeds ", () async {
@@ -217,6 +225,9 @@ void main() {
         "i1" : 2
       });
       expect(results, [[3, 4]]);
+
+      expect(hasCachedQueryNamed(connection, "select i1, i2 from t where i1 > @i1"), true);
+      expect(cachedQueryMap(connection).length, 1);
     });
 
     test("Call query multiple times, mixing in other named queries, succeeds", () async {
@@ -244,6 +255,10 @@ void main() {
         "i1" : 2
       });
       expect(results, [[3, 4]]);
+
+      expect(hasCachedQueryNamed(connection, "select i1, i2 from t where i1 > @i1"), true);
+      expect(hasCachedQueryNamed(connection, "select i1,i2 from t where i2 < @i2"), true);
+      expect(cachedQueryMap(connection).length, 2);
     });
 
     test("Call a bunch of named and unnamed queries without awaiting, still process correctly", () async {
@@ -301,15 +316,7 @@ void main() {
         expect(true, false);
       } on PostgreSQLException {}
 
-      var reuseMapMirror = reflect(connection).type
-          .declarations.values
-          .firstWhere((DeclarationMirror dm) => dm.simpleName.toString().contains("_reuseMap"));
-      Map<String, dynamic> reuseMap = reflect(connection).getField(reuseMapMirror.simpleName).reflectee as Map<String, dynamic>;
-      expect(reuseMap.isEmpty, true);
-    });
-
-    test("A failed describe does not generate cached query", () async {
-
+      expect(cachedQueryMap(connection).isEmpty, true);
     });
 
     test("A failed bind will return normal failure, leave cached query intact", () async {
@@ -326,4 +333,15 @@ void main() {
 
     });
   });
+}
+
+Map<String, dynamic> cachedQueryMap(PostgreSQLConnection connection) {
+  var reuseMapMirror = reflect(connection).type
+      .declarations.values
+      .firstWhere((DeclarationMirror dm) => dm.simpleName.toString().contains("_reuseMap"));
+  return reflect(connection).getField(reuseMapMirror.simpleName).reflectee as Map<String, dynamic>;
+}
+
+bool hasCachedQueryNamed(PostgreSQLConnection connection, String name) {
+  return cachedQueryMap(connection)[name] != null;
 }
