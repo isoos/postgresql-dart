@@ -165,6 +165,36 @@ void main() {
       var results = await Future.wait(futures);
 
       expect(results, [[[1]], [[2]], [[3]]]);
+
+      var queueMirror = reflect(conn).type
+          .declarations.values
+          .firstWhere((DeclarationMirror dm) => dm.simpleName.toString().contains("_queryQueue"));
+      List<dynamic> queue = reflect(conn).getField(queueMirror.simpleName).reflectee;
+      expect(queue, isEmpty);
+    });
+
+    test("Building query throws error, connection continues processing pending queries", () async {
+      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      await conn.open();
+
+      // Make some async queries that'll exit the event loop, but then fail on a query that'll die early
+      conn.execute("askdl").catchError((err, st) {});
+      conn.execute("askdl").catchError((err, st) {});
+      conn.execute("select @a").catchError((err, st) {});
+
+      var futures = [
+        conn.query("select 1", allowReuse: false),
+        conn.query("select 2", allowReuse: false),
+      ];
+      var results = await Future.wait(futures);
+
+      expect(results, [[[1]], [[2]]]);
+
+      var queueMirror = reflect(conn).type
+          .declarations.values
+          .firstWhere((DeclarationMirror dm) => dm.simpleName.toString().contains("_queryQueue"));
+      List<dynamic> queue = reflect(conn).getField(queueMirror.simpleName).reflectee;
+      expect(queue, isEmpty);
     });
   });
 

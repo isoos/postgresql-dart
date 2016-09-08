@@ -15,6 +15,7 @@ class _MessageFrame {
     84 : () => new _RowDescriptionMessage(),
 
     90 : () => new _ReadyForQueryMessage(),
+    110 : () => new _NoDataMessage(),
     116 : () => new _ParameterDescriptionMessage()
   };
 

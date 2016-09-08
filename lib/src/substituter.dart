@@ -49,6 +49,7 @@ class PostgreSQLFormat {
   }
 
   static String substitute(String fmtString, Map<String, dynamic> values, {SQLReplaceIdentifierFunction replace: null}) {
+    values ??= {};
     replace ??= (spec, index) => PostgreSQLCodec.encode(values[spec.name]);
 
     var items = <PostgreSQLFormatToken>[];

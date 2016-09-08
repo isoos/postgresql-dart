@@ -182,6 +182,13 @@ void main() {
       } on PostgreSQLFormatException catch (e) {
         expect(e.message, contains("Format string specified identifier with name i1"));
       }
+
+      try {
+        await connection.query("INSERT INTO t (i1) values (@i1)");
+        expect(true, false);
+      } on PostgreSQLFormatException catch (e) {
+        expect(e.message, contains("Format string specified identifier with name i1"));
+      }
     });
   });
 }

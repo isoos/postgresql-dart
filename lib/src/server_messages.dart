@@ -187,6 +187,14 @@ class _ParameterDescriptionMessage extends _ServerMessage {
   String toString() => "Parameter Description Message: $objectIDs";
 }
 
+class _NoDataMessage extends _ServerMessage {
+  void readBytes(Uint8List bytes) {
+
+  }
+
+  String toString() => "No Data Message";
+}
+
 class _UnknownMessage extends _ServerMessage {
   Uint8List bytes;
   int code;

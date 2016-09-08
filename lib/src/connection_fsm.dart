@@ -174,10 +174,12 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
     try {
       if (q.onlyReturnAffectedRowCount) {
         sendSimpleQuery(q);
+
         return new PostgreSQLConnectionStateBusy(q);
       }
 
       var cache = sendExtendedQuery(q);
+
       return new PostgreSQLConnectionStateBusy(q, cacheToBuild: cache);
     } catch (e, st) {
       q.onComplete.completeError(e, st);
@@ -186,7 +188,7 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
 
     // If there was an exception, try moving on to the next query.
     if (connection._queryQueue.isNotEmpty) {
-      return queueQuery(connection._queryQueue.first);
+      return processQuery(connection._queryQueue.first);
     }
 
     return this;
@@ -289,6 +291,8 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
   }
 
   PostgreSQLConnectionState onMessage(_ServerMessage message) {
+    // We ignore ParameterDescription and NoData, as they don't tell us anything we don't already know
+    // or care about.
     if (message is _ReadyForQueryMessage) {
       if (message.state == _ReadyForQueryMessage.StateIdle) {
         return new PostgreSQLConnectionStateIdle();
@@ -297,7 +301,11 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
       query.finish(message.rowsAffected);
     } else if (message is _RowDescriptionMessage) {
       query.fieldDescriptions = message.fieldDescriptions;
-      cacheToBuild?.fieldDescriptions = message.fieldDescriptions;
+
+      if (cacheToBuild != null) {
+        cacheToBuild.fieldDescriptions = message.fieldDescriptions;
+        connection.cacheQuery(query, cacheToBuild);
+      }
     } else if (message is _DataRowMessage) {
       query.addRow(message.values);
     }
@@ -307,10 +315,5 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
 
   void onExit() {
     connection._queryQueue.remove(query);
-
-    if (cacheToBuild != null) {
-      connection.cacheQuery(query, cacheToBuild);
-    }
   }
 }
-

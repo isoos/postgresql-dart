@@ -1,6 +1,7 @@
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 import 'dart:async';
+import 'dart:mirrors';
 
 String sid(String id, PostgreSQLDataType dt) => PostgreSQLFormat.id(id, type: dt);
 
@@ -295,7 +296,16 @@ void main() {
     });
 
     test("A failed parse does not generate cached query", () async {
+      try {
+        await connection.query("ljkasd");
+        expect(true, false);
+      } on PostgreSQLException {}
 
+      var reuseMapMirror = reflect(connection).type
+          .declarations.values
+          .firstWhere((DeclarationMirror dm) => dm.simpleName.toString().contains("_reuseMap"));
+      Map<String, dynamic> reuseMap = reflect(connection).getField(reuseMapMirror.simpleName).reflectee as Map<String, dynamic>;
+      expect(reuseMap.isEmpty, true);
     });
 
     test("A failed describe does not generate cached query", () async {
@@ -303,7 +313,13 @@ void main() {
     });
 
     test("A failed bind will return normal failure, leave cached query intact", () async {
-
+      // Send a request that fails on bind
+      try {
+        await connection.query("insert into u (i1, i2) values (@i1, @i2)", substitutionValues: {
+          "i1" : "foo", "i2" : "bar"
+        });
+        expect(true, false);
+      } on PostgreSQLException {}
     });
 
     test("Cached query that works the first time, bad params the next time, remains viable", () async {
