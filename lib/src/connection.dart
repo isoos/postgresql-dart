@@ -138,7 +138,7 @@ class PostgreSQLConnection {
 
   void cancelCurrentQueries() {
     _queryQueue?.forEach((q) {
-      q.onComplete.completeError(new PostgreSQLException("Connection closed."));
+      q.completeError(new PostgreSQLException("Connection closed."));
     });
     _queryQueue = null;
   }

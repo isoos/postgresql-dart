@@ -169,7 +169,7 @@ class _BindCompleteMessage extends _ServerMessage {
 }
 
 class _ParameterDescriptionMessage extends _ServerMessage {
-  List<int> objectIDs;
+  List<int> parameterTypeIDs;
 
   void readBytes(Uint8List bytes) {
     var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
@@ -177,14 +177,14 @@ class _ParameterDescriptionMessage extends _ServerMessage {
     var offset = 0;
     var count = view.getUint16(0); offset += 2;
 
-    objectIDs = [];
+    parameterTypeIDs = [];
     for (var i = 0; i < count; i++) {
       var v = view.getUint32(offset); offset += 4;
-      objectIDs.add(v);
+      parameterTypeIDs.add(v);
     }
   }
 
-  String toString() => "Parameter Description Message: $objectIDs";
+  String toString() => "Parameter Description Message: $parameterTypeIDs";
 }
 
 class _NoDataMessage extends _ServerMessage {

@@ -37,6 +37,10 @@ abstract class PostgreSQLConnectionState {
     var p = pendingOperation;
     pendingOperation = null;
 
+    if (p?.isCompleted ?? true) {
+      return;
+    }
+
     scheduleMicrotask(() {
       if (error != null) {
         p?.completeError(error, trace);
@@ -234,6 +238,7 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
     };
 
     var sqlString = PostgreSQLFormat.substitute(q.statement, q.substitutionValues, replace: replaceFunc);
+    q.specifiedParameterTypeCodes = formatIdentifiers.map((i) => i.typeCode).toList();
     var parameterList = formatIdentifiers
         .map((id) => encodeParameter(id, q.substitutionValues))
         .toList();
@@ -257,6 +262,7 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
         .map((identifier) => encodeParameter(identifier, substitutionValues))
         .toList();
 
+    // We can both check known types and also convert them to binary in the Bind message now
     var bytes = _ClientMessage.aggregateBytes([
       new _BindMessage(parameterList, statementName: statementName),
       new _ExecuteMessage(),
@@ -267,10 +273,14 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
   }
 
   _ParameterValue encodeParameter(PostgreSQLFormatIdentifier identifier, Map<String, dynamic> substitutionValues) {
-    if (identifier._dataType != null) {
-      return new _ParameterValue.binary(substitutionValues[identifier.name], identifier.typeCode);
-    } else {
-      return new _ParameterValue.text(substitutionValues[identifier.name]);
+    try {
+      if (identifier.typeCode != null) {
+        return new _ParameterValue.binary(substitutionValues[identifier.name], identifier.typeCode);
+      } else {
+        return new _ParameterValue.text(substitutionValues[identifier.name]);
+      }
+    } on PostgreSQLFormatException catch (e) {
+      throw new PostgreSQLException("Invalid parameter '${identifier.name}': ${e.message}");
     }
   }
 }
@@ -284,30 +294,65 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
 
   _Query query;
   _QueryCache cacheToBuild;
+  PostgreSQLException returningException = null;
+  int rowsAffected = 0;
 
   PostgreSQLConnectionState onEnter() {
     pendingOperation = query.onComplete;
     return this;
   }
 
+  PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
+    // If we get an error here, then we should eat the rest of the messages
+    // and we are always confirmed to get a _ReadyForQueryMessage to finish up.
+    // We should only report the error once that is done.
+    var exception = new PostgreSQLException._(message.fields);
+
+    if (exception.severity == PostgreSQLSeverity.fatal || exception.severity == PostgreSQLSeverity.panic) {
+      return new PostgreSQLConnectionStateClosed();
+    }
+
+    returningException ??= exception;
+
+    return this;
+  }
+
   PostgreSQLConnectionState onMessage(_ServerMessage message) {
-    // We ignore ParameterDescription and NoData, as they don't tell us anything we don't already know
+    // We ignore and NoData, as they don't tell us anything we don't already know
     // or care about.
     if (message is _ReadyForQueryMessage) {
       if (message.state == _ReadyForQueryMessage.StateIdle) {
+        if (returningException != null) {
+          query.completeError(returningException);
+        } else {
+          query.complete(rowsAffected);
+        }
+
         return new PostgreSQLConnectionStateIdle();
       }
+
+      // Hmm?
     } else if (message is _CommandCompleteMessage) {
-      query.finish(message.rowsAffected);
+      rowsAffected = message.rowsAffected;
     } else if (message is _RowDescriptionMessage) {
       query.fieldDescriptions = message.fieldDescriptions;
 
-      if (cacheToBuild != null) {
+      if (cacheToBuild != null && returningException == null) {
         cacheToBuild.fieldDescriptions = message.fieldDescriptions;
         connection.cacheQuery(query, cacheToBuild);
       }
     } else if (message is _DataRowMessage) {
       query.addRow(message.values);
+    } else if (message is _ParameterDescriptionMessage) {
+      var actualParameterTypeCodeIterator = message.parameterTypeIDs.iterator;
+      var parametersAreMismatched = query.specifiedParameterTypeCodes.map((specifiedTypeCode) {
+        actualParameterTypeCodeIterator.moveNext();
+        return actualParameterTypeCodeIterator.current == (specifiedTypeCode ?? actualParameterTypeCodeIterator.current);
+      }).any((v) => v == false);
+
+      if (parametersAreMismatched) {
+        returningException ??= new PostgreSQLException("Specified parameter types do not match column parameter types in query ${query.statement}");
+      }
     }
 
     return this;

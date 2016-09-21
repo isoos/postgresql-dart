@@ -10,6 +10,7 @@ class _Query<T> {
   Completer<T> onComplete = new Completer();
   Future<T> get future => onComplete.future;
 
+  List<int> specifiedParameterTypeCodes;
   List<_FieldDescription> fieldDescriptions;
   List<Iterable<dynamic>> rows = [];
 
@@ -28,13 +29,25 @@ class _Query<T> {
     rows.add(lazyDecodedData);
   }
 
-  void finish(int rowsAffected) {
+  void complete(int rowsAffected) {
+    if (onComplete.isCompleted) {
+      return;
+    }
+
     if (onlyReturnAffectedRowCount) {
       onComplete.complete(rowsAffected);
       return;
     }
 
     onComplete.complete(rows.map((row) => row.toList()).toList());
+  }
+
+  void completeError(dynamic error) {
+    if (onComplete.isCompleted) {
+      return;
+    }
+
+    onComplete.completeError(error);
   }
 
   String toString() => statement;

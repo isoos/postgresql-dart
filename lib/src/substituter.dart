@@ -156,7 +156,11 @@ class PostgreSQLFormatIdentifier {
       name = components.first;
     } else if (components.length == 2) {
       name = components.first;
-      _dataType = components.last;
+
+      var dataTypeString = components.last;
+      if (dataTypeString != null) {
+        typeCode = PostgreSQLFormat._postgresCodeForDataTypeString(dataTypeString);
+      }
     } else {
       throw new PostgreSQLFormatException("Invalid format string identifier, must contain identifier name and optionally one data type in format '@identifier:dataType' (offending identifier: ${t})");
     }
@@ -166,8 +170,7 @@ class PostgreSQLFormatIdentifier {
   }
 
   String name;
-  int get typeCode => PostgreSQLFormat._postgresCodeForDataTypeString(_dataType);
-  String _dataType;
+  int typeCode;
 }
 
 class PostgreSQLFormatException implements Exception {

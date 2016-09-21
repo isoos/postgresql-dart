@@ -25,7 +25,7 @@ void main() {
           "${sid("bl", PostgreSQLDataType.boolean)}, ${sid("si", PostgreSQLDataType.smallInteger)},"
           "${sid("t", PostgreSQLDataType.text)}, ${sid("f", PostgreSQLDataType.real)},"
           "${sid("d", PostgreSQLDataType.double)}, ${sid("dt", PostgreSQLDataType.date)},"
-          "${sid("ts", PostgreSQLDataType.timestampWithoutTimezone)}, ${sid("tsz", PostgreSQLDataType.timestampWithoutTimezone)}"
+          "${sid("ts", PostgreSQLDataType.timestampWithoutTimezone)}, ${sid("tsz", PostgreSQLDataType.timestampWithTimezone)}"
           ") returning i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz";
       var results = await connection.query(insertQueryString, substitutionValues: {
         "i" : 1,
@@ -319,18 +319,87 @@ void main() {
       expect(cachedQueryMap(connection).isEmpty, true);
     });
 
-    test("A failed bind will return normal failure, leave cached query intact", () async {
-      // Send a request that fails on bind
+    test("Trying to parse/describe a query with inaccurate types fails and does not cache query", () async {
+      var string = "insert into u (i1, i2) values (@i1:text, @i2:text) returning i1, i2";
       try {
-        await connection.query("insert into u (i1, i2) values (@i1, @i2)", substitutionValues: {
+        await connection.query(string, substitutionValues: {
           "i1" : "foo", "i2" : "bar"
         });
+
         expect(true, false);
       } on PostgreSQLException {}
+
+      expect(cachedQueryMap(connection).length, 0);
     });
 
-    test("Cached query that works the first time, bad params the next time, remains viable", () async {
+    test("A failed bind on initial query fails query, but cached query is available", () async {
+      var string = "insert into u (i1, i2) values (@i1, @i2) returning i1, i2";
+      try {
+        await connection.query(string, substitutionValues: {
+          "i1" : "foo", "i2" : "bar"
+        });
 
+        expect(true, false);
+      } on PostgreSQLException {}
+
+      expect(hasCachedQueryNamed(connection, string), true);
+
+      var results = await connection.query("select i1, i2 from u");
+      expect(results, []);
+
+      await connection.query(string, substitutionValues: {
+        "i1" : 1,
+        "i2" : 2
+      });
+      results = await connection.query("select i1, i2 from u");
+      expect(results, [[1, 2]]);
+    });
+
+    test("Cached query that works the first time, wrong type for params the next time throws early error but can still be used", () async {
+      await connection.query("insert into u (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2", substitutionValues: {
+        "i1" : 1, "i2" : 2
+      });
+      await connection.query("insert into u (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2", substitutionValues: {
+        "i1" : 2, "i2" : 3
+      });
+
+      var string = "select i1, i2 from u where i1 = @i:int4";
+      var results = await connection.query(string, substitutionValues: {
+        "i" : 1
+      });
+      expect(results, [[1, 2]]);
+      expect(hasCachedQueryNamed(connection, string), true);
+
+      try {
+        await connection.query(string, substitutionValues: {
+          "i" : "foo"
+        });
+      } on PostgreSQLException {}
+
+      results = await connection.query(string, substitutionValues: {
+        "i" : 2
+      });
+      expect(results, [[2, 3]]);
+      expect(hasCachedQueryNamed(connection, string), true);
+    });
+
+    test("Send two queries that will be the same prepared statement async, first one fails on bind", () async {
+      await connection.query("insert into u (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2", substitutionValues: {
+        "i1" : 1, "i2" : 2
+      }, allowReuse: false);
+
+      var string = "select i1, i2 from u where i1 = @i:int4";
+      connection.query(string, substitutionValues: {
+        "i" : "foo"
+      }).catchError((e) {});
+
+      var results = await connection.query(string, substitutionValues: {
+        "i" : 1
+      });
+
+      expect(results, [[1, 2]]);
+      expect(cachedQueryMap(connection).length, 1);
+      expect(hasCachedQueryNamed(connection, string), true);
     });
   });
 }
