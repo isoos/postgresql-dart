@@ -57,7 +57,7 @@ class _QueryCache {
   _QueryCache(this.preparedStatementName, this.orderedParameters);
 
   String preparedStatementName;
-  List<PostgreSQLFormatIdentifier> orderedParameters;
+  List<_PostgreSQLFormatIdentifier> orderedParameters;
   List<_FieldDescription> fieldDescriptions;
 }
 

@@ -1,15 +1,46 @@
 part of postgres;
 
+/// The set of available data types that [PostgreSQLConnection]s support.
 enum PostgreSQLDataType {
+  /// Must be a [String].
   text,
-  integer, smallInteger, bigInteger,
-  serial, bigSerial,
-  real, double,
+
+  /// Must be an [int] (4-byte integer)
+  integer,
+
+  /// Must be an [int] (2-byte integer)
+  smallInteger,
+
+  /// Must be an [int] (8-byte integer)
+  bigInteger,
+
+  /// Must be an [int] (autoincrementing 4-byte integer)
+  serial,
+
+  /// Must be an [int] (autoincrementing 8-byte integer)
+  bigSerial,
+
+  /// Must be a [double] (32-bit floating point value)
+  real,
+
+  /// Must be a [double] (64-bit floating point value)
+  double,
+
+  /// Must be a [bool]
   boolean,
-  timestampWithoutTimezone, timestampWithTimezone, date
+
+  /// Must be a [DateTime] (microsecond date and time precision)
+  timestampWithoutTimezone,
+
+  /// Must be a [DateTime] (microsecond date and time precision)
+  timestampWithTimezone,
+
+  /// Must be a [DateTime] (contains year, month and day only)
+  date
 }
 
-class PostgreSQLCodec {
+/// A namespace for data encoding and decoding operations for PostgreSQL data.
+abstract class PostgreSQLCodec {
   static const int TypeBool = 16;
   static const int TypeInt8 = 20;
   static const int TypeInt2 = 21;
@@ -63,7 +94,7 @@ class PostgreSQLCodec {
 
     if (postgresType == TypeBool) {
       if (value is! bool) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: bool Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: bool Got: ${value.runtimeType}");
       }
 
       var bd = new ByteData(1);
@@ -71,7 +102,7 @@ class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeInt8) {
       if (value is! int) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: int Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: int Got: ${value.runtimeType}");
       }
 
       var bd = new ByteData(8);
@@ -79,7 +110,7 @@ class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeInt2) {
       if (value is! int) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: int Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: int Got: ${value.runtimeType}");
       }
 
       var bd = new ByteData(2);
@@ -87,7 +118,7 @@ class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeInt4) {
       if (value is! int) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: int Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: int Got: ${value.runtimeType}");
       }
 
       var bd = new ByteData(4);
@@ -95,14 +126,14 @@ class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeText) {
       if (value is! String) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: String Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: String Got: ${value.runtimeType}");
       }
 
       String val = value;
       outBuffer = new Uint8List.fromList(val.codeUnits);
     } else if (postgresType == TypeFloat4) {
       if (value is! double) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: double Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: double Got: ${value.runtimeType}");
       }
 
       var bd = new ByteData(4);
@@ -110,7 +141,7 @@ class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeFloat8) {
       if (value is! double) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: double Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: double Got: ${value.runtimeType}");
       }
 
       var bd = new ByteData(8);
@@ -118,7 +149,7 @@ class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeDate) {
       if (value is! DateTime) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}");
       }
 
       var bd = new ByteData(4);
@@ -126,7 +157,7 @@ class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeTimestamp) {
       if (value is! DateTime) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}");
       }
 
       var bd = new ByteData(8);
@@ -135,7 +166,7 @@ class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeTimestampTZ) {
       if (value is! DateTime) {
-        throw new PostgreSQLFormatException("Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}");
+        throw new FormatException("Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}");
       }
 
       var bd = new ByteData(8);

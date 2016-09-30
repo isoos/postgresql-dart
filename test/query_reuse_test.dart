@@ -374,7 +374,7 @@ void main() {
         await connection.query(string, substitutionValues: {
           "i" : "foo"
         });
-      } on PostgreSQLException {}
+      } on FormatException {}
 
       results = await connection.query(string, substitutionValues: {
         "i" : 2

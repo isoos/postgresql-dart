@@ -1,31 +1,31 @@
 part of postgres;
 
-abstract class PostgreSQLConnectionState {
+abstract class _PostgreSQLConnectionState {
   PostgreSQLConnection connection;
   Completer pendingOperation;
 
-  PostgreSQLConnectionState queueQuery(_Query query) {
+  _PostgreSQLConnectionState queueQuery(_Query query) {
     connection._queryQueue.add(query);
 
     return this;
   }
 
-  PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
+  _PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
     var exception = new PostgreSQLException._(message.fields);
     completeWaitingEvent(null, error: exception);
 
     if (exception.severity == PostgreSQLSeverity.fatal || exception.severity == PostgreSQLSeverity.panic) {
-      return new PostgreSQLConnectionStateClosed();
+      return new _PostgreSQLConnectionStateClosed();
     }
 
     return this;
   }
 
-  PostgreSQLConnectionState onEnter() {
+  _PostgreSQLConnectionState onEnter() {
     return this;
   }
 
-  PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
     return this;
   }
 
@@ -55,12 +55,12 @@ abstract class PostgreSQLConnectionState {
   Closed State; starts here and ends here.
  */
 
-class PostgreSQLConnectionStateClosed extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_Query query) {
+class _PostgreSQLConnectionStateClosed extends _PostgreSQLConnectionState {
+  _PostgreSQLConnectionState queueQuery(_Query query) {
     throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
   }
 
-  PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
     return this;
   }
 }
@@ -69,12 +69,12 @@ class PostgreSQLConnectionStateClosed extends PostgreSQLConnectionState {
   Socket connected, prior to any PostgreSQL handshaking - initiates that handshaking
  */
 
-class PostgreSQLConnectionStateSocketConnected extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_Query query) {
+class _PostgreSQLConnectionStateSocketConnected extends _PostgreSQLConnectionState {
+  _PostgreSQLConnectionState queueQuery(_Query query) {
     throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
   }
 
-  PostgreSQLConnectionState onEnter() {
+  _PostgreSQLConnectionState onEnter() {
     var startupMessage = new _StartupMessage(connection.databaseName, connection.timeZone, username: connection.username);
 
     connection._socket.add(startupMessage.asBytes());
@@ -83,23 +83,23 @@ class PostgreSQLConnectionStateSocketConnected extends PostgreSQLConnectionState
     return this;
   }
 
-  PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
     _AuthenticationMessage authMessage = message;
 
     // Pass on the pending op to subsequent stages
     if (authMessage.type == _AuthenticationMessage.KindOK) {
-      return new PostgreSQLConnectionStateAuthenticated()
+      return new _PostgreSQLConnectionStateAuthenticated()
           ..pendingOperation = pendingOperation;
     } else if (authMessage.type == _AuthenticationMessage.KindMD5Password) {
       connection._salt = authMessage.salt;
 
-      return new PostgreSQLConnectionStateAuthenticating()
+      return new _PostgreSQLConnectionStateAuthenticating()
           ..pendingOperation = pendingOperation;
     }
 
     completeWaitingEvent(null, error: new PostgreSQLException("Unsupported authentication type ${authMessage.type}, closing connection."));
 
-    return new PostgreSQLConnectionStateClosed();
+    return new _PostgreSQLConnectionStateClosed();
   }
 }
 
@@ -107,12 +107,12 @@ class PostgreSQLConnectionStateSocketConnected extends PostgreSQLConnectionState
   Authenticating state
  */
 
-class PostgreSQLConnectionStateAuthenticating extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_Query query) {
+class _PostgreSQLConnectionStateAuthenticating extends _PostgreSQLConnectionState {
+  _PostgreSQLConnectionState queueQuery(_Query query) {
     throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
   }
 
-  PostgreSQLConnectionState onEnter() {
+  _PostgreSQLConnectionState onEnter() {
     var authMessage = new _AuthMD5Message(connection.username, connection.password, connection._salt);
 
     connection._socket.add(authMessage.asBytes());
@@ -120,7 +120,7 @@ class PostgreSQLConnectionStateAuthenticating extends PostgreSQLConnectionState 
     return this;
   }
 
-  PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
     if (message is _ParameterStatusMessage) {
       connection.settings[message.name] = message.value;
     } else if (message is _BackendKeyMessage) {
@@ -128,7 +128,7 @@ class PostgreSQLConnectionStateAuthenticating extends PostgreSQLConnectionState 
       connection._processID = message.processID;
     } else if (message is _ReadyForQueryMessage) {
       if (message.state == _ReadyForQueryMessage.StateIdle) {
-        return new PostgreSQLConnectionStateIdle()
+        return new _PostgreSQLConnectionStateIdle()
           ..pendingOperation = pendingOperation;
       }
     }
@@ -141,12 +141,12 @@ class PostgreSQLConnectionStateAuthenticating extends PostgreSQLConnectionState 
   Authenticated state
  */
 
-class PostgreSQLConnectionStateAuthenticated extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_Query query) {
+class _PostgreSQLConnectionStateAuthenticated extends _PostgreSQLConnectionState {
+  _PostgreSQLConnectionState queueQuery(_Query query) {
     throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
   }
 
-  PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
     if (message is _ParameterStatusMessage) {
       connection.settings[message.name] = message.value;
     } else if (message is _BackendKeyMessage) {
@@ -154,7 +154,7 @@ class PostgreSQLConnectionStateAuthenticated extends PostgreSQLConnectionState {
       connection._processID = message.processID;
     } else if (message is _ReadyForQueryMessage) {
       if (message.state == _ReadyForQueryMessage.StateIdle) {
-        return new PostgreSQLConnectionStateIdle()
+        return new _PostgreSQLConnectionStateIdle()
           ..pendingOperation = pendingOperation;
       }
     }
@@ -167,24 +167,24 @@ class PostgreSQLConnectionStateAuthenticated extends PostgreSQLConnectionState {
   Ready/idle state
  */
 
-class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
-  PostgreSQLConnectionState queueQuery(_Query q) {
+class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
+  _PostgreSQLConnectionState queueQuery(_Query q) {
     connection._queryQueue.add(q);
 
     return processQuery(q);
   }
 
-  PostgreSQLConnectionState processQuery(_Query q) {
+  _PostgreSQLConnectionState processQuery(_Query q) {
     try {
       if (q.onlyReturnAffectedRowCount) {
         sendSimpleQuery(q);
 
-        return new PostgreSQLConnectionStateBusy(q);
+        return new _PostgreSQLConnectionStateBusy(q);
       }
 
       var cache = sendExtendedQuery(q);
 
-      return new PostgreSQLConnectionStateBusy(q, cacheToBuild: cache);
+      return new _PostgreSQLConnectionStateBusy(q, cacheToBuild: cache);
     } catch (e, st) {
       q.onComplete.completeError(e, st);
       connection._queryQueue.remove(q);
@@ -198,7 +198,7 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
     return this;
   }
 
-  PostgreSQLConnectionState onEnter() {
+  _PostgreSQLConnectionState onEnter() {
     // This is for waiters on 'open'. If not in the process of opening, then this just no-ops.
     completeWaitingEvent(null);
 
@@ -209,7 +209,7 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
     return this;
   }
 
-  PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
     return this;
   }
 
@@ -230,8 +230,8 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
     }
 
     String statementName = (q.allowReuse ? connection._generateNextQueryIdentifier() : "");
-    var formatIdentifiers = <PostgreSQLFormatIdentifier>[];
-    var replaceFunc = (PostgreSQLFormatIdentifier identifier, int index) {
+    var formatIdentifiers = <_PostgreSQLFormatIdentifier>[];
+    var replaceFunc = (_PostgreSQLFormatIdentifier identifier, int index) {
       formatIdentifiers.add(identifier);
 
       return "\$$index";
@@ -272,15 +272,11 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
     connection._socket.add(bytes);
   }
 
-  _ParameterValue encodeParameter(PostgreSQLFormatIdentifier identifier, Map<String, dynamic> substitutionValues) {
-    try {
-      if (identifier.typeCode != null) {
-        return new _ParameterValue.binary(substitutionValues[identifier.name], identifier.typeCode);
-      } else {
-        return new _ParameterValue.text(substitutionValues[identifier.name]);
-      }
-    } on PostgreSQLFormatException catch (e) {
-      throw new PostgreSQLException("Invalid parameter '${identifier.name}': ${e.message}");
+  _ParameterValue encodeParameter(_PostgreSQLFormatIdentifier identifier, Map<String, dynamic> substitutionValues) {
+    if (identifier.typeCode != null) {
+      return new _ParameterValue.binary(substitutionValues[identifier.name], identifier.typeCode);
+    } else {
+      return new _ParameterValue.text(substitutionValues[identifier.name]);
     }
   }
 }
@@ -289,27 +285,27 @@ class PostgreSQLConnectionStateIdle extends PostgreSQLConnectionState {
   Busy state, query in progress
  */
 
-class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
-  PostgreSQLConnectionStateBusy(this.query, {this.cacheToBuild: null});
+class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
+  _PostgreSQLConnectionStateBusy(this.query, {this.cacheToBuild: null});
 
   _Query query;
   _QueryCache cacheToBuild;
   PostgreSQLException returningException = null;
   int rowsAffected = 0;
 
-  PostgreSQLConnectionState onEnter() {
+  _PostgreSQLConnectionState onEnter() {
     pendingOperation = query.onComplete;
     return this;
   }
 
-  PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
+  _PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
     // If we get an error here, then we should eat the rest of the messages
     // and we are always confirmed to get a _ReadyForQueryMessage to finish up.
     // We should only report the error once that is done.
     var exception = new PostgreSQLException._(message.fields);
 
     if (exception.severity == PostgreSQLSeverity.fatal || exception.severity == PostgreSQLSeverity.panic) {
-      return new PostgreSQLConnectionStateClosed();
+      return new _PostgreSQLConnectionStateClosed();
     }
 
     returningException ??= exception;
@@ -317,7 +313,7 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
     return this;
   }
 
-  PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
     // We ignore and NoData, as they don't tell us anything we don't already know
     // or care about.
     if (message is _ReadyForQueryMessage) {
@@ -328,7 +324,7 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
           query.complete(rowsAffected);
         }
 
-        return new PostgreSQLConnectionStateIdle();
+        return new _PostgreSQLConnectionStateIdle();
       }
 
       // Hmm?
@@ -339,7 +335,7 @@ class PostgreSQLConnectionStateBusy extends PostgreSQLConnectionState {
 
       if (cacheToBuild != null && returningException == null) {
         cacheToBuild.fieldDescriptions = message.fieldDescriptions;
-        connection.cacheQuery(query, cacheToBuild);
+        connection._cacheQuery(query, cacheToBuild);
       }
     } else if (message is _DataRowMessage) {
       query.addRow(message.values);
