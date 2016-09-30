@@ -3,6 +3,7 @@ description: A library to connect and query PostgreSQL databases.
 version: 0.9.0
 author: stable|kernel
 homepage: https://github.com/stablekernel/dart-postgres
+documentation:
 
 environment:
   sdk: '>=1.19.0 <2.0.0'
