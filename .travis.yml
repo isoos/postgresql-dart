@@ -5,6 +5,8 @@ addons:
 services:
   - postgresql
 before_script:
+  - sudo cp pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
+  - sudo /etc/init.d/postgresql restart
   - psql -c 'create database dart_test;' -U postgres
   - psql -c 'create user dart with createdb;' -U postgres
   - psql -c "alter user dart with password 'dart';" -U postgres
