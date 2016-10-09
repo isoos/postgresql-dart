@@ -29,4 +29,4 @@ See the API documentation: https://www.dartdocs.org/documentation/postgres/lates
 
 Please file feature requests and bugs at the [issue tracker][tracker].
 
-[tracker]: http://github.com/stablekernel/dart-postgres/issues
+[tracker]: https://github.com/stablekernel/postgresql-dart/issues
