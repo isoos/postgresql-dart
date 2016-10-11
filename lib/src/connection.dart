@@ -1,10 +1,16 @@
 part of postgres;
 
+abstract class PostgreSQLExecutionContext {
+  Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null, bool allowReuse: true});
+  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null});
+  Future cancelTransaction({String reason: null});
+}
+
 /// Instances of this class connect to and communicate with a PostgreSQL database.
 ///
 /// The primary type of this library, a connection is responsible for connecting to databases and executing queries.
 /// A connection may be opened with [open] after it is created.
-class PostgreSQLConnection {
+class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
   /// Creates an instance of [PostgreSQLConnection].
   ///
@@ -61,7 +67,7 @@ class PostgreSQLConnection {
 
   Socket _socket;
   _MessageFramer _framer = new _MessageFramer();
-  List<_Query> _queryQueue = [];
+
   Map<String, _QueryCache> _reuseMap = {};
   int _reuseCounter = 0;
 
@@ -71,6 +77,15 @@ class PostgreSQLConnection {
 
   bool _hasConnectedPreviously = false;
   _PostgreSQLConnectionState _connectionState;
+
+  List<_Query> _queryQueue = [];
+  List<_TransactionProxy> _transactionQueue = [];
+  _Query get _pendingQuery {
+    if (_queryQueue.isEmpty) {
+      return null;
+    }
+    return _queryQueue.first;
+  }
 
   /// Establishes a connection with a PostgreSQL database.
   ///
@@ -95,13 +110,15 @@ class PostgreSQLConnection {
     _framer = new _MessageFramer();
     _socket.listen(_readData, onError: _handleSocketError, onDone: _handleSocketClosed);
 
-    _transitionToState(new _PostgreSQLConnectionStateSocketConnected());
+    var connectionComplete = new Completer();
+    _transitionToState(new _PostgreSQLConnectionStateSocketConnected(connectionComplete));
 
-    return await _connectionState.pendingOperation.future.timeout(new Duration(seconds: timeoutInSeconds), onTimeout: () {
+    return connectionComplete.future.timeout(new Duration(seconds: timeoutInSeconds), onTimeout: () {
       _connectionState = new _PostgreSQLConnectionStateClosed();
-      _socket.destroy();
+      _socket?.destroy();
 
-      throw new PostgreSQLException("Timed out trying to connect to database $host:$port/$databaseName.");
+      _cancelCurrentQueries();
+      throw new PostgreSQLException("Timed out trying to connect to database postgres://$host:$port/$databaseName.");
     });
   }
 
@@ -138,12 +155,16 @@ class PostgreSQLConnection {
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
   ///
   Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null, bool allowReuse: true}) async {
-    var query = new _Query<List<List<dynamic>>>(fmtString, substitutionValues)
-      ..allowReuse = allowReuse;
+    if (isClosed) {
+      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
+    }
 
-    _transitionToState(_connectionState.queueQuery(query));
+    var query = new _Query<List<List<dynamic>>>(fmtString, substitutionValues, this, null);
+    if (allowReuse) {
+      query.statementIdentifier = _reuseIdentifierForQuery(query);
+    }
 
-    return query.future;
+    return await _enqueue(query);
   }
 
   /// Executes a query on this connection.
@@ -154,26 +175,76 @@ class PostgreSQLConnection {
   /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
   /// or return rows.
   Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
-    var query = new _Query<int>(fmtString, substitutionValues);
-    query.onlyReturnAffectedRowCount = true;
+    if (isClosed) {
+      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
+    }
 
-    _transitionToState(_connectionState.queueQuery(query));
+    var query = new _Query<int>(fmtString, substitutionValues, this, null)
+      ..onlyReturnAffectedRowCount = true;
 
-    return query.future;
+    return await _enqueue(query);
+  }
+
+  /// Executes a series of queries inside a transaction on this connection.
+  ///
+  /// Queries executed inside [queryBlock] will be grouped together in a transaction. If a query fails
+  Future<dynamic> transaction(Future<dynamic> queryBlock(PostgreSQLExecutionContext connection)) async {
+    if (isClosed) {
+      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
+    }
+
+    var proxy = new _TransactionProxy(this, queryBlock);
+    _transactionQueue.add(proxy);
+    _transitionToState(_connectionState.awake());
+
+    return proxy.future;
+  }
+
+  Future cancelTransaction({String reason: null}) async {
+    // We aren't in a transaction if sent to PostgreSQLConnection instances, so this is a no-op.
+  }
+
+  ////////
+
+  Future<dynamic> _enqueue(_Query query) async {
+    _queryQueue.add(query);
+    _transitionToState(_connectionState.awake());
+
+    var result = null;
+    try {
+      result = await query.future;
+
+      _cacheQuery(query);
+      _queryQueue.remove(query);
+    } catch (e) {
+      _cacheQuery(query);
+      _queryQueue.remove(query);
+      rethrow;
+    }
+
+    return result;
   }
 
   void _cancelCurrentQueries() {
-    _queryQueue?.forEach((q) {
-      q.completeError(new PostgreSQLException("Connection closed or query cancelled."));
+    var queries = _queryQueue;
+    _queryQueue = [];
+
+    // We need to jump this to the next event so that the queries
+    // get the error and not the close message, since completeError is
+    // synchronous.
+    scheduleMicrotask(() {
+      var exception = new PostgreSQLException("Connection closed or query cancelled.");
+      queries?.forEach((q) {
+        q.completeError(exception);
+      });
     });
-    _queryQueue = null;
   }
 
-
   void _transitionToState(_PostgreSQLConnectionState newState) {
-    if (newState == _connectionState) {
+    if (identical(newState, _connectionState)) {
       return;
     }
+
     _connectionState.onExit();
 
     _connectionState = newState;
@@ -200,7 +271,7 @@ class PostgreSQLConnection {
         } else {
           _transitionToState(_connectionState.onMessage(msg));
         }
-      } on Exception catch (e) {
+      } catch (e, st) {
         _handleSocketError(e);
       }
     }
@@ -219,15 +290,39 @@ class PostgreSQLConnection {
     _cancelCurrentQueries();
   }
 
-  void _cacheQuery(_Query query, _QueryCache cache) {
-    _reuseMap[query.statement] = cache;
+  void _cacheQuery(_Query query) {
+    if (query.cache == null) {
+      return;
+    }
+
+    if (query.cache.isValid) {
+      _reuseMap[query.statement] = query.cache;
+    }
   }
 
-  String _generateNextQueryIdentifier() {
+  _QueryCache _cachedQuery(String statementIdentifier) {
+    if (statementIdentifier == null) {
+      return null;
+    }
+
+    return _reuseMap[statementIdentifier];
+  }
+
+  String _reuseIdentifierForQuery(_Query q) {
+    var existing = _reuseMap[q.statement];
+    if (existing != null) {
+      return existing.preparedStatementName;
+    }
+
     var string = "$_reuseCounter".padLeft(12, "0");
 
     _reuseCounter ++;
 
     return string;
   }
+}
+
+class _TransactionRollbackException implements Exception {
+  _TransactionRollbackException(this.reason);
+  String reason;
 }

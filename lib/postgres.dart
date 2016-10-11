@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
+part 'src/transaction_proxy.dart';
 part 'src/client_messages.dart';
 part 'src/server_messages.dart';
 part 'src/postgresql_codec.dart';

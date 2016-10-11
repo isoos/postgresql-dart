@@ -106,7 +106,7 @@ void main() {
     });
 
     test("Sending queries to opening connection triggers error", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
       conn.open();
 
       try {
@@ -117,8 +117,22 @@ void main() {
       }
     });
 
+    test("Starting transaction while opening connection triggers error", () async {
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      conn.open();
+
+      try {
+        await conn.transaction((ctx) async {
+          await ctx.execute("select 1");
+        });
+        expect(true, false);
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("connection is not open"));
+      }
+    });
+
     test("Invalid password reports error, conn is closed, disables conn", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "notdart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "notdart");
 
       try {
         await conn.open();
@@ -131,7 +145,7 @@ void main() {
     });
 
     test("A query error maintains connectivity, allows future queries", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
       await conn.open();
 
       await conn.execute("CREATE TEMPORARY TABLE t (i int unique)");
@@ -147,7 +161,7 @@ void main() {
     });
 
     test("A query error maintains connectivity, continues processing pending queries", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
       await conn.open();
 
       await conn.execute("CREATE TEMPORARY TABLE t (i int unique)");
@@ -173,13 +187,37 @@ void main() {
       expect(queue, isEmpty);
     });
 
+    test("A query error maintains connectivity, continues processing pending transactions", () async {
+      fail("NYI");
+//      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+//      await conn.open();
+//
+//      await conn.execute("CREATE TEMPORARY TABLE t (i int unique)");
+//      await conn.execute("INSERT INTO t (i) VALUES (1)");
+//
+//      var orderEnsurer = [];
+//      conn.execute("INSERT INTO t (i) VALUES (1)").catchError((err) {
+//        orderEnsurer.add(1);
+//        // ignore
+//      });
+//
+//      orderEnsurer.add(2);
+//      var res = await conn.transaction((ctx) async {
+//        return await conn.query("SELECT i FROM t");
+//      });
+//      orderEnsurer.add(3);
+//
+//      expect(res, [[1]]);
+//      expect(orderEnsurer, [2, 1, 3]);
+    });
+
     test("Building query throws error, connection continues processing pending queries", () async {
-      var conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
       await conn.open();
 
       // Make some async queries that'll exit the event loop, but then fail on a query that'll die early
       conn.execute("askdl").catchError((err, st) {});
-      conn.execute("askdl").catchError((err, st) {});
+      conn.execute("abdef").catchError((err, st) {});
       conn.execute("select @a").catchError((err, st) {});
 
       var futures = [
@@ -196,6 +234,7 @@ void main() {
       List<dynamic> queue = reflect(conn).getField(queueMirror.simpleName).reflectee;
       expect(queue, isEmpty);
     });
+
   });
 
   group("Network error situations", () {
@@ -208,6 +247,14 @@ void main() {
       } on SocketException {}
 
       await expectConnectionIsInvalid(conn);
+    });
+
+    test("Connection that times out throws appropriate error and cannot be reused", () async {
+      fail("NYI");
+    });
+
+    test("Connection that times out triggers future for pending queries", () async {
+      fail("NYI");
     });
   });
 }
