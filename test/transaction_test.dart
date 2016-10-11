@@ -84,7 +84,7 @@ void main() {
       var firstResults = await firstTransactionFuture;
       var secondResults = await secondTransactionFuture;
 
-      expect(orderEnsurer, [11, 21, 12, 13, 22, 23]);
+      expect(orderEnsurer, [11, 12, 13, 21, 22, 23]);
 
       expect(firstResults, [[1]]);
       expect(secondResults, [[1], [2]]);
@@ -93,7 +93,7 @@ void main() {
     test("May intentionally rollback transaction", () async {
       await conn.transaction((c) async {
         await c.query("INSERT INTO t (id) VALUES (1)");
-        await c.cancelTransaction();
+        c.cancelTransaction();
 
         await c.query("INSERT INTO t (id) VALUES (2)");
       });
@@ -103,7 +103,7 @@ void main() {
     });
 
     test("Intentional rollback on non-transaction has no impact", () async {
-      await conn.cancelTransaction();
+      conn.cancelTransaction();
       var result = await conn.query("SELECT id FROM t");
       expect(result, []);
     });
@@ -123,7 +123,7 @@ void main() {
       });
 
       await nextCompleter.future;
-      await conn.cancelTransaction();
+      conn.cancelTransaction();
 
       orderEnsurer.add(11);
       var results = await outResult;
@@ -137,6 +137,15 @@ void main() {
       // make sure that transaction contains all of the elements.
       fail("NYI");
     });
+
+    test("A transaction doesn't have to await on queries", () async {
+      fail("NYI");
+    });
+
+    test("A transaction doesn't have to await on cancel", () async {
+      fail("NYI");
+    });
+
   });
 
   // A transaction can fail for three reasons: query error, exception in code, or a rollback.
@@ -161,12 +170,13 @@ void main() {
           await c.query("INSERT INTO t (id) VALUES (1)");
           var oneRow = await c.query("SELECT id FROM t");
           expect(oneRow, [[1]]);
+
+          // This will error
           await c.query("INSERT INTO t (id) VALUES (1)");
         });
         expect(true, false);
       } on PostgreSQLException catch (e) {
-        print("$e");
-        expect(e.message, contains("constraint violation"));
+        expect(e.message, contains("unique constraint"));
       }
 
       var noRows = await conn.query("SELECT id FROM t");
@@ -180,15 +190,16 @@ void main() {
         orderEnsurer.add(1);
         await c.query("INSERT INTO t (id) VALUES (1)");
         orderEnsurer.add(2);
+
+        // This will error
         await c.query("INSERT INTO t (id) VALUES (1)");
-        orderEnsurer.add(3);
       }).catchError((e) => null);
 
       orderEnsurer.add(11);
       var result = await conn.query("SELECT id FROM t");
       orderEnsurer.add(12);
 
-      expect(orderEnsurer, [1, 11, 2, 3, 12]);
+      expect(orderEnsurer, [11, 1, 2, 12]);
       expect(result, []);
     });
 
@@ -199,17 +210,18 @@ void main() {
         orderEnsurer.add(1);
         await c.query("INSERT INTO t (id) VALUES (1)");
         orderEnsurer.add(2);
+
+        // This will error
         await c.query("INSERT INTO t (id) VALUES (1)");
-        orderEnsurer.add(3);
       }).catchError((e) => null);
 
       var result = await conn.transaction((ctx) async {
         orderEnsurer.add(11);
-        return await conn.query("SELECT id FROM t");
+        return await ctx.query("SELECT id FROM t");
       });
       orderEnsurer.add(12);
 
-      expect(orderEnsurer, [1, 11, 2, 3, 12]);
+      expect(orderEnsurer, [1, 2, 11, 12]);
       expect(result, []);
     });
 
@@ -217,15 +229,17 @@ void main() {
       try {
         await conn.transaction((c) async {
           await c.query("INSERT INTO t (id) VALUES (1)");
-          var oneRow = await conn.query("SELECT id FROM t");
+          var oneRow = await c.query("SELECT id FROM t");
           expect(oneRow, [[1]]);
+
+          // This will error
           await c.query("INSERT INTO t (id) VALUES (1)");
         });
         expect(true, false);
       } on PostgreSQLException catch (e) {}
 
       var result = await conn.transaction((ctx) async {
-        return await conn.query("SELECT id FROM t");
+        return await ctx.query("SELECT id FROM t");
       });
       expect(result, []);
     });
@@ -271,7 +285,7 @@ void main() {
       var result = await conn.query("SELECT id FROM t");
       orderEnsurer.add(12);
 
-      expect(orderEnsurer, [1, 11, 2, 12]);
+      expect(orderEnsurer, [11, 1, 2, 12]);
       expect(result, []);
     });
 
@@ -287,11 +301,11 @@ void main() {
 
       var result = await conn.transaction((ctx) async {
         orderEnsurer.add(11);
-        return await conn.query("SELECT id FROM t");
+        return await ctx.query("SELECT id FROM t");
       });
       orderEnsurer.add(12);
 
-      expect(orderEnsurer, [1, 11, 2, 12]);
+      expect(orderEnsurer, [1, 2, 11, 12]);
       expect(result, []);
     });
 
@@ -305,7 +319,7 @@ void main() {
       } on String {}
 
       var result = await conn.transaction((ctx) async {
-        return await conn.query("SELECT id FROM t");
+        return await ctx.query("SELECT id FROM t");
       });
       expect(result, []);
     });
@@ -325,14 +339,13 @@ void main() {
     });
 
     test("Is rolled back/executes later query", () async {
-      try {
-        await conn.transaction((c) async {
-          await c.query("INSERT INTO t (id) VALUES (1)");
-          await c.cancelTransaction();
-          await c.query("INSERT INTO t (id) VALUES (2)");
-        });
-        expect(true, false);
-      } on String {}
+      var result = await conn.transaction((c) async {
+        await c.query("INSERT INTO t (id) VALUES (1)");
+        c.cancelTransaction();
+        await c.query("INSERT INTO t (id) VALUES (2)");
+      });
+
+      expect(result is PostgreSQLRollback, true);
 
       var noRows = await conn.query("SELECT id FROM t");
       expect(noRows, []);
@@ -347,14 +360,13 @@ void main() {
         orderEnsurer.add(2);
         await c.cancelTransaction();
         await c.query("INSERT INTO t (id) VALUES (2)");
-        orderEnsurer.add(3);
       });
 
       orderEnsurer.add(11);
       var result = await conn.query("SELECT id FROM t");
       orderEnsurer.add(12);
 
-      expect(orderEnsurer, [1, 11, 2, 12]);
+      expect(orderEnsurer, [11, 1, 2, 12]);
       expect(result, []);
     });
 
@@ -368,30 +380,28 @@ void main() {
         await c.cancelTransaction();
         await c.query("INSERT INTO t (id) VALUES (2)");
         orderEnsurer.add(3);
-      }).catchError((e) => null);
+      });
 
       var result = await conn.transaction((ctx) async {
         orderEnsurer.add(11);
-        return await conn.query("SELECT id FROM t");
+        return await ctx.query("SELECT id FROM t");
       });
       orderEnsurer.add(12);
 
-      expect(orderEnsurer, [1, 11, 2, 12]);
+      expect(orderEnsurer, [1, 2, 11, 12]);
       expect(result, []);
     });
 
     test("Executes later transaction", () async {
-      try {
-        await conn.transaction((c) async {
-          await c.query("INSERT INTO t (id) VALUES (1)");
-          await c.cancelTransaction();
-          await c.query("INSERT INTO t (id) VALUES (2)");
-        });
-        expect(true, false);
-      } on String {}
+      var result = await conn.transaction((c) async {
+        await c.query("INSERT INTO t (id) VALUES (1)");
+        c.cancelTransaction();
+        await c.query("INSERT INTO t (id) VALUES (2)");
+      });
+      expect(result is PostgreSQLRollback, true);
 
-      var result = await conn.transaction((ctx) async {
-        return await conn.query("SELECT id FROM t");
+      result = await conn.transaction((ctx) async {
+        return await ctx.query("SELECT id FROM t");
       });
       expect(result, []);
     });

@@ -7,7 +7,9 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
     beginQuery = new _Query<int>("BEGIN", {}, connection, this)
       ..onlyReturnAffectedRowCount = true;
 
-    queryQueue.add(beginQuery);
+    beginQuery.onComplete.future
+        .then(startTransaction)
+        .catchError(handleTransactionQueryError);
   }
 
   _Query beginQuery;
@@ -25,19 +27,6 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
   PostgreSQLConnection connection;
   _TransactionQuerySignature executionBlock;
 
-  /*
-    try {
-      var results = await queryBlock(proxy);
-      await proxy.commit();
-
-      return results;
-    } on _TransactionRollbackException {
-      return null;
-    } finally {
-      _transactionQueue.remove(proxy);
-    }
-   */
-
   Future commit() async {
     await execute("COMMIT");
   }
@@ -47,13 +36,13 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
 
-    var query = new _Query<List<List<dynamic>>>(fmtString, substitutionValues, connection, this)
-      ..allowReuse = allowReuse;
+    var query = new _Query<List<List<dynamic>>>(fmtString, substitutionValues, connection, this);
 
-    queryQueue.add(query);
-    connection._transitionToState(connection._connectionState.awake());
+    if (allowReuse) {
+      query.statementIdentifier = connection._reuseIdentifierForQuery(query);
+    }
 
-    return query.future;
+    return await enqueue(query);
   }
 
   Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
@@ -64,44 +53,56 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
     var query = new _Query<int>(fmtString, substitutionValues, connection, this)
       ..onlyReturnAffectedRowCount = true;
 
-    queryQueue.add(query);
-
-    connection._transitionToState(connection._connectionState.awake());
-
-    return query.future;
+    return enqueue(query);
   }
 
-  Future cancelTransaction({String reason: null}) async {
-    await execute("ROLLBACK");
+  void cancelTransaction({String reason: null}) {
     throw new _TransactionRollbackException(reason);
   }
 
-  void cancelWithError(dynamic error) {
+  Future startTransaction(dynamic beginResults) async {
+    var result;
+    try {
+      result = await executionBlock(this);
+    } on _TransactionRollbackException catch (rollback) {
+      queryQueue = [];
+      await execute("ROLLBACK");
+      completer.complete(new PostgreSQLRollback(rollback.reason));
+      return;
+    } catch (e) {
+      queryQueue = [];
 
-  }
-
-  void finalizeQuery(_Query q) {
-    queryQueue.remove(q);
-
-    if (identical(q, beginQuery)) {
-      executionBlock(this)
-        .then(commitAndComplete)
-        .catchError((err, st) {
-          if (err is _TransactionRollbackException) {
-            connection._finalizeTransaction(this);
-            completer.complete(new PostgreSQLRollback(err.reason));
-          } else {
-            connection._finalizeTransaction(this);
-            completer.completeError(err, st);
-          }
-        });
+      await execute("ROLLBACK");
+      completer.completeError(e);
+      return;
     }
+
+    await execute("COMMIT");
+
+    completer.complete(result);
   }
 
-  Future commitAndComplete(dynamic returnValue) async {
-    await execute("COMMIT");
-    connection._finalizeTransaction(this);
-    completer.complete(returnValue);
+  Future handleTransactionQueryError(dynamic err) async {
+
+  }
+
+  Future<dynamic> enqueue(_Query query) async {
+    queryQueue.add(query);
+    connection._transitionToState(connection._connectionState.awake());
+
+    var result = null;
+    try {
+      result = await query.future;
+
+      connection._cacheQuery(query);
+      queryQueue.remove(query);
+    } catch (e) {
+      connection._cacheQuery(query);
+      queryQueue.remove(query);
+      rethrow;
+    }
+
+    return result;
   }
 }
 

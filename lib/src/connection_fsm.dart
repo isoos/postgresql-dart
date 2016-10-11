@@ -229,6 +229,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionState onMessage(_ServerMessage message) {
     // We ignore NoData, as it doesn't tell us anything we don't already know
     // or care about.
+
     //print("(${query.statement}) -> $message");
 
     if (message is _ReadyForQueryMessage) {
@@ -242,17 +243,16 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
         return new _PostgreSQLConnectionStateIdle();
       } else if (message.state == _ReadyForQueryMessage.StateTransaction) {
         if (returningException != null) {
-          // This must cancel the transaction
           query.completeError(returningException);
         } else {
           query.complete(rowsAffected);
         }
 
-        return new _PostgreSQLConnectionStateIdle();
+        return new _PostgreSQLConnectionStateReadyInTransaction(query.transaction);
       } else if (message.state == _ReadyForQueryMessage.StateTransactionError) {
-        // This should cancel the transaction
+        // This should cancel the transaction, we may have to send a commit here
         query.completeError(returningException);
-        return new _PostgreSQLConnectionStateIdle();
+        return new _PostgreSQLConnectionStateTransactionFailure(query.transaction);
       }
     } else if (message is _CommandCompleteMessage) {
       rowsAffected = message.rowsAffected;
@@ -271,6 +271,62 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     return this;
   }
 }
+
+/* Idle Transaction State */
+
+class _PostgreSQLConnectionStateReadyInTransaction extends _PostgreSQLConnectionState {
+  _PostgreSQLConnectionStateReadyInTransaction(this.transaction);
+
+  _TransactionProxy transaction;
+
+  _PostgreSQLConnectionState onEnter() {
+    return awake();
+  }
+
+  _PostgreSQLConnectionState awake() {
+    var pendingQuery = transaction.pendingQuery;
+    if (pendingQuery != null) {
+      return processQuery(pendingQuery);
+    }
+
+    return this;
+  }
+
+  _PostgreSQLConnectionState processQuery(_Query q) {
+    try {
+      if (q.onlyReturnAffectedRowCount) {
+        q.sendSimple(connection._socket);
+        return new _PostgreSQLConnectionStateBusy(q);
+      }
+
+      var cached = connection._cachedQuery(q.statement);
+      q.sendExtended(connection._socket, cacheQuery: cached);
+
+      return new _PostgreSQLConnectionStateBusy(q);
+    } catch (e) {
+      scheduleMicrotask(() {
+        q.completeError(e);
+        connection._transitionToState(new _PostgreSQLConnectionStateIdle());
+      });
+
+      return new _PostgreSQLConnectionStateDeferredFailure();
+    }
+  }
+}
+
+/*
+  Transaction error state
+ */
+
+class _PostgreSQLConnectionStateTransactionFailure extends _PostgreSQLConnectionState {
+  _PostgreSQLConnectionStateTransactionFailure(this.transaction);
+  _TransactionProxy transaction;
+
+  _PostgreSQLConnectionState awake() {
+    return new _PostgreSQLConnectionStateReadyInTransaction(transaction);
+  }
+}
+
 
 /*
   Hack for deferred error

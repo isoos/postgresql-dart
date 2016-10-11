@@ -3,7 +3,7 @@ part of postgres;
 abstract class PostgreSQLExecutionContext {
   Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null, bool allowReuse: true});
   Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null});
-  Future cancelTransaction({String reason: null});
+  void cancelTransaction({String reason: null});
 }
 
 /// Instances of this class connect to and communicate with a PostgreSQL database.
@@ -79,7 +79,6 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   _PostgreSQLConnectionState _connectionState;
 
   List<_Query> _queryQueue = [];
-  List<_TransactionProxy> _transactionQueue = [];
   _Query get _pendingQuery {
     if (_queryQueue.isEmpty) {
       return null;
@@ -194,13 +193,13 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     }
 
     var proxy = new _TransactionProxy(this, queryBlock);
-    _transactionQueue.add(proxy);
-    _transitionToState(_connectionState.awake());
 
-    return proxy.future;
+    await _enqueue(proxy.beginQuery);
+
+    return await proxy.completer.future;
   }
 
-  Future cancelTransaction({String reason: null}) async {
+  void cancelTransaction({String reason: null}) {
     // We aren't in a transaction if sent to PostgreSQLConnection instances, so this is a no-op.
   }
 
