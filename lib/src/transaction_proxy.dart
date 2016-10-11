@@ -67,7 +67,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
     } on _TransactionRollbackException catch (rollback) {
       queryQueue = [];
       await execute("ROLLBACK");
-      completer.complete(new PostgreSQLRollback(rollback.reason));
+      completer.complete(new PostgreSQLRollback._(rollback.reason));
       return;
     } catch (e) {
       queryQueue = [];
@@ -106,8 +106,14 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
   }
 }
 
+/// Represents a rollback from a transaction.
+///
+/// If a transaction is cancelled using [PostgreSQLExecutionContext.cancelTransaction], the value of the [Future]
+/// returned from [PostgreSQLConnection.transaction] will be an instance of this type. [reason] will be the [String]
+/// value of the optional argument to [PostgreSQLExecutionContext.cancelTransaction].
 class PostgreSQLRollback {
-  PostgreSQLRollback(this.reason);
+  PostgreSQLRollback._(this.reason);
 
+  /// The reason the transaction was cancelled.
   String reason;
 }

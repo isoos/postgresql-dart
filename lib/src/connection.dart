@@ -1,8 +1,41 @@
 part of postgres;
 
 abstract class PostgreSQLExecutionContext {
+  /// Executes a query on this context.
+  ///
+  /// This method sends the query described by [fmtString] to the database and returns a [Future] whose value returned rows from the query after the query completes.
+  /// The format string may contain parameters that are provided in [substitutionValues]. Parameters are prefixed with the '@' character. Keys to replace the parameters
+  /// do not include the '@' character. For example:
+  ///
+  ///         connection.query("SELECT * FROM table WHERE id = @idParam", {"idParam" : 2});
+  ///
+  /// The type of the value is inferred by default, but can be made more specific by adding ':type" to the parameter pattern in the format string. The possible values
+  /// are declared as static variables in [PostgreSQLCodec] (e.g., [PostgreSQLCodec.TypeInt4]). For example:
+  ///
+  ///         connection.query("SELECT * FROM table WHERE id = @idParam:int4", {"idParam" : 2});
+  ///
+  /// You may also use [PostgreSQLFormat.id] to create parameter patterns.
+  ///
+  /// If successful, the returned [Future] completes with a [List] of rows. Each is row is represented by a [List] of column values for that row that were returned by the query.
+  ///
+  /// By default, instances of this class will reuse queries. This allows significantly more efficient transport to and from the database. You do not have to do
+  /// anything to opt in to this behavior, this connection will track the necessary information required to reuse queries without intervention. (The [fmtString] is
+  /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
   Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null, bool allowReuse: true});
+
+  /// Executes a query on this context.
+  ///
+  /// This method sends a SQL string to the database this instance is connected to. Parameters can be provided in [fmtString], see [query] for more details.
+  ///
+  /// This method returns the number of rows affected and no additional information. This method uses the least efficient and less secure command
+  /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
+  /// or return rows.
   Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null});
+
+  /// Cancels a transaction on this context.
+  ///
+  /// If this context is an instance of [PostgreSQLConnection], this method has no effect. If the context is a transaction context (passed as the argument
+  /// to [PostgreSQLConnection.transaction]), this will rollback the transaction.
   void cancelTransaction({String reason: null});
 }
 
@@ -186,7 +219,31 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
   /// Executes a series of queries inside a transaction on this connection.
   ///
-  /// Queries executed inside [queryBlock] will be grouped together in a transaction. If a query fails
+  /// Queries executed inside [queryBlock] will be grouped together in a transaction. The return value of the [queryBlock]
+  /// will be the wrapped in the [Future] returned by this method if the transaction completes successfully.
+  ///
+  /// If a query or execution fails - for any reason - within a transaction block,
+  /// the transaction will fail and previous statements within the transaction will not be committed. Subsequent  The [Future]
+  /// returned from this method will be completed with the error from the first failing query.
+  ///
+  /// Do not catch exceptions within a transaction block, as it will prevent the transaction exception handler from fulfilling a
+  /// transaction.
+  ///
+  /// Transactions may be cancelled by issuing [PostgreSQLExecutionContext.cancelTransaction]
+  /// within the transaction. This will cause this method to return a [Future] with a value of [PostgreSQLRollback]. This method does not throw an exception
+  /// if the transaction is cancelled in this way.
+  ///
+  /// All queries within a transaction block must be executed using the [PostgreSQLExecutionContext] passed into the [queryBlock].
+  /// You must not issue queries to the receiver of this method from within the [queryBlock], otherwise the connection will deadlock.
+  ///
+  /// Queries within a transaction may be executed asynchronously or be awaited on. The order is still guaranteed. Example:
+  ///
+  ///         connection.transaction((ctx) {
+  ///           var rows = await ctx.query("SELECT id FROM t);
+  ///           if (!rows.contains([2])) {
+  ///             ctx.query("INSERT INTO t (id) VALUES (2)");
+  ///           }
+  ///         });
   Future<dynamic> transaction(Future<dynamic> queryBlock(PostgreSQLExecutionContext connection)) async {
     if (isClosed) {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");

@@ -29,7 +29,7 @@ Execute queries in a transaction:
 await connection.transaction((ctx) async {
     var result = await ctx.query("SELECT id FROM table");
     await ctx.query("INSERT INTO table (id) VALUES (@a:int4)", {
-        "a" : result.last[0]+ 1
+        "a" : result.last[0] + 1
     });
 });
 ```
