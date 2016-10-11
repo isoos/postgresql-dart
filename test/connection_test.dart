@@ -238,6 +238,14 @@ void main() {
   });
 
   group("Network error situations", () {
+    ServerSocket serverSocket = null;
+    Socket socket = null;
+
+    tearDown(() async {
+      await serverSocket.close();
+      await socket?.close();
+    });
+
     test("Socket fails to connect reports error, disables connection for future use", () async {
       var conn = new PostgreSQLConnection("localhost", 5431, "dart_test");
 
@@ -250,11 +258,47 @@ void main() {
     });
 
     test("Connection that times out throws appropriate error and cannot be reused", () async {
-      fail("NYI");
+      serverSocket = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 5433);
+      serverSocket.listen((s) {
+        socket = s;
+        // Don't respond on purpose
+        s.listen((bytes) {});
+      });
+
+      var conn = new PostgreSQLConnection("localhost", 5433, "dart_test", timeoutInSeconds: 2);
+
+      try {
+        await conn.open();
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("Timed out trying to connect"));
+      }
+
+      await expectConnectionIsInvalid(conn);
     });
 
     test("Connection that times out triggers future for pending queries", () async {
-      fail("NYI");
+      var openCompleter = new Completer();
+      serverSocket = await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 5433);
+      serverSocket.listen((s) {
+        socket = s;
+        // Don't respond on purpose
+        s.listen((bytes) {});
+        new Future.delayed(new Duration(milliseconds: 100), () {
+          openCompleter.complete();
+        });
+      });
+
+      var conn = new PostgreSQLConnection("localhost", 5433, "dart_test", timeoutInSeconds: 2);
+      conn.open().catchError((e) {});
+
+      await openCompleter.future;
+
+      try {
+        await conn.execute("select 1");
+        expect(true, false);
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("closed or query cancelled"));
+      }
     });
   });
 }
