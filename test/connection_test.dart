@@ -188,27 +188,27 @@ void main() {
     });
 
     test("A query error maintains connectivity, continues processing pending transactions", () async {
-      fail("NYI");
-//      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
-//      await conn.open();
-//
-//      await conn.execute("CREATE TEMPORARY TABLE t (i int unique)");
-//      await conn.execute("INSERT INTO t (i) VALUES (1)");
-//
-//      var orderEnsurer = [];
-//      conn.execute("INSERT INTO t (i) VALUES (1)").catchError((err) {
-//        orderEnsurer.add(1);
-//        // ignore
-//      });
-//
-//      orderEnsurer.add(2);
-//      var res = await conn.transaction((ctx) async {
-//        return await conn.query("SELECT i FROM t");
-//      });
-//      orderEnsurer.add(3);
-//
-//      expect(res, [[1]]);
-//      expect(orderEnsurer, [2, 1, 3]);
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "darttrust");
+      await conn.open();
+
+      await conn.execute("CREATE TEMPORARY TABLE t (i int unique)");
+      await conn.execute("INSERT INTO t (i) VALUES (1)");
+
+      var orderEnsurer = [];
+      conn.execute("INSERT INTO t (i) VALUES (1)").catchError((err) {
+        orderEnsurer.add(1);
+        // ignore
+      });
+
+      orderEnsurer.add(2);
+      var res = await conn.transaction((ctx) async {
+        orderEnsurer.add(3);
+        return await ctx.query("SELECT i FROM t");
+      });
+      orderEnsurer.add(4);
+
+      expect(res, [[1]]);
+      expect(orderEnsurer, [2, 1, 3, 4]);
     });
 
     test("Building query throws error, connection continues processing pending queries", () async {
@@ -242,7 +242,7 @@ void main() {
     Socket socket = null;
 
     tearDown(() async {
-      await serverSocket.close();
+      await serverSocket?.close();
       await socket?.close();
     });
 

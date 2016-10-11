@@ -135,17 +135,38 @@ void main() {
     test("A transaction does not preempt pending queries", () async {
       // Add a few insert queries but don't await, then do a transaction that does a fetch,
       // make sure that transaction contains all of the elements.
-      fail("NYI");
+      conn.execute("INSERT INTO t (id) VALUES (1)");
+      conn.execute("INSERT INTO t (id) VALUES (2)");
+      conn.execute("INSERT INTO t (id) VALUES (3)");
+
+      var results = await conn.transaction((ctx) async {
+        return await ctx.query("SELECT id FROM t");
+      });
+      expect(results, [[1], [2], [3]]);
     });
 
     test("A transaction doesn't have to await on queries", () async {
-      fail("NYI");
+      conn.transaction((ctx) async {
+        ctx.query("INSERT INTO t (id) VALUES (1)");
+        ctx.query("INSERT INTO t (id) VALUES (2)");
+        ctx.query("INSERT INTO t (id) VALUES (3)");
+      });
+
+      var total = await conn.query("SELECT id FROM t");
+      expect(total, [[1], [2], [3]]);
     });
 
-    test("A transaction doesn't have to await on cancel", () async {
-      fail("NYI");
-    });
+    test("A transaction with a rollback and non-await queries rolls back transaction", () async {
+      conn.transaction((ctx) async {
+        ctx.query("INSERT INTO t (id) VALUES (1)");
+        ctx.query("INSERT INTO t (id) VALUES (2)");
+        ctx.cancelTransaction();
+        ctx.query("INSERT INTO t (id) VALUES (3)");
+      });
 
+      var total = await conn.query("SELECT id FROM t");
+      expect(total, []);
+    });
   });
 
   // A transaction can fail for three reasons: query error, exception in code, or a rollback.
