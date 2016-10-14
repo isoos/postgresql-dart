@@ -1,18 +1,113 @@
 part of postgres;
 
 class _Query<T> {
-  _Query(this.statement, this.substitutionValues);
+  _Query(this.statement, this.substitutionValues, this.connection, this.transaction);
 
   bool onlyReturnAffectedRowCount = false;
-  bool allowReuse = false;
-  String statement;
-  Map<String, dynamic> substitutionValues;
-  Completer<T> onComplete = new Completer();
+  String statementIdentifier;
+  Completer<T> onComplete = new Completer.sync();
   Future<T> get future => onComplete.future;
 
+  final String statement;
+  final Map<String, dynamic> substitutionValues;
+  final _TransactionProxy transaction;
+  final PostgreSQLConnection connection;
+
   List<int> specifiedParameterTypeCodes;
-  List<_FieldDescription> fieldDescriptions;
+
+  List<_FieldDescription> _fieldDescriptions;
+  List<_FieldDescription> get fieldDescriptions => _fieldDescriptions;
+  void set fieldDescriptions(List<_FieldDescription> fds) {
+    _fieldDescriptions = fds;
+    cache?.fieldDescriptions = fds;
+  }
+
   List<Iterable<dynamic>> rows = [];
+
+  _QueryCache cache;
+
+  void sendSimple(Socket socket) {
+    var sqlString = PostgreSQLFormat.substitute(statement, substitutionValues);
+    var queryMessage = new _QueryMessage(sqlString);
+
+    socket.add(queryMessage.asBytes());
+  }
+
+  void sendExtended(Socket socket, {_QueryCache cacheQuery: null}) {
+    if (cacheQuery != null) {
+      fieldDescriptions = cacheQuery.fieldDescriptions;
+      sendCachedQuery(socket, cacheQuery, substitutionValues);
+
+      return;
+    }
+
+    String statementName = (statementIdentifier ?? "");
+    var formatIdentifiers = <_PostgreSQLFormatIdentifier>[];
+    var sqlString = PostgreSQLFormat.substitute(statement, substitutionValues, replace: (_PostgreSQLFormatIdentifier identifier, int index) {
+      formatIdentifiers.add(identifier);
+
+      return "\$$index";
+    });
+
+    specifiedParameterTypeCodes = formatIdentifiers
+        .map((i) => i.typeCode)
+        .toList();
+
+    var parameterList = formatIdentifiers
+        .map((id) => encodeParameter(id, substitutionValues))
+        .toList();
+
+    var messages = [
+      new _ParseMessage(sqlString, statementName: statementName),
+      new _DescribeMessage(statementName: statementName),
+      new _BindMessage(parameterList, statementName: statementName),
+      new _ExecuteMessage(),
+      new _SyncMessage()
+    ];
+
+    if (statementIdentifier != null) {
+      cache = new _QueryCache(statementIdentifier, formatIdentifiers);
+    }
+
+    socket.add(_ClientMessage.aggregateBytes(messages));
+  }
+
+  void sendCachedQuery(Socket socket, _QueryCache cacheQuery, Map<String, dynamic> substitutionValues) {
+    var statementName = cacheQuery.preparedStatementName;
+    var parameterList = cacheQuery.orderedParameters
+        .map((identifier) => encodeParameter(identifier, substitutionValues))
+        .toList();
+
+    var bytes = _ClientMessage.aggregateBytes([
+      new _BindMessage(parameterList, statementName: statementName),
+      new _ExecuteMessage(),
+      new _SyncMessage()
+    ]);
+
+    socket.add(bytes);
+  }
+
+  _ParameterValue encodeParameter(_PostgreSQLFormatIdentifier identifier, Map<String, dynamic> substitutionValues) {
+    if (identifier.typeCode != null) {
+      return new _ParameterValue.binary(substitutionValues[identifier.name], identifier.typeCode);
+    } else {
+      return new _ParameterValue.text(substitutionValues[identifier.name]);
+    }
+  }
+
+  PostgreSQLException validateParameters(List<int> parameterTypeIDs) {
+    var actualParameterTypeCodeIterator = parameterTypeIDs.iterator;
+    var parametersAreMismatched = specifiedParameterTypeCodes.map((specifiedTypeCode) {
+      actualParameterTypeCodeIterator.moveNext();
+      return actualParameterTypeCodeIterator.current == (specifiedTypeCode ?? actualParameterTypeCodeIterator.current);
+    }).any((v) => v == false);
+
+    if (parametersAreMismatched) {
+      return new PostgreSQLException("Specified parameter types do not match column parameter types in query ${statement}");
+    }
+
+    return null;
+  }
 
   void addRow(List<ByteData> rawRowData) {
     if (onlyReturnAffectedRowCount) {
@@ -30,10 +125,6 @@ class _Query<T> {
   }
 
   void complete(int rowsAffected) {
-    if (onComplete.isCompleted) {
-      return;
-    }
-
     if (onlyReturnAffectedRowCount) {
       onComplete.complete(rowsAffected);
       return;
@@ -43,10 +134,6 @@ class _Query<T> {
   }
 
   void completeError(dynamic error) {
-    if (onComplete.isCompleted) {
-      return;
-    }
-
     onComplete.completeError(error);
   }
 
@@ -59,6 +146,11 @@ class _QueryCache {
   String preparedStatementName;
   List<_PostgreSQLFormatIdentifier> orderedParameters;
   List<_FieldDescription> fieldDescriptions;
+  bool get isValid {
+    return preparedStatementName != null
+        && orderedParameters != null
+        && fieldDescriptions != null;
+  }
 }
 
 class _ParameterValue {
