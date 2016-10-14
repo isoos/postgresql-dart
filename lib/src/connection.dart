@@ -3,7 +3,7 @@ part of postgres;
 abstract class PostgreSQLExecutionContext {
   /// Executes a query on this context.
   ///
-  /// This method sends the query described by [fmtString] to the database and returns a [Future] whose value returned rows from the query after the query completes.
+  /// This method sends the query described by [fmtString] to the database and returns a [Future] whose value is the returned rows from the query after the query completes.
   /// The format string may contain parameters that are provided in [substitutionValues]. Parameters are prefixed with the '@' character. Keys to replace the parameters
   /// do not include the '@' character. For example:
   ///
@@ -223,7 +223,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// will be the wrapped in the [Future] returned by this method if the transaction completes successfully.
   ///
   /// If a query or execution fails - for any reason - within a transaction block,
-  /// the transaction will fail and previous statements within the transaction will not be committed. Subsequent  The [Future]
+  /// the transaction will fail and previous statements within the transaction will not be committed. The [Future]
   /// returned from this method will be completed with the error from the first failing query.
   ///
   /// Do not catch exceptions within a transaction block, as it will prevent the transaction exception handler from fulfilling a
