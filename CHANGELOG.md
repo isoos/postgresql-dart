@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.2
+
+- Bump for documentation
+
 ## 0.9.1
 
 - Added transactions: PostgreSQLConnection.transaction and PostgreSQLConnection.cancelTransaction.
