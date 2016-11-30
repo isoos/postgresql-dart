@@ -163,7 +163,7 @@ class _ParameterValue {
   _ParameterValue.text(dynamic value) {
     isBinary = false;
     if (value != null) {
-      bytes = new Uint8List.fromList(PostgreSQLCodec.encode(value, escapeStrings: false).codeUnits);
+      bytes = UTF8.encode(PostgreSQLCodec.encode(value, escapeStrings: false));
     }
     length = bytes?.length;
   }

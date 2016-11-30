@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.3
+
+- Fixed issue with UTF8 encoding
+
 ## 0.9.2
 
 - Bump for documentation

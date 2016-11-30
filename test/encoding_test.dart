@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 import 'dart:typed_data';
@@ -45,31 +46,31 @@ void main() {
 
   test("Escape strings", () {
     //                                                       '   b   o    b   '
-    expect(PostgreSQLCodec.encode('bob').codeUnits, equals([39, 98, 111, 98, 39]));
+    expect(UTF8.encode(PostgreSQLCodec.encode('bob')), equals([39, 98, 111, 98, 39]));
 
     //                                                         '   b   o   \n   b   '
-    expect(PostgreSQLCodec.encode('bo\nb').codeUnits, equals([39, 98, 111, 10, 98, 39]));
+    expect(UTF8.encode(PostgreSQLCodec.encode('bo\nb')), equals([39, 98, 111, 10, 98, 39]));
 
     //                                                         '   b   o   \r   b   '
-    expect(PostgreSQLCodec.encode('bo\rb').codeUnits, equals([39, 98, 111, 13, 98, 39]));
+    expect(UTF8.encode(PostgreSQLCodec.encode('bo\rb')), equals([39, 98, 111, 13, 98, 39]));
 
     //                                                         '   b   o  \b   b   '
-    expect(PostgreSQLCodec.encode('bo\bb').codeUnits, equals([39, 98, 111, 8, 98, 39]));
+    expect(UTF8.encode(PostgreSQLCodec.encode('bo\bb')), equals([39, 98, 111, 8, 98, 39]));
 
     //                                                     '   '   '   '
-    expect(PostgreSQLCodec.encode("'").codeUnits, equals([39, 39, 39, 39]));
+    expect(UTF8.encode(PostgreSQLCodec.encode("'")), equals([39, 39, 39, 39]));
 
     //                                                      '   '   '   '   '   '
-    expect(PostgreSQLCodec.encode("''").codeUnits, equals([39, 39, 39, 39, 39, 39]));
+    expect(UTF8.encode(PostgreSQLCodec.encode("''")), equals([39, 39, 39, 39, 39, 39]));
 
     //                                                       '   '   '   '   '   '
-    expect(PostgreSQLCodec.encode("\''").codeUnits, equals([39, 39, 39, 39, 39, 39]));
+    expect(UTF8.encode(PostgreSQLCodec.encode("\''")), equals([39, 39, 39, 39, 39, 39]));
 
     //                                                       sp   E   '   \   \   '   '   '   '   '
-    expect(PostgreSQLCodec.encode("\\''").codeUnits, equals([32, 69, 39, 92, 92, 39, 39, 39, 39, 39]));
+    expect(UTF8.encode(PostgreSQLCodec.encode("\\''")), equals([32, 69, 39, 92, 92, 39, 39, 39, 39, 39]));
 
     //                                                      sp   E   '   \   \   '   '   '
-    expect(PostgreSQLCodec.encode("\\'").codeUnits, equals([32, 69, 39, 92, 92, 39, 39, 39]));
+    expect(UTF8.encode(PostgreSQLCodec.encode("\\'")), equals([32, 69, 39, 92, 92, 39, 39, 39]));
   });
 
   test("Encode DateTime", () {

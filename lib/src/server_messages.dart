@@ -60,8 +60,8 @@ class _ParameterStatusMessage extends _ServerMessage {
   String value;
 
   void readBytes(Uint8List bytes) {
-    name = new String.fromCharCodes(bytes.sublist(0, bytes.indexOf(0)));
-    value = new String.fromCharCodes(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
+    name = UTF8.decode(bytes.sublist(0, bytes.indexOf(0)));
+    value = UTF8.decode(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
   }
 
   String toString() => "Parameter Message: $name $value";
@@ -75,7 +75,7 @@ class _ReadyForQueryMessage extends _ServerMessage {
   String state;
 
   void readBytes(Uint8List bytes) {
-    state = new String.fromCharCodes(bytes);
+    state = UTF8.decode(bytes);
   }
 
   String toString() => "Ready Message: $state";
@@ -144,7 +144,7 @@ class _CommandCompleteMessage extends _ServerMessage {
 
   static RegExp identifierExpression = new RegExp(r"[A-Z ]*");
   void readBytes(Uint8List bytes) {
-    var str = new String.fromCharCodes(bytes.sublist(0, bytes.length - 1));
+    var str = UTF8.decode(bytes.sublist(0, bytes.length - 1));
 
     var match = identifierExpression.firstMatch(str);
     if (match.end < str.length) {

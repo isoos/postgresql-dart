@@ -130,7 +130,7 @@ abstract class PostgreSQLCodec {
       }
 
       String val = value;
-      outBuffer = new Uint8List.fromList(val.codeUnits);
+      outBuffer = UTF8.encode(val);
     } else if (postgresType == TypeFloat4) {
       if (value is! double) {
         throw new FormatException("Invalid type for parameter value. Expected: double Got: ${value.runtimeType}");
@@ -207,7 +207,7 @@ abstract class PostgreSQLCodec {
     if (quoteCount == 0 && backslashCount == 0) {
       buf.write(text);
     } else {
-      text.codeUnits.forEach((i) {
+      UTF8.encode(text).forEach((i) {
         if (i == quoteCodeUnit || i == backslashCodeUnit) {
           buf.writeCharCode(i);
           buf.writeCharCode(i);
@@ -354,7 +354,7 @@ abstract class PostgreSQLCodec {
         return new DateTime.utc(2000).add(new Duration(days: value.getInt32(0)));
 
       default:
-        return new String.fromCharCodes(value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));
+        return UTF8.decode(value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));
     }
   }
 }

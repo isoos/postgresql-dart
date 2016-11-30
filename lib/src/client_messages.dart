@@ -17,7 +17,7 @@ abstract class _ClientMessage {
   int get length;
 
   int applyStringToBuffer(String string, ByteData buffer, int offset) {
-    var postStringOffset = string.codeUnits.fold(offset, (idx, unit) {
+    var postStringOffset = UTF8.encode(string).fold(offset, (idx, unit) {
       buffer.setInt8(idx, unit);
       return idx + 1;
     });

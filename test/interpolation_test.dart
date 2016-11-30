@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
@@ -36,6 +37,6 @@ void main() {
     var result = PostgreSQLFormat.substitute("@id:text @foo", {"id" : "1';select", "foo" : "3\\4"});
 
     //                         '  1  '  '  ;  s   e   l   e   c  t   '  sp  sp  E  '  3  \  \  4  '
-    expect(result.codeUnits, [39,49,39,39,59,115,101,108,101,99,116,39, 32, 32,69,39,51,92,92,52,39]);
+    expect(UTF8.encode(result), [39,49,39,39,59,115,101,108,101,99,116,39, 32, 32,69,39,51,92,92,52,39]);
   });
 }

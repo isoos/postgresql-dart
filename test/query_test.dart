@@ -17,6 +17,21 @@ void main() {
       await connection.close();
     });
 
+    test("UTF8 strings", () async {
+      var result = await connection.query("INSERT INTO t (t) values "
+          "(${PostgreSQLFormat.id("t", type: PostgreSQLDataType.text)})"
+          "returning t",
+          substitutionValues: {
+            "t" : "°∆",
+          });
+
+      var expectedRow = ["°∆"];
+      expect(result, [expectedRow]);
+
+      result = await connection.query("select t from t");
+      expect(result, [expectedRow]);
+    });
+
     test("Query without specifying types", () async {
       var result = await connection.query("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) values "
           "(${PostgreSQLFormat.id("i")},"
