@@ -52,7 +52,8 @@ abstract class PostgreSQLCodec {
   static const int TypeTimestamp = 1114;
   static const int TypeTimestampTZ = 1184;
 
-  static String encode(dynamic value, {PostgreSQLDataType dataType: null, bool escapeStrings: true}) {
+  static String encode(dynamic value,
+      {PostgreSQLDataType dataType: null, bool escapeStrings: true}) {
     if (value == null) {
       return "null";
     }
@@ -94,7 +95,9 @@ abstract class PostgreSQLCodec {
 
     if (postgresType == TypeBool) {
       if (value is! bool) {
-        throw new FormatException("Invalid type for parameter value. Expected: bool Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: bool Got: ${value
+                .runtimeType}");
       }
 
       var bd = new ByteData(1);
@@ -102,7 +105,9 @@ abstract class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeInt8) {
       if (value is! int) {
-        throw new FormatException("Invalid type for parameter value. Expected: int Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: int Got: ${value
+                .runtimeType}");
       }
 
       var bd = new ByteData(8);
@@ -110,7 +115,9 @@ abstract class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeInt2) {
       if (value is! int) {
-        throw new FormatException("Invalid type for parameter value. Expected: int Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: int Got: ${value
+                .runtimeType}");
       }
 
       var bd = new ByteData(2);
@@ -118,7 +125,9 @@ abstract class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeInt4) {
       if (value is! int) {
-        throw new FormatException("Invalid type for parameter value. Expected: int Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: int Got: ${value
+                .runtimeType}");
       }
 
       var bd = new ByteData(4);
@@ -126,14 +135,18 @@ abstract class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeText) {
       if (value is! String) {
-        throw new FormatException("Invalid type for parameter value. Expected: String Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: String Got: ${value
+                .runtimeType}");
       }
 
       String val = value;
       outBuffer = UTF8.encode(val);
     } else if (postgresType == TypeFloat4) {
       if (value is! double) {
-        throw new FormatException("Invalid type for parameter value. Expected: double Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: double Got: ${value
+                .runtimeType}");
       }
 
       var bd = new ByteData(4);
@@ -141,7 +154,9 @@ abstract class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeFloat8) {
       if (value is! double) {
-        throw new FormatException("Invalid type for parameter value. Expected: double Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: double Got: ${value
+                .runtimeType}");
       }
 
       var bd = new ByteData(8);
@@ -149,7 +164,9 @@ abstract class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeDate) {
       if (value is! DateTime) {
-        throw new FormatException("Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: DateTime Got: ${value
+                .runtimeType}");
       }
 
       var bd = new ByteData(4);
@@ -157,7 +174,9 @@ abstract class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeTimestamp) {
       if (value is! DateTime) {
-        throw new FormatException("Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: DateTime Got: ${value
+                .runtimeType}");
       }
 
       var bd = new ByteData(8);
@@ -166,11 +185,14 @@ abstract class PostgreSQLCodec {
       outBuffer = bd.buffer.asUint8List();
     } else if (postgresType == TypeTimestampTZ) {
       if (value is! DateTime) {
-        throw new FormatException("Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}");
+        throw new FormatException(
+            "Invalid type for parameter value. Expected: DateTime Got: ${value
+                .runtimeType}");
       }
 
       var bd = new ByteData(8);
-      bd.setInt64(0, value.toUtc().difference(new DateTime.utc(2000)).inMicroseconds);
+      bd.setInt64(
+          0, value.toUtc().difference(new DateTime.utc(2000)).inMicroseconds);
       outBuffer = bd.buffer.asUint8List();
     }
 
@@ -190,9 +212,9 @@ abstract class PostgreSQLCodec {
     var it = new RuneIterator(text);
     while (it.moveNext()) {
       if (it.current == backslashCodeUnit) {
-        backslashCount ++;
+        backslashCount++;
       } else if (it.current == quoteCodeUnit) {
-        quoteCount ++;
+        quoteCount++;
       }
     }
 
@@ -224,7 +246,8 @@ abstract class PostgreSQLCodec {
 
   static String encodeNumber(dynamic value) {
     if (value is! num) {
-      throw new PostgreSQLException("Trying to encode ${value.runtimeType}: $value as integer-like type.");
+      throw new PostgreSQLException("Trying to encode ${value
+          .runtimeType}: $value as integer-like type.");
     }
 
     if (value.isNaN) {
@@ -240,7 +263,8 @@ abstract class PostgreSQLCodec {
 
   static String encodeDouble(dynamic value) {
     if (value is! num) {
-      throw new PostgreSQLException("Trying to encode ${value.runtimeType}: $value as double-like type.");
+      throw new PostgreSQLException(
+          "Trying to encode ${value.runtimeType}: $value as double-like type.");
     }
 
     if (value.isNaN) {
@@ -256,7 +280,8 @@ abstract class PostgreSQLCodec {
 
   static String encodeBoolean(dynamic value) {
     if (value is! bool) {
-      throw new PostgreSQLException("Trying to encode ${value.runtimeType}: $value as boolean type.");
+      throw new PostgreSQLException(
+          "Trying to encode ${value.runtimeType}: $value as boolean type.");
     }
 
     return value ? "TRUE" : "FALSE";
@@ -264,7 +289,8 @@ abstract class PostgreSQLCodec {
 
   static String encodeDateTime(dynamic value, {bool isDateOnly: false}) {
     if (value is! DateTime) {
-      throw new PostgreSQLException("Trying to encode ${value.runtimeType}: $value as date-like type.");
+      throw new PostgreSQLException(
+          "Trying to encode ${value.runtimeType}: $value as date-like type.");
     }
 
     var string = value.toIso8601String();
@@ -277,7 +303,8 @@ abstract class PostgreSQLCodec {
         var timezoneMinuteOffset = value.timeZoneOffset.inMinutes % 60;
 
         var hourComponent = timezoneHourOffset.abs().toString().padLeft(2, "0");
-        var minuteComponent = timezoneMinuteOffset.abs().toString().padLeft(2, "0");
+        var minuteComponent =
+            timezoneMinuteOffset.abs().toString().padLeft(2, "0");
 
         if (timezoneHourOffset >= 0) {
           hourComponent = "+${hourComponent}";
@@ -324,7 +351,8 @@ abstract class PostgreSQLCodec {
       return encodeBoolean(value);
     }
 
-    throw new PostgreSQLException("Unknown inferred datatype from ${value.runtimeType}: $value");
+    throw new PostgreSQLException(
+        "Unknown inferred datatype from ${value.runtimeType}: $value");
   }
 
   static dynamic decodeValue(ByteData value, int dbTypeCode) {
@@ -348,13 +376,16 @@ abstract class PostgreSQLCodec {
 
       case TypeTimestamp:
       case TypeTimestampTZ:
-       return new DateTime.utc(2000).add(new Duration(microseconds: value.getInt64(0)));
+        return new DateTime.utc(2000)
+            .add(new Duration(microseconds: value.getInt64(0)));
 
       case TypeDate:
-        return new DateTime.utc(2000).add(new Duration(days: value.getInt32(0)));
+        return new DateTime.utc(2000)
+            .add(new Duration(days: value.getInt32(0)));
 
       default:
-        return UTF8.decode(value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));
+        return UTF8.decode(
+            value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));
     }
   }
 }

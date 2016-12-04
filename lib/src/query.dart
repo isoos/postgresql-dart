@@ -1,11 +1,13 @@
 part of postgres;
 
 class _Query<T> {
-  _Query(this.statement, this.substitutionValues, this.connection, this.transaction);
+  _Query(this.statement, this.substitutionValues, this.connection,
+      this.transaction);
 
   bool onlyReturnAffectedRowCount = false;
   String statementIdentifier;
   Completer<T> onComplete = new Completer.sync();
+
   Future<T> get future => onComplete.future;
 
   final String statement;
@@ -16,7 +18,9 @@ class _Query<T> {
   List<int> specifiedParameterTypeCodes;
 
   List<_FieldDescription> _fieldDescriptions;
+
   List<_FieldDescription> get fieldDescriptions => _fieldDescriptions;
+
   void set fieldDescriptions(List<_FieldDescription> fds) {
     _fieldDescriptions = fds;
     cache?.fieldDescriptions = fds;
@@ -43,15 +47,15 @@ class _Query<T> {
 
     String statementName = (statementIdentifier ?? "");
     var formatIdentifiers = <_PostgreSQLFormatIdentifier>[];
-    var sqlString = PostgreSQLFormat.substitute(statement, substitutionValues, replace: (_PostgreSQLFormatIdentifier identifier, int index) {
+    var sqlString = PostgreSQLFormat.substitute(statement, substitutionValues,
+        replace: (_PostgreSQLFormatIdentifier identifier, int index) {
       formatIdentifiers.add(identifier);
 
       return "\$$index";
     });
 
-    specifiedParameterTypeCodes = formatIdentifiers
-        .map((i) => i.typeCode)
-        .toList();
+    specifiedParameterTypeCodes =
+        formatIdentifiers.map((i) => i.typeCode).toList();
 
     var parameterList = formatIdentifiers
         .map((id) => encodeParameter(id, substitutionValues))
@@ -72,7 +76,8 @@ class _Query<T> {
     socket.add(_ClientMessage.aggregateBytes(messages));
   }
 
-  void sendCachedQuery(Socket socket, _QueryCache cacheQuery, Map<String, dynamic> substitutionValues) {
+  void sendCachedQuery(Socket socket, _QueryCache cacheQuery,
+      Map<String, dynamic> substitutionValues) {
     var statementName = cacheQuery.preparedStatementName;
     var parameterList = cacheQuery.orderedParameters
         .map((identifier) => encodeParameter(identifier, substitutionValues))
@@ -87,9 +92,11 @@ class _Query<T> {
     socket.add(bytes);
   }
 
-  _ParameterValue encodeParameter(_PostgreSQLFormatIdentifier identifier, Map<String, dynamic> substitutionValues) {
+  _ParameterValue encodeParameter(_PostgreSQLFormatIdentifier identifier,
+      Map<String, dynamic> substitutionValues) {
     if (identifier.typeCode != null) {
-      return new _ParameterValue.binary(substitutionValues[identifier.name], identifier.typeCode);
+      return new _ParameterValue.binary(
+          substitutionValues[identifier.name], identifier.typeCode);
     } else {
       return new _ParameterValue.text(substitutionValues[identifier.name]);
     }
@@ -97,13 +104,16 @@ class _Query<T> {
 
   PostgreSQLException validateParameters(List<int> parameterTypeIDs) {
     var actualParameterTypeCodeIterator = parameterTypeIDs.iterator;
-    var parametersAreMismatched = specifiedParameterTypeCodes.map((specifiedTypeCode) {
+    var parametersAreMismatched =
+        specifiedParameterTypeCodes.map((specifiedTypeCode) {
       actualParameterTypeCodeIterator.moveNext();
-      return actualParameterTypeCodeIterator.current == (specifiedTypeCode ?? actualParameterTypeCodeIterator.current);
+      return actualParameterTypeCodeIterator.current ==
+          (specifiedTypeCode ?? actualParameterTypeCodeIterator.current);
     }).any((v) => v == false);
 
     if (parametersAreMismatched) {
-      return new PostgreSQLException("Specified parameter types do not match column parameter types in query ${statement}");
+      return new PostgreSQLException(
+          "Specified parameter types do not match column parameter types in query ${statement}");
     }
 
     return null;
@@ -146,17 +156,21 @@ class _QueryCache {
   String preparedStatementName;
   List<_PostgreSQLFormatIdentifier> orderedParameters;
   List<_FieldDescription> fieldDescriptions;
+
   bool get isValid {
-    return preparedStatementName != null
-        && orderedParameters != null
-        && fieldDescriptions != null;
+    return preparedStatementName != null &&
+        orderedParameters != null &&
+        fieldDescriptions != null;
   }
 }
 
 class _ParameterValue {
   _ParameterValue.binary(dynamic value, this.postgresType) {
     isBinary = true;
-    bytes = PostgreSQLCodec.encodeBinary(value, this.postgresType)?.buffer?.asUint8List();
+    bytes = PostgreSQLCodec
+        .encodeBinary(value, this.postgresType)
+        ?.buffer
+        ?.asUint8List();
     length = bytes?.length ?? 0;
   }
 
@@ -188,7 +202,8 @@ class _FieldDescription {
     var buf = new StringBuffer();
     var byte = 0;
     do {
-      byte = byteData.getUint8(offset); offset += 1;
+      byte = byteData.getUint8(offset);
+      offset += 1;
       if (byte != 0) {
         buf.writeCharCode(byte);
       }
@@ -196,12 +211,18 @@ class _FieldDescription {
 
     fieldName = buf.toString();
 
-    tableID = byteData.getUint32(offset); offset += 4;
-    columnID = byteData.getUint16(offset); offset += 2;
-    typeID = byteData.getUint32(offset); offset += 4;
-    dataTypeSize = byteData.getUint16(offset); offset += 2;
-    typeModifier = byteData.getInt32(offset); offset += 4;
-    formatCode = byteData.getUint16(offset); offset += 2;
+    tableID = byteData.getUint32(offset);
+    offset += 4;
+    columnID = byteData.getUint16(offset);
+    offset += 2;
+    typeID = byteData.getUint32(offset);
+    offset += 4;
+    dataTypeSize = byteData.getUint16(offset);
+    offset += 2;
+    typeModifier = byteData.getInt32(offset);
+    offset += 4;
+    formatCode = byteData.getUint16(offset);
+    offset += 2;
 
     return offset;
   }
@@ -210,4 +231,3 @@ class _FieldDescription {
     return "$fieldName $tableID $columnID $typeID $dataTypeSize $typeModifier $formatCode";
   }
 }
-

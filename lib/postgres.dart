@@ -17,4 +17,5 @@ part 'src/message_window.dart';
 part 'src/connection_fsm.dart';
 part 'src/query.dart';
 part 'src/exceptions.dart';
-
+part 'src/constants.dart';
+part 'src/utf8_backed_string.dart';

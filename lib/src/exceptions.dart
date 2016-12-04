@@ -4,7 +4,6 @@ part of postgres;
 ///
 /// [panic] and [fatal] errors will close the connection.
 enum PostgreSQLSeverity {
-
   /// A [PostgreSQLException] with this severity indicates the throwing connection is now closed.
   panic,
 
@@ -35,16 +34,21 @@ enum PostgreSQLSeverity {
 
 /// Exception thrown by [PostgreSQLConnection] instances.
 class PostgreSQLException implements Exception {
-  PostgreSQLException(String message, {PostgreSQLSeverity severity: PostgreSQLSeverity.error, this.stackTrace}) {
+  PostgreSQLException(String message,
+      {PostgreSQLSeverity severity: PostgreSQLSeverity.error,
+      this.stackTrace}) {
     this.severity = severity;
     this.message = message;
     code = "";
   }
 
   PostgreSQLException._(List<_ErrorField> errorFields, {this.stackTrace}) {
-    var finder = (int identifer) => (errorFields.firstWhere((_ErrorField e) => e.identificationToken == identifer, orElse: () => null));
+    var finder = (int identifer) => (errorFields.firstWhere(
+        (_ErrorField e) => e.identificationToken == identifer,
+        orElse: () => null));
 
-    severity = _ErrorField.severityFromString(finder(_ErrorField.SeverityIdentifier).text);
+    severity = _ErrorField
+        .severityFromString(finder(_ErrorField.SeverityIdentifier).text);
     code = finder(_ErrorField.CodeIdentifier).text;
     message = finder(_ErrorField.MessageIdentifier).text;
     detail = finder(_ErrorField.DetailIdentifier)?.text;
@@ -107,7 +111,8 @@ class PostgreSQLException implements Exception {
   /// A [StackTrace] if available.
   StackTrace stackTrace;
 
-  String toString() => "$severity $code: $message Detail: $detail Hint: $hint Table: $tableName Column: $columnName Constraint: $constraintName";
+  String toString() =>
+      "$severity $code: $message Detail: $detail Hint: $hint Table: $tableName Column: $columnName Constraint: $constraintName";
 }
 
 class _ErrorField {
@@ -131,18 +136,27 @@ class _ErrorField {
 
   static PostgreSQLSeverity severityFromString(String str) {
     switch (str) {
-      case "ERROR" : return PostgreSQLSeverity.error;
-      case "FATAL" : return PostgreSQLSeverity.fatal;
-      case "PANIC" : return PostgreSQLSeverity.panic;
-      case "WARNING" : return PostgreSQLSeverity.warning;
-      case "NOTICE" : return PostgreSQLSeverity.notice;
-      case "DEBUG" : return PostgreSQLSeverity.debug;
-      case "INFO" : return PostgreSQLSeverity.info;
-      case "LOG" : return PostgreSQLSeverity.log;
+      case "ERROR":
+        return PostgreSQLSeverity.error;
+      case "FATAL":
+        return PostgreSQLSeverity.fatal;
+      case "PANIC":
+        return PostgreSQLSeverity.panic;
+      case "WARNING":
+        return PostgreSQLSeverity.warning;
+      case "NOTICE":
+        return PostgreSQLSeverity.notice;
+      case "DEBUG":
+        return PostgreSQLSeverity.debug;
+      case "INFO":
+        return PostgreSQLSeverity.info;
+      case "LOG":
+        return PostgreSQLSeverity.log;
     }
 
     return PostgreSQLSeverity.unknown;
   }
+
   int identificationToken;
 
   String get text => _buffer.toString();

@@ -9,7 +9,8 @@ void main() {
     PostgreSQLConnection conn = null;
 
     setUp(() async {
-      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "dart", password: "dart");
       await conn.open();
       await conn.execute("CREATE TEMPORARY TABLE t (id INT UNIQUE)");
     });
@@ -18,19 +19,25 @@ void main() {
       await conn?.close();
     });
 
-    test("Send successful transaction succeeds, returns returned value", () async {
+    test("Send successful transaction succeeds, returns returned value",
+        () async {
       var outResult = await conn.transaction((c) async {
         await c.query("INSERT INTO t (id) VALUES (1)");
 
         return await c.query("SELECT id FROM t");
       });
-      expect(outResult, [[1]]);
+      expect(outResult, [
+        [1]
+      ]);
 
       var result = await conn.query("SELECT id FROM t");
-      expect(result, [[1]]);
+      expect(result, [
+        [1]
+      ]);
     });
 
-    test("Query during transaction must wait until transaction is finished", () async {
+    test("Query during transaction must wait until transaction is finished",
+        () async {
       var orderEnsurer = [];
       var nextCompleter = new Completer.sync();
       var outResult = conn.transaction((c) async {
@@ -54,11 +61,17 @@ void main() {
       var firstResult = await outResult;
 
       expect(orderEnsurer, [1, 2, 11, 3, 12, 13]);
-      expect(firstResult, [[1]]);
-      expect(laterResults, [[1],[2]]);
+      expect(firstResult, [
+        [1]
+      ]);
+      expect(laterResults, [
+        [1],
+        [2]
+      ]);
     });
 
-    test("Make sure two simultaneous transactions cannot be interwoven", () async {
+    test("Make sure two simultaneous transactions cannot be interwoven",
+        () async {
       var orderEnsurer = [];
 
       var firstTransactionFuture = conn.transaction((c) async {
@@ -86,8 +99,13 @@ void main() {
 
       expect(orderEnsurer, [11, 12, 13, 21, 22, 23]);
 
-      expect(firstResults, [[1]]);
-      expect(secondResults, [[1], [2]]);
+      expect(firstResults, [
+        [1]
+      ]);
+      expect(secondResults, [
+        [1],
+        [2]
+      ]);
     });
 
     test("May intentionally rollback transaction", () async {
@@ -108,7 +126,8 @@ void main() {
       expect(result, []);
     });
 
-    test("Intentional rollback from outside of a transaction has no impact", () async {
+    test("Intentional rollback from outside of a transaction has no impact",
+        () async {
       var orderEnsurer = [];
       var nextCompleter = new Completer.sync();
       var outResult = conn.transaction((c) async {
@@ -129,7 +148,9 @@ void main() {
       var results = await outResult;
 
       expect(orderEnsurer, [1, 2, 11, 3]);
-      expect(results, [[1]]);
+      expect(results, [
+        [1]
+      ]);
     });
 
     test("A transaction does not preempt pending queries", () async {
@@ -142,7 +163,11 @@ void main() {
       var results = await conn.transaction((ctx) async {
         return await ctx.query("SELECT id FROM t");
       });
-      expect(results, [[1], [2], [3]]);
+      expect(results, [
+        [1],
+        [2],
+        [3]
+      ]);
     });
 
     test("A transaction doesn't have to await on queries", () async {
@@ -153,10 +178,16 @@ void main() {
       });
 
       var total = await conn.query("SELECT id FROM t");
-      expect(total, [[1], [2], [3]]);
+      expect(total, [
+        [1],
+        [2],
+        [3]
+      ]);
     });
 
-    test("A transaction with a rollback and non-await queries rolls back transaction", () async {
+    test(
+        "A transaction with a rollback and non-await queries rolls back transaction",
+        () async {
       conn.transaction((ctx) async {
         ctx.query("INSERT INTO t (id) VALUES (1)");
         ctx.query("INSERT INTO t (id) VALUES (2)");
@@ -176,7 +207,8 @@ void main() {
     PostgreSQLConnection conn = null;
 
     setUp(() async {
-      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "dart", password: "dart");
       await conn.open();
       await conn.execute("CREATE TEMPORARY TABLE t (id INT UNIQUE)");
     });
@@ -190,7 +222,9 @@ void main() {
         await conn.transaction((c) async {
           await c.query("INSERT INTO t (id) VALUES (1)");
           var oneRow = await c.query("SELECT id FROM t");
-          expect(oneRow, [[1]]);
+          expect(oneRow, [
+            [1]
+          ]);
 
           // This will error
           await c.query("INSERT INTO t (id) VALUES (1)");
@@ -251,7 +285,9 @@ void main() {
         await conn.transaction((c) async {
           await c.query("INSERT INTO t (id) VALUES (1)");
           var oneRow = await c.query("SELECT id FROM t");
-          expect(oneRow, [[1]]);
+          expect(oneRow, [
+            [1]
+          ]);
 
           // This will error
           await c.query("INSERT INTO t (id) VALUES (1)");
@@ -270,7 +306,8 @@ void main() {
     PostgreSQLConnection conn = null;
 
     setUp(() async {
-      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "dart", password: "dart");
       await conn.open();
       await conn.execute("CREATE TEMPORARY TABLE t (id INT UNIQUE)");
     });
@@ -350,7 +387,8 @@ void main() {
     PostgreSQLConnection conn = null;
 
     setUp(() async {
-      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "dart", password: "dart");
       await conn.open();
       await conn.execute("CREATE TEMPORARY TABLE t (id INT UNIQUE)");
     });

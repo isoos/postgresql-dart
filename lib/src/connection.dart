@@ -21,7 +21,8 @@ abstract class PostgreSQLExecutionContext {
   /// By default, instances of this class will reuse queries. This allows significantly more efficient transport to and from the database. You do not have to do
   /// anything to opt in to this behavior, this connection will track the necessary information required to reuse queries without intervention. (The [fmtString] is
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
-  Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null, bool allowReuse: true});
+  Future<List<List<dynamic>>> query(String fmtString,
+      {Map<String, dynamic> substitutionValues: null, bool allowReuse: true});
 
   /// Executes a query on this context.
   ///
@@ -30,7 +31,8 @@ abstract class PostgreSQLExecutionContext {
   /// This method returns the number of rows affected and no additional information. This method uses the least efficient and less secure command
   /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
   /// or return rows.
-  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null});
+  Future<int> execute(String fmtString,
+      {Map<String, dynamic> substitutionValues: null});
 
   /// Cancels a transaction on this context.
   ///
@@ -44,7 +46,6 @@ abstract class PostgreSQLExecutionContext {
 /// The primary type of this library, a connection is responsible for connecting to databases and executing queries.
 /// A connection may be opened with [open] after it is created.
 class PostgreSQLConnection implements PostgreSQLExecutionContext {
-
   /// Creates an instance of [PostgreSQLConnection].
   ///
   /// [host] must be a hostname, e.g. "foobar.com" or IP address. Do not include scheme or port.
@@ -54,7 +55,12 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// [timeoutInSeconds] refers to the amount of time [PostgreSQLConnection] will wait while establishing a connection before it gives up.
   /// [timeZone] is the timezone the connection is in. Defaults to 'UTC'.
   /// [useSSL] when true, uses a secure socket when connecting to a PostgreSQL database.
-  PostgreSQLConnection(this.host, this.port, this.databaseName, {this.username: null, this.password: null, this.timeoutInSeconds: 30, this.timeZone: "UTC", this.useSSL: false}) {
+  PostgreSQLConnection(this.host, this.port, this.databaseName,
+      {this.username: null,
+      this.password: null,
+      this.timeoutInSeconds: 30,
+      this.timeZone: "UTC",
+      this.useSSL: false}) {
     _connectionState = new _PostgreSQLConnectionStateClosed();
     _connectionState.connection = this;
   }
@@ -112,6 +118,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   _PostgreSQLConnectionState _connectionState;
 
   List<_Query> _queryQueue = [];
+
   _Query get _pendingQuery {
     if (_queryQueue.isEmpty) {
       return null;
@@ -128,29 +135,38 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// Connections may not be reopened after they are closed or opened more than once. If a connection has already been opened and this method is called, an exception will be thrown.
   Future open() async {
     if (_hasConnectedPreviously) {
-      throw new PostgreSQLException("Attempting to reopen a closed connection. Create a new instance instead.");
+      throw new PostgreSQLException(
+          "Attempting to reopen a closed connection. Create a new instance instead.");
     }
 
     _hasConnectedPreviously = true;
 
     if (useSSL) {
-      _socket = await SecureSocket.connect(host, port).timeout(new Duration(seconds: timeoutInSeconds));
+      _socket = await SecureSocket
+          .connect(host, port)
+          .timeout(new Duration(seconds: timeoutInSeconds));
     } else {
-      _socket = await Socket.connect(host, port).timeout(new Duration(seconds: timeoutInSeconds));
+      _socket = await Socket
+          .connect(host, port)
+          .timeout(new Duration(seconds: timeoutInSeconds));
     }
 
     _framer = new _MessageFramer();
-    _socket.listen(_readData, onError: _handleSocketError, onDone: _handleSocketClosed);
+    _socket.listen(_readData,
+        onError: _handleSocketError, onDone: _handleSocketClosed);
 
     var connectionComplete = new Completer();
-    _transitionToState(new _PostgreSQLConnectionStateSocketConnected(connectionComplete));
+    _transitionToState(
+        new _PostgreSQLConnectionStateSocketConnected(connectionComplete));
 
-    return connectionComplete.future.timeout(new Duration(seconds: timeoutInSeconds), onTimeout: () {
+    return connectionComplete.future
+        .timeout(new Duration(seconds: timeoutInSeconds), onTimeout: () {
       _connectionState = new _PostgreSQLConnectionStateClosed();
       _socket?.destroy();
 
       _cancelCurrentQueries();
-      throw new PostgreSQLException("Timed out trying to connect to database postgres://$host:$port/$databaseName.");
+      throw new PostgreSQLException(
+          "Timed out trying to connect to database postgres://$host:$port/$databaseName.");
     });
   }
 
@@ -186,12 +202,16 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// anything to opt in to this behavior, this connection will track the necessary information required to reuse queries without intervention. (The [fmtString] is
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
   ///
-  Future<List<List<dynamic>>> query(String fmtString, {Map<String, dynamic> substitutionValues: null, bool allowReuse: true}) async {
+  Future<List<List<dynamic>>> query(String fmtString,
+      {Map<String, dynamic> substitutionValues: null,
+      bool allowReuse: true}) async {
     if (isClosed) {
-      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
+      throw new PostgreSQLException(
+          "Attempting to execute query, but connection is not open.");
     }
 
-    var query = new _Query<List<List<dynamic>>>(fmtString, substitutionValues, this, null);
+    var query = new _Query<List<List<dynamic>>>(
+        fmtString, substitutionValues, this, null);
     if (allowReuse) {
       query.statementIdentifier = _reuseIdentifierForQuery(query);
     }
@@ -206,9 +226,11 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// This method returns the number of rows affected and no additional information. This method uses the least efficient and less secure command
   /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
   /// or return rows.
-  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) async {
+  Future<int> execute(String fmtString,
+      {Map<String, dynamic> substitutionValues: null}) async {
     if (isClosed) {
-      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
+      throw new PostgreSQLException(
+          "Attempting to execute query, but connection is not open.");
     }
 
     var query = new _Query<int>(fmtString, substitutionValues, this, null)
@@ -244,9 +266,11 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   ///             ctx.query("INSERT INTO t (id) VALUES (2)");
   ///           }
   ///         });
-  Future<dynamic> transaction(Future<dynamic> queryBlock(PostgreSQLExecutionContext connection)) async {
+  Future<dynamic> transaction(
+      Future<dynamic> queryBlock(PostgreSQLExecutionContext connection)) async {
     if (isClosed) {
-      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
+      throw new PostgreSQLException(
+          "Attempting to execute query, but connection is not open.");
     }
 
     var proxy = new _TransactionProxy(this, queryBlock);
@@ -289,7 +313,8 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     // get the error and not the close message, since completeError is
     // synchronous.
     scheduleMicrotask(() {
-      var exception = new PostgreSQLException("Connection closed or query cancelled.");
+      var exception =
+          new PostgreSQLException("Connection closed or query cancelled.");
       queries?.forEach((q) {
         q.completeError(exception);
       });
@@ -372,7 +397,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
     var string = "$_reuseCounter".padLeft(12, "0");
 
-    _reuseCounter ++;
+    _reuseCounter++;
 
     return string;
   }
@@ -380,5 +405,6 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
 class _TransactionRollbackException implements Exception {
   _TransactionRollbackException(this.reason);
+
   String reason;
 }

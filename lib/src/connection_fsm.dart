@@ -18,35 +18,37 @@ abstract class _PostgreSQLConnectionState {
   _PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
     var exception = new PostgreSQLException._(message.fields);
 
-    if (exception.severity == PostgreSQLSeverity.fatal || exception.severity == PostgreSQLSeverity.panic) {
+    if (exception.severity == PostgreSQLSeverity.fatal ||
+        exception.severity == PostgreSQLSeverity.panic) {
       return new _PostgreSQLConnectionStateClosed();
     }
 
     return this;
   }
 
-  void onExit() {
-
-  }
+  void onExit() {}
 }
 
 /*
   Closed State; starts here and ends here.
  */
 
-class _PostgreSQLConnectionStateClosed extends _PostgreSQLConnectionState {
-}
+class _PostgreSQLConnectionStateClosed extends _PostgreSQLConnectionState {}
 
 /*
   Socket connected, prior to any PostgreSQL handshaking - initiates that handshaking
  */
 
-class _PostgreSQLConnectionStateSocketConnected extends _PostgreSQLConnectionState {
+class _PostgreSQLConnectionStateSocketConnected
+    extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateSocketConnected(this.completer);
+
   Completer completer;
 
   _PostgreSQLConnectionState onEnter() {
-    var startupMessage = new _StartupMessage(connection.databaseName, connection.timeZone, username: connection.username);
+    var startupMessage = new _StartupMessage(
+        connection.databaseName, connection.timeZone,
+        username: connection.username);
 
     connection._socket.add(startupMessage.asBytes());
 
@@ -73,7 +75,9 @@ class _PostgreSQLConnectionStateSocketConnected extends _PostgreSQLConnectionSta
       return new _PostgreSQLConnectionStateAuthenticating(completer);
     }
 
-    completer.completeError(new PostgreSQLException("Unsupported authentication type ${authMessage.type}, closing connection."));
+    completer.completeError(
+        new PostgreSQLException("Unsupported authentication type ${authMessage
+            .type}, closing connection."));
 
     return new _PostgreSQLConnectionStateClosed();
   }
@@ -83,12 +87,15 @@ class _PostgreSQLConnectionStateSocketConnected extends _PostgreSQLConnectionSta
   Authenticating state
  */
 
-class _PostgreSQLConnectionStateAuthenticating extends _PostgreSQLConnectionState {
+class _PostgreSQLConnectionStateAuthenticating
+    extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateAuthenticating(this.completer);
+
   Completer completer;
 
   _PostgreSQLConnectionState onEnter() {
-    var authMessage = new _AuthMD5Message(connection.username, connection.password, connection._salt);
+    var authMessage = new _AuthMD5Message(
+        connection.username, connection.password, connection._salt);
 
     connection._socket.add(authMessage.asBytes());
 
@@ -123,8 +130,10 @@ class _PostgreSQLConnectionStateAuthenticating extends _PostgreSQLConnectionStat
   Authenticated state
  */
 
-class _PostgreSQLConnectionStateAuthenticated extends _PostgreSQLConnectionState {
+class _PostgreSQLConnectionStateAuthenticated
+    extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateAuthenticated(this.completer);
+
   Completer completer;
 
   _PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
@@ -219,7 +228,8 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     var exception = new PostgreSQLException._(message.fields);
     returningException ??= exception;
 
-    if (exception.severity == PostgreSQLSeverity.fatal || exception.severity == PostgreSQLSeverity.panic) {
+    if (exception.severity == PostgreSQLSeverity.fatal ||
+        exception.severity == PostgreSQLSeverity.panic) {
       return new _PostgreSQLConnectionStateClosed();
     }
 
@@ -248,11 +258,13 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
           query.complete(rowsAffected);
         }
 
-        return new _PostgreSQLConnectionStateReadyInTransaction(query.transaction);
+        return new _PostgreSQLConnectionStateReadyInTransaction(
+            query.transaction);
       } else if (message.state == _ReadyForQueryMessage.StateTransactionError) {
         // This should cancel the transaction, we may have to send a commit here
         query.completeError(returningException);
-        return new _PostgreSQLConnectionStateTransactionFailure(query.transaction);
+        return new _PostgreSQLConnectionStateTransactionFailure(
+            query.transaction);
       }
     } else if (message is _CommandCompleteMessage) {
       rowsAffected = message.rowsAffected;
@@ -261,7 +273,8 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     } else if (message is _DataRowMessage) {
       query.addRow(message.values);
     } else if (message is _ParameterDescriptionMessage) {
-      var validationException = query.validateParameters(message.parameterTypeIDs);
+      var validationException =
+          query.validateParameters(message.parameterTypeIDs);
       if (validationException != null) {
         query.cache = null;
       }
@@ -274,7 +287,8 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
 
 /* Idle Transaction State */
 
-class _PostgreSQLConnectionStateReadyInTransaction extends _PostgreSQLConnectionState {
+class _PostgreSQLConnectionStateReadyInTransaction
+    extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateReadyInTransaction(this.transaction);
 
   _TransactionProxy transaction;
@@ -318,8 +332,10 @@ class _PostgreSQLConnectionStateReadyInTransaction extends _PostgreSQLConnection
   Transaction error state
  */
 
-class _PostgreSQLConnectionStateTransactionFailure extends _PostgreSQLConnectionState {
+class _PostgreSQLConnectionStateTransactionFailure
+    extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateTransactionFailure(this.transaction);
+
   _TransactionProxy transaction;
 
   _PostgreSQLConnectionState awake() {
@@ -327,10 +343,9 @@ class _PostgreSQLConnectionStateTransactionFailure extends _PostgreSQLConnection
   }
 }
 
-
 /*
   Hack for deferred error
  */
 
-class _PostgreSQLConnectionStateDeferredFailure extends _PostgreSQLConnectionState {
-}
+class _PostgreSQLConnectionStateDeferredFailure
+    extends _PostgreSQLConnectionState {}

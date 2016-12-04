@@ -9,7 +9,8 @@ class _ErrorResponseMessage implements _ServerMessage {
   List<_ErrorField> fields = [new _ErrorField()];
 
   void readBytes(Uint8List bytes) {
-    var lastByteRemovedList = new Uint8List.view(bytes.buffer, bytes.offsetInBytes, bytes.length - 1);
+    var lastByteRemovedList =
+        new Uint8List.view(bytes.buffer, bytes.offsetInBytes, bytes.length - 1);
 
     lastByteRemovedList.forEach((byte) {
       if (byte != 0) {
@@ -61,7 +62,8 @@ class _ParameterStatusMessage extends _ServerMessage {
 
   void readBytes(Uint8List bytes) {
     name = UTF8.decode(bytes.sublist(0, bytes.indexOf(0)));
-    value = UTF8.decode(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
+    value =
+        UTF8.decode(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
   }
 
   String toString() => "Parameter Message: $name $value";
@@ -100,7 +102,8 @@ class _RowDescriptionMessage extends _ServerMessage {
   void readBytes(Uint8List bytes) {
     var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
     var offset = 0;
-    var fieldCount = view.getInt16(offset); offset += 2;
+    var fieldCount = view.getInt16(offset);
+    offset += 2;
 
     fieldDescriptions = <_FieldDescription>[];
     for (var i = 0; i < fieldCount; i++) {
@@ -119,17 +122,20 @@ class _DataRowMessage extends _ServerMessage {
   void readBytes(Uint8List bytes) {
     var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
     var offset = 0;
-    var fieldCount = view.getInt16(offset); offset += 2;
+    var fieldCount = view.getInt16(offset);
+    offset += 2;
 
     for (var i = 0; i < fieldCount; i++) {
-      var dataSize = view.getInt32(offset); offset += 4;
+      var dataSize = view.getInt32(offset);
+      offset += 4;
 
       if (dataSize == 0) {
         values.add(new ByteData(0));
       } else if (dataSize == -1) {
         values.add(null);
       } else {
-        var rawBytes = new ByteData.view(bytes.buffer, bytes.offsetInBytes + offset, dataSize);
+        var rawBytes = new ByteData.view(
+            bytes.buffer, bytes.offsetInBytes + offset, dataSize);
         values.add(rawBytes);
         offset += dataSize;
       }
@@ -143,6 +149,7 @@ class _CommandCompleteMessage extends _ServerMessage {
   int rowsAffected;
 
   static RegExp identifierExpression = new RegExp(r"[A-Z ]*");
+
   void readBytes(Uint8List bytes) {
     var str = UTF8.decode(bytes.sublist(0, bytes.length - 1));
 
@@ -165,6 +172,7 @@ class _ParseCompleteMessage extends _ServerMessage {
 
 class _BindCompleteMessage extends _ServerMessage {
   void readBytes(Uint8List bytes) {}
+
   String toString() => "Bind Complete Message";
 }
 
@@ -175,11 +183,13 @@ class _ParameterDescriptionMessage extends _ServerMessage {
     var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
 
     var offset = 0;
-    var count = view.getUint16(0); offset += 2;
+    var count = view.getUint16(0);
+    offset += 2;
 
     parameterTypeIDs = [];
     for (var i = 0; i < count; i++) {
-      var v = view.getUint32(offset); offset += 4;
+      var v = view.getUint32(offset);
+      offset += 4;
       parameterTypeIDs.add(v);
     }
   }
@@ -188,9 +198,7 @@ class _ParameterDescriptionMessage extends _ServerMessage {
 }
 
 class _NoDataMessage extends _ServerMessage {
-  void readBytes(Uint8List bytes) {
-
-  }
+  void readBytes(Uint8List bytes) {}
 
   String toString() => "No Data Message";
 }
