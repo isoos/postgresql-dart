@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.4
+
+- Fixed issue with buffer length
+
 ## 0.9.3
 
 - Fixed issue with UTF8 encoding
