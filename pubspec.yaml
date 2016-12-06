@@ -1,6 +1,6 @@
 name: postgres
 description: A library to connect and query PostgreSQL databases.
-version: 0.9.3
+version: 0.9.4
 author: stable|kernel <jobs@stablekernel.com>
 homepage: https://github.com/stablekernel/postgresql-dart
 documentation:
