@@ -1,6 +1,6 @@
 # postgres
 
-[![Build Status](https://travis-ci.org/stablekernel/postgresql-dart.svg?branch=master)](https://travis-ci.org/stablekernel/postgresql-dart)
+[![Build Status](https://travis-ci.org/stablekernel/postgresql-dart.svg?branch=master)](https://travis-ci.org/stablekernel/postgresql-dart) [![codecov](https://codecov.io/gh/stablekernel/postgresql-dart/branch/master/graph/badge.svg)](https://codecov.io/gh/stablekernel/postgresql-dart)
 
 A library for connecting to and querying PostgreSQL databases.
 
