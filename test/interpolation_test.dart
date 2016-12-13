@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:postgres/postgres.dart';
+import 'package:postgres/src/substituter.dart';
 import 'package:test/test.dart';
 
 void main() {

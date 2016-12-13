@@ -1,12 +1,14 @@
-part of postgres;
+import 'dart:typed_data';
+import 'dart:convert';
+import 'connection.dart';
+import 'query.dart';
 
-abstract class _ServerMessage {
+abstract class ServerMessage {
   void readBytes(Uint8List bytes);
 }
 
-class _ErrorResponseMessage implements _ServerMessage {
-  PostgreSQLException generatedException;
-  List<_ErrorField> fields = [new _ErrorField()];
+class ErrorResponseMessage implements ServerMessage {
+  List<ErrorField> fields = [new ErrorField()];
 
   void readBytes(Uint8List bytes) {
     var lastByteRemovedList =
@@ -18,16 +20,12 @@ class _ErrorResponseMessage implements _ServerMessage {
         return;
       }
 
-      fields.add(new _ErrorField());
+      fields.add(new ErrorField());
     });
-
-    generatedException = new PostgreSQLException._(fields);
   }
-
-  String toString() => generatedException.toString();
 }
 
-class _AuthenticationMessage implements _ServerMessage {
+class AuthenticationMessage implements ServerMessage {
   static const int KindOK = 0;
   static const int KindKerberosV5 = 2;
   static const int KindClearTextPassword = 3;
@@ -52,11 +50,9 @@ class _AuthenticationMessage implements _ServerMessage {
       }
     }
   }
-
-  String toString() => "Authentication: $type";
 }
 
-class _ParameterStatusMessage extends _ServerMessage {
+class ParameterStatusMessage extends ServerMessage {
   String name;
   String value;
 
@@ -65,11 +61,9 @@ class _ParameterStatusMessage extends _ServerMessage {
     value =
         UTF8.decode(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
   }
-
-  String toString() => "Parameter Message: $name $value";
 }
 
-class _ReadyForQueryMessage extends _ServerMessage {
+class ReadyForQueryMessage extends ServerMessage {
   static const String StateIdle = "I";
   static const String StateTransaction = "T";
   static const String StateTransactionError = "E";
@@ -79,11 +73,9 @@ class _ReadyForQueryMessage extends _ServerMessage {
   void readBytes(Uint8List bytes) {
     state = UTF8.decode(bytes);
   }
-
-  String toString() => "Ready Message: $state";
 }
 
-class _BackendKeyMessage extends _ServerMessage {
+class BackendKeyMessage extends ServerMessage {
   int processID;
   int secretKey;
 
@@ -92,12 +84,10 @@ class _BackendKeyMessage extends _ServerMessage {
     processID = view.getUint32(0);
     secretKey = view.getUint32(4);
   }
-
-  String toString() => "Backend Key Message: $processID $secretKey";
 }
 
-class _RowDescriptionMessage extends _ServerMessage {
-  List<_FieldDescription> fieldDescriptions;
+class RowDescriptionMessage extends ServerMessage {
+  List<FieldDescription> fieldDescriptions;
 
   void readBytes(Uint8List bytes) {
     var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
@@ -105,18 +95,16 @@ class _RowDescriptionMessage extends _ServerMessage {
     var fieldCount = view.getInt16(offset);
     offset += 2;
 
-    fieldDescriptions = <_FieldDescription>[];
+    fieldDescriptions = <FieldDescription>[];
     for (var i = 0; i < fieldCount; i++) {
-      var rowDesc = new _FieldDescription();
+      var rowDesc = new FieldDescription();
       offset = rowDesc.parse(view, offset);
       fieldDescriptions.add(rowDesc);
     }
   }
-
-  String toString() => "RowDescription Message: $fieldDescriptions";
 }
 
-class _DataRowMessage extends _ServerMessage {
+class DataRowMessage extends ServerMessage {
   List<ByteData> values = [];
 
   void readBytes(Uint8List bytes) {
@@ -145,7 +133,7 @@ class _DataRowMessage extends _ServerMessage {
   String toString() => "Data Row Message: ${values}";
 }
 
-class _CommandCompleteMessage extends _ServerMessage {
+class CommandCompleteMessage extends ServerMessage {
   int rowsAffected;
 
   static RegExp identifierExpression = new RegExp(r"[A-Z ]*");
@@ -160,23 +148,21 @@ class _CommandCompleteMessage extends _ServerMessage {
       rowsAffected = 0;
     }
   }
-
-  String toString() => "Command Complete Message: $rowsAffected";
 }
 
-class _ParseCompleteMessage extends _ServerMessage {
+class ParseCompleteMessage extends ServerMessage {
   void readBytes(Uint8List bytes) {}
 
   String toString() => "Parse Complete Message";
 }
 
-class _BindCompleteMessage extends _ServerMessage {
+class BindCompleteMessage extends ServerMessage {
   void readBytes(Uint8List bytes) {}
 
   String toString() => "Bind Complete Message";
 }
 
-class _ParameterDescriptionMessage extends _ServerMessage {
+class ParameterDescriptionMessage extends ServerMessage {
   List<int> parameterTypeIDs;
 
   void readBytes(Uint8List bytes) {
@@ -193,17 +179,15 @@ class _ParameterDescriptionMessage extends _ServerMessage {
       parameterTypeIDs.add(v);
     }
   }
-
-  String toString() => "Parameter Description Message: $parameterTypeIDs";
 }
 
-class _NoDataMessage extends _ServerMessage {
+class NoDataMessage extends ServerMessage {
   void readBytes(Uint8List bytes) {}
 
   String toString() => "No Data Message";
 }
 
-class _UnknownMessage extends _ServerMessage {
+class UnknownMessage extends ServerMessage {
   Uint8List bytes;
   int code;
 
@@ -211,5 +195,78 @@ class _UnknownMessage extends _ServerMessage {
     this.bytes = bytes;
   }
 
-  String toString() => "Unknown message: $code $bytes";
+  @override
+  operator ==(dynamic other) {
+    if (bytes != null) {
+      if (bytes.length != other.bytes.length) {
+        return false;
+      }
+      for (var i = 0; i < bytes.length; i++) {
+        if (bytes[i] != other.bytes[i]) {
+          return false;
+        }
+      }
+    } else {
+      if (other.bytes != null) {
+        return false;
+      }
+    }
+    return code == other.code;
+  }
+}
+
+class ErrorField {
+  static const int SeverityIdentifier = 83;
+  static const int CodeIdentifier = 67;
+  static const int MessageIdentifier = 77;
+  static const int DetailIdentifier = 68;
+  static const int HintIdentifier = 72;
+  static const int PositionIdentifier = 80;
+  static const int InternalPositionIdentifier = 112;
+  static const int InternalQueryIdentifier = 113;
+  static const int WhereIdentifier = 87;
+  static const int SchemaIdentifier = 115;
+  static const int TableIdentifier = 116;
+  static const int ColumnIdentifier = 99;
+  static const int DataTypeIdentifier = 100;
+  static const int ConstraintIdentifier = 110;
+  static const int FileIdentifier = 70;
+  static const int LineIdentifier = 76;
+  static const int RoutineIdentifier = 82;
+
+  static PostgreSQLSeverity severityFromString(String str) {
+    switch (str) {
+      case "ERROR":
+        return PostgreSQLSeverity.error;
+      case "FATAL":
+        return PostgreSQLSeverity.fatal;
+      case "PANIC":
+        return PostgreSQLSeverity.panic;
+      case "WARNING":
+        return PostgreSQLSeverity.warning;
+      case "NOTICE":
+        return PostgreSQLSeverity.notice;
+      case "DEBUG":
+        return PostgreSQLSeverity.debug;
+      case "INFO":
+        return PostgreSQLSeverity.info;
+      case "LOG":
+        return PostgreSQLSeverity.log;
+    }
+
+    return PostgreSQLSeverity.unknown;
+  }
+
+  int identificationToken;
+
+  String get text => _buffer.toString();
+  StringBuffer _buffer = new StringBuffer();
+
+  void add(int byte) {
+    if (identificationToken == null) {
+      identificationToken = byte;
+    } else {
+      _buffer.writeCharCode(byte);
+    }
+  }
 }

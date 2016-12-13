@@ -1,108 +1,147 @@
-part of postgres;
+import 'dart:typed_data';
+import 'dart:io';
+import 'server_messages.dart';
+import 'dart:math';
 
-class _MessageFrame {
-  static Map<int, Function> _messageTypeMap = {
-    49: () => new _ParseCompleteMessage(),
-    50: () => new _BindCompleteMessage(),
-    67: () => new _CommandCompleteMessage(),
-    68: () => new _DataRowMessage(),
-    69: () => new _ErrorResponseMessage(),
-    75: () => new _BackendKeyMessage(),
-    82: () => new _AuthenticationMessage(),
-    83: () => new _ParameterStatusMessage(),
-    84: () => new _RowDescriptionMessage(),
-    90: () => new _ReadyForQueryMessage(),
-    110: () => new _NoDataMessage(),
-    116: () => new _ParameterDescriptionMessage()
+class MessageFrame {
+  static const int HeaderByteSize = 5;
+  static Map<int, Function> messageTypeMap = {
+    49: () => new ParseCompleteMessage(),
+    50: () => new BindCompleteMessage(),
+    67: () => new CommandCompleteMessage(),
+    68: () => new DataRowMessage(),
+    69: () => new ErrorResponseMessage(),
+    75: () => new BackendKeyMessage(),
+    82: () => new AuthenticationMessage(),
+    83: () => new ParameterStatusMessage(),
+    84: () => new RowDescriptionMessage(),
+    90: () => new ReadyForQueryMessage(),
+    110: () => new NoDataMessage(),
+    116: () => new ParameterDescriptionMessage()
   };
 
-  BytesBuilder _inputBuffer = new BytesBuilder(copy: false);
+  int get bytesAvailable => packets.fold(0, (sum, v) => sum + v.lengthInBytes);
+  List<Uint8List> packets = [];
+  bool get hasReadHeader => type != null;
   int type;
   int expectedLength;
 
-  bool get isComplete => data != null;
+  bool get isComplete => data != null || expectedLength == 0;
   Uint8List data;
 
-  int addBytes(Uint8List bytes) {
-    // If we just have the beginning of a packet, then consume the bytes and continue.
-    if (_inputBuffer.length + bytes.length < 5) {
-      _inputBuffer.add(bytes);
-      return bytes.length;
+  ByteData consumeNextBytes(int length) {
+    if (length == 0) {
+      return null;
     }
 
-    // If we have enough data to get the header out, peek at that data and store it
-    // This could be 5 if we haven't collected any data yet, or 1-4 if got a few bytes
-    // from a previous packet. It can't be <= 0 though, as the first precondition
-    // would have failed and we'd be right here.
-    var countNeededFromIncomingToDetermineMessage = 5 - _inputBuffer.length;
-    var headerBuffer = new Uint8List(5);
-    if (countNeededFromIncomingToDetermineMessage < 5) {
-      var takenBytes = _inputBuffer.takeBytes();
-      headerBuffer.setRange(0, takenBytes.length, takenBytes);
+    if (bytesAvailable >= length) {
+      var firstPacket = packets.first;
+
+      // The packet exactly matches the size of the bytes needed,
+      // remove & return it.
+      if (firstPacket.lengthInBytes == length) {
+        packets.removeAt(0);
+        return firstPacket.buffer.asByteData(firstPacket.offsetInBytes, firstPacket.lengthInBytes);
+      }
+
+      if (firstPacket.lengthInBytes > length) {
+        // We have to split up this packet and remove & return the first portion of it,
+        // and replace it with the second portion of it.
+        var remainingOffset = firstPacket.offsetInBytes + length;
+        var bytesNeeded = firstPacket.buffer.asByteData(firstPacket.offsetInBytes, length);
+        var bytesRemaining = firstPacket.buffer.asUint8List(remainingOffset, firstPacket.lengthInBytes - length);
+        packets.removeAt(0);
+        packets.insert(0, bytesRemaining);
+
+        return bytesNeeded;
+      }
+
+      // Otherwise, the first packet can't fill this message, but we know
+      // we have enough packets overall to fulfill it. So we can build
+      // a total buffer by accumulating multiple packets into that buffer.
+      // Each packet gets removed along the way, except for the last one,
+      // in which case if it has more bytes available, it gets replaced
+      // with the remaining bytes.
+
+      var builder = new BytesBuilder(copy: false);
+      var bytesNeeded = length - builder.length;
+      while(bytesNeeded > 0) {
+        var packet = packets.removeAt(0);
+        var bytesRemaining = packet.lengthInBytes;
+
+        if (bytesRemaining <= bytesNeeded) {
+          builder.add(packet.buffer.asUint8List(packet.offsetInBytes, packet.lengthInBytes));
+        } else {
+          builder.add(packet.buffer.asUint8List(packet.offsetInBytes, bytesNeeded));
+          packets.insert(0, packet.buffer.asUint8List(bytesNeeded, bytesRemaining - bytesNeeded));
+        }
+
+        bytesNeeded = length - builder.length;
+      }
+
+      return new Uint8List.fromList(builder.takeBytes()).buffer.asByteData();
     }
-    headerBuffer.setRange(
-        5 - countNeededFromIncomingToDetermineMessage,
-        5,
-        new Uint8List.view(bytes.buffer, bytes.offsetInBytes,
-            countNeededFromIncomingToDetermineMessage));
 
-    var bufReader = new ByteData.view(headerBuffer.buffer);
-    type = bufReader.getUint8(0);
-    // Remove this length from the length needed to complete this message
-    expectedLength = bufReader.getUint32(1) - 4;
-
-    var offsetIntoIncomingBytes = countNeededFromIncomingToDetermineMessage;
-    var byteBufferLengthRemaining = bytes.length - offsetIntoIncomingBytes;
-    if (byteBufferLengthRemaining >= expectedLength) {
-      _inputBuffer.add(new Uint8List.view(bytes.buffer,
-          bytes.offsetInBytes + offsetIntoIncomingBytes, expectedLength));
-      data = _inputBuffer.takeBytes();
-      return offsetIntoIncomingBytes + expectedLength;
-    }
-
-    _inputBuffer.add(new Uint8List.view(
-        bytes.buffer, bytes.offsetInBytes + offsetIntoIncomingBytes));
-    return bytes.length;
+    return null;
   }
 
-  _ServerMessage get message {
-    var msgMaker = _messageTypeMap[type];
-    if (msgMaker == null) {
-      msgMaker = () {
-        var msg = new _UnknownMessage()..code = type;
-        return msg;
-      };
+  int addBytes(Uint8List packet) {
+    packets.add(packet);
+
+    if (!hasReadHeader) {
+      ByteData headerBuffer = consumeNextBytes(HeaderByteSize);
+      if (headerBuffer == null) {
+        return packet.lengthInBytes;
+      }
+
+      type = headerBuffer.getUint8(0);
+      expectedLength = headerBuffer.getUint32(1) - 4;
     }
 
-    _ServerMessage msg = msgMaker();
+    if (expectedLength == 0) {
+      return packet.lengthInBytes - bytesAvailable;
+    }
 
+    var body = consumeNextBytes(expectedLength);
+    if (body == null) {
+      return packet.lengthInBytes;
+    }
+
+    data = body.buffer.asUint8List(body.offsetInBytes, body.lengthInBytes);
+
+    return packet.lengthInBytes - bytesAvailable;
+  }
+
+  ServerMessage get message {
+    var msgMaker = messageTypeMap[type] ?? () => new UnknownMessage()..code = type;
+
+    ServerMessage msg = msgMaker();
     msg.readBytes(data);
-
     return msg;
   }
 }
 
-class _MessageFramer {
-  _MessageFrame messageInProgress = new _MessageFrame();
-  List<_MessageFrame> messageQueue = [];
+class MessageFramer {
+  MessageFrame messageInProgress = new MessageFrame();
+  List<MessageFrame> messageQueue = [];
 
   void addBytes(Uint8List bytes) {
     var offsetIntoBytesRead = 0;
 
     do {
-      offsetIntoBytesRead += messageInProgress
-          .addBytes(new Uint8List.view(bytes.buffer, offsetIntoBytesRead));
+      var byteList = new Uint8List.view(bytes.buffer, offsetIntoBytesRead);
+      offsetIntoBytesRead += messageInProgress.addBytes(byteList);
 
       if (messageInProgress.isComplete) {
         messageQueue.add(messageInProgress);
-        messageInProgress = new _MessageFrame();
+        messageInProgress = new MessageFrame();
       }
     } while (offsetIntoBytesRead != bytes.length);
   }
 
   bool get hasMessage => messageQueue.isNotEmpty;
 
-  _MessageFrame popMessage() {
+  MessageFrame popMessage() {
     return messageQueue.removeAt(0);
   }
 }

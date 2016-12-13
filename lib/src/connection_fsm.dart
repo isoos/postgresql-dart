@@ -1,4 +1,4 @@
-part of postgres;
+part of postgres.connection;
 
 abstract class _PostgreSQLConnectionState {
   PostgreSQLConnection connection;
@@ -11,11 +11,11 @@ abstract class _PostgreSQLConnectionState {
     return this;
   }
 
-  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(ServerMessage message) {
     return this;
   }
 
-  _PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
+  _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
     var exception = new PostgreSQLException._(message.fields);
 
     if (exception.severity == PostgreSQLSeverity.fatal ||
@@ -46,7 +46,7 @@ class _PostgreSQLConnectionStateSocketConnected
   Completer completer;
 
   _PostgreSQLConnectionState onEnter() {
-    var startupMessage = new _StartupMessage(
+    var startupMessage = new StartupMessage(
         connection.databaseName, connection.timeZone,
         username: connection.username);
 
@@ -55,7 +55,7 @@ class _PostgreSQLConnectionStateSocketConnected
     return this;
   }
 
-  _PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
+  _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
     var exception = new PostgreSQLException._(message.fields);
 
     completer.completeError(exception);
@@ -63,13 +63,13 @@ class _PostgreSQLConnectionStateSocketConnected
     return new _PostgreSQLConnectionStateClosed();
   }
 
-  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
-    _AuthenticationMessage authMessage = message;
+  _PostgreSQLConnectionState onMessage(ServerMessage message) {
+    AuthenticationMessage authMessage = message;
 
     // Pass on the pending op to subsequent stages
-    if (authMessage.type == _AuthenticationMessage.KindOK) {
+    if (authMessage.type == AuthenticationMessage.KindOK) {
       return new _PostgreSQLConnectionStateAuthenticated(completer);
-    } else if (authMessage.type == _AuthenticationMessage.KindMD5Password) {
+    } else if (authMessage.type == AuthenticationMessage.KindMD5Password) {
       connection._salt = authMessage.salt;
 
       return new _PostgreSQLConnectionStateAuthenticating(completer);
@@ -94,7 +94,7 @@ class _PostgreSQLConnectionStateAuthenticating
   Completer completer;
 
   _PostgreSQLConnectionState onEnter() {
-    var authMessage = new _AuthMD5Message(
+    var authMessage = new AuthMD5Message(
         connection.username, connection.password, connection._salt);
 
     connection._socket.add(authMessage.asBytes());
@@ -102,7 +102,7 @@ class _PostgreSQLConnectionStateAuthenticating
     return this;
   }
 
-  _PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
+  _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
     var exception = new PostgreSQLException._(message.fields);
 
     completer.completeError(exception);
@@ -110,14 +110,14 @@ class _PostgreSQLConnectionStateAuthenticating
     return new _PostgreSQLConnectionStateClosed();
   }
 
-  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
-    if (message is _ParameterStatusMessage) {
+  _PostgreSQLConnectionState onMessage(ServerMessage message) {
+    if (message is ParameterStatusMessage) {
       connection.settings[message.name] = message.value;
-    } else if (message is _BackendKeyMessage) {
+    } else if (message is BackendKeyMessage) {
       connection._secretKey = message.secretKey;
       connection._processID = message.processID;
-    } else if (message is _ReadyForQueryMessage) {
-      if (message.state == _ReadyForQueryMessage.StateIdle) {
+    } else if (message is ReadyForQueryMessage) {
+      if (message.state == ReadyForQueryMessage.StateIdle) {
         return new _PostgreSQLConnectionStateIdle(openCompleter: completer);
       }
     }
@@ -136,7 +136,7 @@ class _PostgreSQLConnectionStateAuthenticated
 
   Completer completer;
 
-  _PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
+  _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
     var exception = new PostgreSQLException._(message.fields);
 
     completer.completeError(exception);
@@ -144,14 +144,14 @@ class _PostgreSQLConnectionStateAuthenticated
     return new _PostgreSQLConnectionStateClosed();
   }
 
-  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
-    if (message is _ParameterStatusMessage) {
+  _PostgreSQLConnectionState onMessage(ServerMessage message) {
+    if (message is ParameterStatusMessage) {
       connection.settings[message.name] = message.value;
-    } else if (message is _BackendKeyMessage) {
+    } else if (message is BackendKeyMessage) {
       connection._secretKey = message.secretKey;
       connection._processID = message.processID;
-    } else if (message is _ReadyForQueryMessage) {
-      if (message.state == _ReadyForQueryMessage.StateIdle) {
+    } else if (message is ReadyForQueryMessage) {
+      if (message.state == ReadyForQueryMessage.StateIdle) {
         return new _PostgreSQLConnectionStateIdle(openCompleter: completer);
       }
     }
@@ -178,7 +178,7 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
     return this;
   }
 
-  _PostgreSQLConnectionState processQuery(_Query q) {
+  _PostgreSQLConnectionState processQuery(Query q) {
     try {
       if (q.onlyReturnAffectedRowCount) {
         q.sendSimple(connection._socket);
@@ -205,7 +205,7 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
     return awake();
   }
 
-  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(ServerMessage message) {
     return this;
   }
 }
@@ -217,11 +217,11 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
 class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateBusy(this.query);
 
-  _Query query;
+  Query query;
   PostgreSQLException returningException = null;
   int rowsAffected = 0;
 
-  _PostgreSQLConnectionState onErrorResponse(_ErrorResponseMessage message) {
+  _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
     // If we get an error here, then we should eat the rest of the messages
     // and we are always confirmed to get a _ReadyForQueryMessage to finish up.
     // We should only report the error once that is done.
@@ -236,14 +236,14 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     return this;
   }
 
-  _PostgreSQLConnectionState onMessage(_ServerMessage message) {
+  _PostgreSQLConnectionState onMessage(ServerMessage message) {
     // We ignore NoData, as it doesn't tell us anything we don't already know
     // or care about.
 
     //print("(${query.statement}) -> $message");
 
-    if (message is _ReadyForQueryMessage) {
-      if (message.state == _ReadyForQueryMessage.StateIdle) {
+    if (message is ReadyForQueryMessage) {
+      if (message.state == ReadyForQueryMessage.StateIdle) {
         if (returningException != null) {
           query.completeError(returningException);
         } else {
@@ -251,7 +251,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
         }
 
         return new _PostgreSQLConnectionStateIdle();
-      } else if (message.state == _ReadyForQueryMessage.StateTransaction) {
+      } else if (message.state == ReadyForQueryMessage.StateTransaction) {
         if (returningException != null) {
           query.completeError(returningException);
         } else {
@@ -260,19 +260,19 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
 
         return new _PostgreSQLConnectionStateReadyInTransaction(
             query.transaction);
-      } else if (message.state == _ReadyForQueryMessage.StateTransactionError) {
+      } else if (message.state == ReadyForQueryMessage.StateTransactionError) {
         // This should cancel the transaction, we may have to send a commit here
         query.completeError(returningException);
         return new _PostgreSQLConnectionStateTransactionFailure(
             query.transaction);
       }
-    } else if (message is _CommandCompleteMessage) {
+    } else if (message is CommandCompleteMessage) {
       rowsAffected = message.rowsAffected;
-    } else if (message is _RowDescriptionMessage) {
+    } else if (message is RowDescriptionMessage) {
       query.fieldDescriptions = message.fieldDescriptions;
-    } else if (message is _DataRowMessage) {
+    } else if (message is DataRowMessage) {
       query.addRow(message.values);
-    } else if (message is _ParameterDescriptionMessage) {
+    } else if (message is ParameterDescriptionMessage) {
       var validationException =
           query.validateParameters(message.parameterTypeIDs);
       if (validationException != null) {
@@ -306,7 +306,7 @@ class _PostgreSQLConnectionStateReadyInTransaction
     return this;
   }
 
-  _PostgreSQLConnectionState processQuery(_Query q) {
+  _PostgreSQLConnectionState processQuery(Query q) {
     try {
       if (q.onlyReturnAffectedRowCount) {
         q.sendSimple(connection._socket);

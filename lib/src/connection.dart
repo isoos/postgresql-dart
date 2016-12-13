@@ -1,4 +1,16 @@
-part of postgres;
+library postgres.connection;
+
+import 'dart:async';
+import 'message_window.dart';
+import 'query.dart';
+
+import 'server_messages.dart';
+import 'dart:io';
+import 'client_messages.dart';
+
+part 'connection_fsm.dart';
+part 'transaction_proxy.dart';
+part 'exceptions.dart';
 
 abstract class PostgreSQLExecutionContext {
   /// Executes a query on this context.
@@ -105,9 +117,9 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   Map<String, String> settings = {};
 
   Socket _socket;
-  _MessageFramer _framer = new _MessageFramer();
+  MessageFramer _framer = new MessageFramer();
 
-  Map<String, _QueryCache> _reuseMap = {};
+  Map<String, QueryCache> _reuseMap = {};
   int _reuseCounter = 0;
 
   int _processID;
@@ -117,9 +129,9 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   bool _hasConnectedPreviously = false;
   _PostgreSQLConnectionState _connectionState;
 
-  List<_Query> _queryQueue = [];
+  List<Query> _queryQueue = [];
 
-  _Query get _pendingQuery {
+  Query get _pendingQuery {
     if (_queryQueue.isEmpty) {
       return null;
     }
@@ -151,7 +163,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
           .timeout(new Duration(seconds: timeoutInSeconds));
     }
 
-    _framer = new _MessageFramer();
+    _framer = new MessageFramer();
     _socket.listen(_readData,
         onError: _handleSocketError, onDone: _handleSocketClosed);
 
@@ -210,7 +222,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
           "Attempting to execute query, but connection is not open.");
     }
 
-    var query = new _Query<List<List<dynamic>>>(
+    var query = new Query<List<List<dynamic>>>(
         fmtString, substitutionValues, this, null);
     if (allowReuse) {
       query.statementIdentifier = _reuseIdentifierForQuery(query);
@@ -233,7 +245,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
           "Attempting to execute query, but connection is not open.");
     }
 
-    var query = new _Query<int>(fmtString, substitutionValues, this, null)
+    var query = new Query<int>(fmtString, substitutionValues, this, null)
       ..onlyReturnAffectedRowCount = true;
 
     return await _enqueue(query);
@@ -286,7 +298,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
   ////////
 
-  Future<dynamic> _enqueue(_Query query) async {
+  Future<dynamic> _enqueue(Query query) async {
     _queryQueue.add(query);
     _transitionToState(_connectionState.awake());
 
@@ -342,17 +354,15 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     // as soon as a close occurs, we detach the data stream from anything that actually does
     // anything with that data.
     _framer.addBytes(bytes);
-
     while (_framer.hasMessage) {
       var msg = _framer.popMessage().message;
-
       try {
-        if (msg is _ErrorResponseMessage) {
+        if (msg is ErrorResponseMessage) {
           _transitionToState(_connectionState.onErrorResponse(msg));
         } else {
           _transitionToState(_connectionState.onMessage(msg));
         }
-      } catch (e, st) {
+      } catch (e) {
         _handleSocketError(e);
       }
     }
@@ -371,7 +381,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     _cancelCurrentQueries();
   }
 
-  void _cacheQuery(_Query query) {
+  void _cacheQuery(Query query) {
     if (query.cache == null) {
       return;
     }
@@ -381,7 +391,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     }
   }
 
-  _QueryCache _cachedQuery(String statementIdentifier) {
+  QueryCache _cachedQuery(String statementIdentifier) {
     if (statementIdentifier == null) {
       return null;
     }
@@ -389,7 +399,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     return _reuseMap[statementIdentifier];
   }
 
-  String _reuseIdentifierForQuery(_Query q) {
+  String _reuseIdentifierForQuery(Query q) {
     var existing = _reuseMap[q.statement];
     if (existing != null) {
       return existing.preparedStatementName;

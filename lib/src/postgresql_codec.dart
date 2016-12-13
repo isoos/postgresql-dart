@@ -1,4 +1,6 @@
-part of postgres;
+import 'dart:typed_data';
+import 'dart:convert';
+import 'connection.dart';
 
 /// The set of available data types that [PostgreSQLConnection]s support.
 enum PostgreSQLDataType {

@@ -1,22 +1,8 @@
-part of postgres;
-
-typedef String SQLReplaceIdentifierFunction(
-    _PostgreSQLFormatIdentifier identifier, int index);
+import 'postgresql_codec.dart';
+import 'query.dart';
 
 class PostgreSQLFormat {
   static int _AtSignCodeUnit = "@".codeUnitAt(0);
-  static Map<String, int> _typeStringToCodeMap = {
-    "text": PostgreSQLCodec.TypeText,
-    "int2": PostgreSQLCodec.TypeInt2,
-    "int4": PostgreSQLCodec.TypeInt4,
-    "int8": PostgreSQLCodec.TypeInt8,
-    "float4": PostgreSQLCodec.TypeFloat4,
-    "float8": PostgreSQLCodec.TypeFloat8,
-    "boolean": PostgreSQLCodec.TypeBool,
-    "date": PostgreSQLCodec.TypeDate,
-    "timestamp": PostgreSQLCodec.TypeTimestamp,
-    "timestamptz": PostgreSQLCodec.TypeTimestampTZ
-  };
 
   static String id(String name, {PostgreSQLDataType type: null}) {
     if (type != null) {
@@ -57,50 +43,44 @@ class PostgreSQLFormat {
     return null;
   }
 
-  static int _postgresCodeForDataTypeString(String dt) {
-    return _typeStringToCodeMap[dt];
-  }
-
   static String substitute(String fmtString, Map<String, dynamic> values,
       {SQLReplaceIdentifierFunction replace: null}) {
     values ??= {};
     replace ??= (spec, index) => PostgreSQLCodec.encode(values[spec.name]);
 
-    var items = <_PostgreSQLFormatToken>[];
-    _PostgreSQLFormatToken lastPtr = null;
+    var items = <PostgreSQLFormatToken>[];
+    PostgreSQLFormatToken lastPtr = null;
     var iterator = new RuneIterator(fmtString);
 
     iterator.moveNext();
     while (iterator.current != null) {
       if (lastPtr == null) {
         if (iterator.current == _AtSignCodeUnit) {
-          lastPtr =
-              new _PostgreSQLFormatToken(_PostgreSQLFormatTokenType.marker);
+          lastPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.marker);
           lastPtr.buffer.writeCharCode(iterator.current);
           items.add(lastPtr);
         } else {
-          lastPtr = new _PostgreSQLFormatToken(_PostgreSQLFormatTokenType.text);
+          lastPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
           lastPtr.buffer.writeCharCode(iterator.current);
           items.add(lastPtr);
         }
-      } else if (lastPtr.type == _PostgreSQLFormatTokenType.text) {
+      } else if (lastPtr.type == PostgreSQLFormatTokenType.text) {
         if (iterator.current == _AtSignCodeUnit) {
-          lastPtr =
-              new _PostgreSQLFormatToken(_PostgreSQLFormatTokenType.marker);
+          lastPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.marker);
           lastPtr.buffer.writeCharCode(iterator.current);
           items.add(lastPtr);
         } else {
           lastPtr.buffer.writeCharCode(iterator.current);
         }
-      } else if (lastPtr.type == _PostgreSQLFormatTokenType.marker) {
+      } else if (lastPtr.type == PostgreSQLFormatTokenType.marker) {
         if (iterator.current == _AtSignCodeUnit) {
           iterator.movePrevious();
           if (iterator.current == _AtSignCodeUnit) {
             lastPtr.buffer.writeCharCode(iterator.current);
-            lastPtr.type = _PostgreSQLFormatTokenType.text;
+            lastPtr.type = PostgreSQLFormatTokenType.text;
           } else {
             lastPtr =
-                new _PostgreSQLFormatToken(_PostgreSQLFormatTokenType.marker);
+                new PostgreSQLFormatToken(PostgreSQLFormatTokenType.marker);
             lastPtr.buffer.writeCharCode(iterator.current);
             items.add(lastPtr);
           }
@@ -108,7 +88,7 @@ class PostgreSQLFormat {
         } else if (_isIdentifier(iterator.current)) {
           lastPtr.buffer.writeCharCode(iterator.current);
         } else {
-          lastPtr = new _PostgreSQLFormatToken(_PostgreSQLFormatTokenType.text);
+          lastPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
           lastPtr.buffer.writeCharCode(iterator.current);
           items.add(lastPtr);
         }
@@ -119,10 +99,10 @@ class PostgreSQLFormat {
 
     var idx = 1;
     return items.map((t) {
-      if (t.type == _PostgreSQLFormatTokenType.text) {
+      if (t.type == PostgreSQLFormatTokenType.text) {
         return t.buffer;
       } else {
-        var identifier = new _PostgreSQLFormatIdentifier(t.buffer.toString());
+        var identifier = new PostgreSQLFormatIdentifier(t.buffer.toString());
 
         if (!values.containsKey(identifier.name)) {
           throw new FormatException(
@@ -154,39 +134,4 @@ class PostgreSQLFormat {
         (charCode == _underscoreCodeUnit) ||
         (charCode == _ColonCodeUnit);
   }
-}
-
-enum _PostgreSQLFormatTokenType { text, marker }
-
-class _PostgreSQLFormatToken {
-  _PostgreSQLFormatToken(this.type);
-
-  _PostgreSQLFormatTokenType type;
-  StringBuffer buffer = new StringBuffer();
-}
-
-class _PostgreSQLFormatIdentifier {
-  _PostgreSQLFormatIdentifier(String t) {
-    var components = t.split(":");
-    if (components.length == 1) {
-      name = components.first;
-    } else if (components.length == 2) {
-      name = components.first;
-
-      var dataTypeString = components.last;
-      if (dataTypeString != null) {
-        typeCode =
-            PostgreSQLFormat._postgresCodeForDataTypeString(dataTypeString);
-      }
-    } else {
-      throw new FormatException(
-          "Invalid format string identifier, must contain identifier name and optionally one data type in format '@identifier:dataType' (offending identifier: ${t})");
-    }
-
-    // Strip @
-    name = name.substring(1, name.length);
-  }
-
-  String name;
-  int typeCode;
 }

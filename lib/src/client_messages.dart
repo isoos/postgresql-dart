@@ -1,6 +1,10 @@
-part of postgres;
+import 'utf8_backed_string.dart';
+import 'dart:typed_data';
+import 'query.dart';
+import 'constants.dart';
+import 'package:crypto/crypto.dart';
 
-abstract class _ClientMessage {
+abstract class ClientMessage {
   static const int FormatText = 0;
   static const int FormatBinary = 1;
 
@@ -44,9 +48,9 @@ abstract class _ClientMessage {
     return buffer.buffer.asUint8List();
   }
 
-  static Uint8List aggregateBytes(List<_ClientMessage> messages) {
+  static Uint8List aggregateBytes(List<ClientMessage> messages) {
     var totalLength =
-        messages.fold(0, (total, _ClientMessage next) => total + next.length);
+        messages.fold(0, (total, ClientMessage next) => total + next.length);
     var buffer = new ByteData(totalLength);
 
     var offset = 0;
@@ -57,8 +61,8 @@ abstract class _ClientMessage {
   }
 }
 
-class _StartupMessage extends _ClientMessage {
-  _StartupMessage(String databaseName, String timeZone, {String username}) {
+class StartupMessage extends ClientMessage {
+  StartupMessage(String databaseName, String timeZone, {String username}) {
     this.databaseName = new UTF8BackedString(databaseName);
     this.timeZone = new UTF8BackedString(timeZone);
     if (username != null) {
@@ -85,7 +89,7 @@ class _StartupMessage extends _ClientMessage {
   int applyToBuffer(ByteData buffer, int offset) {
     buffer.setInt32(offset, length);
     offset += 4;
-    buffer.setInt32(offset, _ClientMessage.ProtocolVersion);
+    buffer.setInt32(offset, ClientMessage.ProtocolVersion);
     offset += 4;
 
     if (username != null) {
@@ -110,8 +114,8 @@ class _StartupMessage extends _ClientMessage {
   }
 }
 
-class _AuthMD5Message extends _ClientMessage {
-  _AuthMD5Message(String username, String password, List<int> saltBytes) {
+class AuthMD5Message extends ClientMessage {
+  AuthMD5Message(String username, String password, List<int> saltBytes) {
     var passwordHash =
         md5.convert("${password}${username}".codeUnits).toString();
     var saltString = new String.fromCharCodes(saltBytes);
@@ -126,7 +130,7 @@ class _AuthMD5Message extends _ClientMessage {
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
-    buffer.setUint8(offset, _ClientMessage.PasswordIdentifier);
+    buffer.setUint8(offset, ClientMessage.PasswordIdentifier);
     offset += 1;
     buffer.setUint32(offset, length - 1);
     offset += 4;
@@ -136,8 +140,8 @@ class _AuthMD5Message extends _ClientMessage {
   }
 }
 
-class _QueryMessage extends _ClientMessage {
-  _QueryMessage(String queryString) {
+class QueryMessage extends ClientMessage {
+  QueryMessage(String queryString) {
     this.queryString = new UTF8BackedString(queryString);
   }
 
@@ -148,7 +152,7 @@ class _QueryMessage extends _ClientMessage {
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
-    buffer.setUint8(offset, _ClientMessage.QueryIdentifier);
+    buffer.setUint8(offset, ClientMessage.QueryIdentifier);
     offset += 1;
     buffer.setUint32(offset, length - 1);
     offset += 4;
@@ -158,8 +162,8 @@ class _QueryMessage extends _ClientMessage {
   }
 }
 
-class _ParseMessage extends _ClientMessage {
-  _ParseMessage(String statement, {String statementName: ""}) {
+class ParseMessage extends ClientMessage {
+  ParseMessage(String statement, {String statementName: ""}) {
     this.statement = new UTF8BackedString(statement);
     this.statementName = new UTF8BackedString(statementName);
   }
@@ -172,7 +176,7 @@ class _ParseMessage extends _ClientMessage {
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
-    buffer.setUint8(offset, _ClientMessage.ParseIdentifier);
+    buffer.setUint8(offset, ClientMessage.ParseIdentifier);
     offset += 1;
     buffer.setUint32(offset, length - 1);
     offset += 4;
@@ -187,8 +191,8 @@ class _ParseMessage extends _ClientMessage {
   }
 }
 
-class _DescribeMessage extends _ClientMessage {
-  _DescribeMessage({String statementName: ""}) {
+class DescribeMessage extends ClientMessage {
+  DescribeMessage({String statementName: ""}) {
     this.statementName = new UTF8BackedString(statementName);
   }
 
@@ -199,7 +203,7 @@ class _DescribeMessage extends _ClientMessage {
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
-    buffer.setUint8(offset, _ClientMessage.DescribeIdentifier);
+    buffer.setUint8(offset, ClientMessage.DescribeIdentifier);
     offset += 1;
     buffer.setUint32(offset, length - 1);
     offset += 4;
@@ -212,13 +216,13 @@ class _DescribeMessage extends _ClientMessage {
   }
 }
 
-class _BindMessage extends _ClientMessage {
-  _BindMessage(this.parameters, {String statementName: ""}) {
+class BindMessage extends ClientMessage {
+  BindMessage(this.parameters, {String statementName: ""}) {
     typeSpecCount = parameters.where((p) => p.isBinary).length;
     this.statementName = new UTF8BackedString(statementName);
   }
 
-  List<_ParameterValue> parameters;
+  List<ParameterValue> parameters;
   UTF8BackedString statementName;
 
   int typeSpecCount;
@@ -234,7 +238,7 @@ class _BindMessage extends _ClientMessage {
       _cachedLength = 15;
       _cachedLength += statementName.utf8Length;
       _cachedLength += inputParameterElementCount * 2;
-      _cachedLength += parameters.fold(0, (len, _ParameterValue paramValue) {
+      _cachedLength += parameters.fold(0, (len, ParameterValue paramValue) {
         if (paramValue.bytes == null) {
           return len + 4;
         } else {
@@ -246,7 +250,7 @@ class _BindMessage extends _ClientMessage {
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
-    buffer.setUint8(offset, _ClientMessage.BindIdentifier);
+    buffer.setUint8(offset, ClientMessage.BindIdentifier);
     offset += 1;
     buffer.setUint32(offset, length - 1);
     offset += 4;
@@ -262,24 +266,21 @@ class _BindMessage extends _ClientMessage {
       buffer.setUint16(offset, 1);
       // Apply following format code for all parameters by indicating 1
       offset += 2;
-      buffer.setUint16(offset, _ClientMessage.FormatBinary);
+      buffer.setUint16(offset, ClientMessage.FormatBinary);
       offset += 2; // Specify format code for all params is BINARY
     } else if (typeSpecCount == 0) {
       buffer.setUint16(offset, 1);
       // Apply following format code for all parameters by indicating 1
       offset += 2;
-      buffer.setUint16(offset, _ClientMessage.FormatText);
+      buffer.setUint16(offset, ClientMessage.FormatText);
       offset += 2; // Specify format code for all params is TEXT
     } else {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.setUint16(offset, parameters.length);
       offset += 2;
       parameters.forEach((p) {
-        buffer.setUint16(
-            offset,
-            p.isBinary
-                ? _ClientMessage.FormatBinary
-                : _ClientMessage.FormatText);
+        buffer.setUint16(offset,
+            p.isBinary ? ClientMessage.FormatBinary : ClientMessage.FormatText);
         offset += 2;
       });
     }
@@ -311,15 +312,15 @@ class _BindMessage extends _ClientMessage {
   }
 }
 
-class _ExecuteMessage extends _ClientMessage {
-  _ExecuteMessage();
+class ExecuteMessage extends ClientMessage {
+  ExecuteMessage();
 
   int get length {
     return 10;
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
-    buffer.setUint8(offset, _ClientMessage.ExecuteIdentifier);
+    buffer.setUint8(offset, ClientMessage.ExecuteIdentifier);
     offset += 1;
     buffer.setUint32(offset, length - 1);
     offset += 4;
@@ -331,15 +332,15 @@ class _ExecuteMessage extends _ClientMessage {
   }
 }
 
-class _SyncMessage extends _ClientMessage {
-  _SyncMessage();
+class SyncMessage extends ClientMessage {
+  SyncMessage();
 
   int get length {
     return 5;
   }
 
   int applyToBuffer(ByteData buffer, int offset) {
-    buffer.setUint8(offset, _ClientMessage.SyncIdentifier);
+    buffer.setUint8(offset, ClientMessage.SyncIdentifier);
     offset += 1;
     buffer.setUint32(offset, 4);
     offset += 4;

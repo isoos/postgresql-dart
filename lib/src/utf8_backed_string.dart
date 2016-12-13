@@ -1,9 +1,11 @@
-part of postgres;
+import 'dart:convert';
 
 class UTF8BackedString {
   UTF8BackedString(this.string);
 
   List<int> _cachedUTF8Bytes;
+
+  bool get hasCachedBytes => _cachedUTF8Bytes != null;
 
   final String string;
 

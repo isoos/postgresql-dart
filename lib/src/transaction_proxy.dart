@@ -1,11 +1,11 @@
-part of postgres;
+part of postgres.connection;
 
 typedef Future<dynamic> _TransactionQuerySignature(
     PostgreSQLExecutionContext connection);
 
 class _TransactionProxy implements PostgreSQLExecutionContext {
   _TransactionProxy(this.connection, this.executionBlock) {
-    beginQuery = new _Query<int>("BEGIN", {}, connection, this)
+    beginQuery = new Query<int>("BEGIN", {}, connection, this)
       ..onlyReturnAffectedRowCount = true;
 
     beginQuery.onComplete.future
@@ -13,12 +13,12 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
         .catchError(handleTransactionQueryError);
   }
 
-  _Query beginQuery;
+  Query beginQuery;
   Completer completer = new Completer();
 
   Future get future => completer.future;
 
-  _Query get pendingQuery {
+  Query get pendingQuery {
     if (queryQueue.length > 0) {
       return queryQueue.first;
     }
@@ -26,7 +26,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
     return null;
   }
 
-  List<_Query> queryQueue = [];
+  List<Query> queryQueue = [];
   PostgreSQLConnection connection;
   _TransactionQuerySignature executionBlock;
 
@@ -42,7 +42,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
           "Attempting to execute query, but connection is not open.");
     }
 
-    var query = new _Query<List<List<dynamic>>>(
+    var query = new Query<List<List<dynamic>>>(
         fmtString, substitutionValues, connection, this);
 
     if (allowReuse) {
@@ -59,7 +59,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
           "Attempting to execute query, but connection is not open.");
     }
 
-    var query = new _Query<int>(fmtString, substitutionValues, connection, this)
+    var query = new Query<int>(fmtString, substitutionValues, connection, this)
       ..onlyReturnAffectedRowCount = true;
 
     return enqueue(query);
@@ -93,7 +93,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
 
   Future handleTransactionQueryError(dynamic err) async {}
 
-  Future<dynamic> enqueue(_Query query) async {
+  Future<dynamic> enqueue(Query query) async {
     queryQueue.add(query);
     connection._transitionToState(connection._connectionState.awake());
 

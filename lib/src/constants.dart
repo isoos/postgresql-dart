@@ -1,5 +1,3 @@
-part of postgres;
-
 class UTF8ByteConstants {
   static const user = const [117, 115, 101, 114, 0];
   static const database = const [100, 97, 116, 97, 98, 97, 115, 101, 0];
