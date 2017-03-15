@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.5
+
+- Allow connect via SSL.
+
 ## 0.9.4
 
 - Fixed issue with buffer length

@@ -1,6 +1,6 @@
 name: postgres
-description: A library to connect and query PostgreSQL databases.
-version: 0.9.4+1
+description: PostgreSQL database driver. Supports statement reuse and binary protocol.
+version: 0.9.5
 author: stable|kernel <jobs@stablekernel.com>
 homepage: https://github.com/stablekernel/postgresql-dart
 documentation:

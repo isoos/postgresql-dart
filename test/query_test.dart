@@ -51,14 +51,17 @@ void main() {
     });
 
     test("Really long raw substitution value", () async {
-      var result = await connection.query("INSERT INTO t (t) VALUES (${PostgreSQLFormat.id("t", type: PostgreSQLDataType.text)}) returning t;", substitutionValues: {
-        "t" : lorumIpsum
-      });
-      expect(result, [[lorumIpsum]]);
+      var result = await connection.query(
+          "INSERT INTO t (t) VALUES (${PostgreSQLFormat.id("t", type: PostgreSQLDataType.text)}) returning t;",
+          substitutionValues: {"t": lorumIpsum});
+      expect(result, [
+        [lorumIpsum]
+      ]);
     });
 
     test("Really long SQL string in execute", () async {
-      var result = await connection.execute("INSERT INTO t (t) VALUES ('$lorumIpsum') returning t;");
+      var result = await connection
+          .execute("INSERT INTO t (t) VALUES ('$lorumIpsum') returning t;");
       expect(result, 1);
     });
 

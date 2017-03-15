@@ -1,11 +1,11 @@
 language: dart
 sudo: required
 addons:
-  postgresql: "9.4"
+  postgresql: "9.5"
 services:
   - postgresql
 before_script:
-  - sudo cp ci/pg_hba.conf /etc/postgresql/9.4/main/pg_hba.conf
+  - sudo cp ci/pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
   - sudo /etc/init.d/postgresql restart
   - psql -c 'create database dart_test;' -U postgres
   - psql -c 'create user dart with createdb;' -U postgres

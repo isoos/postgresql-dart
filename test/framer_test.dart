@@ -141,11 +141,14 @@ void main() {
     ]);
   });
 
-  test("Message spans two packets, started in a packet that contained another message", () {
+  test(
+      "Message spans two packets, started in a packet that contained another message",
+      () {
     var earlierMessage = messageWithBytes([1, 2], 0);
     var message = messageWithBytes([1, 2, 3, 4, 5, 6, 7], 1);
 
-    framer.addBytes(bufferWithMessages([earlierMessage, fragmentedMessageBuffer(message, 8).first]));
+    framer.addBytes(bufferWithMessages(
+        [earlierMessage, fragmentedMessageBuffer(message, 8).first]));
     expect(framer.messageQueue, hasLength(1));
 
     framer.addBytes(fragmentedMessageBuffer(message, 8).last);
@@ -163,15 +166,21 @@ void main() {
 
   test("Message spans three packets, only part of header in the first", () {
     var earlierMessage = messageWithBytes([1, 2], 0);
-    var message = messageWithBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 1);
+    var message =
+        messageWithBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 1);
 
-    framer.addBytes(bufferWithMessages([earlierMessage, fragmentedMessageBuffer(message, 3).first]));
+    framer.addBytes(bufferWithMessages(
+        [earlierMessage, fragmentedMessageBuffer(message, 3).first]));
     expect(framer.messageQueue, hasLength(1));
 
-    framer.addBytes(fragmentedMessageBuffer(fragmentedMessageBuffer(message, 3).last, 6).first);
+    framer.addBytes(
+        fragmentedMessageBuffer(fragmentedMessageBuffer(message, 3).last, 6)
+            .first);
     expect(framer.messageQueue, hasLength(1));
 
-    framer.addBytes(fragmentedMessageBuffer(fragmentedMessageBuffer(message, 3).last, 6).last);
+    framer.addBytes(
+        fragmentedMessageBuffer(fragmentedMessageBuffer(message, 3).last, 6)
+            .last);
 
     var messages = framer.messageQueue.map((f) => f.message).toList();
     expect(messages, [
@@ -180,7 +189,8 @@ void main() {
         ..bytes = new Uint8List.fromList([1, 2]),
       new UnknownMessage()
         ..code = 1
-        ..bytes = new Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+        ..bytes =
+            new Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
     ]);
   });
 
@@ -188,10 +198,7 @@ void main() {
     framer.addBytes(bufferWithMessages([messageWithBytes([], 10)]));
 
     var messages = framer.messageQueue.map((f) => f.message).toList();
-    expect(messages, [
-      new UnknownMessage()
-        ..code = 10
-    ]);
+    expect(messages, [new UnknownMessage()..code = 10]);
   });
 }
 

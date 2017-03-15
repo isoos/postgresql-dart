@@ -111,6 +111,29 @@ class PostgreSQLException implements Exception {
   /// A [StackTrace] if available.
   StackTrace stackTrace;
 
-  String toString() =>
-      "$severity $code: $message Detail: $detail Hint: $hint Table: $tableName Column: $columnName Constraint: $constraintName";
+  String toString() {
+    var buff = new StringBuffer("$severity $code: $message ");
+
+    if (detail != null) {
+      buff.write("Detail: $detail ");
+    }
+
+    if (hint != null) {
+      buff.write("Hint: $hint ");
+    }
+
+    if (tableName != null) {
+      buff.write("Table: $tableName ");
+    }
+
+    if (columnName != null) {
+      buff.write("Column: $columnName ");
+    }
+
+    if (constraintName != null) {
+      buff.write("Constraint $constraintName ");
+    }
+
+    return buff.toString();
+  }
 }

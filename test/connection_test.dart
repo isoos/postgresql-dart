@@ -21,9 +21,32 @@ void main() {
       expect(await conn.execute("select 1"), equals(1));
     });
 
+    test("SSL Connect with md5 auth required", () async {
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "dart", password: "dart", useSSL: true);
+
+      await conn.open();
+
+      expect(await conn.execute("select 1"), equals(1));
+      var socketMirror = reflect(conn).type.declarations.values.firstWhere(
+          (DeclarationMirror dm) =>
+              dm.simpleName.toString().contains("_socket"));
+      var underlyingSocket =
+          reflect(conn).getField(socketMirror.simpleName).reflectee;
+      expect(underlyingSocket is SecureSocket, true);
+    });
+
     test("Connect with no auth required", () async {
       conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
           username: "darttrust");
+      await conn.open();
+
+      expect(await conn.execute("select 1"), equals(1));
+    });
+
+    test("SSL Connect with no auth required", () async {
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "darttrust", useSSL: true);
       await conn.open();
 
       expect(await conn.execute("select 1"), equals(1));
@@ -47,11 +70,54 @@ void main() {
       conn = null;
     });
 
+    test("SSL Closing idle connection succeeds, closes underlying socket",
+        () async {
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "darttrust", useSSL: true);
+      await conn.open();
+
+      await conn.close();
+
+      var socketMirror = reflect(conn).type.declarations.values.firstWhere(
+          (DeclarationMirror dm) =>
+              dm.simpleName.toString().contains("_socket"));
+      Socket underlyingSocket =
+          reflect(conn).getField(socketMirror.simpleName).reflectee;
+      expect(await underlyingSocket.done, isNotNull);
+
+      conn = null;
+    });
+
     test(
         "Closing connection while busy succeeds, queued queries are all accounted for (canceled), closes underlying socket",
         () async {
       conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
           username: "darttrust");
+      await conn.open();
+
+      var futures = [
+        conn.query("select 1", allowReuse: false),
+        conn.query("select 2", allowReuse: false),
+        conn.query("select 3", allowReuse: false),
+        conn.query("select 4", allowReuse: false),
+        conn.query("select 5", allowReuse: false)
+      ];
+
+      await conn.close();
+
+      try {
+        await Future.wait(futures);
+        expect(true, false);
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("Connection closed"));
+      }
+    });
+
+    test(
+        "SSL Closing connection while busy succeeds, queued queries are all accounted for (canceled), closes underlying socket",
+        () async {
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "darttrust", useSSL: true);
       await conn.open();
 
       var futures = [
@@ -169,6 +235,19 @@ void main() {
       }
     });
 
+    test("SSL Sending queries to opening connection triggers error", () async {
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "darttrust", useSSL: true);
+      conn.open();
+
+      try {
+        await conn.execute("select 1");
+        expect(true, false);
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("connection is not open"));
+      }
+    });
+
     test("Starting transaction while opening connection triggers error",
         () async {
       conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
@@ -185,10 +264,41 @@ void main() {
       }
     });
 
+    test("SSL Starting transaction while opening connection triggers error",
+        () async {
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "darttrust", useSSL: true);
+      conn.open();
+
+      try {
+        await conn.transaction((ctx) async {
+          await ctx.execute("select 1");
+        });
+        expect(true, false);
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("connection is not open"));
+      }
+    });
+
     test("Invalid password reports error, conn is closed, disables conn",
         () async {
       conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
           username: "dart", password: "notdart");
+
+      try {
+        await conn.open();
+        expect(true, false);
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("password authentication failed"));
+      }
+
+      await expectConnectionIsInvalid(conn);
+    });
+
+    test("SSL Invalid password reports error, conn is closed, disables conn",
+        () async {
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "dart", password: "notdart", useSSL: true);
 
       try {
         await conn.open();
@@ -347,6 +457,20 @@ void main() {
     });
 
     test(
+        "SSL Socket fails to connect reports error, disables connection for future use",
+        () async {
+      var conn = new PostgreSQLConnection("localhost", 5431, "dart_test",
+          useSSL: true);
+
+      try {
+        await conn.open();
+        expect(true, false);
+      } on SocketException {}
+
+      await expectConnectionIsInvalid(conn);
+    });
+
+    test(
         "Connection that times out throws appropriate error and cannot be reused",
         () async {
       serverSocket =
@@ -359,6 +483,29 @@ void main() {
 
       var conn = new PostgreSQLConnection("localhost", 5433, "dart_test",
           timeoutInSeconds: 2);
+
+      try {
+        await conn.open();
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("Timed out trying to connect"));
+      }
+
+      await expectConnectionIsInvalid(conn);
+    });
+
+    test(
+        "SSL Connection that times out throws appropriate error and cannot be reused",
+        () async {
+      serverSocket =
+          await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 5433);
+      serverSocket.listen((s) {
+        socket = s;
+        // Don't respond on purpose
+        s.listen((bytes) {});
+      });
+
+      var conn = new PostgreSQLConnection("localhost", 5433, "dart_test",
+          timeoutInSeconds: 2, useSSL: true);
 
       try {
         await conn.open();
@@ -395,6 +542,39 @@ void main() {
       } on PostgreSQLException catch (e) {
         expect(e.message, contains("closed or query cancelled"));
       }
+    });
+
+    test("SSL Connection that times out triggers future for pending queries",
+        () async {
+      var openCompleter = new Completer();
+      serverSocket =
+          await ServerSocket.bind(InternetAddress.LOOPBACK_IP_V4, 5433);
+      serverSocket.listen((s) {
+        socket = s;
+        // Don't respond on purpose
+        s.listen((bytes) {});
+        new Future.delayed(new Duration(milliseconds: 100), () {
+          openCompleter.complete();
+        });
+      });
+
+      var conn = new PostgreSQLConnection("localhost", 5433, "dart_test",
+          timeoutInSeconds: 2, useSSL: true);
+      conn.open().catchError((e) {});
+
+      await openCompleter.future;
+
+      try {
+        await conn.execute("select 1");
+        expect(true, false);
+      } on PostgreSQLException catch (e) {
+        expect(e.message, contains("but connection is not open"));
+      }
+
+      try {
+        await conn.open();
+        expect(true, false);
+      } on PostgreSQLException {}
     });
   });
 }

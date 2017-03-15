@@ -173,7 +173,8 @@ void main() {
         "FALSE");
   });
 
-  test("UTF8String caches string regardless of which method is called first", () {
+  test("UTF8String caches string regardless of which method is called first",
+      () {
     var u = new UTF8BackedString("abcd");
     var v = new UTF8BackedString("abcd");
 

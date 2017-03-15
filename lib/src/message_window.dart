@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 import 'dart:io';
 import 'server_messages.dart';
-import 'dart:math';
 
 class MessageFrame {
   static const int HeaderByteSize = 5;
@@ -41,15 +40,18 @@ class MessageFrame {
       // remove & return it.
       if (firstPacket.lengthInBytes == length) {
         packets.removeAt(0);
-        return firstPacket.buffer.asByteData(firstPacket.offsetInBytes, firstPacket.lengthInBytes);
+        return firstPacket.buffer
+            .asByteData(firstPacket.offsetInBytes, firstPacket.lengthInBytes);
       }
 
       if (firstPacket.lengthInBytes > length) {
         // We have to split up this packet and remove & return the first portion of it,
         // and replace it with the second portion of it.
         var remainingOffset = firstPacket.offsetInBytes + length;
-        var bytesNeeded = firstPacket.buffer.asByteData(firstPacket.offsetInBytes, length);
-        var bytesRemaining = firstPacket.buffer.asUint8List(remainingOffset, firstPacket.lengthInBytes - length);
+        var bytesNeeded =
+            firstPacket.buffer.asByteData(firstPacket.offsetInBytes, length);
+        var bytesRemaining = firstPacket.buffer
+            .asUint8List(remainingOffset, firstPacket.lengthInBytes - length);
         packets.removeAt(0);
         packets.insert(0, bytesRemaining);
 
@@ -65,15 +67,20 @@ class MessageFrame {
 
       var builder = new BytesBuilder(copy: false);
       var bytesNeeded = length - builder.length;
-      while(bytesNeeded > 0) {
+      while (bytesNeeded > 0) {
         var packet = packets.removeAt(0);
         var bytesRemaining = packet.lengthInBytes;
 
         if (bytesRemaining <= bytesNeeded) {
-          builder.add(packet.buffer.asUint8List(packet.offsetInBytes, packet.lengthInBytes));
+          builder.add(packet.buffer
+              .asUint8List(packet.offsetInBytes, packet.lengthInBytes));
         } else {
-          builder.add(packet.buffer.asUint8List(packet.offsetInBytes, bytesNeeded));
-          packets.insert(0, packet.buffer.asUint8List(bytesNeeded, bytesRemaining - bytesNeeded));
+          builder.add(
+              packet.buffer.asUint8List(packet.offsetInBytes, bytesNeeded));
+          packets.insert(
+              0,
+              packet.buffer
+                  .asUint8List(bytesNeeded, bytesRemaining - bytesNeeded));
         }
 
         bytesNeeded = length - builder.length;
@@ -113,7 +120,8 @@ class MessageFrame {
   }
 
   ServerMessage get message {
-    var msgMaker = messageTypeMap[type] ?? () => new UnknownMessage()..code = type;
+    var msgMaker =
+        messageTypeMap[type] ?? () => new UnknownMessage()..code = type;
 
     ServerMessage msg = msgMaker();
     msg.readBytes(data);
