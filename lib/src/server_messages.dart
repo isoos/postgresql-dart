@@ -133,6 +133,19 @@ class DataRowMessage extends ServerMessage {
   String toString() => "Data Row Message: ${values}";
 }
 
+class NotificationResponseMessage extends ServerMessage {
+  int processID;
+  String channel;
+  String payload;
+
+  void readBytes(Uint8List bytes) {
+    var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
+    processID = view.getUint32(0);
+    channel = UTF8.decode(bytes.sublist(4, bytes.indexOf(0, 4)));
+    payload = UTF8.decode(bytes.sublist(bytes.indexOf(0, 4) + 1, bytes.lastIndexOf(0)));
+  }
+}
+
 class CommandCompleteMessage extends ServerMessage {
   int rowsAffected;
 
@@ -269,4 +282,12 @@ class ErrorField {
       _buffer.writeCharCode(byte);
     }
   }
+}
+
+class Notification {
+  final int processID;
+  final String channel;
+  final String payload;
+
+  Notification(this.processID, this.channel, this.payload);
 }

@@ -7,6 +7,7 @@ class MessageFrame {
   static Map<int, Function> messageTypeMap = {
     49: () => new ParseCompleteMessage(),
     50: () => new BindCompleteMessage(),
+    65: () => new NotificationResponseMessage(),
     67: () => new CommandCompleteMessage(),
     68: () => new DataRowMessage(),
     69: () => new ErrorResponseMessage(),

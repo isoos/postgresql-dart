@@ -115,7 +115,7 @@ class _PostgreSQLConnectionStateAuthenticating
       connection.settings[message.name] = message.value;
     } else if (message is BackendKeyMessage) {
       connection._secretKey = message.secretKey;
-      connection._processID = message.processID;
+      connection.processID = message.processID;
     } else if (message is ReadyForQueryMessage) {
       if (message.state == ReadyForQueryMessage.StateIdle) {
         return new _PostgreSQLConnectionStateIdle(openCompleter: completer);
@@ -149,7 +149,7 @@ class _PostgreSQLConnectionStateAuthenticated
       connection.settings[message.name] = message.value;
     } else if (message is BackendKeyMessage) {
       connection._secretKey = message.secretKey;
-      connection._processID = message.processID;
+      connection.processID = message.processID;
     } else if (message is ReadyForQueryMessage) {
       if (message.state == ReadyForQueryMessage.StateIdle) {
         return new _PostgreSQLConnectionStateIdle(openCompleter: completer);

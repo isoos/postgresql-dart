@@ -13,7 +13,7 @@ class Query<T> {
 
   bool onlyReturnAffectedRowCount = false;
   String statementIdentifier;
-  Completer<T> onComplete = new Completer.sync();
+  Completer<dynamic> onComplete = new Completer.sync();
 
   Future<T> get future => onComplete.future;
 
