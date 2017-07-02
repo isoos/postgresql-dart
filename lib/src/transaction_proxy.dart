@@ -8,7 +8,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
     beginQuery = new Query<int>("BEGIN", {}, connection, this)
       ..onlyReturnAffectedRowCount = true;
 
-    beginQuery.onComplete.future
+    beginQuery.future
         .then(startTransaction)
         .catchError(handleTransactionQueryError);
   }

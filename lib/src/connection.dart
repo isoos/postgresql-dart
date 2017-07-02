@@ -327,7 +327,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     return result;
   }
 
-  void _cancelCurrentQueries() {
+  void _cancelCurrentQueries([Object error, StackTrace stackTrace]) {
     var queries = _queryQueue;
     _queryQueue = [];
 
@@ -336,7 +336,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     // synchronous.
     scheduleMicrotask(() {
       var exception =
-          new PostgreSQLException("Connection closed or query cancelled.");
+          new PostgreSQLException("Connection closed or query cancelled (reason: $error).", stackTrace: stackTrace);
       queries?.forEach((q) {
         q.completeError(exception);
       });
@@ -375,17 +375,17 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
         } else {
           _transitionToState(_connectionState.onMessage(msg));
         }
-      } catch (e) {
-        _handleSocketError(e);
+      } catch (e, st) {
+        _handleSocketError(e, st);
       }
     }
   }
 
-  void _handleSocketError(dynamic error) {
+  void _handleSocketError(Object error, StackTrace stack) {
     _connectionState = new _PostgreSQLConnectionStateClosed();
     _socket.destroy();
 
-    _cancelCurrentQueries();
+    _cancelCurrentQueries(error, stack);
   }
 
   void _handleSocketClosed() {

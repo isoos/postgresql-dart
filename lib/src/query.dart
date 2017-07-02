@@ -13,9 +13,9 @@ class Query<T> {
 
   bool onlyReturnAffectedRowCount = false;
   String statementIdentifier;
-  Completer<dynamic> onComplete = new Completer.sync();
+  Completer<dynamic> _onComplete = new Completer.sync();
 
-  Future<T> get future => onComplete.future;
+  Future<T> get future => _onComplete.future;
 
   final String statement;
   final Map<String, dynamic> substitutionValues;
@@ -142,15 +142,15 @@ class Query<T> {
 
   void complete(int rowsAffected) {
     if (onlyReturnAffectedRowCount) {
-      onComplete.complete(rowsAffected);
+      _onComplete.complete(rowsAffected);
       return;
     }
 
-    onComplete.complete(rows.map((row) => row.toList()).toList());
+    _onComplete.complete(rows.map((row) => row.toList()).toList());
   }
 
   void completeError(dynamic error) {
-    onComplete.completeError(error);
+    _onComplete.completeError(error);
   }
 
   String toString() => statement;

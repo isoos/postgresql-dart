@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.6
+
+- Adds better error reporting.
+
 ## 0.9.5
 
 - Allow connect via SSL.
