@@ -283,11 +283,3 @@ class ErrorField {
     }
   }
 }
-
-class Notification {
-  final int processID;
-  final String channel;
-  final String payload;
-
-  Notification(this.processID, this.channel, this.payload);
-}

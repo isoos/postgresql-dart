@@ -2,6 +2,7 @@
 
 ## 0.9.6
 
+- Adds `Connection.notifications` to listen for `NOTIFY` events.
 - Adds better error reporting.
 
 ## 0.9.5

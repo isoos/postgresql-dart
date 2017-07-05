@@ -72,7 +72,7 @@ void main() {
             .timeout(new Duration(milliseconds: 200));
 
         fail('There should be no notification');
-      } on TimeoutException catch (e) {}
+      } on TimeoutException catch (_) {}
     });
 
     test("Notification many channel", () async {

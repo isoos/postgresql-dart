@@ -95,22 +95,19 @@ void main() {
           username: "darttrust");
       await conn.open();
 
+      var errors = [];
       var futures = [
-        conn.query("select 1", allowReuse: false),
-        conn.query("select 2", allowReuse: false),
-        conn.query("select 3", allowReuse: false),
-        conn.query("select 4", allowReuse: false),
-        conn.query("select 5", allowReuse: false)
+        conn.query("select 1", allowReuse: false).catchError((e) => errors.add(e)),
+        conn.query("select 2", allowReuse: false).catchError((e) => errors.add(e)),
+        conn.query("select 3", allowReuse: false).catchError((e) => errors.add(e)),
+        conn.query("select 4", allowReuse: false).catchError((e) => errors.add(e)),
+        conn.query("select 5", allowReuse: false).catchError((e) => errors.add(e)),
       ];
 
       await conn.close();
-
-      try {
-        await Future.wait(futures);
-        expect(true, false);
-      } on PostgreSQLException catch (e) {
-        expect(e.message, contains("Connection closed"));
-      }
+      await Future.wait(futures);
+      expect(errors.length, 5);
+      expect(errors.map((e) => e.message), everyElement(contains("Connection closed")));
     });
 
     test(
@@ -120,22 +117,19 @@ void main() {
           username: "darttrust", useSSL: true);
       await conn.open();
 
+      var errors = [];
       var futures = [
-        conn.query("select 1", allowReuse: false),
-        conn.query("select 2", allowReuse: false),
-        conn.query("select 3", allowReuse: false),
-        conn.query("select 4", allowReuse: false),
-        conn.query("select 5", allowReuse: false)
+        conn.query("select 1", allowReuse: false).catchError((e) => errors.add(e)),
+        conn.query("select 2", allowReuse: false).catchError((e) => errors.add(e)),
+        conn.query("select 3", allowReuse: false).catchError((e) => errors.add(e)),
+        conn.query("select 4", allowReuse: false).catchError((e) => errors.add(e)),
+        conn.query("select 5", allowReuse: false).catchError((e) => errors.add(e)),
       ];
 
       await conn.close();
-
-      try {
-        await Future.wait(futures);
-        expect(true, false);
-      } on PostgreSQLException catch (e) {
-        expect(e.message, contains("Connection closed"));
-      }
+      await Future.wait(futures);
+      expect(errors.length, 5);
+      expect(errors.map((e) => e.message), everyElement(contains("Connection closed")));
     });
   });
 
