@@ -34,6 +34,30 @@ void main() {
     expect(result, equals("122.0"));
   });
 
+  test("Disambiguate PostgreSQL typecast", () {
+    var result = PostgreSQLFormat
+        .substitute("@id::jsonb", {"id": "12"});
+    expect(result, "'12'::jsonb");
+  });
+
+  test("PostgreSQL typecast appears in query", () {
+    var results = PostgreSQLFormat.substitute("SELECT * FROM t WHERE id=@id:int2 WHERE blob=@blob::jsonb AND blob='{\"a\":1}'::jsonb", {
+      "id": 2,
+      "blob": "{\"key\":\"value\"}"
+    });
+
+    expect(results, "SELECT * FROM t WHERE id=2 WHERE blob='{\"key\":\"value\"}'::jsonb AND blob='{\"a\":1}'::jsonb");
+  });
+
+  test("Can both provide type and typecast", () {
+    var results = PostgreSQLFormat.substitute("SELECT * FROM t WHERE id=@id:int2::int4", {
+      "id": 2,
+      "blob": "{\"key\":\"value\"}"
+    });
+
+    expect(results, "SELECT * FROM t WHERE id=2::int4");
+  });
+
   test("String identifiers get escaped", () {
     var result = PostgreSQLFormat
         .substitute("@id:text @foo", {"id": "1';select", "foo": "3\\4"});

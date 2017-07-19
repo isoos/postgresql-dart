@@ -257,6 +257,19 @@ void main() {
         [0, 1]
       ]);
     });
+
+    test("Can cast text to int on db server", () async {
+      var results = await connection.query(
+        "INSERT INTO u (i1, i2) VALUES (@i1::int4, @i2::int4) RETURNING i1, i2",
+        substitutionValues: {
+          "i1": "0",
+          "i2": "1"
+        });
+
+      expect(results, [
+        [0, 1]
+      ]);
+    });
   });
 
   group("Unsuccesful queries", () {
@@ -306,6 +319,20 @@ void main() {
       } on FormatException catch (e) {
         expect(e.message,
             contains("Format string specified identifier with name i1"));
+      }
+    });
+
+    test("Wrong type for parameter in substitution values fails", () async {
+      try {
+        await connection.query(
+            "INSERT INTO t (i1, i2) values (@i1:int4, @i2:int4)",
+            substitutionValues: {
+              "i1": "1",
+              "i2": 1
+            });
+        expect(true, false);
+      } on FormatException catch (e) {
+        expect(e.toString(), contains("Invalid type for parameter value"));
       }
     });
   });

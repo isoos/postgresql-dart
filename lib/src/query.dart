@@ -269,13 +269,18 @@ class PostgreSQLFormatIdentifier {
   }
 
   PostgreSQLFormatIdentifier(String t) {
-    var components = t.split(":");
-    if (components.length == 1) {
-      name = components.first;
-    } else if (components.length == 2) {
-      name = components.first;
+    var components = t.split("::");
+    if (components.length > 1) {
+      typeCast = components.sublist(1).join("");
+    }
 
-      var dataTypeString = components.last;
+    var variableComponents = components.first.split(":");
+    if (variableComponents.length == 1) {
+      name = variableComponents.first;
+    } else if (variableComponents.length == 2) {
+      name = variableComponents.first;
+
+      var dataTypeString = variableComponents.last;
       if (dataTypeString != null) {
         typeCode = postgresCodeForDataTypeString(dataTypeString);
       }
@@ -290,4 +295,5 @@ class PostgreSQLFormatIdentifier {
 
   String name;
   int typeCode;
+  String typeCast;
 }

@@ -112,6 +112,10 @@ class PostgreSQLFormat {
 
         var val = replace(identifier, idx);
         idx++;
+
+        if (identifier.typeCast != null) {
+          return val + "::" + identifier.typeCast;
+        }
         return val;
       }
     }).join("");
