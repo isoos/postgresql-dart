@@ -173,8 +173,19 @@ void main() {
         "FALSE");
   });
 
-  test("UTF8String caches string regardless of which method is called first",
-      () {
+
+  test("Encode JSONB", () {
+    expect(PostgreSQLCodec.encode(null, dataType: PostgreSQLDataType.json), "null");
+    expect(PostgreSQLCodec.encode("a", dataType: PostgreSQLDataType.json), "'\"a\"'");
+    expect(PostgreSQLCodec.encode(1, dataType: PostgreSQLDataType.json), "1");
+    expect(PostgreSQLCodec.encode(2.0, dataType: PostgreSQLDataType.json), "2.0");
+    expect(PostgreSQLCodec.encode({"a":"b"}, dataType: PostgreSQLDataType.json), "{\"a\":\"b\"}");
+    expect(PostgreSQLCodec.encode([{"a":"b"}], dataType: PostgreSQLDataType.json), "[{\"a\":\"b\"}]");
+    expect(PostgreSQLCodec.encode({"a":true}, dataType: PostgreSQLDataType.json), "{\"a\":true}");
+    expect(PostgreSQLCodec.encode({"b":false}, dataType: PostgreSQLDataType.json), "{\"b\":false}");
+  });
+
+  test("UTF8String caches string regardless of which method is called first", () {
     var u = new UTF8BackedString("abcd");
     var v = new UTF8BackedString("abcd");
 

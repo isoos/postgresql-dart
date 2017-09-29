@@ -12,7 +12,11 @@ void main() {
           username: "dart", password: "dart");
       await connection.open();
       await connection.execute(
-          "CREATE TEMPORARY TABLE t (i int, s serial, bi bigint, bs bigserial, bl boolean, si smallint, t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz)");
+          "CREATE TEMPORARY TABLE t "
+              "(i int, s serial, bi bigint, "
+              "bs bigserial, bl boolean, si smallint, "
+              "t text, f real, d double precision, "
+              "dt date, ts timestamp, tsz timestamptz, j jsonb)");
       await connection.execute(
           "CREATE TEMPORARY TABLE u (i1 int not null, i2 int not null);");
       await connection
@@ -67,7 +71,7 @@ void main() {
 
     test("Query without specifying types", () async {
       var result = await connection.query(
-          "INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) values "
+          "INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j) values "
           "(${PostgreSQLFormat.id("i")},"
           "${PostgreSQLFormat.id("bi")},"
           "${PostgreSQLFormat.id("bl")},"
@@ -77,7 +81,8 @@ void main() {
           "${PostgreSQLFormat.id("d")},"
           "${PostgreSQLFormat.id("dt")},"
           "${PostgreSQLFormat.id("ts")},"
-          "${PostgreSQLFormat.id("tsz")}) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz",
+          "${PostgreSQLFormat.id("tsz")},"
+          "${PostgreSQLFormat.id("j")}) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j",
           substitutionValues: {
             "i": 1,
             "bi": 2,
@@ -89,6 +94,7 @@ void main() {
             "dt": new DateTime.utc(2000),
             "ts": new DateTime.utc(2000, 2),
             "tsz": new DateTime.utc(2000, 3),
+            "j": {"a":"b"}
           });
 
       var expectedRow = [
@@ -103,17 +109,18 @@ void main() {
         6.0,
         new DateTime.utc(2000),
         new DateTime.utc(2000, 2),
-        new DateTime.utc(2000, 3)
+        new DateTime.utc(2000, 3),
+        {"a":"b"}
       ];
       expect(result, [expectedRow]);
       result = await connection
-          .query("select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t");
+          .query("select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j from t");
       expect(result, [expectedRow]);
     });
 
     test("Query by specifying all types", () async {
       var result = await connection.query(
-          "INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) values "
+          "INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j) values "
           "(${PostgreSQLFormat.id("i", type: PostgreSQLDataType.integer)},"
           "${PostgreSQLFormat.id("bi", type: PostgreSQLDataType.bigInteger)},"
           "${PostgreSQLFormat.id("bl", type: PostgreSQLDataType.boolean)},"
@@ -123,7 +130,8 @@ void main() {
           "${PostgreSQLFormat.id("d", type: PostgreSQLDataType.double)},"
           "${PostgreSQLFormat.id("dt", type: PostgreSQLDataType.date)},"
           "${PostgreSQLFormat.id("ts", type: PostgreSQLDataType.timestampWithoutTimezone)},"
-          "${PostgreSQLFormat.id("tsz", type: PostgreSQLDataType.timestampWithTimezone)}) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz",
+          "${PostgreSQLFormat.id("tsz", type: PostgreSQLDataType.timestampWithTimezone)},"
+          "${PostgreSQLFormat.id("j", type: PostgreSQLDataType.json)}) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j",
           substitutionValues: {
             "i": 1,
             "bi": 2,
@@ -135,6 +143,7 @@ void main() {
             "dt": new DateTime.utc(2000),
             "ts": new DateTime.utc(2000, 2),
             "tsz": new DateTime.utc(2000, 3),
+            "j": {"key": "value"}
           });
 
       var expectedRow = [
@@ -149,12 +158,13 @@ void main() {
         6.0,
         new DateTime.utc(2000),
         new DateTime.utc(2000, 2),
-        new DateTime.utc(2000, 3)
+        new DateTime.utc(2000, 3),
+        {"key": "value"}
       ];
       expect(result, [expectedRow]);
 
       result = await connection
-          .query("select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t");
+          .query("select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j from t");
       expect(result, [expectedRow]);
     });
 
@@ -272,6 +282,7 @@ void main() {
     });
   });
 
+
   group("Unsuccesful queries", () {
     var connection = new PostgreSQLConnection("localhost", 5432, "dart_test",
         username: "dart", password: "dart");
@@ -333,6 +344,21 @@ void main() {
         expect(true, false);
       } on FormatException catch (e) {
         expect(e.toString(), contains("Invalid type for parameter value"));
+      }
+    });
+
+    test("Invalid type code", () async {
+      try {
+        await connection.query(
+            "INSERT INTO t (i1, i2) values (@i1:qwerty, @i2:int4)",
+            substitutionValues: {
+              "i1": "1",
+              "i2": 1
+            });
+        expect(true, false);
+      } on FormatException catch (e) {
+        expect(e.toString(), contains("Invalid type code"));
+        expect(e.toString(), contains("'@i1:qwerty"));
       }
     });
   });

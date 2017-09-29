@@ -241,7 +241,7 @@ class FieldDescription {
 typedef String SQLReplaceIdentifierFunction(
     PostgreSQLFormatIdentifier identifier, int index);
 
-enum PostgreSQLFormatTokenType { text, marker }
+enum PostgreSQLFormatTokenType { text, variable }
 
 class PostgreSQLFormatToken {
   PostgreSQLFormatToken(this.type);
@@ -261,7 +261,8 @@ class PostgreSQLFormatIdentifier {
     "boolean": PostgreSQLCodec.TypeBool,
     "date": PostgreSQLCodec.TypeDate,
     "timestamp": PostgreSQLCodec.TypeTimestamp,
-    "timestamptz": PostgreSQLCodec.TypeTimestampTZ
+    "timestamptz": PostgreSQLCodec.TypeTimestampTZ,
+    "jsonb": PostgreSQLCodec.TypeJSONB
   };
 
   static int postgresCodeForDataTypeString(String dt) {
@@ -283,6 +284,9 @@ class PostgreSQLFormatIdentifier {
       var dataTypeString = variableComponents.last;
       if (dataTypeString != null) {
         typeCode = postgresCodeForDataTypeString(dataTypeString);
+        if (typeCode == null) {
+          throw new FormatException("Invalid type code in substitution variable '$t'");
+        }
       }
     } else {
       throw new FormatException(
@@ -291,6 +295,7 @@ class PostgreSQLFormatIdentifier {
 
     // Strip @
     name = name.substring(1, name.length);
+
   }
 
   String name;

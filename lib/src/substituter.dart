@@ -38,6 +38,8 @@ class PostgreSQLFormat {
         return "timestamptz";
       case PostgreSQLDataType.date:
         return "date";
+      case PostgreSQLDataType.json:
+        return "jsonb";
     }
 
     return null;
@@ -49,48 +51,48 @@ class PostgreSQLFormat {
     replace ??= (spec, index) => PostgreSQLCodec.encode(values[spec.name]);
 
     var items = <PostgreSQLFormatToken>[];
-    PostgreSQLFormatToken lastPtr = null;
+    PostgreSQLFormatToken currentPtr = null;
     var iterator = new RuneIterator(fmtString);
 
     iterator.moveNext();
     while (iterator.current != null) {
-      if (lastPtr == null) {
+      if (currentPtr == null) {
         if (iterator.current == _AtSignCodeUnit) {
-          lastPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.marker);
-          lastPtr.buffer.writeCharCode(iterator.current);
-          items.add(lastPtr);
+          currentPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
+          currentPtr.buffer.writeCharCode(iterator.current);
+          items.add(currentPtr);
         } else {
-          lastPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
-          lastPtr.buffer.writeCharCode(iterator.current);
-          items.add(lastPtr);
+          currentPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
+          currentPtr.buffer.writeCharCode(iterator.current);
+          items.add(currentPtr);
         }
-      } else if (lastPtr.type == PostgreSQLFormatTokenType.text) {
+      } else if (currentPtr.type == PostgreSQLFormatTokenType.text) {
         if (iterator.current == _AtSignCodeUnit) {
-          lastPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.marker);
-          lastPtr.buffer.writeCharCode(iterator.current);
-          items.add(lastPtr);
+          currentPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
+          currentPtr.buffer.writeCharCode(iterator.current);
+          items.add(currentPtr);
         } else {
-          lastPtr.buffer.writeCharCode(iterator.current);
+          currentPtr.buffer.writeCharCode(iterator.current);
         }
-      } else if (lastPtr.type == PostgreSQLFormatTokenType.marker) {
+      } else if (currentPtr.type == PostgreSQLFormatTokenType.variable) {
         if (iterator.current == _AtSignCodeUnit) {
           iterator.movePrevious();
           if (iterator.current == _AtSignCodeUnit) {
-            lastPtr.buffer.writeCharCode(iterator.current);
-            lastPtr.type = PostgreSQLFormatTokenType.text;
+            currentPtr.buffer.writeCharCode(iterator.current);
+            currentPtr.type = PostgreSQLFormatTokenType.text;
           } else {
-            lastPtr =
-                new PostgreSQLFormatToken(PostgreSQLFormatTokenType.marker);
-            lastPtr.buffer.writeCharCode(iterator.current);
-            items.add(lastPtr);
+            currentPtr =
+                new PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
+            currentPtr.buffer.writeCharCode(iterator.current);
+            items.add(currentPtr);
           }
           iterator.moveNext();
         } else if (_isIdentifier(iterator.current)) {
-          lastPtr.buffer.writeCharCode(iterator.current);
+          currentPtr.buffer.writeCharCode(iterator.current);
         } else {
-          lastPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
-          lastPtr.buffer.writeCharCode(iterator.current);
-          items.add(lastPtr);
+          currentPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
+          currentPtr.buffer.writeCharCode(iterator.current);
+          items.add(currentPtr);
         }
       }
 
@@ -116,6 +118,7 @@ class PostgreSQLFormat {
         if (identifier.typeCast != null) {
           return val + "::" + identifier.typeCast;
         }
+
         return val;
       }
     }).join("");

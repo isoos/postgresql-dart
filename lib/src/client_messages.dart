@@ -295,6 +295,7 @@ class BindMessage extends ClientMessage {
       } else {
         buffer.setInt32(offset, p.length);
         offset += 4;
+
         offset = p.bytes.fold(offset, (inOffset, byte) {
           buffer.setUint8(inOffset, byte);
           return inOffset + 1;

@@ -4,6 +4,7 @@
 
 - Adds `Connection.notifications` to listen for `NOTIFY` events.
 - Adds better error reporting.
+- Adds support for JSONB columns.
 
 ## 0.9.5
 

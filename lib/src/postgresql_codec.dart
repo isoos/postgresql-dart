@@ -38,7 +38,12 @@ enum PostgreSQLDataType {
   timestampWithTimezone,
 
   /// Must be a [DateTime] (contains year, month and day only)
-  date
+  date,
+
+  /// Must be encodable via [JSON.encode].
+  ///
+  /// Values will be encoded via [JSON.encode] before being sent to the database.
+  json
 }
 
 /// A namespace for data encoding and decoding operations for PostgreSQL data.
@@ -53,6 +58,7 @@ abstract class PostgreSQLCodec {
   static const int TypeDate = 1082;
   static const int TypeTimestamp = 1114;
   static const int TypeTimestampTZ = 1184;
+  static const int TypeJSONB = 3802;
 
   static String encode(dynamic value,
       {PostgreSQLDataType dataType: null, bool escapeStrings: true}) {
@@ -82,6 +88,9 @@ abstract class PostgreSQLCodec {
       case PostgreSQLDataType.timestampWithTimezone:
       case PostgreSQLDataType.date:
         return encodeDateTime(value);
+
+      case PostgreSQLDataType.json:
+        return encodeJSON(value);
 
       default:
         return encodeDefault(value, escapeStrings: escapeStrings);
@@ -196,6 +205,14 @@ abstract class PostgreSQLCodec {
       bd.setInt64(
           0, value.toUtc().difference(new DateTime.utc(2000)).inMicroseconds);
       outBuffer = bd.buffer.asUint8List();
+    } else if (postgresType == TypeJSONB) {
+
+      var jsonBytes = UTF8.encode(JSON.encode(value));
+      outBuffer = new Uint8List(jsonBytes.length + 1);
+      outBuffer[0] = 1;
+      for (var i = 0; i < jsonBytes.length; i++) {
+        outBuffer[i + 1] = jsonBytes[i];
+      }
     }
 
     return outBuffer;
@@ -328,6 +345,18 @@ abstract class PostgreSQLCodec {
     return "'$string'";
   }
 
+  static String encodeJSON(dynamic value) {
+    if (value == null) {
+      return "null";
+    }
+
+    if (value is String) {
+      return "'${JSON.encode(value)}'";
+    }
+
+    return "${JSON.encode(value)}";
+  }
+
   static String encodeDefault(dynamic value, {bool escapeStrings: true}) {
     if (value == null) {
       return "null";
@@ -351,6 +380,10 @@ abstract class PostgreSQLCodec {
 
     if (value is bool) {
       return encodeBoolean(value);
+    }
+
+    if (value is Map) {
+      return encodeJSON(value);
     }
 
     throw new PostgreSQLException(
@@ -384,6 +417,12 @@ abstract class PostgreSQLCodec {
       case TypeDate:
         return new DateTime.utc(2000)
             .add(new Duration(days: value.getInt32(0)));
+
+      case TypeJSONB: {
+        // Removes version which is first character and currently always '1'
+        var string = UTF8.decode(value.buffer.asUint8List(value.offsetInBytes + 1, value.lengthInBytes - 1));
+        return JSON.decode(string);
+      }
 
       default:
         return UTF8.decode(
