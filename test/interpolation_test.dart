@@ -58,6 +58,24 @@ void main() {
     expect(results, "SELECT * FROM t WHERE id=2::int4");
   });
 
+  test("UTF16 symbols with quotes", () {
+    var value = "'©™®'";
+    var results = PostgreSQLFormat.substitute("INSERT INTO t (t) VALUES (@t)", {
+      "t": value
+    });
+
+    expect(results, "INSERT INTO t (t) VALUES ('''©™®''')");
+  });
+
+  test("UTF16 symbols with backslash", () {
+    var value = "'©\\™®'";
+    var results = PostgreSQLFormat.substitute("INSERT INTO t (t) VALUES (@t)", {
+      "t": value
+    });
+
+    expect(results, "INSERT INTO t (t) VALUES ( E'''©\\\\™®''')");
+  });
+
   test("String identifiers get escaped", () {
     var result = PostgreSQLFormat
         .substitute("@id:text @foo", {"id": "1';select", "foo": "3\\4"});

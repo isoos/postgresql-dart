@@ -248,7 +248,7 @@ abstract class PostgreSQLCodec {
     if (quoteCount == 0 && backslashCount == 0) {
       buf.write(text);
     } else {
-      UTF8.encode(text).forEach((i) {
+     text.codeUnits.forEach((i) {
         if (i == quoteCodeUnit || i == backslashCodeUnit) {
           buf.writeCharCode(i);
           buf.writeCharCode(i);
