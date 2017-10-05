@@ -2,9 +2,10 @@
 
 ## 0.9.6
 
-- Adds `Connection.notifications` to listen for `NOTIFY` events.
+- Adds `Connection.notifications` to listen for `NOTIFY` events (thanks @andrewst)
 - Adds better error reporting.
 - Adds support for JSONB columns.
+- Fixes issue when encoding UTF16 characters (thanks @andrewst)
 
 ## 0.9.5
 
