@@ -13,12 +13,12 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
         .catchError(handleTransactionQueryError);
   }
 
-  Query beginQuery;
+  Query<dynamic> beginQuery;
   Completer completer = new Completer();
 
   Future get future => completer.future;
 
-  Query get pendingQuery {
+  Query<dynamic> get pendingQuery {
     if (queryQueue.length > 0) {
       return queryQueue.first;
     }
@@ -26,7 +26,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
     return null;
   }
 
-  List<Query> queryQueue = [];
+  List<Query<dynamic>> queryQueue = [];
   PostgreSQLConnection connection;
   _TransactionQuerySignature executionBlock;
 
@@ -49,7 +49,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
       query.statementIdentifier = connection._reuseIdentifierForQuery(query);
     }
 
-    return await enqueue(query);
+    return enqueue(query);
   }
 
   Future<int> execute(String fmtString,
@@ -91,9 +91,10 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
     completer.complete(result);
   }
 
-  Future handleTransactionQueryError(dynamic err) async {}
+  Future handleTransactionQueryError(dynamic err) async {
+  }
 
-  Future<dynamic> enqueue(Query query) async {
+  Future<T> enqueue<T>(Query<T> query) async {
     queryQueue.add(query);
     connection._transitionToState(connection._connectionState.awake());
 
@@ -104,9 +105,11 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
       connection._cacheQuery(query);
       queryQueue.remove(query);
     } catch (e) {
-      connection._cacheQuery(query);
-      queryQueue.remove(query);
-      rethrow;
+      queryQueue = [];
+
+      await execute("ROLLBACK");
+      completer.completeError(e);
+      return null;
     }
 
     return result;

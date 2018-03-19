@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.7
+
+- Adds `Connection.mappedResultsQuery` to return query results as a `Map` with keys for table and column names.
+
 ## 0.9.6
 
 - Adds `Connection.notifications` to listen for `NOTIFY` events (thanks @andrewst)

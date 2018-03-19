@@ -18,9 +18,28 @@ await connection.open();
 Execute queries with `query`:
 
 ```dart
-var results = await connection.query("SELECT a, b FROM table WHERE a = @aValue", substitutionValues: {
+List<List<dynamic>> results = await connection.query("SELECT a, b FROM table WHERE a = @aValue", substitutionValues: {
     "aValue" : 3
 });
+
+for (final row in results) {
+  var a = row[0];
+  var b = row[1];
+
+} 
+```
+
+Return rows as maps containing table and column names:
+
+```dart
+List<Map<String, Map<String, dynamic>>> results = await connection.mappedResultsQuery(
+  "SELECT t.id, t.name, u.name FROM t LEFT OUTER JOIN u ON t.id=u.t_id");
+
+for (final row in results) {
+  var tID = row["t"]["id"];
+  var tName = row["t"]["name"];
+  var uName = row["u"]["name"];
+}
 ```
 
 Execute queries in a transaction:

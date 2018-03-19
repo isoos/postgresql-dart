@@ -11,7 +11,9 @@ import 'dart:io';
 import 'client_messages.dart';
 
 part 'connection_fsm.dart';
+
 part 'transaction_proxy.dart';
+
 part 'exceptions.dart';
 
 abstract class PostgreSQLExecutionContext {
@@ -45,8 +47,7 @@ abstract class PostgreSQLExecutionContext {
   /// This method returns the number of rows affected and no additional information. This method uses the least efficient and less secure command
   /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
   /// or return rows.
-  Future<int> execute(String fmtString,
-      {Map<String, dynamic> substitutionValues: null});
+  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null});
 
   /// Cancels a transaction on this context.
   ///
@@ -70,11 +71,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// [timeZone] is the timezone the connection is in. Defaults to 'UTC'.
   /// [useSSL] when true, uses a secure socket when connecting to a PostgreSQL database.
   PostgreSQLConnection(this.host, this.port, this.databaseName,
-      {this.username: null,
-      this.password: null,
-      this.timeoutInSeconds: 30,
-      this.timeZone: "UTC",
-      this.useSSL: false}) {
+      {this.username: null, this.password: null, this.timeoutInSeconds: 30, this.timeZone: "UTC", this.useSSL: false}) {
     _connectionState = new _PostgreSQLConnectionStateClosed();
     _connectionState.connection = this;
   }
@@ -135,15 +132,17 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   Map<String, QueryCache> _reuseMap = {};
   int _reuseCounter = 0;
 
+  Map<int, String> _tableOIDNameMap = {};
+
   int _secretKey;
   List<int> _salt;
 
   bool _hasConnectedPreviously = false;
   _PostgreSQLConnectionState _connectionState;
 
-  List<Query> _queryQueue = [];
+  List<Query<dynamic>> _queryQueue = [];
 
-  Query get _pendingQuery {
+  Query<dynamic> get _pendingQuery {
     if (_queryQueue.isEmpty) {
       return null;
     }
@@ -159,14 +158,11 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// Connections may not be reopened after they are closed or opened more than once. If a connection has already been opened and this method is called, an exception will be thrown.
   Future open() async {
     if (_hasConnectedPreviously) {
-      throw new PostgreSQLException(
-          "Attempting to reopen a closed connection. Create a new instance instead.");
+      throw new PostgreSQLException("Attempting to reopen a closed connection. Create a new instance instead.");
     }
 
     _hasConnectedPreviously = true;
-    _socket = await Socket
-        .connect(host, port)
-        .timeout(new Duration(seconds: timeoutInSeconds), onTimeout: _timeout);
+    _socket = await Socket.connect(host, port).timeout(new Duration(seconds: timeoutInSeconds), onTimeout: _timeout);
 
     _framer = new MessageFramer();
     if (useSSL) {
@@ -175,14 +171,11 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
     var connectionComplete = new Completer();
 
-    _socket.listen(_readData,
-        onError: _handleSocketError, onDone: _handleSocketClosed);
+    _socket.listen(_readData, onError: _handleSocketError, onDone: _handleSocketClosed);
 
-    _transitionToState(
-        new _PostgreSQLConnectionStateSocketConnected(connectionComplete));
+    _transitionToState(new _PostgreSQLConnectionStateSocketConnected(connectionComplete));
 
-    return connectionComplete.future
-        .timeout(new Duration(seconds: timeoutInSeconds), onTimeout: _timeout);
+    return connectionComplete.future.timeout(new Duration(seconds: timeoutInSeconds), onTimeout: _timeout);
   }
 
   /// Closes a connection.
@@ -220,20 +213,64 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
   ///
   Future<List<List<dynamic>>> query(String fmtString,
-      {Map<String, dynamic> substitutionValues: null,
-      bool allowReuse: true}) async {
+      {Map<String, dynamic> substitutionValues: null, bool allowReuse: true}) async {
     if (isClosed) {
-      throw new PostgreSQLException(
-          "Attempting to execute query, but connection is not open.");
+      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
 
-    var query = new Query<List<List<dynamic>>>(
-        fmtString, substitutionValues, this, null);
+    var query = new Query<List<List<dynamic>>>(fmtString, substitutionValues, this, null);
     if (allowReuse) {
       query.statementIdentifier = _reuseIdentifierForQuery(query);
     }
 
-    return await _enqueue(query);
+    final rows = await _enqueue(query);
+    return rows.map((Iterable<dynamic> row) => row.toList()).toList();
+  }
+
+  /// Executes a query on this connection and returns each row as a [Map].
+  ///
+  /// This method constructs and executes a query in the same way as [query], but returns each row as a [Map].
+  ///
+  /// (Note: this method will execute additional queries to resolve table names the first time a table is encountered. These table names are cached per instance of this type.)
+  ///
+  /// Each row map contains key-value pairs for every table in the query. The value is a [Map] that contains
+  /// key-value pairs for each column from that table. For example, consider
+  /// the following query:
+  ///
+  ///         SELECT employee.id, employee.name FROM employee;
+  ///
+  /// This method would return the following structure:
+  ///
+  ///         [
+  ///           {"employee" : {"name": "Bob", "id": 1}}
+  ///         ]
+  ///
+  /// The purpose of this nested structure is to disambiguate columns that have the same name in different tables. For example, consider a query with a SQL JOIN:
+  ///
+  ///         SELECT employee.id, employee.name, company.name FROM employee LEFT OUTER JOIN company ON employee.company_id=company.id;
+  ///
+  /// Each returned [Map] would contain `employee` and `company` keys. The `name` key would be present in both inner maps.
+  ///
+  ///       [
+  ///         {
+  ///           "employee": {"name": "Bob", "id": 1},
+  ///           "company: {"name": "stable|kernel"}
+  ///         }
+  ///       ]
+  Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(String fmtString,
+      {Map<String, dynamic> substitutionValues: null, bool allowReuse: true}) async {
+    if (isClosed) {
+      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
+    }
+
+    var query = new Query<List<List<dynamic>>>(fmtString, substitutionValues, this, null);
+    if (allowReuse) {
+      query.statementIdentifier = _reuseIdentifierForQuery(query);
+    }
+
+    final rows = await _enqueue(query);
+
+    return _mapifyRows(rows, query.fieldDescriptions);
   }
 
   /// Executes a query on this connection.
@@ -243,17 +280,15 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// This method returns the number of rows affected and no additional information. This method uses the least efficient and less secure command
   /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
   /// or return rows.
-  Future<int> execute(String fmtString,
-      {Map<String, dynamic> substitutionValues: null}) async {
+  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) {
     if (isClosed) {
-      throw new PostgreSQLException(
-          "Attempting to execute query, but connection is not open.");
+      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
 
     var query = new Query<int>(fmtString, substitutionValues, this, null)
       ..onlyReturnAffectedRowCount = true;
 
-    return await _enqueue(query);
+    return _enqueue(query);
   }
 
   /// Executes a series of queries inside a transaction on this connection.
@@ -283,11 +318,9 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   ///             ctx.query("INSERT INTO t (id) VALUES (2)");
   ///           }
   ///         });
-  Future<dynamic> transaction(
-      Future<dynamic> queryBlock(PostgreSQLExecutionContext connection)) async {
+  Future<dynamic> transaction(Future<dynamic> queryBlock(PostgreSQLExecutionContext connection)) async {
     if (isClosed) {
-      throw new PostgreSQLException(
-          "Attempting to execute query, but connection is not open.");
+      throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
 
     var proxy = new _TransactionProxy(this, queryBlock);
@@ -303,24 +336,67 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
   ////////
 
+  Future<List<Map<String, Map<String, dynamic>>>> _mapifyRows(
+      List<List<dynamic>> rows, List<FieldDescription> columns) async {
+    //todo (joeconwaystk): If this was a cached query, resolving is table oids is unnecessary.
+    // It's not a significant impact here, but an area for optimization. This includes
+    // assigning resolvedTableName
+    final tableOIDs = new Set.from(columns.map((f) => f.tableID));
+    final unresolvedTableOIDs = tableOIDs.where((oid) => oid != null && !_tableOIDNameMap.containsKey(oid)).toList()
+      ..sort((int lhs, int rhs) => lhs.compareTo(rhs));
+
+    if (unresolvedTableOIDs.isNotEmpty) {
+      await _resolveTableOIDs(unresolvedTableOIDs);
+    }
+
+    columns.forEach((desc) {
+      desc.resolvedTableName = _tableOIDNameMap[desc.tableID];
+    });
+
+    final tableNames = tableOIDs.map((oid) => _tableOIDNameMap[oid]).toList();
+    return rows.map((row) {
+      var rowMap = new Map.fromIterable(tableNames, key: (name) => name, value: (_) => {});
+
+      final iterator = columns.iterator;
+      row.forEach((column) {
+        iterator.moveNext();
+        rowMap[iterator.current.resolvedTableName][iterator.current.fieldName] = column;
+      });
+
+      return rowMap;
+    }).toList();
+  }
+
+  Future _resolveTableOIDs(List<int> oids) async {
+    final unresolvedIDString = oids.join(",");
+    final orderedTableNames = await query(
+      "SELECT relname FROM pg_class WHERE relkind='r' AND oid IN ($unresolvedIDString) ORDER BY oid ASC");
+
+    final iterator = oids.iterator;
+    orderedTableNames.forEach((tableName) {
+      iterator.moveNext();
+      if (tableName.first != null) {
+        _tableOIDNameMap[iterator.current] = tableName.first;
+      }
+    });
+  }
+
   void _timeout() {
     _connectionState = new _PostgreSQLConnectionStateClosed();
     _socket?.destroy();
 
     _cancelCurrentQueries();
     _cleanup();
-    throw new PostgreSQLException(
-        "Timed out trying to connect to database postgres://$host:$port/$databaseName.");
+    throw new PostgreSQLException("Timed out trying to connect to database postgres://$host:$port/$databaseName.");
   }
 
-  Future<dynamic> _enqueue(Query query) async {
+  Future<T> _enqueue<T>(Query<T> query) async {
     _queryQueue.add(query);
     _transitionToState(_connectionState.awake());
 
     var result = null;
     try {
       result = await query.future;
-
       _cacheQuery(query);
       _queryQueue.remove(query);
     } catch (e) {
@@ -376,8 +452,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
         if (msg is ErrorResponseMessage) {
           _transitionToState(_connectionState.onErrorResponse(msg));
         } else if (msg is NotificationResponseMessage) {
-            _notifications.add(
-                new Notification(msg.processID, msg.channel, msg.payload));
+          _notifications.add(new Notification(msg.processID, msg.channel, msg.payload));
         } else {
           _transitionToState(_connectionState.onMessage(msg));
         }
@@ -402,21 +477,21 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     _cleanup();
   }
 
-  Future<Socket> _upgradeSocketToSSL(Socket originalSocket,
-      {int timeout: 30}) async {
+  Future<Socket> _upgradeSocketToSSL(Socket originalSocket, {int timeout: 30}) async {
     var sslCompleter = new Completer<int>();
 
-    originalSocket.listen((data) {
-      if (data.length != 1) {
-        sslCompleter.completeError(new PostgreSQLException(
-            "Could not initalize SSL connection, received unknown byte stream."));
-        return;
-      }
+    originalSocket.listen(
+        (data) {
+          if (data.length != 1) {
+            sslCompleter.completeError(
+                new PostgreSQLException("Could not initalize SSL connection, received unknown byte stream."));
+            return;
+          }
 
-      sslCompleter.complete(data.first);
-    },
-        onDone: () => sslCompleter.completeError(new PostgreSQLException(
-            "Could not initialize SSL connection, connection closed during handshake.")),
+          sslCompleter.complete(data.first);
+        },
+        onDone: () => sslCompleter.completeError(
+            new PostgreSQLException("Could not initialize SSL connection, connection closed during handshake.")),
         onError: (err) {
           sslCompleter.completeError(err);
         });
@@ -426,8 +501,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     byteBuffer.setUint32(4, 80877103);
     originalSocket.add(byteBuffer.buffer.asUint8List());
 
-    var responseByte = await sslCompleter.future
-        .timeout(new Duration(seconds: timeout), onTimeout: _timeout);
+    var responseByte = await sslCompleter.future.timeout(new Duration(seconds: timeout), onTimeout: _timeout);
     if (responseByte == 83) {
       return SecureSocket
           .secure(originalSocket, onBadCertificate: (certificate) => true)
@@ -437,7 +511,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     throw new PostgreSQLException("SSL not allowed for this connection.");
   }
 
-  void _cacheQuery(Query query) {
+  void _cacheQuery(Query<dynamic> query) {
     if (query.cache == null) {
       return;
     }
@@ -455,7 +529,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     return _reuseMap[statementIdentifier];
   }
 
-  String _reuseIdentifierForQuery(Query q) {
+  String _reuseIdentifierForQuery(Query<dynamic> q) {
     var existing = _reuseMap[q.statement];
     if (existing != null) {
       return existing.preparedStatementName;

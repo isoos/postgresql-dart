@@ -379,6 +379,25 @@ void main() {
       });
       expect(result, []);
     });
+
+    test("If exception thrown while preparing query, transaction gets rolled back", () async {
+      try {
+        await conn.transaction((c) async {
+          await c.query("INSERT INTO t (id) VALUES (1)");
+
+          c.query("INSERT INTO t (id) VALUES (@id:int4)", substitutionValues: {
+            "id": "foobar"
+          });
+          await c.query("INSERT INTO t (id) VALUES (2)");
+        });
+        expect(true, false);
+      } catch (e) {
+        expect(e is FormatException, true);
+      }
+
+      var noRows = await conn.query("SELECT id FROM t");
+      expect(noRows, []);
+    });
   });
 
   group("Transaction:Rollback recovery", () {
