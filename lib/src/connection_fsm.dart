@@ -182,9 +182,9 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
       q.sendExtended(connection._socket, cacheQuery: cached);
 
       return new _PostgreSQLConnectionStateBusy(q);
-    } catch (e) {
+    } catch (e, st) {
       scheduleMicrotask(() {
-        q.completeError(e);
+        q.completeError(e, st);
         connection._transitionToState(new _PostgreSQLConnectionStateIdle());
       });
 
@@ -301,9 +301,9 @@ class _PostgreSQLConnectionStateReadyInTransaction extends _PostgreSQLConnection
       q.sendExtended(connection._socket, cacheQuery: cached);
 
       return new _PostgreSQLConnectionStateBusy(q);
-    } catch (e) {
+    } catch (e, st) {
       scheduleMicrotask(() {
-        q.completeError(e);
+        q.completeError(e, st);
         connection._transitionToState(new _PostgreSQLConnectionStateTransactionFailure(transaction));
       });
 

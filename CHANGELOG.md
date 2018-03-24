@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.8
+
+- Preserve error stacktrace on various query or transaction errors.
+
 ## 0.9.7
 
 - Adds `Connection.mappedResultsQuery` to return query results as a `Map` with keys for table and column names.

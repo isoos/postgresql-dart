@@ -78,11 +78,11 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
       await execute("ROLLBACK");
       completer.complete(new PostgreSQLRollback._(rollback.reason));
       return;
-    } catch (e) {
+    } catch (e, st) {
       queryQueue = [];
 
       await execute("ROLLBACK");
-      completer.completeError(e);
+      completer.completeError(e, st);
       return;
     }
 
@@ -104,11 +104,11 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
 
       connection._cacheQuery(query);
       queryQueue.remove(query);
-    } catch (e) {
+    } catch (e, st) {
       queryQueue = [];
 
       await execute("ROLLBACK");
-      completer.completeError(e);
+      completer.completeError(e, st);
       return null;
     }
 

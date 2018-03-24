@@ -420,7 +420,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
       var exception =
           new PostgreSQLException("Connection closed or query cancelled (reason: $error).", stackTrace: stackTrace);
       queries?.forEach((q) {
-        q.completeError(exception);
+        q.completeError(exception, stackTrace);
       });
     });
   }

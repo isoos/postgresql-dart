@@ -138,8 +138,8 @@ class Query<T> {
     _onComplete.complete(rows);
   }
 
-  void completeError(dynamic error) {
-    _onComplete.completeError(error);
+  void completeError(dynamic error, [StackTrace stackTrace]) {
+    _onComplete.completeError(error, stackTrace);
   }
 
   String toString() => statement;
