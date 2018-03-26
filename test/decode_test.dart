@@ -10,23 +10,23 @@ void main() {
     await connection.execute("""
         CREATE TEMPORARY TABLE t (
           i int, s serial, bi bigint, bs bigserial, bl boolean, si smallint, 
-          t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz, j jsonb)
+          t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz, j jsonb, ba bytea)
     """);
 
-    await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j) "
+    await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, ba) "
         "VALUES (-2147483648, -9223372036854775808, TRUE, -32768, "
         "'string', 10.0, 10.0, '1983-11-06', "
         "'1983-11-06 06:00:00.000000', '1983-11-06 06:00:00.000000', "
-        "'{\"key\":\"value\"}')");
-    await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j) "
+        "'{\"key\":\"value\"}', E'\\\\000')");
+    await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, ba) "
         "VALUES (2147483647, 9223372036854775807, FALSE, 32767, "
         "'a significantly longer string to the point where i doubt this actually matters', "
         "10.25, 10.125, '2183-11-06', '2183-11-06 00:00:00.111111', "
         "'2183-11-06 00:00:00.999999', "
-        "'[{\"key\":1}]')");
+        "'[{\"key\":1}]', E'\\\\377')");
 
-    await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j) "
-        "VALUES (null, null, null, null, null, null, null, null, null, null, null)");
+    await connection.execute("INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, ba) "
+        "VALUES (null, null, null, null, null, null, null, null, null, null, null, null)");
   });
   tearDown(() async {
     await connection?.close();
@@ -55,6 +55,7 @@ void main() {
     expect(row1[10], equals(new DateTime.utc(1983, 11, 6, 6)));
     expect(row1[11], equals(new DateTime.utc(1983, 11, 6, 6)));
     expect(row1[12], equals({"key": "value"}));
+    expect(row1[13], equals([0]));
 
     // upper bound row
     expect(row2[0], equals(2147483647));
@@ -76,6 +77,7 @@ void main() {
         equals([
           {"key": 1}
         ]));
+    expect(row2[13], equals([255]));
 
     // all null row
     expect(row3[0], isNull);
@@ -91,6 +93,7 @@ void main() {
     expect(row3[10], isNull);
     expect(row3[11], isNull);
     expect(row3[12], isNull);
+    expect(row3[13], isNull);
   });
 
   test("Fetch/insert empty string", () async {

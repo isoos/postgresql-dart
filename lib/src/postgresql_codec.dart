@@ -49,6 +49,7 @@ enum PostgreSQLDataType {
 /// A namespace for data encoding and decoding operations for PostgreSQL data.
 abstract class PostgreSQLCodec {
   static const int TypeBool = 16;
+  static const int TypeByteArray = 17;
   static const int TypeInt8 = 20;
   static const int TypeInt2 = 21;
   static const int TypeInt4 = 23;
@@ -423,6 +424,9 @@ abstract class PostgreSQLCodec {
         var string = UTF8.decode(value.buffer.asUint8List(value.offsetInBytes + 1, value.lengthInBytes - 1));
         return JSON.decode(string);
       }
+
+      case TypeByteArray:
+        return value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes);
 
       default:
         return UTF8.decode(

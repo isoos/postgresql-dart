@@ -3,6 +3,7 @@
 ## 0.9.8
 
 - Preserve error stacktrace on various query or transaction errors.
+- Read support for `BYEA` columns.
 
 ## 0.9.7
 
