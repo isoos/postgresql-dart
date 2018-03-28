@@ -126,7 +126,7 @@ class Query<T> {
       return PostgreSQLCodec.decodeValue(bd, iterator.current.typeID);
     });
 
-    rows.add(lazyDecodedData);
+    rows.add(lazyDecodedData.toList());
   }
 
   void complete(int rowsAffected) {

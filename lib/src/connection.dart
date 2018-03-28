@@ -223,8 +223,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
       query.statementIdentifier = _reuseIdentifierForQuery(query);
     }
 
-    final rows = await _enqueue(query);
-    return rows.map((Iterable<dynamic> row) => row.toList()).toList();
+    return _enqueue(query);
   }
 
   /// Executes a query on this connection and returns each row as a [Map].
@@ -285,8 +284,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
 
-    var query = new Query<int>(fmtString, substitutionValues, this, null)
-      ..onlyReturnAffectedRowCount = true;
+    var query = new Query<int>(fmtString, substitutionValues, this, null)..onlyReturnAffectedRowCount = true;
 
     return _enqueue(query);
   }
@@ -342,8 +340,8 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     // It's not a significant impact here, but an area for optimization. This includes
     // assigning resolvedTableName
     final tableOIDs = new Set.from(columns.map((f) => f.tableID));
-    final unresolvedTableOIDs = tableOIDs.where((oid) => oid != null && !_tableOIDNameMap.containsKey(oid)).toList()
-      ..sort((int lhs, int rhs) => lhs.compareTo(rhs));
+    final List<int> unresolvedTableOIDs = tableOIDs.where((oid) => oid != null && !_tableOIDNameMap.containsKey(oid)).toList();
+    unresolvedTableOIDs.sort((int lhs, int rhs) => lhs.compareTo(rhs));
 
     if (unresolvedTableOIDs.isNotEmpty) {
       await _resolveTableOIDs(unresolvedTableOIDs);
@@ -369,8 +367,8 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
   Future _resolveTableOIDs(List<int> oids) async {
     final unresolvedIDString = oids.join(",");
-    final orderedTableNames = await query(
-      "SELECT relname FROM pg_class WHERE relkind='r' AND oid IN ($unresolvedIDString) ORDER BY oid ASC");
+    final orderedTableNames =
+        await query("SELECT relname FROM pg_class WHERE relkind='r' AND oid IN ($unresolvedIDString) ORDER BY oid ASC");
 
     final iterator = oids.iterator;
     orderedTableNames.forEach((tableName) {

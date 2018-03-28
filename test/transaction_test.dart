@@ -9,8 +9,7 @@ void main() {
     PostgreSQLConnection conn = null;
 
     setUp(() async {
-      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
-          username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
       await conn.open();
       await conn.execute("CREATE TEMPORARY TABLE t (id INT UNIQUE)");
     });
@@ -19,8 +18,23 @@ void main() {
       await conn?.close();
     });
 
-    test("Send successful transaction succeeds, returns returned value",
-        () async {
+    test("Rows are Lists of column values", () async {
+      await conn.execute("INSERT INTO t (id) VALUES (1)");
+
+      final List<List<dynamic>> outValue = await conn.transaction((ctx) async {
+        return await ctx.query(
+          'SELECT * FROM t WHERE id = @id LIMIT 1',
+          substitutionValues: {'id': 1});
+      });
+
+      expect(outValue.length, 1);
+      expect(outValue.first is List, true);
+      expect(outValue.first.length, 1);
+      expect(outValue.first.first, 1);
+    });
+
+
+    test("Send successful transaction succeeds, returns returned value", () async {
       var outResult = await conn.transaction((c) async {
         await c.query("INSERT INTO t (id) VALUES (1)");
 
@@ -36,8 +50,7 @@ void main() {
       ]);
     });
 
-    test("Query during transaction must wait until transaction is finished",
-        () async {
+    test("Query during transaction must wait until transaction is finished", () async {
       var orderEnsurer = [];
       var nextCompleter = new Completer.sync();
       var outResult = conn.transaction((c) async {
@@ -70,8 +83,7 @@ void main() {
       ]);
     });
 
-    test("Make sure two simultaneous transactions cannot be interwoven",
-        () async {
+    test("Make sure two simultaneous transactions cannot be interwoven", () async {
       var orderEnsurer = [];
 
       var firstTransactionFuture = conn.transaction((c) async {
@@ -126,8 +138,7 @@ void main() {
       expect(result, []);
     });
 
-    test("Intentional rollback from outside of a transaction has no impact",
-        () async {
+    test("Intentional rollback from outside of a transaction has no impact", () async {
       var orderEnsurer = [];
       var nextCompleter = new Completer.sync();
       var outResult = conn.transaction((c) async {
@@ -185,9 +196,7 @@ void main() {
       ]);
     });
 
-    test(
-        "A transaction with a rollback and non-await queries rolls back transaction",
-        () async {
+    test("A transaction with a rollback and non-await queries rolls back transaction", () async {
       conn.transaction((ctx) async {
         ctx.query("INSERT INTO t (id) VALUES (1)");
         ctx.query("INSERT INTO t (id) VALUES (2)");
@@ -207,8 +216,7 @@ void main() {
     PostgreSQLConnection conn = null;
 
     setUp(() async {
-      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
-          username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
       await conn.open();
       await conn.execute("CREATE TEMPORARY TABLE t (id INT UNIQUE)");
     });
@@ -306,8 +314,7 @@ void main() {
     PostgreSQLConnection conn = null;
 
     setUp(() async {
-      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
-          username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
       await conn.open();
       await conn.execute("CREATE TEMPORARY TABLE t (id INT UNIQUE)");
     });
@@ -387,9 +394,7 @@ void main() {
         await conn.transaction((c) async {
           await c.query("INSERT INTO t (id) VALUES (1)");
 
-          c.query("INSERT INTO t (id) VALUES (@id:int4)", substitutionValues: {
-            "id": "foobar"
-          });
+          c.query("INSERT INTO t (id) VALUES (@id:int4)", substitutionValues: {"id": "foobar"});
           await c.query("INSERT INTO t (id) VALUES (2)");
         });
         expect(true, false);
@@ -406,8 +411,7 @@ void main() {
     PostgreSQLConnection conn = null;
 
     setUp(() async {
-      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
-          username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
       await conn.open();
       await conn.execute("CREATE TEMPORARY TABLE t (id INT UNIQUE)");
     });
