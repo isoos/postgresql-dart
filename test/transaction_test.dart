@@ -22,9 +22,7 @@ void main() {
       await conn.execute("INSERT INTO t (id) VALUES (1)");
 
       final List<List<dynamic>> outValue = await conn.transaction((ctx) async {
-        return await ctx.query(
-          'SELECT * FROM t WHERE id = @id LIMIT 1',
-          substitutionValues: {'id': 1});
+        return await ctx.query('SELECT * FROM t WHERE id = @id LIMIT 1', substitutionValues: {'id': 1});
       });
 
       expect(outValue.length, 1);
@@ -32,7 +30,6 @@ void main() {
       expect(outValue.first.length, 1);
       expect(outValue.first.first, 1);
     });
-
 
     test("Send successful transaction succeeds, returns returned value", () async {
       var outResult = await conn.transaction((c) async {
@@ -121,13 +118,16 @@ void main() {
     });
 
     test("May intentionally rollback transaction", () async {
+      var reached = false;
       await conn.transaction((c) async {
         await c.query("INSERT INTO t (id) VALUES (1)");
         c.cancelTransaction();
 
+        reached = true;
         await c.query("INSERT INTO t (id) VALUES (2)");
       });
 
+      expect(reached, false);
       var result = await conn.query("SELECT id FROM t");
       expect(result, []);
     });
@@ -197,7 +197,7 @@ void main() {
     });
 
     test("A transaction with a rollback and non-await queries rolls back transaction", () async {
-      conn.transaction((ctx) async {
+      await conn.transaction((ctx) async {
         ctx.query("INSERT INTO t (id) VALUES (1)");
         ctx.query("INSERT INTO t (id) VALUES (2)");
         ctx.cancelTransaction();
@@ -394,7 +394,7 @@ void main() {
         await conn.transaction((c) async {
           await c.query("INSERT INTO t (id) VALUES (1)");
 
-          c.query("INSERT INTO t (id) VALUES (@id:int4)", substitutionValues: {"id": "foobar"});
+          c.query("INSERT INTO t (id) VALUES (@id:int4)", substitutionValues: {"id": "foobar"}).catchError((_) => null);
           await c.query("INSERT INTO t (id) VALUES (2)");
         });
         expect(true, false);
@@ -404,6 +404,41 @@ void main() {
 
       var noRows = await conn.query("SELECT id FROM t");
       expect(noRows, []);
+    });
+
+    test("Async query failure prevents closure from continuning", () async {
+      var reached = false;
+
+      try {
+        await conn.transaction((c) async {
+          await c.query("INSERT INTO t (id) VALUES (1)");
+          await c.query("INSERT INTO t (id) VALUE ('foo') RETURNING id");
+
+          reached = true;
+          await c.query("INSERT INTO t (id) VALUES (2)");
+        });
+        fail('unreachable');
+      } on PostgreSQLException {
+      }
+
+      expect(reached, false);
+      final res = await conn.query("SELECT * FROM t");
+      expect(res, []);
+    });
+
+    test("When exception thrown in unawaited on future, transaction is rolled back", () async {
+      try {
+        await conn.transaction((c) async {
+          await c.query("INSERT INTO t (id) VALUES (1)");
+          c.query("INSERT INTO t (id) VALUE ('foo') RETURNING id").catchError((_) => null);
+          await c.query("INSERT INTO t (id) VALUES (2)");
+        });
+        fail('unreachable');
+      } on PostgreSQLException {
+      }
+
+      final res = await conn.query("SELECT * FROM t");
+      expect(res, []);
     });
   });
 

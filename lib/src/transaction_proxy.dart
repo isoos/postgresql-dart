@@ -29,6 +29,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
   List<Query<dynamic>> queryQueue = [];
   PostgreSQLConnection connection;
   _TransactionQuerySignature executionBlock;
+  bool _hasFailed = false;
 
   Future commit() async {
     await execute("COMMIT");
@@ -79,10 +80,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
       completer.complete(new PostgreSQLRollback._(rollback.reason));
       return;
     } catch (e, st) {
-      queryQueue = [];
-
-      await execute("ROLLBACK");
-      completer.completeError(e, st);
+      await _transactionFailed(e, st);
       return;
     }
 
@@ -98,21 +96,26 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
     queryQueue.add(query);
     connection._transitionToState(connection._connectionState.awake());
 
-    var result = null;
     try {
-      result = await query.future;
+      final result = await query.future;
 
       connection._cacheQuery(query);
       queryQueue.remove(query);
+
+      return result;
     } catch (e, st) {
-      queryQueue = [];
-
-      await execute("ROLLBACK");
-      completer.completeError(e, st);
-      return null;
+      await _transactionFailed(e, st);
+      rethrow;
     }
+  }
 
-    return result;
+  Future _transactionFailed(dynamic error, [StackTrace trace]) async {
+    if (!_hasFailed) {
+      _hasFailed = true;
+      queryQueue = [];
+      await execute("ROLLBACK");
+      completer.completeError(error, trace);
+    }
   }
 }
 
