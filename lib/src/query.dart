@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:postgres/src/execution_context.dart';
+
 import 'postgresql_codec.dart';
 import 'connection.dart';
 import 'dart:io';

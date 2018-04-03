@@ -196,6 +196,19 @@ void main() {
       ]);
     });
 
+    test(
+        "A transaction doesn't have to await on queries, when the last query fails, "
+        "it still emits an error from the transaction", () async {
+      await conn.transaction((ctx) async {
+        ctx.query("INSERT INTO t (id) VALUES (1)");
+        ctx.query("INSERT INTO t (id) VALUES (2)");
+        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((_) => null);
+      });
+
+      var total = await conn.query("SELECT id FROM t");
+      expect(total, []);
+    });
+
     test("A transaction with a rollback and non-await queries rolls back transaction", () async {
       await conn.transaction((ctx) async {
         ctx.query("INSERT INTO t (id) VALUES (1)");
@@ -418,8 +431,7 @@ void main() {
           await c.query("INSERT INTO t (id) VALUES (2)");
         });
         fail('unreachable');
-      } on PostgreSQLException {
-      }
+      } on PostgreSQLException {}
 
       expect(reached, false);
       final res = await conn.query("SELECT * FROM t");
@@ -434,8 +446,7 @@ void main() {
           await c.query("INSERT INTO t (id) VALUES (2)");
         });
         fail('unreachable');
-      } on PostgreSQLException {
-      }
+      } on PostgreSQLException {}
 
       final res = await conn.query("SELECT * FROM t");
       expect(res, []);

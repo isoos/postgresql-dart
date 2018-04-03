@@ -542,6 +542,7 @@ void main() {
           allowReuse: false);
 
       var string = "select i1, i2 from u where i1 = @i:int4";
+      // ignore: unawaited_futures
       connection
           .query(string, substitutionValues: {"i": "foo"}).catchError((e) {});
 

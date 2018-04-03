@@ -163,7 +163,7 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
   Completer openCompleter;
 
   _PostgreSQLConnectionState awake() {
-    var pendingQuery = connection._pendingQuery;
+    var pendingQuery = connection._queue.pending;
     if (pendingQuery != null) {
       return processQuery(pendingQuery);
     }
@@ -232,7 +232,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     // We ignore NoData, as it doesn't tell us anything we don't already know
     // or care about.
 
-    //print("(${query.statement}) -> $message");
+    // print("(${query.statement}) -> $message");
 
     if (message is ReadyForQueryMessage) {
       if (message.state == ReadyForQueryMessage.StateTransactionError) {
@@ -282,7 +282,7 @@ class _PostgreSQLConnectionStateReadyInTransaction extends _PostgreSQLConnection
   }
 
   _PostgreSQLConnectionState awake() {
-    var pendingQuery = transaction.pendingQuery;
+    var pendingQuery = transaction._queue.pending;
     if (pendingQuery != null) {
       return processQuery(pendingQuery);
     }
