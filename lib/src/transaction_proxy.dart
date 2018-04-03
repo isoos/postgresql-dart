@@ -47,7 +47,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
         fmtString, substitutionValues, connection, this);
 
     if (allowReuse) {
-      query.statementIdentifier = connection._reuseIdentifierForQuery(query);
+      query.statementIdentifier = connection._cache.identifierForQuery(query);
     }
 
     return enqueue(query);
@@ -99,7 +99,7 @@ class _TransactionProxy implements PostgreSQLExecutionContext {
     try {
       final result = await query.future;
 
-      connection._cacheQuery(query);
+      connection._cache.add(query);
       queryQueue.remove(query);
 
       return result;

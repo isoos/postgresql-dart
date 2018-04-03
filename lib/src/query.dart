@@ -35,7 +35,7 @@ class Query<T> {
 
   List<dynamic> rows = [];
 
-  QueryCache cache;
+  CachedQuery cache;
 
   void sendSimple(Socket socket) {
     var sqlString = PostgreSQLFormat.substitute(statement, substitutionValues);
@@ -44,7 +44,7 @@ class Query<T> {
     socket.add(queryMessage.asBytes());
   }
 
-  void sendExtended(Socket socket, {QueryCache cacheQuery: null}) {
+  void sendExtended(Socket socket, {CachedQuery cacheQuery: null}) {
     if (cacheQuery != null) {
       fieldDescriptions = cacheQuery.fieldDescriptions;
       sendCachedQuery(socket, cacheQuery, substitutionValues);
@@ -74,13 +74,13 @@ class Query<T> {
     ];
 
     if (statementIdentifier != null) {
-      cache = new QueryCache(statementIdentifier, formatIdentifiers);
+      cache = new CachedQuery(statementIdentifier, formatIdentifiers);
     }
 
     socket.add(ClientMessage.aggregateBytes(messages));
   }
 
-  void sendCachedQuery(Socket socket, QueryCache cacheQuery, Map<String, dynamic> substitutionValues) {
+  void sendCachedQuery(Socket socket, CachedQuery cacheQuery, Map<String, dynamic> substitutionValues) {
     var statementName = cacheQuery.preparedStatementName;
     var parameterList =
         cacheQuery.orderedParameters.map((identifier) => encodeParameter(identifier, substitutionValues)).toList();
@@ -145,8 +145,8 @@ class Query<T> {
   String toString() => statement;
 }
 
-class QueryCache {
-  QueryCache(this.preparedStatementName, this.orderedParameters);
+class CachedQuery {
+  CachedQuery(this.preparedStatementName, this.orderedParameters);
 
   String preparedStatementName;
   List<PostgreSQLFormatIdentifier> orderedParameters;

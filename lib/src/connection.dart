@@ -3,6 +3,8 @@ library postgres.connection;
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:postgres/src/query_cache.dart';
+
 import 'message_window.dart';
 import 'query.dart';
 
@@ -126,11 +128,9 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// Prior to connection, it is the empty map.
   Map<String, String> settings = {};
 
+  QueryCache _cache = new QueryCache();
   Socket _socket;
   MessageFramer _framer = new MessageFramer();
-
-  Map<String, QueryCache> _reuseMap = {};
-  int _reuseCounter = 0;
 
   Map<int, String> _tableOIDNameMap = {};
 
@@ -220,7 +220,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
     var query = new Query<List<List<dynamic>>>(fmtString, substitutionValues, this, null);
     if (allowReuse) {
-      query.statementIdentifier = _reuseIdentifierForQuery(query);
+      query.statementIdentifier = _cache.identifierForQuery(query);
     }
 
     return _enqueue(query);
@@ -264,7 +264,7 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
 
     var query = new Query<List<List<dynamic>>>(fmtString, substitutionValues, this, null);
     if (allowReuse) {
-      query.statementIdentifier = _reuseIdentifierForQuery(query);
+      query.statementIdentifier = _cache.identifierForQuery(query);
     }
 
     final rows = await _enqueue(query);
@@ -395,10 +395,9 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     var result = null;
     try {
       result = await query.future;
-      _cacheQuery(query);
+      _cache.add(query);
       _queryQueue.remove(query);
     } catch (e) {
-      _cacheQuery(query);
       _queryQueue.remove(query);
       rethrow;
     }
@@ -507,37 +506,6 @@ class PostgreSQLConnection implements PostgreSQLExecutionContext {
     }
 
     throw new PostgreSQLException("SSL not allowed for this connection.");
-  }
-
-  void _cacheQuery(Query<dynamic> query) {
-    if (query.cache == null) {
-      return;
-    }
-
-    if (query.cache.isValid) {
-      _reuseMap[query.statement] = query.cache;
-    }
-  }
-
-  QueryCache _cachedQuery(String statementIdentifier) {
-    if (statementIdentifier == null) {
-      return null;
-    }
-
-    return _reuseMap[statementIdentifier];
-  }
-
-  String _reuseIdentifierForQuery(Query<dynamic> q) {
-    var existing = _reuseMap[q.statement];
-    if (existing != null) {
-      return existing.preparedStatementName;
-    }
-
-    var string = "$_reuseCounter".padLeft(12, "0");
-
-    _reuseCounter++;
-
-    return string;
   }
 
   Future _cleanup() async {

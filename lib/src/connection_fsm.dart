@@ -178,7 +178,7 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
         return new _PostgreSQLConnectionStateBusy(q);
       }
 
-      var cached = connection._cachedQuery(q.statement);
+      final cached = connection._cache[q.statement];
       q.sendExtended(connection._socket, cacheQuery: cached);
 
       return new _PostgreSQLConnectionStateBusy(q);
@@ -297,7 +297,7 @@ class _PostgreSQLConnectionStateReadyInTransaction extends _PostgreSQLConnection
         return new _PostgreSQLConnectionStateBusy(q);
       }
 
-      var cached = connection._cachedQuery(q.statement);
+      final cached = connection._cache[q.statement];
       q.sendExtended(connection._socket, cacheQuery: cached);
 
       return new _PostgreSQLConnectionStateBusy(q);

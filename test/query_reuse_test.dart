@@ -481,7 +481,7 @@ void main() {
     });
 
     test(
-        "A failed bind on initial query fails query, but cached query is available",
+        "A failed bind on initial query fails query, but can still make query later",
         () async {
       var string = "insert into u (i1, i2) values (@i1, @i2) returning i1, i2";
       try {
@@ -491,7 +491,7 @@ void main() {
         expect(true, false);
       } on PostgreSQLException {}
 
-      expect(hasCachedQueryNamed(connection, string), true);
+      expect(hasCachedQueryNamed(connection, string), false);
 
       var results = await connection.query("select i1, i2 from u");
       expect(results, []);
@@ -501,6 +501,7 @@ void main() {
       expect(results, [
         [1, 2]
       ]);
+      expect(hasCachedQueryNamed(connection, string), true);
     });
 
     test(
@@ -557,9 +558,9 @@ void main() {
 }
 
 Map<String, dynamic> cachedQueryMap(PostgreSQLConnection connection) {
-  var reuseMapMirror = reflect(connection).type.declarations.values.firstWhere(
-      (DeclarationMirror dm) => dm.simpleName.toString().contains("_reuseMap"));
-  return reflect(connection).getField(reuseMapMirror.simpleName).reflectee
+  var cacheMirror = reflect(connection).type.declarations.values.firstWhere(
+      (DeclarationMirror dm) => dm.simpleName.toString().contains("_cache"));
+  return reflect(connection).getField(cacheMirror.simpleName).getField(#queries).reflectee
       as Map<String, dynamic>;
 }
 
