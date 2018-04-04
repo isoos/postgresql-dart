@@ -133,7 +133,7 @@ class InterceptingConnection extends PostgreSQLConnection {
 
   @override
   Future<List<List<dynamic>>> query(String fmtString,
-    {Map<String, dynamic> substitutionValues: null, bool allowReuse: true}) {
+    {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds}) {
     queries.add(fmtString);
     return super.query(fmtString, substitutionValues: substitutionValues, allowReuse: allowReuse);
   }

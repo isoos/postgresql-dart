@@ -101,6 +101,7 @@ class PostgreSQLConnection extends Object with _PostgreSQLExecutionContextMixin 
   _PostgreSQLConnectionState _connectionState;
 
   PostgreSQLExecutionContext get _transaction => null;
+
   PostgreSQLConnection get _connection => this;
 
   /// Establishes a connection with a PostgreSQL database.
@@ -318,10 +319,11 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
   QueryQueue _queue = new QueryQueue();
 
   PostgreSQLConnection get _connection;
+
   PostgreSQLExecutionContext get _transaction;
 
   Future<List<List<dynamic>>> query(String fmtString,
-    {Map<String, dynamic> substitutionValues: null, bool allowReuse: true}) async {
+      {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds: 30}) async {
     if (_connection.isClosed) {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
@@ -331,11 +333,11 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
       query.statementIdentifier = _connection._cache.identifierForQuery(query);
     }
 
-    return _enqueue(query);
+    return _enqueue(query, timeoutInSeconds: timeoutInSeconds);
   }
 
   Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(String fmtString,
-    {Map<String, dynamic> substitutionValues: null, bool allowReuse: true}) async {
+      {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds: 30}) async {
     if (_connection.isClosed) {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
@@ -345,30 +347,32 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
       query.statementIdentifier = _connection._cache.identifierForQuery(query);
     }
 
-    final rows = await _enqueue(query);
+    final rows = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
 
     return _mapifyRows(rows, query.fieldDescriptions);
   }
 
-  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null}) {
+  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null, int timeoutInSeconds: 30}) {
     if (_connection.isClosed) {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
 
-    var query = new Query<int>(fmtString, substitutionValues, _connection, _transaction)..onlyReturnAffectedRowCount = true;
+    var query = new Query<int>(fmtString, substitutionValues, _connection, _transaction)
+      ..onlyReturnAffectedRowCount = true;
 
-    return _enqueue(query);
+    return _enqueue(query, timeoutInSeconds: timeoutInSeconds);
   }
 
   void cancelTransaction({String reason: null});
 
   Future<List<Map<String, Map<String, dynamic>>>> _mapifyRows(
-    List<List<dynamic>> rows, List<FieldDescription> columns) async {
+      List<List<dynamic>> rows, List<FieldDescription> columns) async {
     //todo (joeconwaystk): If this was a cached query, resolving is table oids is unnecessary.
     // It's not a significant impact here, but an area for optimization. This includes
     // assigning resolvedTableName
     final tableOIDs = new Set.from(columns.map((f) => f.tableID));
-    final List<int> unresolvedTableOIDs = tableOIDs.where((oid) => oid != null && !_tableOIDNameMap.containsKey(oid)).toList();
+    final List<int> unresolvedTableOIDs =
+        tableOIDs.where((oid) => oid != null && !_tableOIDNameMap.containsKey(oid)).toList();
     unresolvedTableOIDs.sort((int lhs, int rhs) => lhs.compareTo(rhs));
 
     if (unresolvedTableOIDs.isNotEmpty) {
@@ -396,7 +400,7 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
   Future _resolveTableOIDs(List<int> oids) async {
     final unresolvedIDString = oids.join(",");
     final orderedTableNames =
-    await query("SELECT relname FROM pg_class WHERE relkind='r' AND oid IN ($unresolvedIDString) ORDER BY oid ASC");
+        await query("SELECT relname FROM pg_class WHERE relkind='r' AND oid IN ($unresolvedIDString) ORDER BY oid ASC");
 
     final iterator = oids.iterator;
     orderedTableNames.forEach((tableName) {
@@ -407,12 +411,12 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
     });
   }
 
-  Future<T> _enqueue<T>(Query<T> query) async {
+  Future<T> _enqueue<T>(Query<T> query, {int timeoutInSeconds: 30}) async {
     _queue.add(query);
     _connection._transitionToState(_connection._connectionState.awake());
 
     try {
-      final result = await query.future;
+      final result = await query.future.timeout(new Duration(seconds: timeoutInSeconds));
       _connection._cache.add(query);
       _queue.remove(query);
       return result;
@@ -423,6 +427,5 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
     }
   }
 
-  Future _onQueryError(Query query, dynamic error, [StackTrace trace]) async {
-  }
+  Future _onQueryError(Query query, dynamic error, [StackTrace trace]) async {}
 }

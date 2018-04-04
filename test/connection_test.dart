@@ -1,3 +1,4 @@
+// ignore_for_file: unawaited_futures
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 import 'dart:io';
@@ -525,6 +526,38 @@ void main() {
         expect(true, false);
       } on PostgreSQLException {}
     });
+  });
+
+  test("If connection is closed, do not allow .execute", () async {
+    final conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+    try {
+      await conn.execute("SELECT 1");
+      fail('unreachable');
+    } on PostgreSQLException catch (e) {
+      expect(e.toString(), contains("connection is not open"));
+    }
+  });
+
+  test("If connection is closed, do not allow .query", () async {
+    final conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+    try {
+      await conn.query("SELECT 1");
+      fail('unreachable');
+    } on PostgreSQLException catch (e) {
+      expect(e.toString(), contains("connection is not open"));
+    }
+
+  });
+
+  test("If connection is closed, do not allow .mappedResultsQuery", () async {
+    final conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+    try {
+      await conn.mappedResultsQuery("SELECT 1");
+      fail('unreachable');
+    } on PostgreSQLException catch (e) {
+      expect(e.toString(), contains("connection is not open"));
+    }
+
   });
 }
 

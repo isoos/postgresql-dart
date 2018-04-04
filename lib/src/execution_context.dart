@@ -22,7 +22,7 @@ abstract class PostgreSQLExecutionContext {
   /// anything to opt in to this behavior, this connection will track the necessary information required to reuse queries without intervention. (The [fmtString] is
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
   Future<List<List<dynamic>>> query(String fmtString,
-    {Map<String, dynamic> substitutionValues: null, bool allowReuse: true});
+    {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds});
 
   /// Executes a query on this context.
   ///
@@ -31,7 +31,7 @@ abstract class PostgreSQLExecutionContext {
   /// This method returns the number of rows affected and no additional information. This method uses the least efficient and less secure command
   /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
   /// or return rows.
-  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null});
+  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null, int timeoutInSeconds});
 
   /// Cancels a transaction on this context.
   ///
@@ -70,5 +70,5 @@ abstract class PostgreSQLExecutionContext {
   ///         }
   ///       ]
   Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(String fmtString,
-    {Map<String, dynamic> substitutionValues: null, bool allowReuse: true});
+    {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds});
 }
