@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+
+import 'package:dart2_constant/convert.dart' as convert;
+import 'package:dart2_constant/core.dart' as core;
+import 'package:test/test.dart';
+
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/binary_codec.dart';
 import 'package:postgres/src/text_codec.dart';
-import 'package:test/test.dart';
 import 'package:postgres/src/types.dart';
 import 'package:postgres/src/utf8_backed_string.dart';
 
@@ -203,31 +207,31 @@ void main() {
     test("Escape strings", () {
       final encoder = new PostgresTextEncoder(true);
       //                                                       '   b   o    b   '
-      expect(UTF8.encode(encoder.convert('bob')), equals([39, 98, 111, 98, 39]));
+      expect(convert.utf8.encode(encoder.convert('bob')), equals([39, 98, 111, 98, 39]));
 
       //                                                         '   b   o   \n   b   '
-      expect(UTF8.encode(encoder.convert('bo\nb')), equals([39, 98, 111, 10, 98, 39]));
+      expect(convert.utf8.encode(encoder.convert('bo\nb')), equals([39, 98, 111, 10, 98, 39]));
 
       //                                                         '   b   o   \r   b   '
-      expect(UTF8.encode(encoder.convert('bo\rb')), equals([39, 98, 111, 13, 98, 39]));
+      expect(convert.utf8.encode(encoder.convert('bo\rb')), equals([39, 98, 111, 13, 98, 39]));
 
       //                                                         '   b   o  \b   b   '
-      expect(UTF8.encode(encoder.convert('bo\bb')), equals([39, 98, 111, 8, 98, 39]));
+      expect(convert.utf8.encode(encoder.convert('bo\bb')), equals([39, 98, 111, 8, 98, 39]));
 
       //                                                     '   '   '   '
-      expect(UTF8.encode(encoder.convert("'")), equals([39, 39, 39, 39]));
+      expect(convert.utf8.encode(encoder.convert("'")), equals([39, 39, 39, 39]));
 
       //                                                      '   '   '   '   '   '
-      expect(UTF8.encode(encoder.convert("''")), equals([39, 39, 39, 39, 39, 39]));
+      expect(convert.utf8.encode(encoder.convert("''")), equals([39, 39, 39, 39, 39, 39]));
 
       //                                                       '   '   '   '   '   '
-      expect(UTF8.encode(encoder.convert("\''")), equals([39, 39, 39, 39, 39, 39]));
+      expect(convert.utf8.encode(encoder.convert("\''")), equals([39, 39, 39, 39, 39, 39]));
 
       //                                                       sp   E   '   \   \   '   '   '   '   '
-      expect(UTF8.encode(encoder.convert("\\''")), equals([32, 69, 39, 92, 92, 39, 39, 39, 39, 39]));
+      expect(convert.utf8.encode(encoder.convert("\\''")), equals([32, 69, 39, 92, 92, 39, 39, 39, 39, 39]));
 
       //                                                      sp   E   '   \   \   '   '   '
-      expect(UTF8.encode(encoder.convert("\\'")), equals([32, 69, 39, 92, 92, 39, 39, 39]));
+      expect(convert.utf8.encode(encoder.convert("\\'")), equals([32, 69, 39, 92, 92, 39, 39, 39]));
     });
 
     test("Encode DateTime", () {
@@ -242,13 +246,13 @@ void main() {
           ":${(tz.inSeconds % 60).toString().padLeft(2, '0')}";
 
       var pairs = {
-        "2001-02-03T00:00:00.000$tzOffsetDelimiter": new DateTime(2001, DateTime.FEBRUARY, 3),
-        "2001-02-03T04:05:06.000$tzOffsetDelimiter": new DateTime(2001, DateTime.FEBRUARY, 3, 4, 5, 6, 0),
-        "2001-02-03T04:05:06.999$tzOffsetDelimiter": new DateTime(2001, DateTime.FEBRUARY, 3, 4, 5, 6, 999),
-        "0010-02-03T04:05:06.123$tzOffsetDelimiter BC": new DateTime(-10, DateTime.FEBRUARY, 3, 4, 5, 6, 123),
-        "0010-02-03T04:05:06.000$tzOffsetDelimiter BC": new DateTime(-10, DateTime.FEBRUARY, 3, 4, 5, 6, 0),
-        "012345-02-03T04:05:06.000$tzOffsetDelimiter BC": new DateTime(-12345, DateTime.FEBRUARY, 3, 4, 5, 6, 0),
-        "012345-02-03T04:05:06.000$tzOffsetDelimiter": new DateTime(12345, DateTime.FEBRUARY, 3, 4, 5, 6, 0)
+        "2001-02-03T00:00:00.000$tzOffsetDelimiter": new DateTime(2001, core.DateTime.february, 3),
+        "2001-02-03T04:05:06.000$tzOffsetDelimiter": new DateTime(2001, core.DateTime.february, 3, 4, 5, 6, 0),
+        "2001-02-03T04:05:06.999$tzOffsetDelimiter": new DateTime(2001, core.DateTime.february, 3, 4, 5, 6, 999),
+        "0010-02-03T04:05:06.123$tzOffsetDelimiter BC": new DateTime(-10, core.DateTime.february, 3, 4, 5, 6, 123),
+        "0010-02-03T04:05:06.000$tzOffsetDelimiter BC": new DateTime(-10, core.DateTime.february, 3, 4, 5, 6, 0),
+        "012345-02-03T04:05:06.000$tzOffsetDelimiter BC": new DateTime(-12345, core.DateTime.february, 3, 4, 5, 6, 0),
+        "012345-02-03T04:05:06.000$tzOffsetDelimiter": new DateTime(12345, core.DateTime.february, 3, 4, 5, 6, 0)
       };
 
       final encoder = new PostgresTextEncoder(false);
@@ -259,11 +263,11 @@ void main() {
 
     test("Encode Double", () {
       var pairs = {
-        "'nan'": double.NAN,
-        "'infinity'": double.INFINITY,
-        "'-infinity'": double.NEGATIVE_INFINITY,
-        "1.7976931348623157e+308": double.MAX_FINITE,
-        "5e-324": double.MIN_POSITIVE,
+        "'nan'": core.double.nan,
+        "'infinity'": core.double.infinity,
+        "'-infinity'": core.double.negativeInfinity,
+        "1.7976931348623157e+308": core.double.maxFinite,
+        "5e-324": core.double.minPositive,
         "-0.0": -0.0,
         "0.0": 0.0
       };

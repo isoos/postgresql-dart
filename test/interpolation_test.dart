@@ -1,6 +1,7 @@
-import 'dart:convert';
-import 'package:postgres/src/substituter.dart';
+import 'package:dart2_constant/convert.dart' as convert;
 import 'package:test/test.dart';
+
+import 'package:postgres/src/substituter.dart';
 
 void main() {
   test("Simple replacement", () {
@@ -81,7 +82,7 @@ void main() {
         .substitute("@id:text @foo", {"id": "1';select", "foo": "3\\4"});
 
     //                         '  1  '  '  ;  s   e   l   e   c  t   '  sp  sp  E  '  3  \  \  4  '
-    expect(UTF8.encode(result), [
+    expect(convert.utf8.encode(result), [
       39,
       49,
       39,

@@ -1,15 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:dart2_constant/convert.dart' as convert;
+
 import 'package:postgres/src/binary_codec.dart';
 import 'package:postgres/src/execution_context.dart';
 
 import 'package:postgres/src/text_codec.dart';
 import 'types.dart';
 import 'connection.dart';
-import 'dart:io';
 import 'substituter.dart';
 import 'client_messages.dart';
-import 'dart:typed_data';
-import 'dart:convert';
 
 class Query<T> {
   Query(this.statement, this.substitutionValues, this.connection, this.transaction);
@@ -177,7 +180,7 @@ class ParameterValue {
   ParameterValue.text(dynamic value) : isBinary = false {
     if (value != null) {
       final converter = new PostgresTextEncoder(false);
-      bytes = UTF8.encode(converter.convert(value));
+      bytes = convert.utf8.encode(converter.convert(value));
     }
     length = bytes?.length;
   }

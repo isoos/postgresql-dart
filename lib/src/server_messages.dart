@@ -1,5 +1,7 @@
 import 'dart:typed_data';
-import 'dart:convert';
+
+import 'package:dart2_constant/convert.dart' as convert;
+
 import 'connection.dart';
 import 'query.dart';
 
@@ -56,8 +58,8 @@ class ParameterStatusMessage extends ServerMessage {
   String value;
 
   void readBytes(Uint8List bytes) {
-    name = UTF8.decode(bytes.sublist(0, bytes.indexOf(0)));
-    value = UTF8.decode(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
+    name = convert.utf8.decode(bytes.sublist(0, bytes.indexOf(0)));
+    value = convert.utf8.decode(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
   }
 }
 
@@ -69,7 +71,7 @@ class ReadyForQueryMessage extends ServerMessage {
   String state;
 
   void readBytes(Uint8List bytes) {
-    state = UTF8.decode(bytes);
+    state = convert.utf8.decode(bytes);
   }
 }
 
@@ -138,8 +140,8 @@ class NotificationResponseMessage extends ServerMessage {
   void readBytes(Uint8List bytes) {
     var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
     processID = view.getUint32(0);
-    channel = UTF8.decode(bytes.sublist(4, bytes.indexOf(0, 4)));
-    payload = UTF8.decode(bytes.sublist(bytes.indexOf(0, 4) + 1, bytes.lastIndexOf(0)));
+    channel = convert.utf8.decode(bytes.sublist(4, bytes.indexOf(0, 4)));
+    payload = convert.utf8.decode(bytes.sublist(bytes.indexOf(0, 4) + 1, bytes.lastIndexOf(0)));
   }
 }
 
@@ -149,7 +151,7 @@ class CommandCompleteMessage extends ServerMessage {
   static RegExp identifierExpression = new RegExp(r"[A-Z ]*");
 
   void readBytes(Uint8List bytes) {
-    var str = UTF8.decode(bytes.sublist(0, bytes.length - 1));
+    var str = convert.utf8.decode(bytes.sublist(0, bytes.length - 1));
 
     var match = identifierExpression.firstMatch(str);
     if (match.end < str.length) {
