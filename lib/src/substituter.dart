@@ -109,6 +109,8 @@ class PostgreSQLFormat {
     return items.map((t) {
       if (t.type == PostgreSQLFormatTokenType.text) {
         return t.buffer;
+      } else if (t.buffer.length == 1 && t.buffer.toString() == '@') {
+        return t.buffer;
       } else {
         var identifier = new PostgreSQLFormatIdentifier(t.buffer.toString());
 

@@ -106,4 +106,11 @@ void main() {
       39
     ]);
   });
+
+  test("JSONB operator does not throw", () {
+    final query = "SELECT id FROM table WHERE data @> '{\"key\": \"value\"}'";
+    final results = PostgreSQLFormat.substitute(query, {});
+
+    expect(results, query);
+  });
 }
