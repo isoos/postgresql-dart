@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:postgres/src/binary_codec.dart';
 import 'package:postgres/src/execution_context.dart';
 
-import 'postgresql_codec.dart';
+import 'package:postgres/src/text_codec.dart';
+import 'types.dart';
 import 'connection.dart';
 import 'dart:io';
 import 'substituter.dart';
@@ -24,7 +26,7 @@ class Query<T> {
   final PostgreSQLExecutionContext transaction;
   final PostgreSQLConnection connection;
 
-  List<int> specifiedParameterTypeCodes;
+  List<PostgreSQLDataType> specifiedParameterTypeCodes;
 
   List<FieldDescription> _fieldDescriptions;
 
@@ -63,9 +65,9 @@ class Query<T> {
       return "\$$index";
     });
 
-    specifiedParameterTypeCodes = formatIdentifiers.map((i) => i.typeCode).toList();
+    specifiedParameterTypeCodes = formatIdentifiers.map((i) => i.type).toList();
 
-    var parameterList = formatIdentifiers.map((id) => encodeParameter(id, substitutionValues)).toList();
+    var parameterList = formatIdentifiers.map((id) => new ParameterValue(id, substitutionValues)).toList();
 
     var messages = [
       new ParseMessage(sqlString, statementName: statementName),
@@ -85,7 +87,7 @@ class Query<T> {
   void sendCachedQuery(Socket socket, CachedQuery cacheQuery, Map<String, dynamic> substitutionValues) {
     var statementName = cacheQuery.preparedStatementName;
     var parameterList =
-        cacheQuery.orderedParameters.map((identifier) => encodeParameter(identifier, substitutionValues)).toList();
+        cacheQuery.orderedParameters.map((identifier) => new ParameterValue(identifier, substitutionValues)).toList();
 
     var bytes = ClientMessage.aggregateBytes(
         [new BindMessage(parameterList, statementName: statementName), new ExecuteMessage(), new SyncMessage()]);
@@ -93,19 +95,17 @@ class Query<T> {
     socket.add(bytes);
   }
 
-  ParameterValue encodeParameter(PostgreSQLFormatIdentifier identifier, Map<String, dynamic> substitutionValues) {
-    if (identifier.typeCode != null) {
-      return new ParameterValue.binary(substitutionValues[identifier.name], identifier.typeCode);
-    } else {
-      return new ParameterValue.text(substitutionValues[identifier.name]);
-    }
-  }
-
   PostgreSQLException validateParameters(List<int> parameterTypeIDs) {
     var actualParameterTypeCodeIterator = parameterTypeIDs.iterator;
-    var parametersAreMismatched = specifiedParameterTypeCodes.map((specifiedTypeCode) {
+    var parametersAreMismatched = specifiedParameterTypeCodes.map((specifiedType) {
       actualParameterTypeCodeIterator.moveNext();
-      return actualParameterTypeCodeIterator.current == (specifiedTypeCode ?? actualParameterTypeCodeIterator.current);
+
+      if (specifiedType == null) {
+        return true;
+      }
+
+      final actualType = PostgresBinaryDecoder.typeMap[actualParameterTypeCodeIterator.current];
+      return actualType == specifiedType;
     }).any((v) => v == false);
 
     if (parametersAreMismatched) {
@@ -125,7 +125,7 @@ class Query<T> {
     var lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
 
-      return PostgreSQLCodec.decodeValue(bd, iterator.current.typeID);
+      return iterator.current.converter.convert(bd?.buffer?.asUint8List(bd.offsetInBytes, bd.lengthInBytes));
     });
 
     rows.add(lazyDecodedData.toList());
@@ -160,27 +160,36 @@ class CachedQuery {
 }
 
 class ParameterValue {
-  ParameterValue.binary(dynamic value, this.postgresType) {
-    isBinary = true;
-    bytes = PostgreSQLCodec.encodeBinary(value, this.postgresType)?.buffer?.asUint8List();
+  factory ParameterValue(PostgreSQLFormatIdentifier identifier, Map<String, dynamic> substitutionValues) {
+    if (identifier.type == null) {
+      return new ParameterValue.text(substitutionValues[identifier.name]);
+    }
+
+    return new ParameterValue.binary(substitutionValues[identifier.name], identifier.type);
+  }
+
+  ParameterValue.binary(dynamic value, PostgreSQLDataType postgresType) : isBinary = true {
+    final converter = new PostgresBinaryEncoder(postgresType);
+    bytes = converter.convert(value);
     length = bytes?.length ?? 0;
   }
 
-  ParameterValue.text(dynamic value) {
-    isBinary = false;
+  ParameterValue.text(dynamic value) : isBinary = false {
     if (value != null) {
-      bytes = UTF8.encode(PostgreSQLCodec.encode(value, escapeStrings: false));
+      final converter = new PostgresTextEncoder(false);
+      bytes = UTF8.encode(converter.convert(value));
     }
     length = bytes?.length;
   }
 
-  bool isBinary;
-  int postgresType;
+  final bool isBinary;
   Uint8List bytes;
   int length;
 }
 
 class FieldDescription {
+  Converter converter;
+
   String fieldName;
   int tableID;
   int columnID;
@@ -218,6 +227,8 @@ class FieldDescription {
     formatCode = byteData.getUint16(offset);
     offset += 2;
 
+    converter = new PostgresBinaryDecoder(typeID);
+
     return offset;
   }
 
@@ -238,23 +249,22 @@ class PostgreSQLFormatToken {
 }
 
 class PostgreSQLFormatIdentifier {
-  static Map<String, int> typeStringToCodeMap = {
-    "text": PostgreSQLCodec.TypeText,
-    "int2": PostgreSQLCodec.TypeInt2,
-    "int4": PostgreSQLCodec.TypeInt4,
-    "int8": PostgreSQLCodec.TypeInt8,
-    "float4": PostgreSQLCodec.TypeFloat4,
-    "float8": PostgreSQLCodec.TypeFloat8,
-    "boolean": PostgreSQLCodec.TypeBool,
-    "date": PostgreSQLCodec.TypeDate,
-    "timestamp": PostgreSQLCodec.TypeTimestamp,
-    "timestamptz": PostgreSQLCodec.TypeTimestampTZ,
-    "jsonb": PostgreSQLCodec.TypeJSONB
+  static Map<String, PostgreSQLDataType> typeStringToCodeMap = {
+    "text": PostgreSQLDataType.text,
+    "serial": PostgreSQLDataType.serial,
+    "bigserial": PostgreSQLDataType.bigSerial,
+    "int2": PostgreSQLDataType.smallInteger,
+    "int4": PostgreSQLDataType.integer,
+    "int8": PostgreSQLDataType.bigInteger,
+    "float4": PostgreSQLDataType.real,
+    "float8": PostgreSQLDataType.double,
+    "boolean": PostgreSQLDataType.boolean,
+    "date": PostgreSQLDataType.date,
+    "timestamp": PostgreSQLDataType.timestampWithoutTimezone,
+    "timestamptz": PostgreSQLDataType.timestampWithTimezone,
+    "jsonb": PostgreSQLDataType.json,
+    "bytea": PostgreSQLDataType.byteArray
   };
-
-  static int postgresCodeForDataTypeString(String dt) {
-    return typeStringToCodeMap[dt];
-  }
 
   PostgreSQLFormatIdentifier(String t) {
     var components = t.split("::");
@@ -270,8 +280,8 @@ class PostgreSQLFormatIdentifier {
 
       var dataTypeString = variableComponents.last;
       if (dataTypeString != null) {
-        typeCode = postgresCodeForDataTypeString(dataTypeString);
-        if (typeCode == null) {
+        type = typeStringToCodeMap[dataTypeString];
+        if (type == null) {
           throw new FormatException("Invalid type code in substitution variable '$t'");
         }
       }
@@ -285,6 +295,6 @@ class PostgreSQLFormatIdentifier {
   }
 
   String name;
-  int typeCode;
+  PostgreSQLDataType type;
   String typeCast;
 }

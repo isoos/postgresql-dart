@@ -1,4 +1,5 @@
-import 'postgresql_codec.dart';
+import 'package:postgres/src/text_codec.dart';
+import 'types.dart';
 import 'query.dart';
 
 class PostgreSQLFormat {
@@ -40,6 +41,8 @@ class PostgreSQLFormat {
         return "date";
       case PostgreSQLDataType.json:
         return "jsonb";
+      case PostgreSQLDataType.byteArray:
+        return "bytea";
     }
 
     return null;
@@ -47,8 +50,9 @@ class PostgreSQLFormat {
 
   static String substitute(String fmtString, Map<String, dynamic> values,
       {SQLReplaceIdentifierFunction replace: null}) {
+    final converter = new PostgresTextEncoder(true);
     values ??= {};
-    replace ??= (spec, index) => PostgreSQLCodec.encode(values[spec.name]);
+    replace ??= (spec, index) => converter.convert(values[spec.name]);
 
     var items = <PostgreSQLFormatToken>[];
     PostgreSQLFormatToken currentPtr = null;

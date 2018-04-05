@@ -1,6 +1,7 @@
 library postgres.connection;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:postgres/src/query_cache.dart';
@@ -406,7 +407,7 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
     orderedTableNames.forEach((tableName) {
       iterator.moveNext();
       if (tableName.first != null) {
-        _tableOIDNameMap[iterator.current] = tableName.first;
+        _tableOIDNameMap[iterator.current] = UTF8.decode(tableName.first);
       }
     });
   }
