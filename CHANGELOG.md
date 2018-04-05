@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.9
+
+- Add full support for `UUID` columns.
+
 ## 0.9.8
 
 - Preserve error stacktrace on various query or transaction errors.

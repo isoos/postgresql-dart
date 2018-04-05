@@ -170,7 +170,6 @@ void main() {
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: DateTime"));
       }
-
     });
 
     test("jsonb", () async {
@@ -186,7 +185,7 @@ void main() {
       try {
         await conn.query("INSERT INTO t (v) VALUES (@v:jsonb)", substitutionValues: {"v": new DateTime.now()});
         fail('unreachable');
-      } on JsonUnsupportedObjectError catch (e) {}
+      } on JsonUnsupportedObjectError catch (_) {}
     });
 
     test("bytea", () async {
@@ -199,6 +198,18 @@ void main() {
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: List<int>"));
+      }
+    });
+
+    test("uuid", () async {
+      await expectInverse("00000000-0000-0000-0000-000000000000", PostgreSQLDataType.uuid);
+      await expectInverse("12345678-abcd-efab-cdef-012345678901", PostgreSQLDataType.uuid);
+
+      try {
+        await conn.query("INSERT INTO t (v) VALUES (@v:uuid)", substitutionValues: {"v": new DateTime.now()});
+        fail('unreachable');
+      } on FormatException catch (e) {
+        expect(e.toString(), contains("Expected: String"));
       }
     });
   });
@@ -321,6 +332,37 @@ void main() {
 
     expect(u.hasCachedBytes, true);
     expect(v.hasCachedBytes, true);
+  });
+
+  test("Invalid UUID encoding", () {
+    final converter = new PostgresBinaryEncoder(PostgreSQLDataType.uuid);
+    try {
+      converter.convert("z0000000-0000-0000-0000-000000000000");
+      fail('unreachable');
+    } on FormatException catch (e) {
+      expect(e.toString(), contains("Invalid UUID string"));
+    }
+
+    try {
+      converter.convert(123123);
+      fail('unreachable');
+    } on FormatException catch (e) {
+      expect(e.toString(), contains("Invalid type for parameter"));
+    }
+
+    try {
+      converter.convert("0000000-0000-0000-0000-000000000000");
+      fail('unreachable');
+    } on FormatException catch (e) {
+      expect(e.toString(), contains("Invalid UUID string"));
+    }
+
+    try {
+      converter.convert("00000000-0000-0000-0000-000000000000f");
+      fail('unreachable');
+    } on FormatException catch (e) {
+      expect(e.toString(), contains("Invalid UUID string"));
+    }
   });
 }
 

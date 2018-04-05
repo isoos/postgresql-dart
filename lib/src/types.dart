@@ -55,5 +55,11 @@ enum PostgreSQLDataType {
   /// Must be a [List<int>].
   ///
   /// Each element of the list must fit into a byte (0-255).
-  byteArray
+  byteArray,
+
+  /// Must be a [String].
+  ///
+  /// Must contain 32 hexadecimal characters. May contain any number of '-' characters.
+  /// When returned from database, format will be xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
+  uuid
 }
