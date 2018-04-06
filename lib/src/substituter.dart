@@ -43,6 +43,8 @@ class PostgreSQLFormat {
         return "jsonb";
       case PostgreSQLDataType.byteArray:
         return "bytea";
+      case PostgreSQLDataType.name:
+        return "name";
       case PostgreSQLDataType.uuid:
         return "uuid";
     }

@@ -128,6 +128,4 @@ void main() {
       [null]
     ]);
   });
-
-  test("Timezone concerns", () {});
 }

@@ -1,9 +1,27 @@
 import 'package:dart2_constant/convert.dart' as convert;
+
+import 'package:postgres/postgres.dart';
+import 'package:postgres/src/query.dart';
 import 'package:test/test.dart';
 
-import 'package:postgres/src/substituter.dart';
 
 void main() {
+  test("Ensure all types/format type mappings are available and accurate", () {
+    PostgreSQLDataType.values.where((t) => t != PostgreSQLDataType.bigSerial && t != PostgreSQLDataType.serial).forEach((t) {
+      expect(PostgreSQLFormatIdentifier.typeStringToCodeMap.values.contains(t), true);
+      final code = PostgreSQLFormat.dataTypeStringForDataType(t); 
+      expect(PostgreSQLFormatIdentifier.typeStringToCodeMap[code], t);
+    });
+  });
+
+  test("Ensure bigserial gets translated to int8", () {
+    expect(PostgreSQLFormat.dataTypeStringForDataType(PostgreSQLDataType.serial), "int4");
+  });
+
+  test("Ensure serial gets translated to int4", () {
+    expect(PostgreSQLFormat.dataTypeStringForDataType(PostgreSQLDataType.bigSerial), "int8");
+  });
+
   test("Simple replacement", () {
     var result = PostgreSQLFormat.substitute("@id", {"id": 20});
     expect(result, equals("20"));

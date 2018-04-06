@@ -81,7 +81,7 @@ class PostgreSQLConnection extends Object with _PostgreSQLExecutionContextMixin 
 
   /// Whether or not this connection is open or not.
   ///
-  /// This is [true] when this instance is first created and after it has been closed or encountered an unrecoverable error.
+  /// This is `true` when this instance is first created and after it has been closed or encountered an unrecoverable error.
   /// If a connection has already been opened and this value is now true, the connection cannot be reopened and a new instance
   /// must be created.
   bool get isClosed => _connectionState is _PostgreSQLConnectionStateClosed;
@@ -408,7 +408,7 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
     orderedTableNames.forEach((tableName) {
       iterator.moveNext();
       if (tableName.first != null) {
-        _tableOIDNameMap[iterator.current] = convert.utf8.decode(tableName.first);
+        _tableOIDNameMap[iterator.current] = tableName.first;
       }
     });
   }

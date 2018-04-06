@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'query.dart';
+import 'types.dart';
+import 'substituter.dart';
+import 'connection.dart';
 
 abstract class PostgreSQLExecutionContext {
   /// Executes a query on this context.
@@ -9,12 +13,12 @@ abstract class PostgreSQLExecutionContext {
   ///
   ///         connection.query("SELECT * FROM table WHERE id = @idParam", {"idParam" : 2});
   ///
-  /// The type of the value is inferred by default, but can be made more specific by adding ':type" to the parameter pattern in the format string. The possible values
-  /// are declared as static variables in [PostgreSQLCodec] (e.g., [PostgreSQLCodec.TypeInt4]). For example:
+  /// The type of the value is inferred by default, but should be made more specific by adding ':type" to the parameter pattern in the format string. For example:
   ///
   ///         connection.query("SELECT * FROM table WHERE id = @idParam:int4", {"idParam" : 2});
   ///
-  /// You may also use [PostgreSQLFormat.id] to create parameter patterns.
+  /// Available types are listed in [PostgreSQLFormatIdentifier.typeStringToCodeMap]. Some types have multiple options. It is preferable to use the [PostgreSQLFormat.id]
+  /// function to add parameters to a query string. This method inserts a parameter name and the appropriate ':type' string for a [PostgreSQLDataType].
   ///
   /// If successful, the returned [Future] completes with a [List] of rows. Each is row is represented by a [List] of column values for that row that were returned by the query.
   ///

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'dart:typed_data';
 
+import 'package:dart2_constant/convert.dart' as _convert;
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/types.dart';
 
@@ -63,6 +64,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
           bd.setInt16(0, value);
           return bd.buffer.asUint8List();
         }
+      case PostgreSQLDataType.name:
       case PostgreSQLDataType.text:
         {
           if (value is! String) {
@@ -207,6 +209,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     final buffer = new ByteData.view(value.buffer, value.offsetInBytes, value.lengthInBytes);
 
     switch (dataType) {
+      case PostgreSQLDataType.name:
       case PostgreSQLDataType.text:
         return UTF8.decode(value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));
       case PostgreSQLDataType.boolean:
@@ -267,12 +270,21 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
         }
     }
 
-    return value;
+    // We'll try and decode this as a utf8 string and return that
+    // for many internal types, this is valid. If it fails,
+    // we just return the bytes and let the caller figure out what to
+    // do with it.
+    try {
+      return _convert.utf8.decode(value);
+    } catch (_) {
+      return value;
+    }
   }
 
   static final Map<int, PostgreSQLDataType> typeMap = {
     16: PostgreSQLDataType.boolean,
     17: PostgreSQLDataType.byteArray,
+    19: PostgreSQLDataType.name,
     20: PostgreSQLDataType.bigInteger,
     21: PostgreSQLDataType.smallInteger,
     23: PostgreSQLDataType.integer,
@@ -283,6 +295,6 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     1114: PostgreSQLDataType.timestampWithoutTimezone,
     1184: PostgreSQLDataType.timestampWithTimezone,
     2950: PostgreSQLDataType.uuid,
-    3802: PostgreSQLDataType.json
+    3802: PostgreSQLDataType.json,
   };
 }

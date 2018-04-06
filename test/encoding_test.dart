@@ -68,7 +68,7 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.serial);
       await expectInverse(1, PostgreSQLDataType.serial);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:serial)", substitutionValues: {"v": "not-serial"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:int4)", substitutionValues: {"v": "not-serial"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: int"));
@@ -93,7 +93,7 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.bigSerial);
       await expectInverse(1, PostgreSQLDataType.bigSerial);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:bigserial)", substitutionValues: {"v": "not-bigserial"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:int8)", substitutionValues: {"v": "not-bigserial"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: int"));
