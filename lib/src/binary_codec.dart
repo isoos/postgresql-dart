@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'dart:typed_data';
 
-import 'package:dart2_constant/convert.dart' as _convert;
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/types.dart';
 
@@ -72,7 +71,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
               .runtimeType}");
           }
 
-          return UTF8.encode(value);
+          return utf8.encode(value);
         }
       case PostgreSQLDataType.real:
         {
@@ -135,7 +134,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
 
       case PostgreSQLDataType.json:
         {
-          var jsonBytes = UTF8.encode(JSON.encode(value));
+          var jsonBytes = utf8.encode(json.encode(value));
           final outBuffer = new Uint8List(jsonBytes.length + 1);
           outBuffer[0] = 1;
           for (var i = 0; i < jsonBytes.length; i++) {
@@ -211,7 +210,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     switch (dataType) {
       case PostgreSQLDataType.name:
       case PostgreSQLDataType.text:
-        return UTF8.decode(value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));
+        return utf8.decode(value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));
       case PostgreSQLDataType.boolean:
         return buffer.getInt8(0) != 0;
       case PostgreSQLDataType.smallInteger:
@@ -237,7 +236,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
         {
           // Removes version which is first character and currently always '1'
           final bytes = value.buffer.asUint8List(value.offsetInBytes + 1, value.lengthInBytes - 1);
-          return JSON.decode(UTF8.decode(bytes));
+          return json.decode(utf8.decode(bytes));
         }
 
       case PostgreSQLDataType.byteArray:
@@ -275,7 +274,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     // we just return the bytes and let the caller figure out what to
     // do with it.
     try {
-      return _convert.utf8.decode(value);
+      return utf8.decode(value);
     } catch (_) {
       return value;
     }

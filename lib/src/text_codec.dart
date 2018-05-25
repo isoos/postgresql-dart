@@ -152,9 +152,9 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
     }
 
     if (value is String) {
-      return "'${JSON.encode(value)}'";
+      return "'${json.encode(value)}'";
     }
 
-    return "${JSON.encode(value)}";
+    return "${json.encode(value)}";
   }
 }

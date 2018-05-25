@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:dart2_constant/convert.dart' as convert;
-
 import 'package:postgres/src/binary_codec.dart';
 import 'package:postgres/src/execution_context.dart';
 
@@ -20,7 +18,6 @@ class Query<T> {
   bool onlyReturnAffectedRowCount = false;
 
   String statementIdentifier;
-  Completer<dynamic> _onComplete = new Completer.sync();
 
   Future<T> get future => _onComplete.future;
 
@@ -30,7 +27,11 @@ class Query<T> {
   final PostgreSQLConnection connection;
 
   List<PostgreSQLDataType> specifiedParameterTypeCodes;
+  List<List<dynamic>> rows = [];
 
+  CachedQuery cache;
+
+  Completer<T> _onComplete = new Completer.sync();
   List<FieldDescription> _fieldDescriptions;
 
   List<FieldDescription> get fieldDescriptions => _fieldDescriptions;
@@ -39,10 +40,6 @@ class Query<T> {
     _fieldDescriptions = fds;
     cache?.fieldDescriptions = fds;
   }
-
-  List<dynamic> rows = [];
-
-  CachedQuery cache;
 
   void sendSimple(Socket socket) {
     var sqlString = PostgreSQLFormat.substitute(statement, substitutionValues);
@@ -135,15 +132,23 @@ class Query<T> {
   }
 
   void complete(int rowsAffected) {
-    if (onlyReturnAffectedRowCount) {
-      _onComplete.complete(rowsAffected);
+    if (_onComplete.isCompleted) {
       return;
     }
 
-    _onComplete.complete(rows);
+    if (onlyReturnAffectedRowCount) {
+      _onComplete.complete(rowsAffected as T);
+      return;
+    }
+
+    _onComplete.complete(rows as T);
   }
 
   void completeError(dynamic error, [StackTrace stackTrace]) {
+    if (_onComplete.isCompleted) {
+      return;
+    }
+
     _onComplete.completeError(error, stackTrace);
   }
 
@@ -180,7 +185,7 @@ class ParameterValue {
   ParameterValue.text(dynamic value) : isBinary = false {
     if (value != null) {
       final converter = new PostgresTextEncoder(false);
-      bytes = convert.utf8.encode(converter.convert(value));
+      bytes = utf8.encode(converter.convert(value));
     }
     length = bytes?.length;
   }

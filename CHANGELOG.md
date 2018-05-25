@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0
+
+- Adds support for Dart 2
+
 ## 0.9.9
 
 - Add full support for `UUID` columns.

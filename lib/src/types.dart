@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 /*
   Adding a new type:
 
@@ -47,9 +45,9 @@ enum PostgreSQLDataType {
   /// Must be a [DateTime] (contains year, month and day only)
   date,
 
-  /// Must be encodable via [JSON.encode].
+  /// Must be encodable via [json.encode].
   ///
-  /// Values will be encoded via [JSON.encode] before being sent to the database.
+  /// Values will be encoded via [json.encode] before being sent to the database.
   json,
 
   /// Must be a [List] of [int].

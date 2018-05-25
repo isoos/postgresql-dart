@@ -6,6 +6,9 @@ import 'package:postgres/src/query.dart';
 
 class QueryQueue extends ListBase<Query<dynamic>> implements List<Query<dynamic>> {
   List<Query<dynamic>> _inner = [];
+  bool _isCancelled = false;
+
+  PostgreSQLException get _cancellationException => new PostgreSQLException("Query cancelled due to the database connection closing.");
 
   Query<dynamic> get pending {
     if (_inner.isEmpty) {
@@ -14,8 +17,9 @@ class QueryQueue extends ListBase<Query<dynamic>> implements List<Query<dynamic>
     return _inner.first;
   }
 
-  void cancel([Object error, StackTrace stackTrace]) {
-    error ??= "Cancelled";
+  void cancel([dynamic error, StackTrace stackTrace]) {
+    _isCancelled = true;
+    error ??= _cancellationException;
     final existing = _inner;
     _inner = [];
 
@@ -23,10 +27,8 @@ class QueryQueue extends ListBase<Query<dynamic>> implements List<Query<dynamic>
     // get the error and not the close message, since completeError is
     // synchronous.
     scheduleMicrotask(() {
-      var exception =
-          new PostgreSQLException("Connection closed or query cancelled (reason: $error).", stackTrace: stackTrace);
       existing?.forEach((q) {
-        q.completeError(exception, stackTrace);
+        q.completeError(error, stackTrace);
       });
     });
   }
@@ -45,9 +47,20 @@ class QueryQueue extends ListBase<Query<dynamic>> implements List<Query<dynamic>
   @override
   void operator []=(int index, Query value) => _inner[index] = value;
 
-  @override
-  void add(Query element) {
+  void addEvenIfCancelled(Query element) {
     _inner.add(element);
+  }
+
+  @override
+  bool add(Query element) {
+    if (_isCancelled) {
+      element.future.catchError((_) {});
+      element.completeError(_cancellationException);
+      return false;
+    }
+
+    _inner.add(element);
+    return true;
   }
 
   @override
