@@ -1,13 +1,13 @@
 language: dart
 sudo: required
 dart:
-  - dev
+  - stable
 addons:
-  postgresql: "9.5"
+  postgresql: "9.6"
 services:
   - postgresql
 before_script:
-  - sudo cp ci/pg_hba.conf /etc/postgresql/9.5/main/pg_hba.conf
+  - sudo cp ci/pg_hba.conf /etc/postgresql/9.6/main/pg_hba.conf
   - sudo /etc/init.d/postgresql restart
   - psql -c 'create database dart_test;' -U postgres
   - psql -c 'create user dart with createdb;' -U postgres
@@ -17,7 +17,7 @@ before_script:
   - psql -c 'grant all on database dart_test to darttrust;' -U postgres
   - pub get
 script: bash ci/script.sh
-after_success: bash ci/after_script.sh
+#after_success: bash ci/after_script.sh
 branches:
   only:
     - master
