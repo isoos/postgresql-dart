@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1
+
+- Prevent the table name resolution of OIDs <= 0.
+
 ## 1.0.0
 
 - Adds support for Dart 2
@@ -11,7 +15,7 @@
 ## 0.9.8
 
 - Preserve error stacktrace on various query or transaction errors.
-- Read support for `BYEA` columns.
+- Read support for `BYTEA` columns.
 
 ## 0.9.7
 

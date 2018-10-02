@@ -352,7 +352,7 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
     // assigning resolvedTableName
     final tableOIDs = new Set<int>.from(columns.map((f) => f.tableID));
     final List<int> unresolvedTableOIDs =
-        tableOIDs.where((oid) => oid != null && !_tableOIDNameMap.containsKey(oid)).toList();
+        tableOIDs.where((oid) => oid != null && oid > 0 && !_tableOIDNameMap.containsKey(oid)).toList();
     unresolvedTableOIDs.sort((int lhs, int rhs) => lhs.compareTo(rhs));
 
     if (unresolvedTableOIDs.isNotEmpty) {
