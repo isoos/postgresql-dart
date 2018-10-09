@@ -302,6 +302,8 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
 
   PostgreSQLExecutionContext get _transaction;
 
+  int get queueSize => _queue.length;
+
   Future<List<List<dynamic>>> query(String fmtString,
       {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds: 30}) async {
     if (_connection.isClosed) {

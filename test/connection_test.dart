@@ -567,6 +567,22 @@ void main() {
     }
 
   });
+
+  test("Queue size, should be 0 on open, >0 if queries added and 0 again after queries executed", () async {
+    final conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+    await conn.open();
+    expect(conn.queueSize, 0);
+
+    var futures = [
+      conn.query("select 1", allowReuse: false),
+      conn.query("select 2", allowReuse: false),
+      conn.query("select 3", allowReuse: false)
+    ];
+    expect(conn.queueSize, 3);
+
+    await Future.wait(futures);
+    expect(conn.queueSize, 0);
+  });
 }
 
 Future expectConnectionIsInvalid(PostgreSQLConnection conn) async {

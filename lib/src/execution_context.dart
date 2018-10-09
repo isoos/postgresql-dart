@@ -5,6 +5,9 @@ import 'substituter.dart';
 import 'connection.dart';
 
 abstract class PostgreSQLExecutionContext {
+  /// Returns this context queue size
+  int get queueSize;
+
   /// Executes a query on this context.
   ///
   /// This method sends the query described by [fmtString] to the database and returns a [Future] whose value is the returned rows from the query after the query completes.

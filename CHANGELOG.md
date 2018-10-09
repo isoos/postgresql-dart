@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.2
+- Add connection queue size
+
 ## 1.0.1
 
 - Prevent the table name resolution of OIDs <= 0.
