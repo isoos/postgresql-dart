@@ -108,8 +108,8 @@ class _PostgreSQLConnectionStateAuthenticating extends _PostgreSQLConnectionStat
     if (message is ParameterStatusMessage) {
       connection.settings[message.name] = message.value;
     } else if (message is BackendKeyMessage) {
+      connection._processID = message.processID;
       connection._secretKey = message.secretKey;
-      connection.processID = message.processID;
     } else if (message is ReadyForQueryMessage) {
       if (message.state == ReadyForQueryMessage.StateIdle) {
         return new _PostgreSQLConnectionStateIdle(openCompleter: completer);
@@ -141,8 +141,8 @@ class _PostgreSQLConnectionStateAuthenticated extends _PostgreSQLConnectionState
     if (message is ParameterStatusMessage) {
       connection.settings[message.name] = message.value;
     } else if (message is BackendKeyMessage) {
+      connection._processID = message.processID;
       connection._secretKey = message.secretKey;
-      connection.processID = message.processID;
     } else if (message is ReadyForQueryMessage) {
       if (message.state == ReadyForQueryMessage.StateIdle) {
         return new _PostgreSQLConnectionStateIdle(openCompleter: completer);

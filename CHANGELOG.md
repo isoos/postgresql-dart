@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+
+- Restricted field access on [PostgreSQLConnection].
+
 ## 1.0.2
 - Add connection queue size
 

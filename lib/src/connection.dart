@@ -43,31 +43,31 @@ class PostgreSQLConnection extends Object with _PostgreSQLExecutionContextMixin 
   final StreamController<Notification> _notifications = new StreamController<Notification>.broadcast();
 
   /// Hostname of database this connection refers to.
-  String host;
+  final String host;
 
   /// Port of database this connection refers to.
-  int port;
+  final int port;
 
   /// Name of database this connection refers to.
-  String databaseName;
+  final String databaseName;
 
   /// Username for authenticating this connection.
-  String username;
+  final String username;
 
   /// Password for authenticating this connection.
-  String password;
+  final String password;
 
   /// Whether or not this connection should connect securely.
-  bool useSSL;
+  final bool useSSL;
 
   /// The amount of time this connection will wait during connecting before giving up.
-  int timeoutInSeconds;
+  final int timeoutInSeconds;
 
   /// The timezone of this connection for date operations that don't specify a timezone.
-  String timeZone;
+  final String timeZone;
 
   /// The processID of this backend.
-  int processID;
+  int get processID => _processID;
 
   /// Stream of notification from the database.
   ///
@@ -88,11 +88,12 @@ class PostgreSQLConnection extends Object with _PostgreSQLExecutionContextMixin 
   ///
   /// After connecting to a database, this map will contain the settings values that the database returns.
   /// Prior to connection, it is the empty map.
-  Map<String, String> settings = {};
+  final Map<String, String> settings = {};
 
   QueryCache _cache = new QueryCache();
   Socket _socket;
   MessageFramer _framer = new MessageFramer();
+  int _processID;
   int _secretKey;
   List<int> _salt;
 
