@@ -32,10 +32,11 @@ class PostgreSQLConnection extends Object with _PostgreSQLExecutionContextMixin 
   /// [databaseName] is the name of the database to connect to.
   /// [username] and [password] are optional if the database requires user authentication.
   /// [timeoutInSeconds] refers to the amount of time [PostgreSQLConnection] will wait while establishing a connection before it gives up.
+  /// [queryTimeoutInSeconds] refers to the default timeout for [PostgreSQLExecutionContext]'s execute and query methods.
   /// [timeZone] is the timezone the connection is in. Defaults to 'UTC'.
   /// [useSSL] when true, uses a secure socket when connecting to a PostgreSQL database.
   PostgreSQLConnection(this.host, this.port, this.databaseName,
-      {this.username: null, this.password: null, this.timeoutInSeconds: 30, this.timeZone: "UTC", this.useSSL: false}) {
+      {this.username: null, this.password: null, this.timeoutInSeconds: 30, this.queryTimeoutInSeconds: 30, this.timeZone: "UTC", this.useSSL: false}) {
     _connectionState = new _PostgreSQLConnectionStateClosed();
     _connectionState.connection = this;
   }
@@ -62,6 +63,9 @@ class PostgreSQLConnection extends Object with _PostgreSQLExecutionContextMixin 
 
   /// The amount of time this connection will wait during connecting before giving up.
   final int timeoutInSeconds;
+
+  /// The default timeout for [PostgreSQLExecutionContext]'s execute and query methods.
+  final int queryTimeoutInSeconds;
 
   /// The timezone of this connection for date operations that don't specify a timezone.
   final String timeZone;
@@ -306,7 +310,8 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
   int get queueSize => _queue.length;
 
   Future<List<List<dynamic>>> query(String fmtString,
-      {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds: 30}) async {
+      {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds}) async {
+    timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
     if (_connection.isClosed) {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
@@ -320,7 +325,8 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
   }
 
   Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(String fmtString,
-      {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds: 30}) async {
+      {Map<String, dynamic> substitutionValues: null, bool allowReuse: true, int timeoutInSeconds}) async {
+    timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
     if (_connection.isClosed) {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
@@ -335,7 +341,8 @@ abstract class _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionCo
     return _mapifyRows(rows, query.fieldDescriptions);
   }
 
-  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null, int timeoutInSeconds: 30}) {
+  Future<int> execute(String fmtString, {Map<String, dynamic> substitutionValues: null, int timeoutInSeconds}) {
+    timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
     if (_connection.isClosed) {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }

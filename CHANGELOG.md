@@ -3,6 +3,7 @@
 ## 1.0.3
 
 - Restricted field access on [PostgreSQLConnection].
+- Connection-level default query timeout.
 
 ## 1.0.2
 - Add connection queue size
