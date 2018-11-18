@@ -176,12 +176,16 @@ class PostgreSQLConnection extends Object with _PostgreSQLExecutionContextMixin 
   ///             ctx.query("INSERT INTO t (id) VALUES (2)");
   ///           }
   ///         });
-  Future<dynamic> transaction(Future<dynamic> queryBlock(PostgreSQLExecutionContext connection)) async {
+  ///
+  /// If specified, the final `"COMMIT"` query of the transaction will use
+  /// [commitTimeoutInSeconds] as its timeout, otherwise the connection's
+  /// default query timeout will be used.
+  Future<dynamic> transaction(Future<dynamic> queryBlock(PostgreSQLExecutionContext connection), {int commitTimeoutInSeconds}) async {
     if (isClosed) {
       throw new PostgreSQLException("Attempting to execute query, but connection is not open.");
     }
 
-    var proxy = new _TransactionProxy(this, queryBlock);
+    var proxy = new _TransactionProxy(this, queryBlock, commitTimeoutInSeconds);
 
     await _enqueue(proxy.beginQuery);
 

@@ -3,7 +3,7 @@ part of postgres.connection;
 typedef Future<dynamic> _TransactionQuerySignature(PostgreSQLExecutionContext connection);
 
 class _TransactionProxy extends Object with _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionContext {
-  _TransactionProxy(this._connection, this.executionBlock) {
+  _TransactionProxy(this._connection, this.executionBlock, this.commitTimeoutInSeconds) {
     beginQuery = new Query<int>("BEGIN", {}, _connection, this)..onlyReturnAffectedRowCount = true;
 
     beginQuery.future.then(startTransaction).catchError((err, st) {
@@ -22,7 +22,8 @@ class _TransactionProxy extends Object with _PostgreSQLExecutionContextMixin imp
 
   PostgreSQLExecutionContext get _transaction => this;
 
-  _TransactionQuerySignature executionBlock;
+  final _TransactionQuerySignature executionBlock;
+  final int commitTimeoutInSeconds;
   bool _hasFailed = false;
   bool _hasRolledBack = false;
 
@@ -56,7 +57,7 @@ class _TransactionProxy extends Object with _PostgreSQLExecutionContextMixin imp
     }
 
     if (!_hasRolledBack && !_hasFailed) {
-      await execute("COMMIT");
+      await execute("COMMIT", timeoutInSeconds: commitTimeoutInSeconds);
       completer.complete(result);
     }
   }

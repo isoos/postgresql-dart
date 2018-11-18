@@ -4,6 +4,7 @@
 
 - Restricted field access on [PostgreSQLConnection].
 - Connection-level default query timeout.
+- Option to specify timeout for the transaction's `"COMMIT"` query.
 
 ## 1.0.2
 - Add connection queue size
