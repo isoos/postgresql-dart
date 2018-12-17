@@ -223,7 +223,7 @@ List<int> bufferWithMessages(List<List<int>> messages) {
 }
 
 flush(MessageFramer framer) {
-  framer.messageQueue = [];
+  framer.messageQueue.clear();
   framer.addBytes(bufferWithMessages([
     messageWithBytes([1, 2, 3], 1)
   ]));

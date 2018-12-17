@@ -1,5 +1,7 @@
-import 'dart:typed_data';
+import 'dart:collection';
 import 'dart:io';
+import 'dart:typed_data';
+
 import 'server_messages.dart';
 
 class MessageFrame {
@@ -132,7 +134,7 @@ class MessageFrame {
 
 class MessageFramer {
   MessageFrame messageInProgress = new MessageFrame();
-  List<MessageFrame> messageQueue = [];
+  final messageQueue = new Queue<MessageFrame>();
 
   void addBytes(Uint8List bytes) {
     var offsetIntoBytesRead = 0;
@@ -151,6 +153,6 @@ class MessageFramer {
   bool get hasMessage => messageQueue.isNotEmpty;
 
   MessageFrame popMessage() {
-    return messageQueue.removeAt(0);
+    return messageQueue.removeFirst();
   }
 }
