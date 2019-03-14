@@ -9,6 +9,7 @@ environment:
   sdk: ">=2.0.0 <3.0.0"
 
 dependencies:
+  buffer: ^1.0.5
   crypto: ^2.0.0
 
 dev_dependencies:
