@@ -11,12 +11,11 @@ void main() {
       connection = new PostgreSQLConnection("localhost", 5432, "dart_test",
           username: "dart", password: "dart");
       await connection.open();
-      await connection.execute(
-          "CREATE TEMPORARY TABLE t "
-              "(i int, s serial, bi bigint, "
-              "bs bigserial, bl boolean, si smallint, "
-              "t text, f real, d double precision, "
-              "dt date, ts timestamp, tsz timestamptz, j jsonb, u uuid)");
+      await connection.execute("CREATE TEMPORARY TABLE t "
+          "(i int, s serial, bi bigint, "
+          "bs bigserial, bl boolean, si smallint, "
+          "t text, f real, d double precision, "
+          "dt date, ts timestamp, tsz timestamptz, j jsonb, u uuid)");
       await connection.execute(
           "CREATE TEMPORARY TABLE u (i1 int not null, i2 int not null);");
       await connection
@@ -57,7 +56,7 @@ void main() {
     test("UTF16 strings in value with escape characters", () async {
       await connection.execute(
           "INSERT INTO t (t) values "
-              "(${PostgreSQLFormat.id("t", type: PostgreSQLDataType.text)})",
+          "(${PostgreSQLFormat.id("t", type: PostgreSQLDataType.text)})",
           substitutionValues: {
             "t": "'©™®'",
           });
@@ -71,7 +70,7 @@ void main() {
     test("UTF16 strings in value with backslash", () async {
       await connection.execute(
           "INSERT INTO t (t) values "
-              "(${PostgreSQLFormat.id("t", type: PostgreSQLDataType.text)})",
+          "(${PostgreSQLFormat.id("t", type: PostgreSQLDataType.text)})",
           substitutionValues: {
             "t": "°\\'©™®'",
           });
@@ -133,7 +132,7 @@ void main() {
             "dt": new DateTime.utc(2000),
             "ts": new DateTime.utc(2000, 2),
             "tsz": new DateTime.utc(2000, 3),
-            "j": {"a":"b"},
+            "j": {"a": "b"},
             "u": "01234567-89ab-cdef-0123-0123456789ab"
           });
 
@@ -150,12 +149,12 @@ void main() {
         new DateTime.utc(2000),
         new DateTime.utc(2000, 2),
         new DateTime.utc(2000, 3),
-        {"a":"b"},
+        {"a": "b"},
         "01234567-89ab-cdef-0123-0123456789ab"
       ];
       expect(result, [expectedRow]);
-      result = await connection
-          .query("select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u from t");
+      result = await connection.query(
+          "select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u from t");
       expect(result, [expectedRow]);
     });
 
@@ -174,7 +173,7 @@ void main() {
           "${PostgreSQLFormat.id("tsz", type: PostgreSQLDataType.timestampWithTimezone)},"
           "${PostgreSQLFormat.id("j", type: PostgreSQLDataType.json)},"
           "${PostgreSQLFormat.id("u", type: PostgreSQLDataType.uuid)})"
-            " returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u",
+          " returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u",
           substitutionValues: {
             "i": 1,
             "bi": 2,
@@ -208,8 +207,8 @@ void main() {
       ];
       expect(result, [expectedRow]);
 
-      result = await connection
-          .query("select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u from t");
+      result = await connection.query(
+          "select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u from t");
       expect(result, [expectedRow]);
     });
 
@@ -315,18 +314,14 @@ void main() {
 
     test("Can cast text to int on db server", () async {
       var results = await connection.query(
-        "INSERT INTO u (i1, i2) VALUES (@i1::int4, @i2::int4) RETURNING i1, i2",
-        substitutionValues: {
-          "i1": "0",
-          "i2": "1"
-        });
+          "INSERT INTO u (i1, i2) VALUES (@i1::int4, @i2::int4) RETURNING i1, i2",
+          substitutionValues: {"i1": "0", "i2": "1"});
 
       expect(results, [
         [0, 1]
       ]);
     });
   });
-
 
   group("Unsuccesful queries", () {
     var connection = new PostgreSQLConnection("localhost", 5432, "dart_test",
@@ -382,10 +377,7 @@ void main() {
       try {
         await connection.query(
             "INSERT INTO t (i1, i2) values (@i1:int4, @i2:int4)",
-            substitutionValues: {
-              "i1": "1",
-              "i2": 1
-            });
+            substitutionValues: {"i1": "1", "i2": 1});
         expect(true, false);
       } on FormatException catch (e) {
         expect(e.toString(), contains("Invalid type for parameter value"));
@@ -396,10 +388,7 @@ void main() {
       try {
         await connection.query(
             "INSERT INTO t (i1, i2) values (@i1:qwerty, @i2:int4)",
-            substitutionValues: {
-              "i1": "1",
-              "i2": 1
-            });
+            substitutionValues: {"i1": "1", "i2": 1});
         expect(true, false);
       } on FormatException catch (e) {
         expect(e.toString(), contains("Invalid type code"));

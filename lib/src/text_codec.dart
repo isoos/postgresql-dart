@@ -124,7 +124,8 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
         var timezoneMinuteOffset = value.timeZoneOffset.inMinutes % 60;
 
         var hourComponent = timezoneHourOffset.abs().toString().padLeft(2, "0");
-        var minuteComponent = timezoneMinuteOffset.abs().toString().padLeft(2, "0");
+        var minuteComponent =
+            timezoneMinuteOffset.abs().toString().padLeft(2, "0");
 
         if (timezoneHourOffset >= 0) {
           hourComponent = "+${hourComponent}";

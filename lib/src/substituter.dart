@@ -66,17 +66,20 @@ class PostgreSQLFormat {
     while (iterator.current != null) {
       if (currentPtr == null) {
         if (iterator.current == _AtSignCodeUnit) {
-          currentPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
+          currentPtr =
+              new PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
           currentPtr.buffer.writeCharCode(iterator.current);
           items.add(currentPtr);
         } else {
-          currentPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
+          currentPtr =
+              new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
           currentPtr.buffer.writeCharCode(iterator.current);
           items.add(currentPtr);
         }
       } else if (currentPtr.type == PostgreSQLFormatTokenType.text) {
         if (iterator.current == _AtSignCodeUnit) {
-          currentPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
+          currentPtr =
+              new PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
           currentPtr.buffer.writeCharCode(iterator.current);
           items.add(currentPtr);
         } else {
@@ -98,7 +101,8 @@ class PostgreSQLFormat {
         } else if (_isIdentifier(iterator.current)) {
           currentPtr.buffer.writeCharCode(iterator.current);
         } else {
-          currentPtr = new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
+          currentPtr =
+              new PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
           currentPtr.buffer.writeCharCode(iterator.current);
           items.add(currentPtr);
         }
@@ -118,8 +122,7 @@ class PostgreSQLFormat {
 
         if (!values.containsKey(identifier.name)) {
           throw new FormatException(
-              "Format string specified identifier with name ${identifier
-                  .name}, but key was not present in values. Format string: $fmtString");
+              "Format string specified identifier with name ${identifier.name}, but key was not present in values. Format string: $fmtString");
         }
 
         var val = replace(identifier, idx);

@@ -1,10 +1,15 @@
 part of postgres.connection;
 
-typedef Future<dynamic> _TransactionQuerySignature(PostgreSQLExecutionContext connection);
+typedef Future<dynamic> _TransactionQuerySignature(
+    PostgreSQLExecutionContext connection);
 
-class _TransactionProxy extends Object with _PostgreSQLExecutionContextMixin implements PostgreSQLExecutionContext {
-  _TransactionProxy(this._connection, this.executionBlock, this.commitTimeoutInSeconds) {
-    beginQuery = new Query<int>("BEGIN", {}, _connection, this)..onlyReturnAffectedRowCount = true;
+class _TransactionProxy extends Object
+    with _PostgreSQLExecutionContextMixin
+    implements PostgreSQLExecutionContext {
+  _TransactionProxy(
+      this._connection, this.executionBlock, this.commitTimeoutInSeconds) {
+    beginQuery = new Query<int>("BEGIN", {}, _connection, this)
+      ..onlyReturnAffectedRowCount = true;
 
     beginQuery.future.then(startTransaction).catchError((err, st) {
       new Future(() {
@@ -79,7 +84,8 @@ class _TransactionProxy extends Object with _PostgreSQLExecutionContextMixin imp
         "that prevented this query from executing.");
     _queue.cancel(err);
 
-    var rollback = new Query<int>("ROLLBACK", {}, _connection, _transaction)..onlyReturnAffectedRowCount = true;
+    var rollback = new Query<int>("ROLLBACK", {}, _connection, _transaction)
+      ..onlyReturnAffectedRowCount = true;
     _queue.addEvenIfCancelled(rollback);
 
     _connection._transitionToState(_connection._connectionState.awake());

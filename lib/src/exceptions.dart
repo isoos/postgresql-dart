@@ -47,8 +47,8 @@ class PostgreSQLException implements Exception {
         (ErrorField e) => e.identificationToken == identifer,
         orElse: () => null));
 
-    severity = ErrorField
-        .severityFromString(finder(ErrorField.SeverityIdentifier).text);
+    severity = ErrorField.severityFromString(
+        finder(ErrorField.SeverityIdentifier).text);
     code = finder(ErrorField.CodeIdentifier).text;
     message = finder(ErrorField.MessageIdentifier).text;
     detail = finder(ErrorField.DetailIdentifier)?.text;

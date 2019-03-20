@@ -14,7 +14,8 @@ PostgreSQLConnection conn;
 void main() {
   group("Binary encoders", () {
     setUp(() async {
-      conn = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+      conn = new PostgreSQLConnection("localhost", 5432, "dart_test",
+          username: "dart", password: "dart");
       await conn.open();
     });
 
@@ -31,7 +32,8 @@ void main() {
       await expectInverse(true, PostgreSQLDataType.boolean);
       await expectInverse(false, PostgreSQLDataType.boolean);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:boolean)", substitutionValues: {"v": "not-bool"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:boolean)",
+            substitutionValues: {"v": "not-bool"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: bool"));
@@ -43,7 +45,8 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.smallInteger);
       await expectInverse(1, PostgreSQLDataType.smallInteger);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:int2)", substitutionValues: {"v": "not-int2"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:int2)",
+            substitutionValues: {"v": "not-int2"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: int"));
@@ -55,7 +58,8 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.integer);
       await expectInverse(1, PostgreSQLDataType.integer);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:int4)", substitutionValues: {"v": "not-int4"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:int4)",
+            substitutionValues: {"v": "not-int4"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: int"));
@@ -66,12 +70,12 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.serial);
       await expectInverse(1, PostgreSQLDataType.serial);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:int4)", substitutionValues: {"v": "not-serial"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:int4)",
+            substitutionValues: {"v": "not-serial"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: int"));
       }
-
     });
 
     test("bigint", () async {
@@ -79,24 +83,24 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.bigInteger);
       await expectInverse(1, PostgreSQLDataType.bigInteger);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:int8)", substitutionValues: {"v": "not-int8"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:int8)",
+            substitutionValues: {"v": "not-int8"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: int"));
       }
-
     });
 
     test("bigserial", () async {
       await expectInverse(0, PostgreSQLDataType.bigSerial);
       await expectInverse(1, PostgreSQLDataType.bigSerial);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:int8)", substitutionValues: {"v": "not-bigserial"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:int8)",
+            substitutionValues: {"v": "not-bigserial"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: int"));
       }
-
     });
 
     test("text", () async {
@@ -105,7 +109,8 @@ void main() {
       await expectInverse("foo\n", PostgreSQLDataType.text);
       await expectInverse("foo\nbar;s", PostgreSQLDataType.text);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:text)", substitutionValues: {"v": 0});
+        await conn.query("INSERT INTO t (v) VALUES (@v:text)",
+            substitutionValues: {"v": 0});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: String"));
@@ -117,7 +122,8 @@ void main() {
       await expectInverse(0.0, PostgreSQLDataType.real);
       await expectInverse(1.0, PostgreSQLDataType.real);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:float4)", substitutionValues: {"v": "not-real"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:float4)",
+            substitutionValues: {"v": "not-real"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: double"));
@@ -129,7 +135,8 @@ void main() {
       await expectInverse(0.0, PostgreSQLDataType.double);
       await expectInverse(1.0, PostgreSQLDataType.double);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:float8)", substitutionValues: {"v": "not-double"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:float8)",
+            substitutionValues: {"v": "not-double"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: double"));
@@ -137,11 +144,15 @@ void main() {
     });
 
     test("date", () async {
-      await expectInverse(new DateTime.utc(1920, 10, 1), PostgreSQLDataType.date);
-      await expectInverse(new DateTime.utc(2120, 10, 5), PostgreSQLDataType.date);
-      await expectInverse(new DateTime.utc(2016, 10, 1), PostgreSQLDataType.date);
+      await expectInverse(
+          new DateTime.utc(1920, 10, 1), PostgreSQLDataType.date);
+      await expectInverse(
+          new DateTime.utc(2120, 10, 5), PostgreSQLDataType.date);
+      await expectInverse(
+          new DateTime.utc(2016, 10, 1), PostgreSQLDataType.date);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:date)", substitutionValues: {"v": "not-date"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:date)",
+            substitutionValues: {"v": "not-date"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: DateTime"));
@@ -149,10 +160,13 @@ void main() {
     });
 
     test("timestamp", () async {
-      await expectInverse(new DateTime.utc(1920, 10, 1), PostgreSQLDataType.timestampWithoutTimezone);
-      await expectInverse(new DateTime.utc(2120, 10, 5), PostgreSQLDataType.timestampWithoutTimezone);
+      await expectInverse(new DateTime.utc(1920, 10, 1),
+          PostgreSQLDataType.timestampWithoutTimezone);
+      await expectInverse(new DateTime.utc(2120, 10, 5),
+          PostgreSQLDataType.timestampWithoutTimezone);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:timestamp)", substitutionValues: {"v": "not-timestamp"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:timestamp)",
+            substitutionValues: {"v": "not-timestamp"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: DateTime"));
@@ -160,10 +174,13 @@ void main() {
     });
 
     test("timestamptz", () async {
-      await expectInverse(new DateTime.utc(1920, 10, 1), PostgreSQLDataType.timestampWithTimezone);
-      await expectInverse(new DateTime.utc(2120, 10, 5), PostgreSQLDataType.timestampWithTimezone);
+      await expectInverse(new DateTime.utc(1920, 10, 1),
+          PostgreSQLDataType.timestampWithTimezone);
+      await expectInverse(new DateTime.utc(2120, 10, 5),
+          PostgreSQLDataType.timestampWithTimezone);
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:timestamptz)", substitutionValues: {"v": "not-timestamptz"});
+        await conn.query("INSERT INTO t (v) VALUES (@v:timestamptz)",
+            substitutionValues: {"v": "not-timestamptz"});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: DateTime"));
@@ -181,18 +198,20 @@ void main() {
       }, PostgreSQLDataType.json);
 
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:jsonb)", substitutionValues: {"v": new DateTime.now()});
+        await conn.query("INSERT INTO t (v) VALUES (@v:jsonb)",
+            substitutionValues: {"v": new DateTime.now()});
         fail('unreachable');
       } on JsonUnsupportedObjectError catch (_) {}
     });
 
     test("bytea", () async {
       await expectInverse([0], PostgreSQLDataType.byteArray);
-      await expectInverse([1,2,3,4,5], PostgreSQLDataType.byteArray);
+      await expectInverse([1, 2, 3, 4, 5], PostgreSQLDataType.byteArray);
       await expectInverse([255, 254, 253], PostgreSQLDataType.byteArray);
 
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:bytea)", substitutionValues: {"v": new DateTime.now()});
+        await conn.query("INSERT INTO t (v) VALUES (@v:bytea)",
+            substitutionValues: {"v": new DateTime.now()});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: List<int>"));
@@ -200,11 +219,14 @@ void main() {
     });
 
     test("uuid", () async {
-      await expectInverse("00000000-0000-0000-0000-000000000000", PostgreSQLDataType.uuid);
-      await expectInverse("12345678-abcd-efab-cdef-012345678901", PostgreSQLDataType.uuid);
+      await expectInverse(
+          "00000000-0000-0000-0000-000000000000", PostgreSQLDataType.uuid);
+      await expectInverse(
+          "12345678-abcd-efab-cdef-012345678901", PostgreSQLDataType.uuid);
 
       try {
-        await conn.query("INSERT INTO t (v) VALUES (@v:uuid)", substitutionValues: {"v": new DateTime.now()});
+        await conn.query("INSERT INTO t (v) VALUES (@v:uuid)",
+            substitutionValues: {"v": new DateTime.now()});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains("Expected: String"));
@@ -216,52 +238,63 @@ void main() {
     test("Escape strings", () {
       final encoder = new PostgresTextEncoder(true);
       //                                                       '   b   o    b   '
-      expect(utf8.encode(encoder.convert('bob')), equals([39, 98, 111, 98, 39]));
+      expect(
+          utf8.encode(encoder.convert('bob')), equals([39, 98, 111, 98, 39]));
 
       //                                                         '   b   o   \n   b   '
-      expect(utf8.encode(encoder.convert('bo\nb')), equals([39, 98, 111, 10, 98, 39]));
+      expect(utf8.encode(encoder.convert('bo\nb')),
+          equals([39, 98, 111, 10, 98, 39]));
 
       //                                                         '   b   o   \r   b   '
-      expect(utf8.encode(encoder.convert('bo\rb')), equals([39, 98, 111, 13, 98, 39]));
+      expect(utf8.encode(encoder.convert('bo\rb')),
+          equals([39, 98, 111, 13, 98, 39]));
 
       //                                                         '   b   o  \b   b   '
-      expect(utf8.encode(encoder.convert('bo\bb')), equals([39, 98, 111, 8, 98, 39]));
+      expect(utf8.encode(encoder.convert('bo\bb')),
+          equals([39, 98, 111, 8, 98, 39]));
 
       //                                                     '   '   '   '
       expect(utf8.encode(encoder.convert("'")), equals([39, 39, 39, 39]));
 
       //                                                      '   '   '   '   '   '
-      expect(utf8.encode(encoder.convert("''")), equals([39, 39, 39, 39, 39, 39]));
+      expect(
+          utf8.encode(encoder.convert("''")), equals([39, 39, 39, 39, 39, 39]));
 
       //                                                       '   '   '   '   '   '
-      expect(utf8.encode(encoder.convert("\''")), equals([39, 39, 39, 39, 39, 39]));
+      expect(utf8.encode(encoder.convert("\''")),
+          equals([39, 39, 39, 39, 39, 39]));
 
       //                                                       sp   E   '   \   \   '   '   '   '   '
-      expect(utf8.encode(encoder.convert("\\''")), equals([32, 69, 39, 92, 92, 39, 39, 39, 39, 39]));
+      expect(utf8.encode(encoder.convert("\\''")),
+          equals([32, 69, 39, 92, 92, 39, 39, 39, 39, 39]));
 
       //                                                      sp   E   '   \   \   '   '   '
-      expect(utf8.encode(encoder.convert("\\'")), equals([32, 69, 39, 92, 92, 39, 39, 39]));
+      expect(utf8.encode(encoder.convert("\\'")),
+          equals([32, 69, 39, 92, 92, 39, 39, 39]));
     });
 
     test("Encode DateTime", () {
       // Get users current timezone
       var tz = new DateTime(2001, 2, 3).timeZoneOffset;
       var tzOffsetDelimiter = "${tz.isNegative ? '-' : '+'}"
-          "${tz
-        .abs()
-        .inHours
-        .toString()
-        .padLeft(2, '0')}"
+          "${tz.abs().inHours.toString().padLeft(2, '0')}"
           ":${(tz.inSeconds % 60).toString().padLeft(2, '0')}";
 
       var pairs = {
-        "2001-02-03T00:00:00.000$tzOffsetDelimiter": new DateTime(2001, DateTime.february, 3),
-        "2001-02-03T04:05:06.000$tzOffsetDelimiter": new DateTime(2001, DateTime.february, 3, 4, 5, 6, 0),
-        "2001-02-03T04:05:06.999$tzOffsetDelimiter": new DateTime(2001, DateTime.february, 3, 4, 5, 6, 999),
-        "0010-02-03T04:05:06.123$tzOffsetDelimiter BC": new DateTime(-10, DateTime.february, 3, 4, 5, 6, 123),
-        "0010-02-03T04:05:06.000$tzOffsetDelimiter BC": new DateTime(-10, DateTime.february, 3, 4, 5, 6, 0),
-        "012345-02-03T04:05:06.000$tzOffsetDelimiter BC": new DateTime(-12345, DateTime.february, 3, 4, 5, 6, 0),
-        "012345-02-03T04:05:06.000$tzOffsetDelimiter": new DateTime(12345, DateTime.february, 3, 4, 5, 6, 0)
+        "2001-02-03T00:00:00.000$tzOffsetDelimiter":
+            new DateTime(2001, DateTime.february, 3),
+        "2001-02-03T04:05:06.000$tzOffsetDelimiter":
+            new DateTime(2001, DateTime.february, 3, 4, 5, 6, 0),
+        "2001-02-03T04:05:06.999$tzOffsetDelimiter":
+            new DateTime(2001, DateTime.february, 3, 4, 5, 6, 999),
+        "0010-02-03T04:05:06.123$tzOffsetDelimiter BC":
+            new DateTime(-10, DateTime.february, 3, 4, 5, 6, 123),
+        "0010-02-03T04:05:06.000$tzOffsetDelimiter BC":
+            new DateTime(-10, DateTime.february, 3, 4, 5, 6, 0),
+        "012345-02-03T04:05:06.000$tzOffsetDelimiter BC":
+            new DateTime(-12345, DateTime.february, 3, 4, 5, 6, 0),
+        "012345-02-03T04:05:06.000$tzOffsetDelimiter":
+            new DateTime(12345, DateTime.february, 3, 4, 5, 6, 0)
       };
 
       final encoder = new PostgresTextEncoder(false);
@@ -321,7 +354,8 @@ void main() {
     });
   });
 
-  test("UTF8String caches string regardless of which method is called first", () {
+  test("UTF8String caches string regardless of which method is called first",
+      () {
     var u = new UTF8BackedString("abcd");
     var v = new UTF8BackedString("abcd");
 
@@ -368,9 +402,9 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
   final type = PostgreSQLFormat.dataTypeStringForDataType(dataType);
 
   await conn.execute("CREATE TEMPORARY TABLE IF NOT EXISTS t (v $type)");
-  final result = await conn.query("INSERT INTO t (v) VALUES (${PostgreSQLFormat.id("v", type: dataType)}) RETURNING v", substitutionValues: {
-    "v": value
-  });
+  final result = await conn.query(
+      "INSERT INTO t (v) VALUES (${PostgreSQLFormat.id("v", type: dataType)}) RETURNING v",
+      substitutionValues: {"v": value});
   expect(result.first.first, equals(value));
 
   final encoder = new PostgresBinaryEncoder(dataType);

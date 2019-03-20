@@ -561,8 +561,10 @@ void main() {
 Map<String, dynamic> cachedQueryMap(PostgreSQLConnection connection) {
   var cacheMirror = reflect(connection).type.declarations.values.firstWhere(
       (DeclarationMirror dm) => dm.simpleName.toString().contains("_cache"));
-  return reflect(connection).getField(cacheMirror.simpleName).getField(#queries).reflectee
-      as Map<String, dynamic>;
+  return reflect(connection)
+      .getField(cacheMirror.simpleName)
+      .getField(#queries)
+      .reflectee as Map<String, dynamic>;
 }
 
 bool hasCachedQueryNamed(PostgreSQLConnection connection, String name) {

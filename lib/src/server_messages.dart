@@ -12,7 +12,8 @@ class ErrorResponseMessage implements ServerMessage {
   List<ErrorField> fields = [new ErrorField()];
 
   void readBytes(Uint8List bytes) {
-    var lastByteRemovedList = new Uint8List.view(bytes.buffer, bytes.offsetInBytes, bytes.length - 1);
+    var lastByteRemovedList =
+        new Uint8List.view(bytes.buffer, bytes.offsetInBytes, bytes.length - 1);
 
     lastByteRemovedList.forEach((byte) {
       if (byte != 0) {
@@ -58,7 +59,8 @@ class ParameterStatusMessage extends ServerMessage {
 
   void readBytes(Uint8List bytes) {
     name = utf8.decode(bytes.sublist(0, bytes.indexOf(0)));
-    value = utf8.decode(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
+    value =
+        utf8.decode(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
   }
 }
 
@@ -121,7 +123,8 @@ class DataRowMessage extends ServerMessage {
       } else if (dataSize == -1) {
         values.add(null);
       } else {
-        var rawBytes = new ByteData.view(bytes.buffer, bytes.offsetInBytes + offset, dataSize);
+        var rawBytes = new ByteData.view(
+            bytes.buffer, bytes.offsetInBytes + offset, dataSize);
         values.add(rawBytes);
         offset += dataSize;
       }
@@ -140,7 +143,8 @@ class NotificationResponseMessage extends ServerMessage {
     var view = new ByteData.view(bytes.buffer, bytes.offsetInBytes);
     processID = view.getUint32(0);
     channel = utf8.decode(bytes.sublist(4, bytes.indexOf(0, 4)));
-    payload = utf8.decode(bytes.sublist(bytes.indexOf(0, 4) + 1, bytes.lastIndexOf(0)));
+    payload = utf8
+        .decode(bytes.sublist(bytes.indexOf(0, 4) + 1, bytes.lastIndexOf(0)));
   }
 }
 
