@@ -1,10 +1,11 @@
-import 'utf8_backed_string.dart';
 import 'dart:typed_data';
-import 'query.dart';
-import 'constants.dart';
 
 import 'package:buffer/buffer.dart';
 import 'package:crypto/crypto.dart';
+
+import 'constants.dart';
+import 'query.dart';
+import 'utf8_backed_string.dart';
 
 abstract class ClientMessage {
   static const int FormatText = 0;
@@ -34,13 +35,13 @@ abstract class ClientMessage {
   void applyToBuffer(ByteDataWriter buffer);
 
   Uint8List asBytes() {
-    var buffer = new ByteDataWriter();
+    final buffer = ByteDataWriter();
     applyToBuffer(buffer);
     return buffer.toBytes();
   }
 
   static Uint8List aggregateBytes(List<ClientMessage> messages) {
-    var buffer = new ByteDataWriter();
+    final buffer = ByteDataWriter();
     messages.forEach((cm) => cm.applyToBuffer(buffer));
     return buffer.toBytes();
   }
@@ -48,22 +49,23 @@ abstract class ClientMessage {
 
 class StartupMessage extends ClientMessage {
   StartupMessage(String databaseName, String timeZone, {String username}) {
-    this.databaseName = new UTF8BackedString(databaseName);
-    this.timeZone = new UTF8BackedString(timeZone);
+    this.databaseName = UTF8BackedString(databaseName);
+    this.timeZone = UTF8BackedString(timeZone);
     if (username != null) {
-      this.username = new UTF8BackedString(username);
+      this.username = UTF8BackedString(username);
     }
   }
 
-  UTF8BackedString username = null;
+  UTF8BackedString username;
   UTF8BackedString databaseName;
   UTF8BackedString timeZone;
 
   ByteData buffer;
 
+  @override
   int get length {
-    var fixedLength = 53;
-    var variableLength = (username?.utf8Length ?? 0) +
+    final fixedLength = 53;
+    final variableLength = (username?.utf8Length ?? 0) +
         databaseName.utf8Length +
         timeZone.utf8Length +
         3;
@@ -71,6 +73,7 @@ class StartupMessage extends ClientMessage {
     return fixedLength + variableLength;
   }
 
+  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeInt32(length);
     buffer.writeInt32(ClientMessage.ProtocolVersion);
@@ -95,19 +98,21 @@ class StartupMessage extends ClientMessage {
 
 class AuthMD5Message extends ClientMessage {
   AuthMD5Message(String username, String password, List<int> saltBytes) {
-    var passwordHash =
-        md5.convert("${password}${username}".codeUnits).toString();
-    var saltString = new String.fromCharCodes(saltBytes);
-    hashedAuthString = new UTF8BackedString(
-        "md5" + md5.convert("$passwordHash$saltString".codeUnits).toString());
+    final passwordHash = md5.convert('$password$username'.codeUnits).toString();
+    final saltString = String.fromCharCodes(saltBytes);
+    final md5Hash =
+        md5.convert('$passwordHash$saltString'.codeUnits).toString();
+    hashedAuthString = UTF8BackedString('md5$md5Hash');
   }
 
   UTF8BackedString hashedAuthString;
 
+  @override
   int get length {
     return 6 + hashedAuthString.utf8Length;
   }
 
+  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
     buffer.writeUint32(length - 1);
@@ -117,15 +122,17 @@ class AuthMD5Message extends ClientMessage {
 
 class QueryMessage extends ClientMessage {
   QueryMessage(String queryString) {
-    this.queryString = new UTF8BackedString(queryString);
+    this.queryString = UTF8BackedString(queryString);
   }
 
   UTF8BackedString queryString;
 
+  @override
   int get length {
     return 6 + queryString.utf8Length;
   }
 
+  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.QueryIdentifier);
     buffer.writeUint32(length - 1);
@@ -134,18 +141,20 @@ class QueryMessage extends ClientMessage {
 }
 
 class ParseMessage extends ClientMessage {
-  ParseMessage(String statement, {String statementName: ""}) {
-    this.statement = new UTF8BackedString(statement);
-    this.statementName = new UTF8BackedString(statementName);
+  ParseMessage(String statement, {String statementName = ''}) {
+    this.statement = UTF8BackedString(statement);
+    this.statementName = UTF8BackedString(statementName);
   }
 
   UTF8BackedString statementName;
   UTF8BackedString statement;
 
+  @override
   int get length {
     return 9 + statement.utf8Length + statementName.utf8Length;
   }
 
+  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ParseIdentifier);
     buffer.writeUint32(length - 1);
@@ -157,16 +166,18 @@ class ParseMessage extends ClientMessage {
 }
 
 class DescribeMessage extends ClientMessage {
-  DescribeMessage({String statementName: ""}) {
-    this.statementName = new UTF8BackedString(statementName);
+  DescribeMessage({String statementName = ''}) {
+    this.statementName = UTF8BackedString(statementName);
   }
 
   UTF8BackedString statementName;
 
+  @override
   int get length {
     return 7 + statementName.utf8Length;
   }
 
+  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.DescribeIdentifier);
     buffer.writeUint32(length - 1);
@@ -176,9 +187,9 @@ class DescribeMessage extends ClientMessage {
 }
 
 class BindMessage extends ClientMessage {
-  BindMessage(this.parameters, {String statementName: ""}) {
+  BindMessage(this.parameters, {String statementName = ''}) {
     typeSpecCount = parameters.where((p) => p.isBinary).length;
-    this.statementName = new UTF8BackedString(statementName);
+    this.statementName = UTF8BackedString(statementName);
   }
 
   List<ParameterValue> parameters;
@@ -187,6 +198,7 @@ class BindMessage extends ClientMessage {
   int typeSpecCount;
   int _cachedLength;
 
+  @override
   int get length {
     if (_cachedLength == null) {
       var inputParameterElementCount = parameters.length;
@@ -197,7 +209,8 @@ class BindMessage extends ClientMessage {
       _cachedLength = 15;
       _cachedLength += statementName.utf8Length;
       _cachedLength += inputParameterElementCount * 2;
-      _cachedLength += parameters.fold(0, (len, ParameterValue paramValue) {
+      _cachedLength +=
+          parameters.fold<int>(0, (len, ParameterValue paramValue) {
         if (paramValue.bytes == null) {
           return len + 4;
         } else {
@@ -208,6 +221,7 @@ class BindMessage extends ClientMessage {
     return _cachedLength;
   }
 
+  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.BindIdentifier);
     buffer.writeUint32(length - 1);
@@ -256,10 +270,12 @@ class BindMessage extends ClientMessage {
 class ExecuteMessage extends ClientMessage {
   ExecuteMessage();
 
+  @override
   int get length {
     return 10;
   }
 
+  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ExecuteIdentifier);
     buffer.writeUint32(length - 1);
@@ -271,10 +287,12 @@ class ExecuteMessage extends ClientMessage {
 class SyncMessage extends ClientMessage {
   SyncMessage();
 
+  @override
   int get length {
     return 5;
   }
 
+  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.SyncIdentifier);
     buffer.writeUint32(4);

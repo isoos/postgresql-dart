@@ -10,7 +10,7 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
   @override
   String convert(dynamic value) {
     if (value == null) {
-      return "null";
+      return 'null';
     }
 
     if (value is int) {
@@ -37,7 +37,7 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
       return encodeJSON(value);
     }
 
-    throw new PostgreSQLException("Could not infer type of value '$value'.");
+    throw PostgreSQLException("Could not infer type of value '$value'.");
   }
 
   String encodeString(String text, bool escapeStrings) {
@@ -45,12 +45,12 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
       return text;
     }
 
-    var backslashCodeUnit = r"\".codeUnitAt(0);
-    var quoteCodeUnit = r"'".codeUnitAt(0);
+    final backslashCodeUnit = r'\'.codeUnitAt(0);
+    final quoteCodeUnit = r"'".codeUnitAt(0);
 
-    var quoteCount = 0;
-    var backslashCount = 0;
-    var it = new RuneIterator(text);
+    int quoteCount = 0;
+    int backslashCount = 0;
+    final it = RuneIterator(text);
     while (it.moveNext()) {
       if (it.current == backslashCodeUnit) {
         backslashCount++;
@@ -59,10 +59,10 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
       }
     }
 
-    var buf = new StringBuffer();
+    final buf = StringBuffer();
 
     if (backslashCount > 0) {
-      buf.write(" E");
+      buf.write(' E');
     }
 
     buf.write("'");
@@ -110,37 +110,37 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
   }
 
   String encodeBoolean(bool value) {
-    return value ? "TRUE" : "FALSE";
+    return value ? 'TRUE' : 'FALSE';
   }
 
-  String encodeDateTime(DateTime value, {bool isDateOnly: false}) {
+  String encodeDateTime(DateTime value, {bool isDateOnly}) {
     var string = value.toIso8601String();
 
     if (isDateOnly) {
-      string = string.split("T").first;
+      string = string.split('T').first;
     } else {
       if (!value.isUtc) {
-        var timezoneHourOffset = value.timeZoneOffset.inHours;
-        var timezoneMinuteOffset = value.timeZoneOffset.inMinutes % 60;
+        final timezoneHourOffset = value.timeZoneOffset.inHours;
+        final timezoneMinuteOffset = value.timeZoneOffset.inMinutes % 60;
 
-        var hourComponent = timezoneHourOffset.abs().toString().padLeft(2, "0");
-        var minuteComponent =
-            timezoneMinuteOffset.abs().toString().padLeft(2, "0");
+        var hourComponent = timezoneHourOffset.abs().toString().padLeft(2, '0');
+        final minuteComponent =
+            timezoneMinuteOffset.abs().toString().padLeft(2, '0');
 
         if (timezoneHourOffset >= 0) {
-          hourComponent = "+${hourComponent}";
+          hourComponent = '+$hourComponent';
         } else {
-          hourComponent = "-${hourComponent}";
+          hourComponent = '-$hourComponent';
         }
 
-        var timezoneString = [hourComponent, minuteComponent].join(":");
-        string = [string, timezoneString].join("");
+        final timezoneString = [hourComponent, minuteComponent].join(':');
+        string = [string, timezoneString].join('');
       }
     }
 
-    if (string.substring(0, 1) == "-") {
-      string = string.substring(1) + " BC";
-    } else if (string.substring(0, 1) == "+") {
+    if (string.substring(0, 1) == '-') {
+      string = '${string.substring(1)} BC';
+    } else if (string.substring(0, 1) == '+') {
       string = string.substring(1);
     }
 
@@ -149,13 +149,13 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
 
   String encodeJSON(dynamic value) {
     if (value == null) {
-      return "null";
+      return 'null';
     }
 
     if (value is String) {
       return "'${json.encode(value)}'";
     }
 
-    return "${json.encode(value)}";
+    return json.encode(value);
   }
 }

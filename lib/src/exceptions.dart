@@ -34,16 +34,13 @@ enum PostgreSQLSeverity {
 
 /// Exception thrown by [PostgreSQLConnection] instances.
 class PostgreSQLException implements Exception {
-  PostgreSQLException(String message,
-      {PostgreSQLSeverity severity: PostgreSQLSeverity.error,
-      this.stackTrace}) {
-    this.severity = severity;
-    this.message = message;
-    code = "";
+  PostgreSQLException(this.message,
+      {this.severity = PostgreSQLSeverity.error, this.stackTrace}) {
+    code = '';
   }
 
   PostgreSQLException._(List<ErrorField> errorFields, {this.stackTrace}) {
-    var finder = (int identifer) => (errorFields.firstWhere(
+    final finder = (int identifer) => (errorFields.firstWhere(
         (ErrorField e) => e.identificationToken == identifer,
         orElse: () => null));
 
@@ -111,27 +108,28 @@ class PostgreSQLException implements Exception {
   /// A [StackTrace] if available.
   StackTrace stackTrace;
 
+  @override
   String toString() {
-    var buff = new StringBuffer("$severity $code: $message ");
+    final buff = StringBuffer('$severity $code: $message ');
 
     if (detail != null) {
-      buff.write("Detail: $detail ");
+      buff.write('Detail: $detail ');
     }
 
     if (hint != null) {
-      buff.write("Hint: $hint ");
+      buff.write('Hint: $hint ');
     }
 
     if (tableName != null) {
-      buff.write("Table: $tableName ");
+      buff.write('Table: $tableName ');
     }
 
     if (columnName != null) {
-      buff.write("Column: $columnName ");
+      buff.write('Column: $columnName ');
     }
 
     if (constraintName != null) {
-      buff.write("Constraint $constraintName ");
+      buff.write('Constraint $constraintName ');
     }
 
     return buff.toString();
