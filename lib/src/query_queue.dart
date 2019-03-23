@@ -7,7 +7,7 @@ import 'query.dart';
 
 class QueryQueue extends ListBase<Query<dynamic>>
     implements List<Query<dynamic>> {
-  List<Query<dynamic>> _inner = [];
+  List<Query<dynamic>> _inner = <Query<dynamic>>[];
   bool _isCancelled = false;
 
   PostgreSQLException get _cancellationException => PostgreSQLException(
@@ -24,7 +24,7 @@ class QueryQueue extends ListBase<Query<dynamic>>
     _isCancelled = true;
     error ??= _cancellationException;
     final existing = _inner;
-    _inner = [];
+    _inner = <Query<dynamic>>[];
 
     // We need to jump this to the next event so that the queries
     // get the error and not the close message, since completeError is

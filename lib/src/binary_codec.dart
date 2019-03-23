@@ -7,9 +7,9 @@ import '../postgres.dart';
 import 'types.dart';
 
 class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
-  const PostgresBinaryEncoder(this.dataType);
+  final PostgreSQLDataType _dataType;
 
-  final PostgreSQLDataType dataType;
+  const PostgresBinaryEncoder(this._dataType);
 
   @override
   Uint8List convert(dynamic value) {
@@ -17,7 +17,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
       return null;
     }
 
-    switch (dataType) {
+    switch (_dataType) {
       case PostgreSQLDataType.boolean:
         {
           if (value is bool) {

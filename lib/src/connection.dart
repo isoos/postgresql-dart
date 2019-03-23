@@ -205,9 +205,9 @@ class PostgreSQLConnection extends Object
 
     final proxy = _TransactionProxy(this, queryBlock, commitTimeoutInSeconds);
 
-    await _enqueue(proxy.beginQuery);
+    await _enqueue(proxy._beginQuery);
 
-    return await proxy.completer.future;
+    return await proxy.future;
   }
 
   @override

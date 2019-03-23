@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:mirrors';
 
+import 'package:postgres/src/query_cache.dart';
 import 'package:test/test.dart';
 
 import 'package:postgres/postgres.dart';
@@ -339,7 +340,7 @@ void main() {
           hasCachedQueryNamed(
               connection, 'select i1, i2 from t where i1 > @i1'),
           true);
-      expect(cachedQueryMap(connection).length, 1);
+      expect(getQueryCache(connection).length, 1);
     });
 
     test('Call query multiple times, mixing in other named queries, succeeds',
@@ -381,7 +382,7 @@ void main() {
       expect(
           hasCachedQueryNamed(connection, 'select i1,i2 from t where i2 < @i2'),
           true);
-      expect(cachedQueryMap(connection).length, 2);
+      expect(getQueryCache(connection).length, 2);
     });
 
     test(
@@ -464,7 +465,7 @@ void main() {
         expect(true, false);
       } on PostgreSQLException {}
 
-      expect(cachedQueryMap(connection).isEmpty, true);
+      expect(getQueryCache(connection).isEmpty, true);
     });
 
     test(
@@ -479,7 +480,7 @@ void main() {
         expect(true, false);
       } on PostgreSQLException {}
 
-      expect(cachedQueryMap(connection).length, 0);
+      expect(getQueryCache(connection).length, 0);
     });
 
     test(
@@ -555,21 +556,19 @@ void main() {
       expect(results, [
         [1, 2]
       ]);
-      expect(cachedQueryMap(connection).length, 1);
+      expect(getQueryCache(connection).length, 1);
       expect(hasCachedQueryNamed(connection, string), true);
     });
   });
 }
 
-Map<String, dynamic> cachedQueryMap(PostgreSQLConnection connection) {
+QueryCache getQueryCache(PostgreSQLConnection connection) {
   final cacheMirror = reflect(connection).type.declarations.values.firstWhere(
       (DeclarationMirror dm) => dm.simpleName.toString().contains('_cache'));
-  return reflect(connection)
-      .getField(cacheMirror.simpleName)
-      .getField(#queries)
-      .reflectee as Map<String, dynamic>;
+  return reflect(connection).getField(cacheMirror.simpleName).reflectee
+      as QueryCache;
 }
 
 bool hasCachedQueryNamed(PostgreSQLConnection connection, String name) {
-  return cachedQueryMap(connection)[name] != null;
+  return getQueryCache(connection)[name] != null;
 }

@@ -8,20 +8,20 @@ class _TransactionProxy extends Object
     implements PostgreSQLExecutionContext {
   _TransactionProxy(
       this._connection, this.executionBlock, this.commitTimeoutInSeconds) {
-    beginQuery = Query<int>('BEGIN', {}, _connection, this)
+    _beginQuery = Query<int>('BEGIN', {}, _connection, this)
       ..onlyReturnAffectedRowCount = true;
 
-    beginQuery.future.then(startTransaction).catchError((err, StackTrace st) {
+    _beginQuery.future.then(startTransaction).catchError((err, StackTrace st) {
       Future(() {
-        completer.completeError(err, st);
+        _completer.completeError(err, st);
       });
     });
   }
 
-  Query<dynamic> beginQuery;
-  Completer completer = Completer();
+  Query<dynamic> _beginQuery;
+  final _completer = Completer();
 
-  Future get future => completer.future;
+  Future get future => _completer.future;
 
   @override
   final PostgreSQLConnection _connection;
@@ -66,7 +66,7 @@ class _TransactionProxy extends Object
 
     if (!_hasRolledBack && !_hasFailed) {
       await execute('COMMIT', timeoutInSeconds: commitTimeoutInSeconds);
-      completer.complete(result);
+      _completer.complete(result);
     }
   }
 
@@ -100,9 +100,9 @@ class _TransactionProxy extends Object
     }
 
     if (object is _TransactionRollbackException) {
-      completer.complete(PostgreSQLRollback._(object.reason));
+      _completer.complete(PostgreSQLRollback._(object.reason));
     } else {
-      completer.completeError(object, trace);
+      _completer.completeError(object, trace);
     }
   }
 
@@ -131,5 +131,8 @@ class PostgreSQLRollback {
   PostgreSQLRollback._(this.reason);
 
   /// The reason the transaction was cancelled.
-  String reason;
+  final String reason;
+
+  @override
+  String toString() => 'PostgreSQLRollback: $reason';
 }

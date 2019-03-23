@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:postgres/postgres.dart';
 
 class PostgresTextEncoder extends Converter<dynamic, String> {
-  const PostgresTextEncoder(this.escapeStrings);
+  const PostgresTextEncoder(this._escapeStrings);
 
-  final bool escapeStrings;
+  final bool _escapeStrings;
 
   @override
   String convert(dynamic value) {
@@ -22,7 +22,7 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
     }
 
     if (value is String) {
-      return encodeString(value, escapeStrings);
+      return encodeString(value, _escapeStrings);
     }
 
     if (value is DateTime) {

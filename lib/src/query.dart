@@ -28,8 +28,8 @@ class Query<T> {
   final PostgreSQLExecutionContext transaction;
   final PostgreSQLConnection connection;
 
-  List<PostgreSQLDataType> specifiedParameterTypeCodes;
-  List<List<dynamic>> rows = [];
+  List<PostgreSQLDataType> _specifiedParameterTypeCodes;
+  final rows = <List<dynamic>>[];
 
   CachedQuery cache;
 
@@ -68,7 +68,8 @@ class Query<T> {
       return '\$$index';
     });
 
-    specifiedParameterTypeCodes = formatIdentifiers.map((i) => i.type).toList();
+    _specifiedParameterTypeCodes =
+        formatIdentifiers.map((i) => i.type).toList();
 
     final parameterList = formatIdentifiers
         .map((id) => ParameterValue(id, substitutionValues))
@@ -108,7 +109,7 @@ class Query<T> {
   PostgreSQLException validateParameters(List<int> parameterTypeIDs) {
     final actualParameterTypeCodeIterator = parameterTypeIDs.iterator;
     final parametersAreMismatched =
-        specifiedParameterTypeCodes.map((specifiedType) {
+        _specifiedParameterTypeCodes.map((specifiedType) {
       actualParameterTypeCodeIterator.moveNext();
 
       if (specifiedType == null) {
