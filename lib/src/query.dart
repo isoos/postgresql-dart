@@ -129,7 +129,7 @@ class Query<T> {
     return null;
   }
 
-  void addRow(List<ByteData> rawRowData) {
+  void addRow(List<Uint8List> rawRowData) {
     if (onlyReturnAffectedRowCount) {
       return;
     }
@@ -137,9 +137,7 @@ class Query<T> {
     final iterator = fieldDescriptions.iterator;
     final lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
-
-      return iterator.current.converter
-          .convert(bd?.buffer?.asUint8List(bd.offsetInBytes, bd.lengthInBytes));
+      return iterator.current.converter.convert(bd);
     });
 
     rows.add(lazyDecodedData.toList());

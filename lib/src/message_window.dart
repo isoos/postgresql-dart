@@ -5,45 +5,39 @@ import 'package:buffer/buffer.dart';
 
 import 'server_messages.dart';
 
-class MessageFrame {
-  static const int HeaderByteSize = 5;
-  static Map<int, Function> messageTypeMap = {
-    49: () => ParseCompleteMessage(),
-    50: () => BindCompleteMessage(),
-    65: () => NotificationResponseMessage(),
-    67: () => CommandCompleteMessage(),
-    68: () => DataRowMessage(),
-    69: () => ErrorResponseMessage(),
-    75: () => BackendKeyMessage(),
-    82: () => AuthenticationMessage(),
-    83: () => ParameterStatusMessage(),
-    84: () => RowDescriptionMessage(),
-    90: () => ReadyForQueryMessage(),
-    110: () => NoDataMessage(),
-    116: () => ParameterDescriptionMessage()
-  };
+const int _headerByteSize = 5;
+final _emptyData = Uint8List(0);
 
-  bool get hasReadHeader => type != null;
-  int type;
-  int expectedLength;
+typedef ServerMessage _ServerMessageFn(Uint8List data);
 
-  bool get isComplete => data != null || expectedLength == 0;
-  Uint8List data;
-
-  ServerMessage get message {
-    final msgMaker =
-        messageTypeMap[type] ?? () => UnknownMessage()..code = type;
-
-    final msg = msgMaker() as ServerMessage;
-    msg.readBytes(data);
-    return msg;
-  }
-}
+Map<int, _ServerMessageFn> _messageTypeMap = {
+  49: (d) => ParseCompleteMessage(),
+  50: (d) => BindCompleteMessage(),
+  65: (d) => NotificationResponseMessage(d),
+  67: (d) => CommandCompleteMessage(d),
+  68: (d) => DataRowMessage(d),
+  69: (d) => ErrorResponseMessage(d),
+  75: (d) => BackendKeyMessage(d),
+  82: (d) => AuthenticationMessage(d),
+  83: (d) => ParameterStatusMessage(d),
+  84: (d) => RowDescriptionMessage(d),
+  90: (d) => ReadyForQueryMessage(d),
+  110: (d) => NoDataMessage(),
+  116: (d) => ParameterDescriptionMessage(d),
+};
 
 class MessageFramer {
   final _reader = ByteDataReader();
-  MessageFrame messageInProgress = MessageFrame();
-  final messageQueue = Queue<MessageFrame>();
+  final messageQueue = Queue<ServerMessage>();
+
+  int _type;
+  int _expectedLength;
+
+  bool get _hasReadHeader => _type != null;
+  bool get _canReadHeader => _reader.remainingLength >= _headerByteSize;
+
+  bool get _isComplete =>
+      _expectedLength == 0 || _expectedLength <= _reader.remainingLength;
 
   void addBytes(Uint8List bytes) {
     _reader.add(bytes);
@@ -51,21 +45,21 @@ class MessageFramer {
     bool evaluateNextMessage = true;
     while (evaluateNextMessage) {
       evaluateNextMessage = false;
-      if (!messageInProgress.hasReadHeader &&
-          _reader.remainingLength >= MessageFrame.HeaderByteSize) {
-        messageInProgress.type = _reader.readUint8();
-        messageInProgress.expectedLength = _reader.readUint32() - 4;
+
+      if (!_hasReadHeader && _canReadHeader) {
+        _type = _reader.readUint8();
+        _expectedLength = _reader.readUint32() - 4;
       }
 
-      if (messageInProgress.hasReadHeader &&
-          messageInProgress.expectedLength > 0 &&
-          _reader.remainingLength >= messageInProgress.expectedLength) {
-        messageInProgress.data = _reader.read(messageInProgress.expectedLength);
-      }
-
-      if (messageInProgress.isComplete) {
-        messageQueue.add(messageInProgress);
-        messageInProgress = MessageFrame();
+      if (_hasReadHeader && _isComplete) {
+        final data =
+            _expectedLength == 0 ? _emptyData : _reader.read(_expectedLength);
+        final msgMaker = _messageTypeMap[_type];
+        final msg =
+            msgMaker == null ? UnknownMessage(_type, data) : msgMaker(data);
+        messageQueue.add(msg);
+        _type = null;
+        _expectedLength = null;
         evaluateNextMessage = true;
       }
     }
@@ -73,7 +67,7 @@ class MessageFramer {
 
   bool get hasMessage => messageQueue.isNotEmpty;
 
-  MessageFrame popMessage() {
+  ServerMessage popMessage() {
     return messageQueue.removeFirst();
   }
 }

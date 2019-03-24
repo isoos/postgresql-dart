@@ -22,11 +22,9 @@ void main() {
       messageWithBytes([1, 2, 3], 1)
     ]));
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
+    final messages = framer.messageQueue.toList();
     expect(messages, [
-      UnknownMessage()
-        ..code = 1
-        ..bytes = Uint8List.fromList([1, 2, 3])
+      UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
     ]);
   });
 
@@ -36,14 +34,10 @@ void main() {
       messageWithBytes([1, 2, 3, 4], 2)
     ]));
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
+    final messages = framer.messageQueue.toList();
     expect(messages, [
-      UnknownMessage()
-        ..code = 1
-        ..bytes = Uint8List.fromList([1, 2, 3]),
-      UnknownMessage()
-        ..code = 2
-        ..bytes = Uint8List.fromList([1, 2, 3, 4])
+      UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
+      UnknownMessage(2, Uint8List.fromList([1, 2, 3, 4])),
     ]);
   });
 
@@ -55,11 +49,9 @@ void main() {
 
     framer.addBytes(fragments.last);
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
+    final messages = framer.messageQueue.toList();
     expect(messages, [
-      UnknownMessage()
-        ..code = 1
-        ..bytes = Uint8List.fromList([1, 2, 3])
+      UnknownMessage(1, Uint8List.fromList([1, 2, 3]))
     ]);
   });
 
@@ -76,11 +68,9 @@ void main() {
 
     framer.addBytes(fragments.last);
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
+    final messages = framer.messageQueue.toList();
     expect(messages, [
-      UnknownMessage()
-        ..code = 1
-        ..bytes = Uint8List.fromList([1, 2, 3])
+      UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
     ]);
   });
 
@@ -95,14 +85,10 @@ void main() {
 
     framer.addBytes(message2Fragments.last);
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
+    final messages = framer.messageQueue.toList();
     expect(messages, [
-      UnknownMessage()
-        ..code = 1
-        ..bytes = Uint8List.fromList([1, 2, 3]),
-      UnknownMessage()
-        ..code = 2
-        ..bytes = Uint8List.fromList([2, 2, 3]),
+      UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
+      UnknownMessage(2, Uint8List.fromList([2, 2, 3])),
     ]);
   });
 
@@ -117,14 +103,10 @@ void main() {
 
     framer.addBytes(message2Fragments.last);
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
+    final messages = framer.messageQueue.toList();
     expect(messages, [
-      UnknownMessage()
-        ..code = 1
-        ..bytes = Uint8List.fromList([1, 2, 3]),
-      UnknownMessage()
-        ..code = 2
-        ..bytes = Uint8List.fromList([2, 2, 3]),
+      UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
+      UnknownMessage(2, Uint8List.fromList([2, 2, 3])),
     ]);
   });
 
@@ -136,11 +118,9 @@ void main() {
 
     framer.addBytes(fragments.last);
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
+    final messages = framer.messageQueue.toList();
     expect(messages, [
-      UnknownMessage()
-        ..code = 1
-        ..bytes = Uint8List.fromList([1, 2, 3, 4, 5, 6, 7])
+      UnknownMessage(1, Uint8List.fromList([1, 2, 3, 4, 5, 6, 7])),
     ]);
   });
 
@@ -156,14 +136,10 @@ void main() {
 
     framer.addBytes(fragmentedMessageBuffer(message, 8).last);
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
+    final messages = framer.messageQueue.toList();
     expect(messages, [
-      UnknownMessage()
-        ..code = 0
-        ..bytes = Uint8List.fromList([1, 2]),
-      UnknownMessage()
-        ..code = 1
-        ..bytes = Uint8List.fromList([1, 2, 3, 4, 5, 6, 7])
+      UnknownMessage(0, Uint8List.fromList([1, 2])),
+      UnknownMessage(1, Uint8List.fromList([1, 2, 3, 4, 5, 6, 7]))
     ]);
   });
 
@@ -185,23 +161,19 @@ void main() {
         fragmentedMessageBuffer(fragmentedMessageBuffer(message, 3).last, 6)
             .last);
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
+    final messages = framer.messageQueue.toList();
     expect(messages, [
-      UnknownMessage()
-        ..code = 0
-        ..bytes = Uint8List.fromList([1, 2]),
-      UnknownMessage()
-        ..code = 1
-        ..bytes =
-            Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+      UnknownMessage(0, Uint8List.fromList([1, 2])),
+      UnknownMessage(
+          1, Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])),
     ]);
   });
 
   test('Frame with no data', () {
     framer.addBytes(bufferWithMessages([messageWithBytes([], 10)]));
 
-    final messages = framer.messageQueue.map((f) => f.message).toList();
-    expect(messages, [UnknownMessage()..code = 10]);
+    final messages = framer.messageQueue.toList();
+    expect(messages, [UnknownMessage(10, Uint8List(0))]);
   });
 }
 
@@ -231,10 +203,8 @@ flush(MessageFramer framer) {
     messageWithBytes([1, 2, 3], 1)
   ]));
 
-  final messages = framer.messageQueue.map((f) => f.message).toList();
+  final messages = framer.messageQueue.toList();
   expect(messages, [
-    UnknownMessage()
-      ..code = 1
-      ..bytes = Uint8List.fromList([1, 2, 3])
+    UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
   ]);
 }

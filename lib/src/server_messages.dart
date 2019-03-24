@@ -1,29 +1,38 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:buffer/buffer.dart';
+
 import 'connection.dart';
 import 'query.dart';
 
-abstract class ServerMessage {
-  void readBytes(Uint8List bytes);
-}
+abstract class ServerMessage {}
 
 class ErrorResponseMessage implements ServerMessage {
-  List<ErrorField> fields = [ErrorField()];
+  final fields = <ErrorField>[];
 
-  @override
-  void readBytes(Uint8List bytes) {
-    final lastByteRemovedList =
-        Uint8List.view(bytes.buffer, bytes.offsetInBytes, bytes.length - 1);
+  ErrorResponseMessage(Uint8List bytes) {
+    final reader = ByteDataReader()..add(bytes);
 
-    lastByteRemovedList.forEach((byte) {
-      if (byte != 0) {
-        fields.last.add(byte);
-        return;
+    int identificationToken;
+    StringBuffer sb;
+
+    while (reader.remainingLength > 0) {
+      final byte = reader.readUint8();
+      if (identificationToken == null) {
+        identificationToken = byte;
+        sb = StringBuffer();
+      } else if (byte == 0) {
+        fields.add(ErrorField(identificationToken, sb.toString()));
+        identificationToken = null;
+        sb = null;
+      } else {
+        sb.writeCharCode(byte);
       }
-
-      fields.add(ErrorField());
-    });
+    }
+    if (identificationToken != null && sb != null) {
+      fields.add(ErrorField(identificationToken, sb.toString()));
+    }
   }
 }
 
@@ -37,33 +46,33 @@ class AuthenticationMessage implements ServerMessage {
   static const int KindGSSContinue = 8;
   static const int KindSSPI = 9;
 
-  int type;
+  final int type;
+  final List<int> salt;
 
-  List<int> salt;
+  AuthenticationMessage._(this.type, this.salt);
 
-  @override
-  void readBytes(Uint8List bytes) {
-    final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
-    type = view.getUint32(0);
-
+  factory AuthenticationMessage(Uint8List bytes) {
+    final reader = ByteDataReader()..add(bytes);
+    final type = reader.readUint32();
+    List<int> salt;
     if (type == KindMD5Password) {
-      salt = List<int>(4);
-      for (var i = 0; i < 4; i++) {
-        salt[i] = view.getUint8(4 + i);
-      }
+      salt = reader.read(4, copy: true);
     }
+    return AuthenticationMessage._(type, salt);
   }
 }
 
 class ParameterStatusMessage extends ServerMessage {
-  String name;
-  String value;
+  final String name;
+  final String value;
 
-  @override
-  void readBytes(Uint8List bytes) {
-    name = utf8.decode(bytes.sublist(0, bytes.indexOf(0)));
-    value =
-        utf8.decode(bytes.sublist(bytes.indexOf(0) + 1, bytes.lastIndexOf(0)));
+  ParameterStatusMessage._(this.name, this.value);
+
+  factory ParameterStatusMessage(Uint8List bytes) {
+    final first0 = bytes.indexOf(0);
+    final name = utf8.decode(bytes.sublist(0, first0));
+    final value = utf8.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
+    return ParameterStatusMessage._(name, value);
   }
 }
 
@@ -72,37 +81,34 @@ class ReadyForQueryMessage extends ServerMessage {
   static const String StateTransaction = 'T';
   static const String StateTransactionError = 'E';
 
-  String state;
+  final String state;
 
-  @override
-  void readBytes(Uint8List bytes) {
-    state = utf8.decode(bytes);
-  }
+  ReadyForQueryMessage(Uint8List bytes) : state = utf8.decode(bytes);
 }
 
 class BackendKeyMessage extends ServerMessage {
-  int processID;
-  int secretKey;
+  final int processID;
+  final int secretKey;
 
-  @override
-  void readBytes(Uint8List bytes) {
+  BackendKeyMessage._(this.processID, this.secretKey);
+
+  factory BackendKeyMessage(Uint8List bytes) {
     final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
-    processID = view.getUint32(0);
-    secretKey = view.getUint32(4);
+    final processID = view.getUint32(0);
+    final secretKey = view.getUint32(4);
+    return BackendKeyMessage._(processID, secretKey);
   }
 }
 
 class RowDescriptionMessage extends ServerMessage {
-  List<FieldDescription> fieldDescriptions;
+  final fieldDescriptions = <FieldDescription>[];
 
-  @override
-  void readBytes(Uint8List bytes) {
+  RowDescriptionMessage(Uint8List bytes) {
     final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
     int offset = 0;
     final fieldCount = view.getInt16(offset);
     offset += 2;
 
-    fieldDescriptions = <FieldDescription>[];
     for (var i = 0; i < fieldCount; i++) {
       final rowDesc = FieldDescription();
       offset = rowDesc.parse(view, offset);
@@ -112,28 +118,22 @@ class RowDescriptionMessage extends ServerMessage {
 }
 
 class DataRowMessage extends ServerMessage {
-  List<ByteData> values = [];
+  final values = <Uint8List>[];
 
-  @override
-  void readBytes(Uint8List bytes) {
-    final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
-    int offset = 0;
-    final fieldCount = view.getInt16(offset);
-    offset += 2;
+  DataRowMessage(Uint8List bytes) {
+    final reader = ByteDataReader()..add(bytes);
+    final fieldCount = reader.readInt16();
 
     for (var i = 0; i < fieldCount; i++) {
-      final dataSize = view.getInt32(offset);
-      offset += 4;
+      final dataSize = reader.readInt32();
 
       if (dataSize == 0) {
-        values.add(ByteData(0));
+        values.add(Uint8List(0));
       } else if (dataSize == -1) {
         values.add(null);
       } else {
-        final rawBytes =
-            ByteData.view(bytes.buffer, bytes.offsetInBytes + offset, dataSize);
+        final rawBytes = reader.read(dataSize);
         values.add(rawBytes);
-        offset += dataSize;
       }
     }
   }
@@ -143,90 +143,80 @@ class DataRowMessage extends ServerMessage {
 }
 
 class NotificationResponseMessage extends ServerMessage {
-  int processID;
-  String channel;
-  String payload;
+  final int processID;
+  final String channel;
+  final String payload;
 
-  @override
-  void readBytes(Uint8List bytes) {
+  NotificationResponseMessage._(this.processID, this.channel, this.payload);
+
+  factory NotificationResponseMessage(Uint8List bytes) {
     final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
-    processID = view.getUint32(0);
-    channel = utf8.decode(bytes.sublist(4, bytes.indexOf(0, 4)));
-    payload = utf8
-        .decode(bytes.sublist(bytes.indexOf(0, 4) + 1, bytes.lastIndexOf(0)));
+    final processID = view.getUint32(0);
+    final first0 = bytes.indexOf(0, 4);
+    final channel = utf8.decode(bytes.sublist(4, first0));
+    final payload =
+        utf8.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
+    return NotificationResponseMessage._(processID, channel, payload);
   }
 }
 
 class CommandCompleteMessage extends ServerMessage {
-  int rowsAffected;
+  final int rowsAffected;
 
   static RegExp identifierExpression = RegExp(r'[A-Z ]*');
 
-  @override
-  void readBytes(Uint8List bytes) {
-    final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
+  CommandCompleteMessage._(this.rowsAffected);
 
+  factory CommandCompleteMessage(Uint8List bytes) {
+    final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
     final match = identifierExpression.firstMatch(str);
+    int rowsAffected = 0;
     if (match.end < str.length) {
       rowsAffected = int.parse(str.split(' ').last);
-    } else {
-      rowsAffected = 0;
     }
+    return CommandCompleteMessage._(rowsAffected);
   }
 }
 
 class ParseCompleteMessage extends ServerMessage {
-  @override
-  void readBytes(Uint8List bytes) {}
+  ParseCompleteMessage();
 
   @override
   String toString() => 'Parse Complete Message';
 }
 
 class BindCompleteMessage extends ServerMessage {
-  @override
-  void readBytes(Uint8List bytes) {}
+  BindCompleteMessage();
 
   @override
   String toString() => 'Bind Complete Message';
 }
 
 class ParameterDescriptionMessage extends ServerMessage {
-  List<int> parameterTypeIDs;
+  final parameterTypeIDs = <int>[];
 
-  @override
-  void readBytes(Uint8List bytes) {
-    final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
+  ParameterDescriptionMessage(Uint8List bytes) {
+    final reader = ByteDataReader()..add(bytes);
+    final count = reader.readUint16();
 
-    int offset = 0;
-    final count = view.getUint16(0);
-    offset += 2;
-
-    parameterTypeIDs = [];
     for (var i = 0; i < count; i++) {
-      final v = view.getUint32(offset);
-      offset += 4;
-      parameterTypeIDs.add(v);
+      parameterTypeIDs.add(reader.readUint32());
     }
   }
 }
 
 class NoDataMessage extends ServerMessage {
-  @override
-  void readBytes(Uint8List bytes) {}
+  NoDataMessage();
 
   @override
   String toString() => 'No Data Message';
 }
 
 class UnknownMessage extends ServerMessage {
-  Uint8List bytes;
-  int code;
+  final int code;
+  final Uint8List bytes;
 
-  @override
-  void readBytes(Uint8List bytes) {
-    this.bytes = bytes;
-  }
+  UnknownMessage(this.code, this.bytes);
 
   @override
   int get hashCode {
@@ -295,16 +285,8 @@ class ErrorField {
     return PostgreSQLSeverity.unknown;
   }
 
-  int identificationToken;
+  final int identificationToken;
+  final String text;
 
-  String get text => _buffer.toString();
-  final _buffer = StringBuffer();
-
-  void add(int byte) {
-    if (identificationToken == null) {
-      identificationToken = byte;
-    } else {
-      _buffer.writeCharCode(byte);
-    }
-  }
+  ErrorField(this.identificationToken, this.text);
 }

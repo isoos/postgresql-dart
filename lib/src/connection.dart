@@ -248,7 +248,7 @@ class PostgreSQLConnection extends Object
     // anything with that data.
     _framer.addBytes(castBytes(bytes));
     while (_framer.hasMessage) {
-      final msg = _framer.popMessage().message;
+      final msg = _framer.popMessage();
       try {
         if (msg is ErrorResponseMessage) {
           _transitionToState(_connectionState.onErrorResponse(msg));
