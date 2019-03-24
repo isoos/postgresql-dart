@@ -6,6 +6,28 @@ import 'package:buffer/buffer.dart';
 import '../postgres.dart';
 import 'types.dart';
 
+final _bool0 = Uint8List(1)..[0] = 0;
+final _bool1 = Uint8List(1)..[0] = 1;
+final _dashUnit = '-'.codeUnits.first;
+final _hex = <String>[
+  '0',
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  'a',
+  'b',
+  'c',
+  'd',
+  'e',
+  'f',
+];
+
 class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
   final PostgreSQLDataType _dataType;
 
@@ -21,9 +43,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
       case PostgreSQLDataType.boolean:
         {
           if (value is bool) {
-            final bd = ByteData(1);
-            bd.setUint8(0, value ? 1 : 0);
-            return bd.buffer.asUint8List();
+            return value ? _bool1 : _bool0;
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: bool Got: ${value.runtimeType}');
@@ -127,13 +147,10 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
       case PostgreSQLDataType.json:
         {
           final jsonBytes = utf8.encode(json.encode(value));
-          final outBuffer = Uint8List(jsonBytes.length + 1);
-          outBuffer[0] = 1;
-          for (var i = 0; i < jsonBytes.length; i++) {
-            outBuffer[i + 1] = jsonBytes[i];
-          }
-
-          return outBuffer;
+          final writer = ByteDataWriter(bufferLength: jsonBytes.length + 1);
+          writer.writeUint8(1);
+          writer.write(jsonBytes);
+          return writer.toBytes();
         }
 
       case PostgreSQLDataType.byteArray:
@@ -152,11 +169,10 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
                 'Invalid type for parameter value. Expected: String Got: ${value.runtimeType}');
           }
 
-          final dashUnit = '-'.codeUnits.first;
           final hexBytes = (value as String)
               .toLowerCase()
               .codeUnits
-              .where((c) => c != dashUnit)
+              .where((c) => c != _dashUnit)
               .toList();
           if (hexBytes.length != 32) {
             throw FormatException(
@@ -175,11 +191,11 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
           };
 
           final outBuffer = Uint8List(16);
-          for (var i = 0; i < hexBytes.length; i += 2) {
+          for (var i = 0, j = 0; i < hexBytes.length; i += 2, j++) {
             final upperByte = byteConvert(hexBytes[i]);
             final lowerByte = byteConvert(hexBytes[i + 1]);
 
-            outBuffer[i ~/ 2] = upperByte * 16 + lowerByte;
+            outBuffer[j] = (upperByte << 4) + lowerByte;
           }
           return outBuffer;
         }
@@ -208,8 +224,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     switch (dataType) {
       case PostgreSQLDataType.name:
       case PostgreSQLDataType.text:
-        return utf8.decode(
-            value.buffer.asUint8List(value.offsetInBytes, value.lengthInBytes));
+        return utf8.decode(value);
       case PostgreSQLDataType.boolean:
         return buffer.getInt8(0) != 0;
       case PostgreSQLDataType.smallInteger:
@@ -241,46 +256,22 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
         }
 
       case PostgreSQLDataType.byteArray:
-        return value.buffer
-            .asUint8List(value.offsetInBytes, value.lengthInBytes);
+        return value;
 
       case PostgreSQLDataType.uuid:
         {
-          final codeDash = '-'.codeUnitAt(0);
-
-          final cipher = [
-            '0',
-            '1',
-            '2',
-            '3',
-            '4',
-            '5',
-            '6',
-            '7',
-            '8',
-            '9',
-            'a',
-            'b',
-            'c',
-            'd',
-            'e',
-            'f'
-          ];
-          final byteConvert = (int value) {
-            return cipher[value];
-          };
-
           final buf = StringBuffer();
           for (var i = 0; i < buffer.lengthInBytes; i++) {
             final byteValue = buffer.getUint8(i);
-            final upperByteValue = byteValue ~/ 16;
+            final upperByteValue = byteValue >> 4;
+            final lowerByteValue = byteValue & 0x0f;
 
-            final upperByteHex = byteConvert(upperByteValue);
-            final lowerByteHex = byteConvert(byteValue - (upperByteValue * 16));
+            final upperByteHex = _hex[upperByteValue];
+            final lowerByteHex = _hex[lowerByteValue];
             buf.write(upperByteHex);
             buf.write(lowerByteHex);
             if (i == 3 || i == 5 || i == 7 || i == 9) {
-              buf.writeCharCode(codeDash);
+              buf.writeCharCode(_dashUnit);
             }
           }
 
