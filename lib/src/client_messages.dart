@@ -21,17 +21,6 @@ abstract class ClientMessage {
   static const int SyncIdentifier = 83;
   static const int PasswordIdentifier = 112;
 
-  int get length;
-
-  void applyStringToBuffer(UTF8BackedString string, ByteDataWriter buffer) {
-    buffer.write(string.utf8Bytes);
-    buffer.writeInt8(0);
-  }
-
-  void applyBytesToBuffer(List<int> bytes, ByteDataWriter buffer) {
-    buffer.write(bytes);
-  }
-
   void applyToBuffer(ByteDataWriter buffer);
 
   Uint8List asBytes() {
@@ -47,6 +36,11 @@ abstract class ClientMessage {
   }
 }
 
+void _applyStringToBuffer(UTF8BackedString string, ByteDataWriter buffer) {
+  buffer.write(string.utf8Bytes);
+  buffer.writeInt8(0);
+}
+
 class StartupMessage extends ClientMessage {
   final UTF8BackedString _username;
   final UTF8BackedString _databaseName;
@@ -58,34 +52,29 @@ class StartupMessage extends ClientMessage {
         _username = username == null ? null : UTF8BackedString(username);
 
   @override
-  int get length {
+  void applyToBuffer(ByteDataWriter buffer) {
     final fixedLength = 53;
     final variableLength = (_username?.utf8Length ?? 0) +
         _databaseName.utf8Length +
         _timeZone.utf8Length +
         3;
 
-    return fixedLength + variableLength;
-  }
-
-  @override
-  void applyToBuffer(ByteDataWriter buffer) {
-    buffer.writeInt32(length);
+    buffer.writeInt32(fixedLength + variableLength);
     buffer.writeInt32(ClientMessage.ProtocolVersion);
 
     if (_username != null) {
-      applyBytesToBuffer((UTF8ByteConstants.user), buffer);
-      applyStringToBuffer(_username, buffer);
+      buffer.write(UTF8ByteConstants.user);
+      _applyStringToBuffer(_username, buffer);
     }
 
-    applyBytesToBuffer(UTF8ByteConstants.database, buffer);
-    applyStringToBuffer(_databaseName, buffer);
+    buffer.write(UTF8ByteConstants.database);
+    _applyStringToBuffer(_databaseName, buffer);
 
-    applyBytesToBuffer(UTF8ByteConstants.clientEncoding, buffer);
-    applyBytesToBuffer(UTF8ByteConstants.utf8, buffer);
+    buffer.write(UTF8ByteConstants.clientEncoding);
+    buffer.write(UTF8ByteConstants.utf8);
 
-    applyBytesToBuffer(UTF8ByteConstants.timeZone, buffer);
-    applyStringToBuffer(_timeZone, buffer);
+    buffer.write(UTF8ByteConstants.timeZone);
+    _applyStringToBuffer(_timeZone, buffer);
 
     buffer.writeInt8(0);
   }
@@ -103,15 +92,11 @@ class AuthMD5Message extends ClientMessage {
   }
 
   @override
-  int get length {
-    return 6 + _hashedAuthString.utf8Length;
-  }
-
-  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
-    buffer.writeUint32(length - 1);
-    applyStringToBuffer(_hashedAuthString, buffer);
+    final length = 5 + _hashedAuthString.utf8Length;
+    buffer.writeUint32(length);
+    _applyStringToBuffer(_hashedAuthString, buffer);
   }
 }
 
@@ -122,15 +107,11 @@ class QueryMessage extends ClientMessage {
       : _queryString = UTF8BackedString(queryString);
 
   @override
-  int get length {
-    return 6 + _queryString.utf8Length;
-  }
-
-  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.QueryIdentifier);
-    buffer.writeUint32(length - 1);
-    applyStringToBuffer(_queryString, buffer);
+    final length = 5 + _queryString.utf8Length;
+    buffer.writeUint32(length);
+    _applyStringToBuffer(_queryString, buffer);
   }
 }
 
@@ -143,17 +124,13 @@ class ParseMessage extends ClientMessage {
         _statementName = UTF8BackedString(statementName);
 
   @override
-  int get length {
-    return 9 + _statement.utf8Length + _statementName.utf8Length;
-  }
-
-  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ParseIdentifier);
-    buffer.writeUint32(length - 1);
+    final length = 8 + _statement.utf8Length + _statementName.utf8Length;
+    buffer.writeUint32(length);
     // Name of prepared statement
-    applyStringToBuffer(_statementName, buffer);
-    applyStringToBuffer(_statement, buffer); // Query string
+    _applyStringToBuffer(_statementName, buffer);
+    _applyStringToBuffer(_statement, buffer); // Query string
     buffer.writeUint16(0);
   }
 }
@@ -165,16 +142,12 @@ class DescribeMessage extends ClientMessage {
       : _statementName = UTF8BackedString(statementName);
 
   @override
-  int get length {
-    return 7 + _statementName.utf8Length;
-  }
-
-  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.DescribeIdentifier);
-    buffer.writeUint32(length - 1);
+    final length = 6 + _statementName.utf8Length;
+    buffer.writeUint32(length);
     buffer.writeUint8(83);
-    applyStringToBuffer(_statementName, buffer); // Name of prepared statement
+    _applyStringToBuffer(_statementName, buffer); // Name of prepared statement
   }
 }
 
@@ -188,7 +161,6 @@ class BindMessage extends ClientMessage {
       : _typeSpecCount = _parameters.where((p) => p.isBinary).length,
         _statementName = UTF8BackedString(statementName);
 
-  @override
   int get length {
     if (_cachedLength == null) {
       var inputParameterElementCount = _parameters.length;
@@ -217,9 +189,9 @@ class BindMessage extends ClientMessage {
     buffer.writeUint32(length - 1);
 
     // Name of portal - currently unnamed portal.
-    applyBytesToBuffer([0], buffer);
+    buffer.writeUint8(0);
     // Name of prepared statement.
-    applyStringToBuffer(_statementName, buffer);
+    _applyStringToBuffer(_statementName, buffer);
 
     // OK, if we have no specified types at all, we can use 0. If we have all specified types, we can use 1. If we have a mix, we have to individually
     // call out each type.
@@ -259,25 +231,15 @@ class BindMessage extends ClientMessage {
 
 class ExecuteMessage extends ClientMessage {
   @override
-  int get length {
-    return 10;
-  }
-
-  @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ExecuteIdentifier);
-    buffer.writeUint32(length - 1);
-    applyBytesToBuffer([0], buffer); // Portal name
+    buffer.writeUint32(9);
+    buffer.writeUint8(0); // Portal name
     buffer.writeUint32(0);
   }
 }
 
 class SyncMessage extends ClientMessage {
-  @override
-  int get length {
-    return 5;
-  }
-
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.SyncIdentifier);
