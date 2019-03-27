@@ -14,10 +14,15 @@ import 'text_codec.dart';
 import 'types.dart';
 
 class Query<T> {
-  Query(this.statement, this.substitutionValues, this.connection,
-      this.transaction);
+  Query(
+    this.statement,
+    this.substitutionValues,
+    this.connection,
+    this.transaction, {
+    this.onlyReturnAffectedRowCount = false,
+  });
 
-  bool onlyReturnAffectedRowCount = false;
+  final bool onlyReturnAffectedRowCount;
 
   String statementIdentifier;
 
@@ -171,8 +176,8 @@ class Query<T> {
 class CachedQuery {
   CachedQuery(this.preparedStatementName, this.orderedParameters);
 
-  String preparedStatementName;
-  List<PostgreSQLFormatIdentifier> orderedParameters;
+  final String preparedStatementName;
+  final List<PostgreSQLFormatIdentifier> orderedParameters;
   List<FieldDescription> fieldDescriptions;
 
   bool get isValid {
@@ -193,69 +198,76 @@ class ParameterValue {
         substitutionValues[identifier.name], identifier.type);
   }
 
-  ParameterValue.binary(dynamic value, PostgreSQLDataType postgresType)
-      : isBinary = true {
+  factory ParameterValue.binary(
+      dynamic value, PostgreSQLDataType postgresType) {
     final converter = PostgresBinaryEncoder(postgresType);
-    bytes = converter.convert(value);
-    length = bytes?.length ?? 0;
+    final bytes = converter.convert(value);
+    final length = bytes?.length ?? 0;
+    return ParameterValue._(true, bytes, length);
   }
 
-  ParameterValue.text(dynamic value) : isBinary = false {
+  factory ParameterValue.text(dynamic value) {
+    Uint8List bytes;
     if (value != null) {
       final converter = PostgresTextEncoder(false);
       bytes = castBytes(utf8.encode(converter.convert(value)));
     }
-    length = bytes?.length;
+    final length = bytes?.length ?? 0;
+    return ParameterValue._(false, bytes, length);
   }
 
+  ParameterValue._(this.isBinary, this.bytes, this.length);
+
   final bool isBinary;
-  Uint8List bytes;
-  int length;
+  final Uint8List bytes;
+  final int length;
 }
 
 class FieldDescription {
-  Converter converter;
+  final Converter converter;
 
-  String fieldName;
-  int tableID;
-  int columnID;
-  int typeID;
-  int dataTypeSize;
-  int typeModifier;
-  int formatCode;
+  final String fieldName;
+  final int tableID;
+  final int columnID;
+  final int typeID;
+  final int dataTypeSize;
+  final int typeModifier;
+  final int formatCode;
 
   String resolvedTableName;
 
-  int parse(ByteData byteData, int initialOffset) {
-    int offset = initialOffset;
+  FieldDescription._(
+      this.converter,
+      this.fieldName,
+      this.tableID,
+      this.columnID,
+      this.typeID,
+      this.dataTypeSize,
+      this.typeModifier,
+      this.formatCode);
+
+  factory FieldDescription.read(ByteDataReader reader) {
     final buf = StringBuffer();
     int byte = 0;
     do {
-      byte = byteData.getUint8(offset);
-      offset += 1;
+      byte = reader.readUint8();
       if (byte != 0) {
         buf.writeCharCode(byte);
       }
     } while (byte != 0);
 
-    fieldName = buf.toString();
+    final fieldName = buf.toString();
 
-    tableID = byteData.getUint32(offset);
-    offset += 4;
-    columnID = byteData.getUint16(offset);
-    offset += 2;
-    typeID = byteData.getUint32(offset);
-    offset += 4;
-    dataTypeSize = byteData.getUint16(offset);
-    offset += 2;
-    typeModifier = byteData.getInt32(offset);
-    offset += 4;
-    formatCode = byteData.getUint16(offset);
-    offset += 2;
+    final tableID = reader.readUint32();
+    final columnID = reader.readUint16();
+    final typeID = reader.readUint32();
+    final dataTypeSize = reader.readUint16();
+    final typeModifier = reader.readInt32();
+    final formatCode = reader.readUint16();
 
-    converter = PostgresBinaryDecoder(typeID);
-
-    return offset;
+    final converter = PostgresBinaryDecoder(typeID);
+    return FieldDescription._(converter, fieldName, tableID, columnID, typeID,
+        dataTypeSize, typeModifier, formatCode);
   }
 
   @override
@@ -294,7 +306,11 @@ class PostgreSQLFormatIdentifier {
     'uuid': PostgreSQLDataType.uuid
   };
 
-  PostgreSQLFormatIdentifier(String t) {
+  factory PostgreSQLFormatIdentifier(String t) {
+    String name;
+    PostgreSQLDataType type;
+    String typeCast;
+
     final components = t.split('::');
     if (components.length > 1) {
       typeCast = components.sublist(1).join('');
@@ -321,9 +337,12 @@ class PostgreSQLFormatIdentifier {
 
     // Strip @
     name = name.substring(1, name.length);
+    return PostgreSQLFormatIdentifier._(name, type, typeCast);
   }
 
-  String name;
-  PostgreSQLDataType type;
-  String typeCast;
+  PostgreSQLFormatIdentifier._(this.name, this.type, this.typeCast);
+
+  final String name;
+  final PostgreSQLDataType type;
+  final String typeCast;
 }

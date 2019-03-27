@@ -388,9 +388,9 @@ abstract class _PostgreSQLExecutionContextMixin
           'Attempting to execute query, but connection is not open.');
     }
 
-    final query =
-        Query<int>(fmtString, substitutionValues, _connection, _transaction)
-          ..onlyReturnAffectedRowCount = true;
+    final query = Query<int>(
+        fmtString, substitutionValues, _connection, _transaction,
+        onlyReturnAffectedRowCount: true);
 
     return _enqueue(query, timeoutInSeconds: timeoutInSeconds);
   }

@@ -104,14 +104,11 @@ class RowDescriptionMessage extends ServerMessage {
   final fieldDescriptions = <FieldDescription>[];
 
   RowDescriptionMessage(Uint8List bytes) {
-    final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
-    int offset = 0;
-    final fieldCount = view.getInt16(offset);
-    offset += 2;
+    final reader = ByteDataReader()..add(bytes);
+    final fieldCount = reader.readInt16();
 
     for (var i = 0; i < fieldCount; i++) {
-      final rowDesc = FieldDescription();
-      offset = rowDesc.parse(view, offset);
+      final rowDesc = FieldDescription.read(reader);
       fieldDescriptions.add(rowDesc);
     }
   }
