@@ -1,10 +1,13 @@
 # Changelog
 
-## 1.0.3
+## 2.0.0-dev1
 
 - Restricted field access on [PostgreSQLConnection].
 - Connection-level default query timeout.
 - Option to specify timeout for the transaction's `"COMMIT"` query.
+- Optimized byte buffer parsing and construction with `package:buffer`.
+- Hardened codebase with `package:pedantic` and additional lints.
+- Updated codebase to Dart 2.2.
 
 ## 1.0.2
 - Add connection queue size
