@@ -146,7 +146,7 @@ class InterceptingConnection extends PostgreSQLConnection {
   List<String> queries = [];
 
   @override
-  Future<List<List<dynamic>>> query(String fmtString,
+  Future<PostgreSQLResult> query(String fmtString,
       {Map<String, dynamic> substitutionValues,
       bool allowReuse = true,
       int timeoutInSeconds}) {

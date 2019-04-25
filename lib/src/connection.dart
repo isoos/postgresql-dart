@@ -1,6 +1,7 @@
 library postgres.connection;
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -337,7 +338,7 @@ abstract class _PostgreSQLExecutionContextMixin
   int get queueSize => _queue.length;
 
   @override
-  Future<List<List<dynamic>>> query(String fmtString,
+  Future<PostgreSQLResult> query(String fmtString,
       {Map<String, dynamic> substitutionValues,
       bool allowReuse = true,
       int timeoutInSeconds}) async {
@@ -353,7 +354,9 @@ abstract class _PostgreSQLExecutionContextMixin
       query.statementIdentifier = _connection._cache.identifierForQuery(query);
     }
 
-    return _enqueue(query, timeoutInSeconds: timeoutInSeconds);
+    final rows = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
+    return _PostgreSQLResult(
+        rows.map((columns) => _PostgreSQLResultRow(columns)).toList());
   }
 
   @override
@@ -473,4 +476,14 @@ abstract class _PostgreSQLExecutionContextMixin
   }
 
   Future _onQueryError(Query query, dynamic error, [StackTrace trace]) async {}
+}
+
+class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
+    implements PostgreSQLResult {
+  _PostgreSQLResult(List<PostgreSQLResultRow> rows) : super(rows);
+}
+
+class _PostgreSQLResultRow extends UnmodifiableListView
+    implements PostgreSQLResultRow {
+  _PostgreSQLResultRow(List columns) : super(columns);
 }

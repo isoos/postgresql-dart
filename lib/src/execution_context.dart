@@ -29,7 +29,7 @@ abstract class PostgreSQLExecutionContext {
   /// By default, instances of this class will reuse queries. This allows significantly more efficient transport to and from the database. You do not have to do
   /// anything to opt in to this behavior, this connection will track the necessary information required to reuse queries without intervention. (The [fmtString] is
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
-  Future<List<List<dynamic>>> query(String fmtString,
+  Future<PostgreSQLResult> query(String fmtString,
       {Map<String, dynamic> substitutionValues,
       bool allowReuse = true,
       int timeoutInSeconds});
@@ -86,3 +86,13 @@ abstract class PostgreSQLExecutionContext {
       bool allowReuse = true,
       int timeoutInSeconds});
 }
+
+/// A single row of a query result.
+///
+/// Column values can be accessed through the [] [List] accessor.
+abstract class PostgreSQLResultRow implements List {}
+
+/// The query result.
+///
+/// Rows can be accessed through the [] [List] accessor.
+abstract class PostgreSQLResult implements List<PostgreSQLResultRow> {}
