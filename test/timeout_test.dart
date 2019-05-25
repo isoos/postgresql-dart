@@ -26,7 +26,9 @@ void main() {
     try {
       await conn.query('SELECT 1', timeoutInSeconds: 1);
       fail('unreachable');
-    } on TimeoutException {}
+    } on TimeoutException {
+      // ignore
+    }
 
     expect(f, completes);
   });
@@ -38,7 +40,9 @@ void main() {
         await ctx.query('SELECT pg_sleep(2)', timeoutInSeconds: 1);
       });
       fail('unreachable');
-    } on TimeoutException {}
+    } on TimeoutException {
+      // ignore
+    }
 
     expect(await conn.query('SELECT * from t'), hasLength(0));
   });
@@ -52,7 +56,9 @@ void main() {
         await ctx.query('INSERT INTO t (id) VALUES (1)');
       });
       fail('unreachable');
-    } on TimeoutException {}
+    } on TimeoutException {
+      // ignore
+    }
 
     expect(await conn.query('SELECT * from t'), hasLength(0));
   });
@@ -63,7 +69,9 @@ void main() {
     try {
       await conn.query('SELECT pg_sleep(2)', timeoutInSeconds: 1);
       fail('unreachable');
-    } on TimeoutException {}
+    } on TimeoutException {
+      // ignore
+    }
   });
 
   test('Query times out, next query in the queue runs', () async {

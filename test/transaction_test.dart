@@ -384,7 +384,9 @@ void main() {
           await c.query('INSERT INTO t (id) VALUES (1)');
         });
         expect(true, false);
-      } on PostgreSQLException {}
+      } on PostgreSQLException {
+        // ignore
+      }
 
       final result = await conn.transaction((ctx) async {
         return await ctx.query('SELECT id FROM t');
@@ -414,7 +416,9 @@ void main() {
           throw Exception('foo');
         });
         expect(true, false);
-      } on Exception {}
+      } on Exception {
+        // ignore
+      }
 
       final noRows = await conn.query('SELECT id FROM t');
       expect(noRows, []);
@@ -465,7 +469,9 @@ void main() {
           throw Exception('foo');
         });
         expect(true, false);
-      } on Exception {}
+      } on Exception {
+        // ignore
+      }
 
       final result = await conn.transaction((ctx) async {
         return await ctx.query('SELECT id FROM t');
@@ -505,7 +511,9 @@ void main() {
           await c.query('INSERT INTO t (id) VALUES (2)');
         });
         fail('unreachable');
-      } on PostgreSQLException {}
+      } on PostgreSQLException {
+        // ignore
+      }
 
       expect(reached, false);
       final res = await conn.query('SELECT * FROM t');
@@ -524,7 +532,9 @@ void main() {
           await c.query('INSERT INTO t (id) VALUES (2)');
         });
         fail('unreachable');
-      } on PostgreSQLException {}
+      } on PostgreSQLException {
+        // ignore
+      }
 
       final res = await conn.query('SELECT * FROM t');
       expect(res, []);

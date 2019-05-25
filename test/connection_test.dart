@@ -465,7 +465,9 @@ void main() {
       try {
         await conn.open();
         expect(true, false);
-      } on SocketException {}
+      } on SocketException {
+        // ignore
+      }
 
       await expectConnectionIsInvalid(conn);
     });
@@ -479,7 +481,9 @@ void main() {
       try {
         await conn.open();
         expect(true, false);
-      } on SocketException {}
+      } on SocketException {
+        // ignore
+      }
 
       await expectConnectionIsInvalid(conn);
     });
@@ -501,7 +505,9 @@ void main() {
       try {
         await conn.open();
         fail('unreachable');
-      } on TimeoutException {}
+      } on TimeoutException {
+        // ignore
+      }
 
       await expectConnectionIsInvalid(conn);
     });
@@ -523,7 +529,9 @@ void main() {
       try {
         await conn.open();
         fail('unreachable');
-      } on TimeoutException {}
+      } on TimeoutException {
+        // ignore
+      }
 
       await expectConnectionIsInvalid(conn);
     });
@@ -584,7 +592,9 @@ void main() {
       try {
         await conn.open();
         expect(true, false);
-      } on PostgreSQLException {}
+      } on PostgreSQLException {
+        // ignore
+      }
     });
   });
 

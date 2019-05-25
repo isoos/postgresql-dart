@@ -463,7 +463,9 @@ void main() {
       try {
         await connection.query('ljkasd');
         expect(true, false);
-      } on PostgreSQLException {}
+      } on PostgreSQLException {
+        // ignore
+      }
 
       expect(getQueryCache(connection).isEmpty, true);
     });
@@ -478,7 +480,9 @@ void main() {
             .query(string, substitutionValues: {'i1': 'foo', 'i2': 'bar'});
 
         expect(true, false);
-      } on PostgreSQLException {}
+      } on PostgreSQLException {
+        // ignore
+      }
 
       expect(getQueryCache(connection).length, 0);
     });
@@ -493,7 +497,9 @@ void main() {
             .query(string, substitutionValues: {'i1': 'foo', 'i2': 'bar'});
 
         expect(true, false);
-      } on PostgreSQLException {}
+      } on PostgreSQLException {
+        // ignores
+      }
 
       expect(hasCachedQueryNamed(connection, string), false);
 
@@ -528,7 +534,9 @@ void main() {
 
       try {
         await connection.query(string, substitutionValues: {'i': 'foo'});
-      } on FormatException {}
+      } on FormatException {
+        // ignore
+      }
 
       results = await connection.query(string, substitutionValues: {'i': 2});
       expect(results, [
