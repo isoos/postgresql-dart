@@ -329,7 +329,7 @@ class Notification {
 class _OidCache {
   final _tableOIDNameMap = <int, String>{};
 
-  Future _resolveOids(
+  Future _resolveTableNames(
       PostgreSQLExecutionContext c, List<FieldDescription> columns) async {
     //todo (joeconwaystk): If this was a cached query, resolving is table oids is unnecessary.
     // It's not a significant impact here, but an area for optimization. This includes
@@ -345,6 +345,10 @@ class _OidCache {
     if (unresolvedTableOIDs.isNotEmpty) {
       await _resolveTableOIDs(c, unresolvedTableOIDs);
     }
+
+    columns.forEach((desc) {
+      desc.resolvedTableName = _tableOIDNameMap[desc.tableID];
+    });
   }
 
   Future _resolveTableOIDs(PostgreSQLExecutionContext c, List<int> oids) async {
@@ -415,7 +419,7 @@ abstract class _PostgreSQLExecutionContextMixin
 
     final rows = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
     final columns = query.fieldDescriptions;
-    await _connection._oidCache._resolveOids(this, columns);
+    await _connection._oidCache._resolveTableNames(this, columns);
     return _mapifyRows(rows, columns);
   }
 
@@ -440,23 +444,15 @@ abstract class _PostgreSQLExecutionContextMixin
 
   List<Map<String, Map<String, dynamic>>> _mapifyRows(
       List<List<dynamic>> rows, List<FieldDescription> columns) {
-    columns.forEach((desc) {
-      desc.resolvedTableName =
-          _connection._oidCache._tableOIDNameMap[desc.tableID];
-    });
-
-    final tableNames = columns.map((c) => c.resolvedTableName).toSet().toList();
     return rows.map((row) {
-      final rowMap = Map<String, Map<String, dynamic>>.fromIterable(tableNames,
-          key: (name) => name as String, value: (_) => <String, dynamic>{});
-
-      final iterator = columns.iterator;
-      row.forEach((column) {
-        iterator.moveNext();
-        rowMap[iterator.current.resolvedTableName][iterator.current.fieldName] =
-            column;
+      final rowMap = <String, Map<String, dynamic>>{};
+      columns.forEach((c) {
+        rowMap.putIfAbsent(c.resolvedTableName, () => <String, dynamic>{});
       });
-
+      for (int i = 0; i < columns.length; i++) {
+        final col = columns[i];
+        rowMap[col.resolvedTableName][col.fieldName] = row[i];
+      }
       return rowMap;
     }).toList();
   }
