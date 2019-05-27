@@ -434,11 +434,12 @@ abstract class _PostgreSQLExecutionContextMixin
       columnDescriptions = await _connection._oidCache
           ._resolveTableNames(this, columnDescriptions);
     }
+    final metaData = _PostgreSQLResultMetaData(columnDescriptions);
 
     return _PostgreSQLResult(
-        columnDescriptions,
+        metaData,
         rows
-            .map((columns) => _PostgreSQLResultRow(columnDescriptions, columns))
+            .map((columns) => _PostgreSQLResultRow(metaData, columns))
             .toList());
   }
 
@@ -454,7 +455,7 @@ abstract class _PostgreSQLExecutionContextMixin
       allowReuse: allowReuse,
       timeoutInSeconds: timeoutInSeconds,
     );
-    return _mapifyRows(rs, rs.columnDescriptions);
+    return rs.map((row) => row.toTableColumnMap()).toList();
   }
 
   @override
@@ -475,21 +476,6 @@ abstract class _PostgreSQLExecutionContextMixin
 
   @override
   void cancelTransaction({String reason});
-
-  List<Map<String, Map<String, dynamic>>> _mapifyRows(
-      List<List<dynamic>> rows, List<ColumnDescription> columns) {
-    return rows.map((row) {
-      final rowMap = <String, Map<String, dynamic>>{};
-      columns.forEach((c) {
-        rowMap.putIfAbsent(c.tableName, () => <String, dynamic>{});
-      });
-      for (int i = 0; i < columns.length; i++) {
-        final col = columns[i];
-        rowMap[col.tableName][col.columnName] = row[i];
-      }
-      return rowMap;
-    }).toList();
-  }
 
   Future<T> _enqueue<T>(Query<T> query, {int timeoutInSeconds = 30}) async {
     if (_queue.add(query)) {
@@ -518,18 +504,61 @@ abstract class _PostgreSQLExecutionContextMixin
   Future _onQueryError(Query query, dynamic error, [StackTrace trace]) async {}
 }
 
+class _PostgreSQLResultMetaData {
+  final List<ColumnDescription> columnDescriptions;
+  List<String> _tableNames;
+
+  _PostgreSQLResultMetaData(this.columnDescriptions);
+
+  List<String> get tableNames {
+    _tableNames ??=
+        columnDescriptions.map((column) => column.tableName).toSet().toList();
+    return _tableNames;
+  }
+}
+
 class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
     implements PostgreSQLResult {
-  @override
-  final List<ColumnDescription> columnDescriptions;
+  final _PostgreSQLResultMetaData _metaData;
 
-  _PostgreSQLResult(this.columnDescriptions, List<PostgreSQLResultRow> rows)
+  _PostgreSQLResult(this._metaData, List<PostgreSQLResultRow> rows)
       : super(rows);
+
+  @override
+  List<ColumnDescription> get columnDescriptions =>
+      _metaData.columnDescriptions;
 }
 
 class _PostgreSQLResultRow extends UnmodifiableListView
     implements PostgreSQLResultRow {
-  final List<ColumnDescription> columnDescriptions;
+  final _PostgreSQLResultMetaData _metaData;
 
-  _PostgreSQLResultRow(this.columnDescriptions, List columns) : super(columns);
+  _PostgreSQLResultRow(this._metaData, List columns) : super(columns);
+
+  @override
+  List<ColumnDescription> get columnDescriptions =>
+      _metaData.columnDescriptions;
+
+  @override
+  Map<String, Map<String, dynamic>> toTableColumnMap() {
+    final rowMap = <String, Map<String, dynamic>>{};
+    _metaData.tableNames.forEach((tableName) {
+      rowMap[tableName] = <String, dynamic>{};
+    });
+    for (int i = 0; i < _metaData.columnDescriptions.length; i++) {
+      final col = _metaData.columnDescriptions[i];
+      rowMap[col.tableName][col.columnName] = this[i];
+    }
+    return rowMap;
+  }
+
+  @override
+  Map<String, dynamic> toColumnMap() {
+    final rowMap = <String, dynamic>{};
+    for (int i = 0; i < _metaData.columnDescriptions.length; i++) {
+      final col = _metaData.columnDescriptions[i];
+      rowMap[col.columnName] = this[i];
+    }
+    return rowMap;
+  }
 }

@@ -99,7 +99,17 @@ abstract class ColumnDescription {
 /// A single row of a query result.
 ///
 /// Column values can be accessed through the [] [List] accessor.
-abstract class PostgreSQLResultRow implements List {}
+abstract class PostgreSQLResultRow implements List {
+  List<ColumnDescription> get columnDescriptions;
+
+  /// Returns a two-level map that on the first level contains the resolved
+  /// table name, and on the second level the column name (or its alias).
+  Map<String, Map<String, dynamic>> toTableColumnMap();
+
+  /// Returns a single-level map that maps the column name (or its alias) to the
+  /// value returned on that position.
+  Map<String, dynamic> toColumnMap();
+}
 
 /// The query result.
 ///
