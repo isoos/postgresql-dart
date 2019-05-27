@@ -328,9 +328,18 @@ class Notification {
 
 class _OidCache {
   final _tableOIDNameMap = <int, String>{};
+  int _queryCount = 0;
 
-  Future _resolveTableNames(
-      PostgreSQLExecutionContext c, List<FieldDescription> columns) async {
+  int get queryCount => _queryCount;
+
+  void clear() {
+    _queryCount = 0;
+    _tableOIDNameMap.clear();
+  }
+
+  Future _resolveTableNames(_PostgreSQLExecutionContextMixin c,
+      List<FieldDescription> columns) async {
+    if (columns == null) return;
     //todo (joeconwaystk): If this was a cached query, resolving is table oids is unnecessary.
     // It's not a significant impact here, but an area for optimization. This includes
     // assigning resolvedTableName
@@ -351,10 +360,15 @@ class _OidCache {
     });
   }
 
-  Future _resolveTableOIDs(PostgreSQLExecutionContext c, List<int> oids) async {
+  Future _resolveTableOIDs(
+      _PostgreSQLExecutionContextMixin c, List<int> oids) async {
+    _queryCount++;
     final unresolvedIDString = oids.join(',');
-    final orderedTableNames = await c.query(
-        "SELECT relname FROM pg_class WHERE relkind='r' AND oid IN ($unresolvedIDString) ORDER BY oid ASC");
+    final orderedTableNames = await c._query(
+      "SELECT relname FROM pg_class WHERE relkind='r' AND oid IN ($unresolvedIDString) ORDER BY oid ASC",
+      allowReuse: false, // inlined OIDs would make it difficult anyway
+      resolveOids: false,
+    );
 
     final iterator = oids.iterator;
     orderedTableNames.forEach((tableName) {
@@ -378,11 +392,30 @@ abstract class _PostgreSQLExecutionContextMixin
   int get queueSize => _queue.length;
 
   @override
-  Future<PostgreSQLResult> query(String fmtString,
-      {Map<String, dynamic> substitutionValues,
-      bool allowReuse = true,
-      int timeoutInSeconds}) async {
+  Future<PostgreSQLResult> query(
+    String fmtString, {
+    Map<String, dynamic> substitutionValues,
+    bool allowReuse,
+    int timeoutInSeconds,
+  }) =>
+      _query(
+        fmtString,
+        substitutionValues: substitutionValues,
+        allowReuse: allowReuse,
+        timeoutInSeconds: timeoutInSeconds,
+      );
+
+  Future<PostgreSQLResult> _query(
+    String fmtString, {
+    Map<String, dynamic> substitutionValues,
+    bool allowReuse,
+    int timeoutInSeconds,
+    bool resolveOids,
+  }) async {
+    allowReuse ??= true;
     timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
+    resolveOids ??= true;
+
     if (_connection.isClosed) {
       throw PostgreSQLException(
           'Attempting to execute query, but connection is not open.');
@@ -395,32 +428,31 @@ abstract class _PostgreSQLExecutionContextMixin
     }
 
     final rows = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
+    final columnDescriptions = query.fieldDescriptions;
+    if (resolveOids) {
+      await _connection._oidCache._resolveTableNames(this, columnDescriptions);
+    }
+
     return _PostgreSQLResult(
-        rows.map((columns) => _PostgreSQLResultRow(columns)).toList());
+        columnDescriptions,
+        rows
+            .map((columns) => _PostgreSQLResultRow(columnDescriptions, columns))
+            .toList());
   }
 
   @override
   Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
       String fmtString,
       {Map<String, dynamic> substitutionValues,
-      bool allowReuse = true,
+      bool allowReuse,
       int timeoutInSeconds}) async {
-    timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
-    if (_connection.isClosed) {
-      throw PostgreSQLException(
-          'Attempting to execute query, but connection is not open.');
-    }
-
-    final query = Query<List<List<dynamic>>>(
-        fmtString, substitutionValues, _connection, _transaction);
-    if (allowReuse) {
-      query.statementIdentifier = _connection._cache.identifierForQuery(query);
-    }
-
-    final rows = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
-    final columns = query.fieldDescriptions;
-    await _connection._oidCache._resolveTableNames(this, columns);
-    return _mapifyRows(rows, columns);
+    final rs = await query(
+      fmtString,
+      substitutionValues: substitutionValues,
+      allowReuse: allowReuse,
+      timeoutInSeconds: timeoutInSeconds,
+    );
+    return _mapifyRows(rs, rs.columnDescriptions);
   }
 
   @override
@@ -486,10 +518,16 @@ abstract class _PostgreSQLExecutionContextMixin
 
 class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
     implements PostgreSQLResult {
-  _PostgreSQLResult(List<PostgreSQLResultRow> rows) : super(rows);
+  @override
+  final List<FieldDescription> columnDescriptions;
+
+  _PostgreSQLResult(this.columnDescriptions, List<PostgreSQLResultRow> rows)
+      : super(rows);
 }
 
 class _PostgreSQLResultRow extends UnmodifiableListView
     implements PostgreSQLResultRow {
-  _PostgreSQLResultRow(List columns) : super(columns);
+  final List<FieldDescription> columnDescriptions;
+
+  _PostgreSQLResultRow(this.columnDescriptions, List columns) : super(columns);
 }

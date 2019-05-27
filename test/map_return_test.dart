@@ -1,12 +1,13 @@
-import 'dart:async';
+import 'dart:mirrors';
+
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
 void main() {
-  InterceptingConnection connection;
+  PostgreSQLConnection connection;
 
   setUp(() async {
-    connection = InterceptingConnection('localhost', 5432, 'dart_test',
+    connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
         username: 'dart', password: 'dart');
     await connection.open();
 
@@ -103,29 +104,21 @@ void main() {
   });
 
   test('Table names get cached', () async {
-    final regex = RegExp(
-        "SELECT relname FROM pg_class WHERE relkind='r' AND oid IN \\(([0-9]*)\\) ORDER BY oid ASC");
-    final oids = <String>[];
+    clearOidQueryCount(connection);
+    expect(getOidQueryCount(connection), 0);
 
     await connection.mappedResultsQuery('SELECT id FROM t');
-    expect(connection.queries.length, 1);
-    var match = regex.firstMatch(connection.queries.first);
-    oids.add(match.group(1));
-    connection.queries.clear();
+    expect(getOidQueryCount(connection), 1);
 
     await connection.mappedResultsQuery('SELECT id FROM t');
-    expect(connection.queries.length, 0);
+    expect(getOidQueryCount(connection), 1);
 
     await connection.mappedResultsQuery(
         'SELECT t.id, u.id FROM t LEFT OUTER JOIN u ON t.id=u.t_id');
-    expect(connection.queries.length, 1);
-    match = regex.firstMatch(connection.queries.first);
-    expect(oids.contains(match.group(1)), false);
-    oids.add(match.group(1));
-    connection.queries.clear();
+    expect(getOidQueryCount(connection), 2);
 
     await connection.mappedResultsQuery('SELECT u.id FROM u');
-    expect(connection.queries.length, 0);
+    expect(getOidQueryCount(connection), 2);
   });
 
   test('Non-table mappedResultsQuery succeeds', () async {
@@ -138,20 +131,23 @@ void main() {
   });
 }
 
-class InterceptingConnection extends PostgreSQLConnection {
-  InterceptingConnection(String host, int port, String databaseName,
-      {String username, String password})
-      : super(host, port, databaseName, username: username, password: password);
+void clearOidQueryCount(PostgreSQLConnection connection) {
+  final oidCacheMirror = reflect(connection)
+      .type
+      .declarations
+      .values
+      .firstWhere((DeclarationMirror dm) =>
+          dm.simpleName.toString().contains('_oidCache'));
+  (reflect(connection).getField(oidCacheMirror.simpleName).reflectee).clear();
+}
 
-  List<String> queries = [];
-
-  @override
-  Future<PostgreSQLResult> query(String fmtString,
-      {Map<String, dynamic> substitutionValues,
-      bool allowReuse = true,
-      int timeoutInSeconds}) {
-    queries.add(fmtString);
-    return super.query(fmtString,
-        substitutionValues: substitutionValues, allowReuse: allowReuse);
-  }
+int getOidQueryCount(PostgreSQLConnection connection) {
+  final oidCacheMirror = reflect(connection)
+      .type
+      .declarations
+      .values
+      .firstWhere((DeclarationMirror dm) =>
+          dm.simpleName.toString().contains('_oidCache'));
+  return (reflect(connection).getField(oidCacheMirror.simpleName).reflectee)
+      .queryCount as int;
 }

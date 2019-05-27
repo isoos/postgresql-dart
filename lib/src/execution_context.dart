@@ -31,7 +31,7 @@ abstract class PostgreSQLExecutionContext {
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
   Future<PostgreSQLResult> query(String fmtString,
       {Map<String, dynamic> substitutionValues,
-      bool allowReuse = true,
+      bool allowReuse,
       int timeoutInSeconds});
 
   /// Executes a query on this context.
@@ -83,7 +83,7 @@ abstract class PostgreSQLExecutionContext {
   Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
       String fmtString,
       {Map<String, dynamic> substitutionValues,
-      bool allowReuse = true,
+      bool allowReuse,
       int timeoutInSeconds});
 }
 
@@ -95,4 +95,6 @@ abstract class PostgreSQLResultRow implements List {}
 /// The query result.
 ///
 /// Rows can be accessed through the [] [List] accessor.
-abstract class PostgreSQLResult implements List<PostgreSQLResultRow> {}
+abstract class PostgreSQLResult implements List<PostgreSQLResultRow> {
+  List<FieldDescription> get columnDescriptions;
+}
