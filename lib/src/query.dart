@@ -223,10 +223,11 @@ class ParameterValue {
   final int length;
 }
 
-class FieldDescription {
+class FieldDescription implements ColumnDescription {
   final Converter converter;
 
-  final String fieldName;
+  @override
+  final String columnName;
   final int tableID;
   final int columnID;
   final int typeID;
@@ -234,17 +235,20 @@ class FieldDescription {
   final int typeModifier;
   final int formatCode;
 
-  String resolvedTableName;
+  @override
+  final String tableName;
 
   FieldDescription._(
-      this.converter,
-      this.fieldName,
-      this.tableID,
-      this.columnID,
-      this.typeID,
-      this.dataTypeSize,
-      this.typeModifier,
-      this.formatCode);
+    this.converter,
+    this.columnName,
+    this.tableID,
+    this.columnID,
+    this.typeID,
+    this.dataTypeSize,
+    this.typeModifier,
+    this.formatCode,
+    this.tableName,
+  );
 
   factory FieldDescription.read(ByteDataReader reader) {
     final buf = StringBuffer();
@@ -266,13 +270,21 @@ class FieldDescription {
     final formatCode = reader.readUint16();
 
     final converter = PostgresBinaryDecoder(typeID);
-    return FieldDescription._(converter, fieldName, tableID, columnID, typeID,
-        dataTypeSize, typeModifier, formatCode);
+    return FieldDescription._(
+      converter, fieldName, tableID, columnID, typeID,
+      dataTypeSize, typeModifier, formatCode,
+      null, // tableName
+    );
+  }
+
+  FieldDescription change({String tableName}) {
+    return FieldDescription._(converter, columnName, tableID, columnID, typeID,
+        dataTypeSize, typeModifier, formatCode, tableName ?? this.tableName);
   }
 
   @override
   String toString() {
-    return '$fieldName $tableID $columnID $typeID $dataTypeSize $typeModifier $formatCode';
+    return '$columnName $tableID $columnID $typeID $dataTypeSize $typeModifier $formatCode';
   }
 }
 

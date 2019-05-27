@@ -87,6 +87,15 @@ abstract class PostgreSQLExecutionContext {
       int timeoutInSeconds});
 }
 
+/// A description of a column.
+abstract class ColumnDescription {
+  /// The name of the column returned by the query.
+  String get columnName;
+
+  /// The resolved name of the referenced table.
+  String get tableName;
+}
+
 /// A single row of a query result.
 ///
 /// Column values can be accessed through the [] [List] accessor.
@@ -96,5 +105,5 @@ abstract class PostgreSQLResultRow implements List {}
 ///
 /// Rows can be accessed through the [] [List] accessor.
 abstract class PostgreSQLResult implements List<PostgreSQLResultRow> {
-  List<FieldDescription> get columnDescriptions;
+  List<ColumnDescription> get columnDescriptions;
 }

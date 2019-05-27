@@ -337,9 +337,10 @@ class _OidCache {
     _tableOIDNameMap.clear();
   }
 
-  Future _resolveTableNames(_PostgreSQLExecutionContextMixin c,
+  Future<List<FieldDescription>> _resolveTableNames(
+      _PostgreSQLExecutionContextMixin c,
       List<FieldDescription> columns) async {
-    if (columns == null) return;
+    if (columns == null) return null;
     //todo (joeconwaystk): If this was a cached query, resolving is table oids is unnecessary.
     // It's not a significant impact here, but an area for optimization. This includes
     // assigning resolvedTableName
@@ -355,9 +356,9 @@ class _OidCache {
       await _resolveTableOIDs(c, unresolvedTableOIDs);
     }
 
-    columns.forEach((desc) {
-      desc.resolvedTableName = _tableOIDNameMap[desc.tableID];
-    });
+    return columns
+        .map((c) => c.change(tableName: _tableOIDNameMap[c.tableID]))
+        .toList();
   }
 
   Future _resolveTableOIDs(
@@ -428,9 +429,10 @@ abstract class _PostgreSQLExecutionContextMixin
     }
 
     final rows = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
-    final columnDescriptions = query.fieldDescriptions;
+    List<FieldDescription> columnDescriptions = query.fieldDescriptions;
     if (resolveOids) {
-      await _connection._oidCache._resolveTableNames(this, columnDescriptions);
+      columnDescriptions = await _connection._oidCache
+          ._resolveTableNames(this, columnDescriptions);
     }
 
     return _PostgreSQLResult(
@@ -475,15 +477,15 @@ abstract class _PostgreSQLExecutionContextMixin
   void cancelTransaction({String reason});
 
   List<Map<String, Map<String, dynamic>>> _mapifyRows(
-      List<List<dynamic>> rows, List<FieldDescription> columns) {
+      List<List<dynamic>> rows, List<ColumnDescription> columns) {
     return rows.map((row) {
       final rowMap = <String, Map<String, dynamic>>{};
       columns.forEach((c) {
-        rowMap.putIfAbsent(c.resolvedTableName, () => <String, dynamic>{});
+        rowMap.putIfAbsent(c.tableName, () => <String, dynamic>{});
       });
       for (int i = 0; i < columns.length; i++) {
         final col = columns[i];
-        rowMap[col.resolvedTableName][col.fieldName] = row[i];
+        rowMap[col.tableName][col.columnName] = row[i];
       }
       return rowMap;
     }).toList();
@@ -519,7 +521,7 @@ abstract class _PostgreSQLExecutionContextMixin
 class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
     implements PostgreSQLResult {
   @override
-  final List<FieldDescription> columnDescriptions;
+  final List<ColumnDescription> columnDescriptions;
 
   _PostgreSQLResult(this.columnDescriptions, List<PostgreSQLResultRow> rows)
       : super(rows);
@@ -527,7 +529,7 @@ class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
 
 class _PostgreSQLResultRow extends UnmodifiableListView
     implements PostgreSQLResultRow {
-  final List<FieldDescription> columnDescriptions;
+  final List<ColumnDescription> columnDescriptions;
 
   _PostgreSQLResultRow(this.columnDescriptions, List columns) : super(columns);
 }

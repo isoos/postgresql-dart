@@ -39,6 +39,9 @@ void main() {
       expect(result, [expectedRow]);
 
       result = await connection.query('select t from t');
+      expect(result.columnDescriptions, hasLength(1));
+      expect(result.columnDescriptions.single.tableName, 't');
+      expect(result.columnDescriptions.single.columnName, 't');
       expect(result, [expectedRow]);
     });
 
@@ -152,6 +155,11 @@ void main() {
         {'a': 'b'},
         '01234567-89ab-cdef-0123-0123456789ab'
       ];
+      expect(result.columnDescriptions, hasLength(14));
+      expect(result.columnDescriptions.first.tableName, 't');
+      expect(result.columnDescriptions.first.columnName, 'i');
+      expect(result.columnDescriptions.last.tableName, 't');
+      expect(result.columnDescriptions.last.columnName, 'u');
       expect(result, [expectedRow]);
       result = await connection.query(
           'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u from t');
