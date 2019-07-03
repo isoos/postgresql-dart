@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0-dev1
+## 2.0.0-dev1.0
 
 - Restricted field access on [PostgreSQLConnection].
 - Connection-level default query timeout.
