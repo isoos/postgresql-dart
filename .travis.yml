@@ -16,7 +16,6 @@ before_script:
   - psql -c 'create user darttrust with createdb;' -U postgres
   - psql -c 'grant all on database dart_test to darttrust;' -U postgres
   - pub get
-#script: bash ci/script.sh
 dart_task:
   - test: --run-skipped -r expanded -j 1
   - dartfmt
