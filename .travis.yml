@@ -21,3 +21,4 @@ script: bash ci/script.sh
 branches:
   only:
     - master
+    - dev
