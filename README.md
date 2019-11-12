@@ -55,6 +55,11 @@ await connection.transaction((ctx) async {
 
 See the API documentation: https://www.dartdocs.org/documentation/postgres/latest.
 
+## Development branch
+
+The package's upcoming 2.0 version is being developed in the
+[`dev`](https://github.com/stablekernel/postgresql-dart/tree/dev) branch.
+
 ## Features and bugs
 
 Please file feature requests and bugs at the [issue tracker][tracker].
