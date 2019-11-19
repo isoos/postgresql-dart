@@ -53,11 +53,13 @@ class StartupMessage extends ClientMessage {
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
-    final fixedLength = 53;
-    final variableLength = (_username?.utf8Length ?? 0) +
-        _databaseName.utf8Length +
-        _timeZone.utf8Length +
-        3;
+    int fixedLength = 48;
+    int variableLength = _databaseName.utf8Length + _timeZone.utf8Length + 2;
+
+    if (_username != null) {
+      fixedLength += 5;
+      variableLength += _username.utf8Length + 1;
+    }
 
     buffer.writeInt32(fixedLength + variableLength);
     buffer.writeInt32(ClientMessage.ProtocolVersion);
