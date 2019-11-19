@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0
+
+- Fixed startup packet length when username is null (#111).
+- Finalized dev release.
+
 ## 2.0.0-dev1.0
 
 - Restricted field access on [PostgreSQLConnection].
