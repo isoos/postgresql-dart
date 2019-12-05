@@ -119,8 +119,9 @@ class PostgreSQLFormat {
         final identifier = PostgreSQLFormatIdentifier(t.buffer.toString());
 
         if (!values.containsKey(identifier.name)) {
-          throw FormatException(
-              'Format string specified identifier with name ${identifier.name}, but key was not present in values. Format string: $fmtString');
+          // Format string specified identifier with name ${identifier.name},
+          // but key was not present in values.
+          return t.buffer;
         }
 
         final val = replace(identifier, idx);

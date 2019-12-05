@@ -361,24 +361,17 @@ void main() {
     });
 
     test(
-        'Not enough parameters to support format string throws error prior to sending to server',
+        'Missing substitution value does not throw, query is sent to the server without changing that part.',
         () async {
-      try {
-        await connection
-            .query('INSERT INTO t (i1) values (@i1)', substitutionValues: {});
-        expect(true, false);
-      } on FormatException catch (e) {
-        expect(e.message,
-            contains('Format string specified identifier with name i1'));
-      }
+      final rs1 = await connection
+          .query('SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1)');
+      expect(rs1.first.toColumnMap(), {'col1': 'user@domain.com'});
 
-      try {
-        await connection.query('INSERT INTO t (i1) values (@i1)');
-        expect(true, false);
-      } on FormatException catch (e) {
-        expect(e.message,
-            contains('Format string specified identifier with name i1'));
-      }
+      final rs2 = await connection.query(
+        'SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1) WHERE col1 > @u1',
+        substitutionValues: {'u1': 'hello@domain.com'},
+      );
+      expect(rs2.first.toColumnMap(), {'col1': 'user@domain.com'});
     });
 
     test('Wrong type for parameter in substitution values fails', () async {

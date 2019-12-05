@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.0
+
+- Missing substitution value no longer throws `FormatException`.
+  [More details in the GitHub issue.](https://github.com/stablekernel/postgresql-dart/issues/57)
+
 ## 2.0.0
 
 - Fixed startup packet length when username is null (#111).
