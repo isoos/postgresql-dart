@@ -1,6 +1,6 @@
 part of postgres.connection;
 
-typedef Future<dynamic> _TransactionQuerySignature(
+typedef _TransactionQuerySignature = Future<dynamic> Function(
     PostgreSQLExecutionContext connection);
 
 class _TransactionProxy extends Object

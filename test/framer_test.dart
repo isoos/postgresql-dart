@@ -197,7 +197,7 @@ Uint8List bufferWithMessages(List<List<int>> messages) {
   return Uint8List.fromList(messages.expand((l) => l).toList());
 }
 
-flush(MessageFramer framer) {
+void flush(MessageFramer framer) {
   framer.messageQueue.clear();
   framer.addBytes(bufferWithMessages([
     messageWithBytes([1, 2, 3], 1)

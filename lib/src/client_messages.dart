@@ -53,8 +53,8 @@ class StartupMessage extends ClientMessage {
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
-    int fixedLength = 48;
-    int variableLength = _databaseName.utf8Length + _timeZone.utf8Length + 2;
+    var fixedLength = 48;
+    var variableLength = _databaseName.utf8Length + _timeZone.utf8Length + 2;
 
     if (_username != null) {
       fixedLength += 5;

@@ -125,7 +125,7 @@ void main() {
     });
 
     test('May intentionally rollback transaction', () async {
-      bool reached = false;
+      var reached = false;
       await conn.transaction((c) async {
         await c.query('INSERT INTO t (id) VALUES (1)');
         c.cancelTransaction();
@@ -500,7 +500,7 @@ void main() {
     });
 
     test('Async query failure prevents closure from continuning', () async {
-      bool reached = false;
+      var reached = false;
 
       try {
         await conn.transaction((c) async {

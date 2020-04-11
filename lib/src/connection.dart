@@ -198,8 +198,10 @@ class PostgreSQLConnection extends Object
   /// If specified, the final `"COMMIT"` query of the transaction will use
   /// [commitTimeoutInSeconds] as its timeout, otherwise the connection's
   /// default query timeout will be used.
-  Future transaction(Future queryBlock(PostgreSQLExecutionContext connection),
-      {int commitTimeoutInSeconds}) async {
+  Future transaction(
+    Future Function(PostgreSQLExecutionContext connection) queryBlock, {
+    int commitTimeoutInSeconds,
+  }) async {
     if (isClosed) {
       throw PostgreSQLException(
           'Attempting to execute query, but connection is not open.');
@@ -429,7 +431,7 @@ abstract class _PostgreSQLExecutionContextMixin
     }
 
     final rows = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
-    List<FieldDescription> columnDescriptions = query.fieldDescriptions;
+    var columnDescriptions = query.fieldDescriptions;
     if (resolveOids) {
       columnDescriptions = await _connection._oidCache
           ._resolveTableNames(this, columnDescriptions);
@@ -545,7 +547,7 @@ class _PostgreSQLResultRow extends UnmodifiableListView
     _metaData.tableNames.forEach((tableName) {
       rowMap[tableName] = <String, dynamic>{};
     });
-    for (int i = 0; i < _metaData.columnDescriptions.length; i++) {
+    for (var i = 0; i < _metaData.columnDescriptions.length; i++) {
       final col = _metaData.columnDescriptions[i];
       rowMap[col.tableName][col.columnName] = this[i];
     }
@@ -555,7 +557,7 @@ class _PostgreSQLResultRow extends UnmodifiableListView
   @override
   Map<String, dynamic> toColumnMap() {
     final rowMap = <String, dynamic>{};
-    for (int i = 0; i < _metaData.columnDescriptions.length; i++) {
+    for (var i = 0; i < _metaData.columnDescriptions.length; i++) {
       final col = _metaData.columnDescriptions[i];
       rowMap[col.columnName] = this[i];
     }

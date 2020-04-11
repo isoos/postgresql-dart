@@ -8,7 +8,7 @@ import 'server_messages.dart';
 const int _headerByteSize = 5;
 final _emptyData = Uint8List(0);
 
-typedef ServerMessage _ServerMessageFn(Uint8List data);
+typedef _ServerMessageFn = ServerMessage Function(Uint8List data);
 
 Map<int, _ServerMessageFn> _messageTypeMap = {
   49: (d) => ParseCompleteMessage(),
@@ -42,7 +42,7 @@ class MessageFramer {
   void addBytes(Uint8List bytes) {
     _reader.add(bytes);
 
-    bool evaluateNextMessage = true;
+    var evaluateNextMessage = true;
     while (evaluateNextMessage) {
       evaluateNextMessage = false;
 

@@ -68,7 +68,7 @@ void main() {
 
     test('Notification many channel', () async {
       final countResponse = <String, int>{};
-      int totalCountResponse = 0;
+      var totalCountResponse = 0;
       final finishExecute = Completer();
       connection.notifications.listen((msg) {
         final count = countResponse[msg.channel];
@@ -81,7 +81,7 @@ void main() {
       final channel2 = 'virtual2';
 
       final notifier = () async {
-        for (int i = 0; i < 5; i++) {
+        for (var i = 0; i < 5; i++) {
           await connection.execute('NOTIFY $channel1;'
               'NOTIFY $channel2;');
         }

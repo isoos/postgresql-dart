@@ -252,7 +252,7 @@ class FieldDescription implements ColumnDescription {
 
   factory FieldDescription.read(ByteDataReader reader) {
     final buf = StringBuffer();
-    int byte = 0;
+    var byte = 0;
     do {
       byte = reader.readUint8();
       if (byte != 0) {
@@ -288,7 +288,7 @@ class FieldDescription implements ColumnDescription {
   }
 }
 
-typedef String SQLReplaceIdentifierFunction(
+typedef SQLReplaceIdentifierFunction = String Function(
     PostgreSQLFormatIdentifier identifier, int index);
 
 enum PostgreSQLFormatTokenType { text, variable }

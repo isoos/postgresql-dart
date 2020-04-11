@@ -167,7 +167,7 @@ class CommandCompleteMessage extends ServerMessage {
   factory CommandCompleteMessage(Uint8List bytes) {
     final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
     final match = identifierExpression.firstMatch(str);
-    int rowsAffected = 0;
+    var rowsAffected = 0;
     if (match.end < str.length) {
       rowsAffected = int.parse(str.split(' ').last);
     }
@@ -221,7 +221,7 @@ class UnknownMessage extends ServerMessage {
   }
 
   @override
-  operator ==(dynamic other) {
+  bool operator ==(dynamic other) {
     if (bytes != null) {
       if (bytes.length != other.bytes.length) {
         return false;

@@ -98,7 +98,7 @@ abstract class ColumnDescription {
 
 /// A single row of a query result.
 ///
-/// Column values can be accessed through the [] [List] accessor.
+/// Column values can be accessed through the `[]` operator.
 abstract class PostgreSQLResultRow implements List {
   List<ColumnDescription> get columnDescriptions;
 
@@ -113,7 +113,7 @@ abstract class PostgreSQLResultRow implements List {
 
 /// The query result.
 ///
-/// Rows can be accessed through the [] [List] accessor.
+/// Rows can be accessed through the `[]` operator.
 abstract class PostgreSQLResult implements List<PostgreSQLResultRow> {
   List<ColumnDescription> get columnDescriptions;
 }

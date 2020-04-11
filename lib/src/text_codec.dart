@@ -48,8 +48,8 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
     final backslashCodeUnit = r'\'.codeUnitAt(0);
     final quoteCodeUnit = r"'".codeUnitAt(0);
 
-    int quoteCount = 0;
-    int backslashCount = 0;
+    var quoteCount = 0;
+    var backslashCount = 0;
     final it = RuneIterator(text);
     while (it.moveNext()) {
       if (it.current == backslashCodeUnit) {
