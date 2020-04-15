@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1
+
+- Fix `RuneIterator.current` use, which no longer returns `null` in 2.8 SDK.
+
 ## 2.1.0
 
 - Missing substitution value no longer throws `FormatException`.
