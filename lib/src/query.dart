@@ -209,8 +209,9 @@ class ParameterValue {
   factory ParameterValue.text(dynamic value) {
     Uint8List bytes;
     if (value != null) {
-      final converter = PostgresTextEncoder(false);
-      bytes = castBytes(utf8.encode(converter.convert(value)));
+      final converter = PostgresTextEncoder();
+      bytes = castBytes(
+          utf8.encode(converter.convert(value, escapeStrings: false)));
     }
     final length = bytes?.length ?? 0;
     return ParameterValue._(false, bytes, length);

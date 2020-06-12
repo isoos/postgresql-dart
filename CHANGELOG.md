@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.0
+
+- Preparation for custom type converters.
+
 ## 2.1.1
 
 - Fix `RuneIterator.current` use, which no longer returns `null` in 2.8 SDK.

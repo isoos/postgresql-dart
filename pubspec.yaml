@@ -1,6 +1,6 @@
 name: postgres
 description: PostgreSQL database driver. Supports statement reuse and binary protocol.
-version: 2.1.1
+version: 2.2.0-dev
 homepage: https://github.com/stablekernel/postgresql-dart
 
 environment:

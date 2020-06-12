@@ -54,7 +54,7 @@ class PostgreSQLFormat {
 
   static String substitute(String fmtString, Map<String, dynamic> values,
       {SQLReplaceIdentifierFunction replace}) {
-    final converter = PostgresTextEncoder(true);
+    final converter = PostgresTextEncoder();
     values ??= <String, dynamic>{};
     replace ??= (spec, index) => converter.convert(values[spec.name]);
 

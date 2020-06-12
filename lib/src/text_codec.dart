@@ -2,45 +2,42 @@ import 'dart:convert';
 
 import 'package:postgres/postgres.dart';
 
-class PostgresTextEncoder extends Converter<dynamic, String> {
-  const PostgresTextEncoder(this._escapeStrings);
-
-  final bool _escapeStrings;
-
-  @override
-  String convert(dynamic value) {
+class PostgresTextEncoder {
+  String convert(dynamic value, {bool escapeStrings = true}) {
     if (value == null) {
       return 'null';
     }
 
     if (value is int) {
-      return encodeNumber(value);
+      return _encodeNumber(value);
     }
 
     if (value is double) {
-      return encodeDouble(value);
+      return _encodeDouble(value);
     }
 
     if (value is String) {
-      return encodeString(value, _escapeStrings);
+      return _encodeString(value, escapeStrings);
     }
 
     if (value is DateTime) {
-      return encodeDateTime(value, isDateOnly: false);
+      return _encodeDateTime(value, isDateOnly: false);
     }
 
     if (value is bool) {
-      return encodeBoolean(value);
+      return _encodeBoolean(value);
     }
 
     if (value is Map) {
-      return encodeJSON(value);
+      return _encodeJSON(value);
     }
+
+    // TODO: use custom type encoders
 
     throw PostgreSQLException("Could not infer type of value '$value'.");
   }
 
-  String encodeString(String text, bool escapeStrings) {
+  String _encodeString(String text, bool escapeStrings) {
     if (!escapeStrings) {
       return text;
     }
@@ -85,7 +82,7 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
     return buf.toString();
   }
 
-  String encodeNumber(num value) {
+  String _encodeNumber(num value) {
     if (value.isNaN) {
       return "'nan'";
     }
@@ -97,7 +94,7 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
     return value.toInt().toString();
   }
 
-  String encodeDouble(double value) {
+  String _encodeDouble(double value) {
     if (value.isNaN) {
       return "'nan'";
     }
@@ -109,11 +106,11 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
     return value.toString();
   }
 
-  String encodeBoolean(bool value) {
+  String _encodeBoolean(bool value) {
     return value ? 'TRUE' : 'FALSE';
   }
 
-  String encodeDateTime(DateTime value, {bool isDateOnly}) {
+  String _encodeDateTime(DateTime value, {bool isDateOnly}) {
     var string = value.toIso8601String();
 
     if (isDateOnly) {
@@ -147,7 +144,7 @@ class PostgresTextEncoder extends Converter<dynamic, String> {
     return "'$string'";
   }
 
-  String encodeJSON(dynamic value) {
+  String _encodeJSON(dynamic value) {
     if (value == null) {
       return 'null';
     }

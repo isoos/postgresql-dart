@@ -232,8 +232,9 @@ void main() {
   });
 
   group('Text encoders', () {
+    final encoder = PostgresTextEncoder();
+
     test('Escape strings', () {
-      final encoder = PostgresTextEncoder(true);
       //                                                       '   b   o    b   '
       expect(
           utf8.encode(encoder.convert('bob')), equals([39, 98, 111, 98, 39]));
@@ -294,9 +295,8 @@ void main() {
             DateTime(12345, DateTime.february, 3, 4, 5, 6, 0)
       };
 
-      final encoder = PostgresTextEncoder(false);
       pairs.forEach((k, v) {
-        expect(encoder.convert(v), "'$k'");
+        expect(encoder.convert(v, escapeStrings: false), "'$k'");
       });
     });
 
@@ -311,37 +311,29 @@ void main() {
         '0.0': 0.0
       };
 
-      final encoder = PostgresTextEncoder(false);
       pairs.forEach((k, v) {
-        expect(encoder.convert(v), '$k');
+        expect(encoder.convert(v, escapeStrings: false), '$k');
       });
     });
 
     test('Encode Int', () {
-      final encoder = PostgresTextEncoder(false);
-
       expect(encoder.convert(1), '1');
       expect(encoder.convert(1234324323), '1234324323');
       expect(encoder.convert(-1234324323), '-1234324323');
     });
 
     test('Encode Bool', () {
-      final encoder = PostgresTextEncoder(false);
-
       expect(encoder.convert(true), 'TRUE');
       expect(encoder.convert(false), 'FALSE');
     });
 
     test('Encode JSONB', () {
-      final encoder = PostgresTextEncoder(false);
-
       expect(encoder.convert({'a': 'b'}), '{"a":"b"}');
       expect(encoder.convert({'a': true}), '{"a":true}');
       expect(encoder.convert({'b': false}), '{"b":false}');
     });
 
     test('Attempt to infer unknown type throws exception', () {
-      final encoder = PostgresTextEncoder(false);
       try {
         encoder.convert([]);
         fail('unreachable');
