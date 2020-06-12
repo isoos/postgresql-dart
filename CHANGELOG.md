@@ -2,6 +2,8 @@
 
 ## 2.2.0
 
+- Supporting Unix socket connections. (Thanks to [grillbiff](https://github.com/grillbiff),
+  [#124](https://github.com/stablekernel/postgresql-dart/pull/124))
 - Preparation for custom type converters.
 
 ## 2.1.1
