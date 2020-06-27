@@ -11,7 +11,7 @@ This driver uses the more efficient and secure extended query format of the Post
 Create `PostgreSQLConnection`s and `open` them:
 
 ```dart
-var connection = new PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
+var connection = PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
 await connection.open();
 ```
 
@@ -47,18 +47,13 @@ Execute queries in a transaction:
 ```dart
 await connection.transaction((ctx) async {
     var result = await ctx.query("SELECT id FROM table");
-    await ctx.query("INSERT INTO table (id) VALUES (@a:int4)", {
+    await ctx.query("INSERT INTO table (id) VALUES (@a:int4)", substitutionValues: {
         "a" : result.last[0] + 1
     });
 });
 ```
 
-See the API documentation: https://www.dartdocs.org/documentation/postgres/latest.
-
-## Development branch
-
-The package's upcoming 2.0 version is being developed in the
-[`dev`](https://github.com/stablekernel/postgresql-dart/tree/dev) branch.
+See the API documentation: https://pub.dev/documentation/postgres/latest/
 
 ## Features and bugs
 
