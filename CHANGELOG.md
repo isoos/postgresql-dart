@@ -5,6 +5,8 @@
 - Supporting Unix socket connections. (Thanks to [grillbiff](https://github.com/grillbiff),
   [#124](https://github.com/stablekernel/postgresql-dart/pull/124))
 - Preparation for custom type converters.
+- Added rowsAffected to PostgreSQLResult. (Thanks to [arturaz](https://github.com/arturaz),
+  [#143](https://github.com/stablekernel/postgresql-dart/pull/143))
 
 ## 2.1.1
 
