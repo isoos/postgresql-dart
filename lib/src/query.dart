@@ -26,7 +26,7 @@ class Query<T> {
 
   String statementIdentifier;
 
-  Future<T> get future => _onComplete.future;
+  Future<QueryResult<T>> get future => _onComplete.future;
 
   final String statement;
   final Map<String, dynamic> substitutionValues;
@@ -38,7 +38,7 @@ class Query<T> {
 
   CachedQuery cache;
 
-  final _onComplete = Completer<T>.sync();
+  final _onComplete = Completer<QueryResult<T>>.sync();
   List<FieldDescription> _fieldDescriptions;
 
   List<FieldDescription> get fieldDescriptions => _fieldDescriptions;
@@ -154,11 +154,11 @@ class Query<T> {
     }
 
     if (onlyReturnAffectedRowCount) {
-      _onComplete.complete(rowsAffected as T);
+      _onComplete.complete(QueryResult(rowsAffected, null));
       return;
     }
 
-    _onComplete.complete(rows as T);
+    _onComplete.complete(QueryResult(rowsAffected, rows as T));
   }
 
   void completeError(dynamic error, [StackTrace stackTrace]) {
@@ -171,6 +171,13 @@ class Query<T> {
 
   @override
   String toString() => statement;
+}
+
+class QueryResult<T> {
+  final int affectedRowCount;
+  final T value;
+
+  const QueryResult(this.affectedRowCount, this.value);
 }
 
 class CachedQuery {
