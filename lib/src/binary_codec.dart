@@ -387,7 +387,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     final size = buffer.getInt32(12);
 
     var offset = 20;
-    for (var i = 0; i <= size; i++) {
+    for (var i = 0; i < size; i++) {
       final len = buffer.getInt32(offset);
       decoded.add(valueDecoder(offset + 4, len));
       offset += 4 + len;
