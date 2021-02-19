@@ -179,7 +179,7 @@ void main() {
           '${PostgreSQLFormat.id('dt', type: PostgreSQLDataType.date)},'
           '${PostgreSQLFormat.id('ts', type: PostgreSQLDataType.timestampWithoutTimezone)},'
           '${PostgreSQLFormat.id('tsz', type: PostgreSQLDataType.timestampWithTimezone)},'
-          '${PostgreSQLFormat.id('j', type: PostgreSQLDataType.json)},'
+          '${PostgreSQLFormat.id('j', type: PostgreSQLDataType.jsonb)},'
           '${PostgreSQLFormat.id('u', type: PostgreSQLDataType.uuid)})'
           ' returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u',
           substitutionValues: {

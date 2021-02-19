@@ -185,14 +185,14 @@ void main() {
     });
 
     test('jsonb', () async {
-      await expectInverse('string', PostgreSQLDataType.json);
-      await expectInverse(2, PostgreSQLDataType.json);
-      await expectInverse(['foo'], PostgreSQLDataType.json);
+      await expectInverse('string', PostgreSQLDataType.jsonb);
+      await expectInverse(2, PostgreSQLDataType.jsonb);
+      await expectInverse(['foo'], PostgreSQLDataType.jsonb);
       await expectInverse({
         'key': 'val',
         'key1': 1,
         'array': ['foo']
-      }, PostgreSQLDataType.json);
+      }, PostgreSQLDataType.jsonb);
 
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:jsonb)',

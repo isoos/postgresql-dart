@@ -48,6 +48,11 @@ enum PostgreSQLDataType {
   /// Must be encodable via [json.encode].
   ///
   /// Values will be encoded via [json.encode] before being sent to the database.
+  jsonb,
+
+  /// Must be encodable via [json.encode].
+  ///
+  /// Values will be encoded via [json.encode] before being sent to the database.
   json,
 
   /// Must be a [List] of [int].
