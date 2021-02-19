@@ -329,6 +329,7 @@ class PostgreSQLFormatIdentifier {
     '_int4': PostgreSQLDataType.integerArray,
     '_text': PostgreSQLDataType.textArray,
     '_float8': PostgreSQLDataType.doubleArray,
+    'varchar': PostgreSQLDataType.varChar,
   };
 
   factory PostgreSQLFormatIdentifier(String t) {

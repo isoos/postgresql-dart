@@ -82,4 +82,7 @@ enum PostgreSQLDataType {
 
   /// Must be a [List<double>]
   doubleArray,
+
+  /// Must be a [String]
+  varChar,
 }

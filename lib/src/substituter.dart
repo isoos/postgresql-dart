@@ -57,6 +57,8 @@ class PostgreSQLFormat {
         return '_text';
       case PostgreSQLDataType.doubleArray:
         return '_float8';
+      case PostgreSQLDataType.varChar:
+        return 'varchar';
     }
 
     return null;

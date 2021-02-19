@@ -83,6 +83,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
         }
       case PostgreSQLDataType.name:
       case PostgreSQLDataType.text:
+      case PostgreSQLDataType.varChar:
         {
           if (value is String) {
             return castBytes(utf8.encode(value));
@@ -295,6 +296,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     switch (dataType) {
       case PostgreSQLDataType.name:
       case PostgreSQLDataType.text:
+      case PostgreSQLDataType.varChar:
         return utf8.decode(value);
       case PostgreSQLDataType.boolean:
         return buffer.getInt8(0) != 0;
@@ -408,6 +410,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     701: PostgreSQLDataType.double,
     1007: PostgreSQLDataType.integerArray,
     1009: PostgreSQLDataType.textArray,
+    1043: PostgreSQLDataType.varChar,
     1022: PostgreSQLDataType.doubleArray,
     1082: PostgreSQLDataType.date,
     1114: PostgreSQLDataType.timestampWithoutTimezone,
