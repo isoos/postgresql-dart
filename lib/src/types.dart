@@ -64,5 +64,17 @@ enum PostgreSQLDataType {
   ///
   /// Must contain 32 hexadecimal characters. May contain any number of '-' characters.
   /// When returned from database, format will be xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
-  uuid
+  uuid,
+
+  /// Must be a [LatLng]
+  point,
+
+  /// Must be a [List<int>]
+  integerArray,
+
+  /// Must be a [List<String>]
+  textArray,
+
+  /// Must be a [List<double>]
+  doubleArray,
 }

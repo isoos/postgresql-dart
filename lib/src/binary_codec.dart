@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:latlong/latlong.dart';
 
 import '../postgres.dart';
 import 'types.dart';
@@ -199,10 +200,66 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
           }
           return outBuffer;
         }
+
+      case PostgreSQLDataType.point:
+        {
+          if (value is LatLng) {
+            final bd = ByteData(16);
+            bd.setFloat64(0, value.latitude);
+            bd.setFloat64(8, value.longitude);
+            return bd.buffer.asUint8List();
+          }
+          throw FormatException('Invalid type for parameter value. Expected: LatLng Got: ${value.runtimeType}');
+        }
+
+      case PostgreSQLDataType.integerArray:
+        {
+          if (value is List<int>) {
+            return writeListBytes<int>(value, 23, (_) => 4, (bd, offset, item) => bd.setInt32(offset, item));
+          }
+          throw FormatException('Invalid type for parameter value. Expected: List<int> Got: ${value.runtimeType}');
+        }
+
+      case PostgreSQLDataType.textArray:
+        {
+          if (value is List<String>) {
+            final bytesArray = value.map((v) => castBytes(utf8.encode(v)));
+            return writeListBytes<Uint8List>(bytesArray, 25, (item) => item.length, (bd, offset, item) {
+              item.forEach((i) => bd.setUint8(offset++, i));
+            });
+          }
+          throw FormatException('Invalid type for parameter value. Expected: List<String> Got: ${value.runtimeType}');
+        }
+
+      case PostgreSQLDataType.doubleArray:
+        {
+          if (value is List<double>) {
+            return writeListBytes<double>(value, 701, (_) => 8, (bd, offset, item) => bd.setFloat64(offset, item));
+          }
+          throw FormatException('Invalid type for parameter value. Expected: List<double> Got: ${value.runtimeType}');
+        }
     }
 
     throw PostgreSQLException('Unsupported datatype');
   }
+}
+
+Uint8List writeListBytes<T>(Iterable<T> value, int type, int Function(T item) lengthEncoder,
+    void Function(ByteData bd, int offset, T item) valueEncoder) {
+  final bd = ByteData(20 + value.fold<int>(0, (sum, item) => 4 + lengthEncoder(item)));
+  bd.setInt32(0, 1); // dimension
+  bd.setInt32(4, 0); // ign
+  bd.setInt32(8, type); // type
+  bd.setInt32(12, value.length); // size
+  bd.setInt32(16, 1); // index
+  var offset = 20;
+  for (var i in value) {
+    final len = lengthEncoder(i);
+    bd.setInt32(offset, len); // value length
+    valueEncoder(bd, offset + 4, i); // value
+    offset += 4 + len;
+  }
+  return bd.buffer.asUint8List();
 }
 
 class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
@@ -277,6 +334,18 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
 
           return buf.toString();
         }
+
+      case PostgreSQLDataType.point:
+        return LatLng(buffer.getFloat64(0), buffer.getFloat64(8));
+
+      case PostgreSQLDataType.integerArray:
+        return readListBytes<int>(buffer, (offset, _) => buffer.getInt32(offset));
+
+      case PostgreSQLDataType.textArray:
+        return readListBytes<String>(buffer, (offset, length) => utf8.decode(value.sublist(offset, offset + length)));
+
+      case PostgreSQLDataType.doubleArray:
+        return readListBytes<double>(buffer, (offset, _) => buffer.getFloat64(offset));
     }
 
     // We'll try and decode this as a utf8 string and return that
@@ -290,6 +359,21 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     }
   }
 
+  List<T> readListBytes<T>(ByteData buffer, T Function(int offset, int length) valueDecoder) {
+    final decoded = [].cast<T>();
+
+    final size = buffer.getInt32(12);
+
+    var offset = 20;
+    for (var i = 0; i <= size; i++) {
+      final len = buffer.getInt32(offset);
+      decoded.add(valueDecoder(offset + 4, len));
+      offset += 4 + len;
+    }
+
+    return decoded;
+  }
+
   static final Map<int, PostgreSQLDataType> typeMap = {
     16: PostgreSQLDataType.boolean,
     17: PostgreSQLDataType.byteArray,
@@ -298,8 +382,13 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     21: PostgreSQLDataType.smallInteger,
     23: PostgreSQLDataType.integer,
     25: PostgreSQLDataType.text,
+    114: PostgreSQLDataType.json,
+    600: PostgreSQLDataType.point,
     700: PostgreSQLDataType.real,
     701: PostgreSQLDataType.double,
+    1007: PostgreSQLDataType.integerArray,
+    1009: PostgreSQLDataType.textArray,
+    1022: PostgreSQLDataType.doubleArray,
     1082: PostgreSQLDataType.date,
     1114: PostgreSQLDataType.timestampWithoutTimezone,
     1184: PostgreSQLDataType.timestampWithTimezone,

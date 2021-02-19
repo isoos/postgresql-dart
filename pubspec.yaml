@@ -9,6 +9,7 @@ environment:
 dependencies:
   buffer: ^1.0.6
   crypto: ^2.0.0
+  latlong: ^0.6.1
 
 dev_dependencies:
   pedantic: ^1.0.0
