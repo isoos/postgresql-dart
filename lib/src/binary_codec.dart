@@ -384,26 +384,20 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
       ByteData buffer, T Function(int offset, int length) valueDecoder) {
     final decoded = [].cast<T>();
 
-    if (buffer.lengthInBytes < 20) {
+    try {
+      final size = buffer.getInt32(12);
+
+      var offset = 20;
+      for (var i = 0; i < size; i++) {
+        final len = buffer.getInt32(offset);
+        decoded.add(valueDecoder(offset + 4, len));
+        offset += 4 + len;
+      }
+
+      return decoded;
+    } on RangeError catch (_) {
       return decoded;
     }
-
-    final size = buffer.getInt32(12);
-
-    var offset = 20;
-    for (var i = 0; i < size; i++) {
-      if (offset >= buffer.lengthInBytes - 4) {
-        break;
-      }
-      final len = buffer.getInt32(offset);
-      if (offset + 4 + len > buffer.lengthInBytes) {
-        break;
-      }
-      decoded.add(valueDecoder(offset + 4, len));
-      offset += 4 + len;
-    }
-
-    return decoded;
   }
 
   static final Map<int, PostgreSQLDataType> typeMap = {
@@ -429,3 +423,11 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     3802: PostgreSQLDataType.jsonb,
   };
 }
+
+/*
+        [0,0,0,1,0,0,0,0,0,0,2,189,0,0,0,2,0,0,0,1,0,0,0,8,64,0,0,0,0,0,0,0,0,0,0,8,64,16,0,0,0,0,0,0]
+         dim     ign     type      size    index   len1    int1             len2    int2
+
+        [0,0,0,1,0,0,0,0,0,0,0,25,0,0,0,1,0,0,0,1,0,0,0,13,84,101,115,108,97,32,77,111,100,101,108,32,83]
+         dim     ign     type     size    index   len1     str1
+       */
