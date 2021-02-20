@@ -384,6 +384,10 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
       ByteData buffer, T Function(int offset, int length) valueDecoder) {
     final decoded = [].cast<T>();
 
+    if (buffer.lengthInBytes < 20) {
+      return decoded;
+    }
+
     final size = buffer.getInt32(12);
 
     var offset = 20;
