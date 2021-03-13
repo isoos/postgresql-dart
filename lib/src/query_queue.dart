@@ -5,9 +5,9 @@ import '../postgres.dart';
 
 import 'query.dart';
 
-class QueryQueue extends ListBase<Query<dynamic>?>
+class QueryQueue extends ListBase<Query<dynamic>>
     implements List<Query<dynamic>> {
-  List<Query<dynamic>?> _inner = <Query<dynamic>?>[];
+  List<Query<dynamic>> _inner = <Query<dynamic>>[];
   bool _isCancelled = false;
 
   PostgreSQLException get _cancellationException => PostgreSQLException(
@@ -20,18 +20,18 @@ class QueryQueue extends ListBase<Query<dynamic>?>
     return _inner.first;
   }
 
-  void cancel([dynamic error, StackTrace? stackTrace]) {
+  void cancel([Object? error, StackTrace? stackTrace]) {
     _isCancelled = true;
     error ??= _cancellationException;
     final existing = _inner;
-    _inner = <Query<dynamic>?>[];
+    _inner = <Query<dynamic>>[];
 
     // We need to jump this to the next event so that the queries
     // get the error and not the close message, since completeError is
     // synchronous.
     scheduleMicrotask(() {
-      existing?.forEach((q) {
-        q!.completeError(error, stackTrace);
+      existing.forEach((q) {
+        q.completeError(error!, stackTrace);
       });
     });
   }
@@ -42,22 +42,22 @@ class QueryQueue extends ListBase<Query<dynamic>?>
   }
 
   @override
-  Query? operator [](int index) => _inner[index];
+  Query operator [](int index) => _inner[index];
 
   @override
   int get length => _inner.length;
 
   @override
-  void operator []=(int index, Query? value) => _inner[index] = value;
+  void operator []=(int index, Query value) => _inner[index] = value;
 
   void addEvenIfCancelled(Query element) {
     _inner.add(element);
   }
 
   @override
-  bool add(Query? element) {
+  bool add(Query element) {
     if (_isCancelled) {
-      element!.future.catchError((_) {});
+      element.future.catchError((_) {});
       element.completeError(_cancellationException);
       return false;
     }
@@ -67,7 +67,7 @@ class QueryQueue extends ListBase<Query<dynamic>?>
   }
 
   @override
-  void addAll(Iterable<Query?> iterable) {
+  void addAll(Iterable<Query> iterable) {
     _inner.addAll(iterable);
   }
 }

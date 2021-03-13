@@ -31,7 +31,7 @@ void main() {
   });
 
   tearDown(() async {
-    await connection?.close();
+    await connection.close();
   });
 
   test('Get row map without specifying columns', () async {
@@ -141,7 +141,7 @@ void clearOidQueryCount(PostgreSQLConnection connection) {
   (reflect(connection).getField(oidCacheMirror.simpleName).reflectee).clear();
 }
 
-int? getOidQueryCount(PostgreSQLConnection connection) {
+int getOidQueryCount(PostgreSQLConnection connection) {
   final oidCacheMirror = reflect(connection)
       .type
       .declarations
@@ -149,5 +149,5 @@ int? getOidQueryCount(PostgreSQLConnection connection) {
       .firstWhere((DeclarationMirror dm) =>
           dm.simpleName.toString().contains('_oidCache'));
   return (reflect(connection).getField(oidCacheMirror.simpleName).reflectee)
-      .queryCount as int?;
+      .queryCount as int;
 }

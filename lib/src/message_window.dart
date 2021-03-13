@@ -31,13 +31,13 @@ class MessageFramer {
   final messageQueue = Queue<ServerMessage>();
 
   int? _type;
-  int? _expectedLength;
+  int _expectedLength = 0;
 
   bool get _hasReadHeader => _type != null;
   bool get _canReadHeader => _reader.remainingLength >= _headerByteSize;
 
   bool get _isComplete =>
-      _expectedLength == 0 || _expectedLength! <= _reader.remainingLength;
+      _expectedLength == 0 || _expectedLength <= _reader.remainingLength;
 
   void addBytes(Uint8List bytes) {
     _reader.add(bytes);
@@ -53,13 +53,13 @@ class MessageFramer {
 
       if (_hasReadHeader && _isComplete) {
         final data =
-            _expectedLength == 0 ? _emptyData : _reader.read(_expectedLength!);
-        final msgMaker = _messageTypeMap[_type!];
+            _expectedLength == 0 ? _emptyData : _reader.read(_expectedLength);
+        final msgMaker = _messageTypeMap[_type];
         final msg =
             msgMaker == null ? UnknownMessage(_type, data) : msgMaker(data);
         messageQueue.add(msg);
         _type = null;
-        _expectedLength = null;
+        _expectedLength = 0;
         evaluateNextMessage = true;
       }
     }

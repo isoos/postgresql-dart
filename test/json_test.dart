@@ -15,7 +15,7 @@ void main() {
   });
 
   tearDown(() async {
-    await connection?.close();
+    await connection.close();
   });
 
   group('Storage', () {

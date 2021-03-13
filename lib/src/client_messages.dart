@@ -37,7 +37,7 @@ abstract class ClientMessage {
 }
 
 void _applyStringToBuffer(UTF8BackedString string, ByteDataWriter buffer) {
-  buffer.write(string.utf8Bytes!);
+  buffer.write(string.utf8Bytes);
   buffer.writeInt8(0);
 }
 
@@ -83,9 +83,9 @@ class StartupMessage extends ClientMessage {
 }
 
 class AuthMD5Message extends ClientMessage {
-  late UTF8BackedString _hashedAuthString;
+  UTF8BackedString? _hashedAuthString;
 
-  AuthMD5Message(String? username, String? password, List<int> saltBytes) {
+  AuthMD5Message(String username, String password, List<int> saltBytes) {
     final passwordHash = md5.convert('$password$username'.codeUnits).toString();
     final saltString = String.fromCharCodes(saltBytes);
     final md5Hash =
@@ -96,9 +96,9 @@ class AuthMD5Message extends ClientMessage {
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
-    final length = 5 + _hashedAuthString.utf8Length;
+    final length = 5 + _hashedAuthString!.utf8Length;
     buffer.writeUint32(length);
-    _applyStringToBuffer(_hashedAuthString, buffer);
+    _applyStringToBuffer(_hashedAuthString!, buffer);
   }
 }
 
@@ -157,14 +157,14 @@ class BindMessage extends ClientMessage {
   final List<ParameterValue> _parameters;
   final UTF8BackedString _statementName;
   final int _typeSpecCount;
-  int? _cachedLength;
+  int _cachedLength = -1;
 
-  BindMessage(this._parameters, {String? statementName = ''})
+  BindMessage(this._parameters, {String statementName = ''})
       : _typeSpecCount = _parameters.where((p) => p.isBinary).length,
         _statementName = UTF8BackedString(statementName);
 
-  int? get length {
-    if (_cachedLength == null) {
+  int get length {
+    if (_cachedLength == -1) {
       var inputParameterElementCount = _parameters.length;
       if (_typeSpecCount == _parameters.length || _typeSpecCount == 0) {
         inputParameterElementCount = 1;
@@ -188,7 +188,7 @@ class BindMessage extends ClientMessage {
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.BindIdentifier);
-    buffer.writeUint32(length! - 1);
+    buffer.writeUint32(length - 1);
 
     // Name of portal - currently unnamed portal.
     buffer.writeUint8(0);

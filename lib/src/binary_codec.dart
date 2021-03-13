@@ -29,7 +29,7 @@ final _hex = <String>[
 ];
 
 class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
-  final PostgreSQLDataType? _dataType;
+  final PostgreSQLDataType _dataType;
 
   const PostgresBinaryEncoder(this._dataType);
 
@@ -199,24 +199,24 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
           }
           return outBuffer;
         }
+      default:
+        throw PostgreSQLException('Unsupported datatype');
     }
-
-    throw PostgreSQLException('Unsupported datatype');
   }
 }
 
 class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
   const PostgresBinaryDecoder(this.typeCode);
 
-  final int? typeCode;
+  final int typeCode;
 
   @override
   dynamic convert(Uint8List? value) {
-    final dataType = typeMap[typeCode!];
-
     if (value == null) {
       return null;
     }
+
+    final dataType = typeMap[typeCode];
 
     final buffer =
         ByteData.view(value.buffer, value.offsetInBytes, value.lengthInBytes);
@@ -277,16 +277,18 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
 
           return buf.toString();
         }
-    }
-
-    // We'll try and decode this as a utf8 string and return that
-    // for many internal types, this is valid. If it fails,
-    // we just return the bytes and let the caller figure out what to
-    // do with it.
-    try {
-      return utf8.decode(value);
-    } catch (_) {
-      return value;
+      default:
+        {
+          // We'll try and decode this as a utf8 string and return that
+          // for many internal types, this is valid. If it fails,
+          // we just return the bytes and let the caller figure out what to
+          // do with it.
+          try {
+            return utf8.decode(value);
+          } catch (_) {
+            return value;
+          }
+        }
     }
   }
 

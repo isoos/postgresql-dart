@@ -17,7 +17,7 @@ void main() {
     });
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test('Rows are Lists of column values', () async {
@@ -248,8 +248,12 @@ void main() {
         () async {
       final errs = [];
       await conn.transaction((ctx) async {
-        ctx.query('INSERT INTO t (id) VALUES (1)').catchError(errs.add);
-        ctx.query('INSERT INTO t (id) VALUES (2)').catchError(errs.add);
+        final errsAdd = (e) {
+          errs.add(e);
+          return null;
+        };
+        ctx.query('INSERT INTO t (id) VALUES (1)').catchError(errsAdd);
+        ctx.query('INSERT INTO t (id) VALUES (2)').catchError(errsAdd);
         ctx.cancelTransaction();
         ctx.query('INSERT INTO t (id) VALUES (3)').catchError((e) {});
       });
@@ -305,7 +309,7 @@ void main() {
     });
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test('Is rolled back/executes later query', () async {
@@ -406,7 +410,7 @@ void main() {
     });
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test('Is rolled back/executes later query', () async {
@@ -552,7 +556,7 @@ void main() {
     });
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test('Is rolled back/executes later query', () async {

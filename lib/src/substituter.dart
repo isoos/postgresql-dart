@@ -13,7 +13,7 @@ class PostgreSQLFormat {
     return '@$name';
   }
 
-  static String? dataTypeStringForDataType(PostgreSQLDataType dt) {
+  static String? dataTypeStringForDataType(PostgreSQLDataType? dt) {
     switch (dt) {
       case PostgreSQLDataType.text:
         return 'text';
@@ -47,18 +47,18 @@ class PostgreSQLFormat {
         return 'name';
       case PostgreSQLDataType.uuid:
         return 'uuid';
+      default:
+        return null;
     }
-
-    return null;
   }
 
   static String substitute(String fmtString, Map<String, dynamic>? values,
       {SQLReplaceIdentifierFunction? replace}) {
     final converter = PostgresTextEncoder();
-    values ??= <String, dynamic>{};
+    values ??= const {};
     replace ??= (spec, index) => converter.convert(values![spec.name]);
 
-    final items = <PostgreSQLFormatToken?>[];
+    final items = <PostgreSQLFormatToken>[];
     PostgreSQLFormatToken? currentPtr;
     final iterator = RuneIterator(fmtString);
 
@@ -108,14 +108,14 @@ class PostgreSQLFormat {
 
     var idx = 1;
     return items.map((t) {
-      if (t!.type == PostgreSQLFormatTokenType.text) {
+      if (t.type == PostgreSQLFormatTokenType.text) {
         return t.buffer;
       } else if (t.buffer.length == 1 && t.buffer.toString() == '@') {
         return t.buffer;
       } else {
         final identifier = PostgreSQLFormatIdentifier(t.buffer.toString());
 
-        if (!values!.containsKey(identifier.name)) {
+        if (values != null && !values.containsKey(identifier.name)) {
           // Format string specified identifier with name ${identifier.name},
           // but key was not present in values.
           return t.buffer;

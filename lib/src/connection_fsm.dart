@@ -1,7 +1,7 @@
 part of postgres.connection;
 
 abstract class _PostgreSQLConnectionState {
-  late PostgreSQLConnection connection;
+  PostgreSQLConnection? connection;
 
   _PostgreSQLConnectionState onEnter() {
     return this;
@@ -48,10 +48,10 @@ class _PostgreSQLConnectionStateSocketConnected
   @override
   _PostgreSQLConnectionState onEnter() {
     final startupMessage = StartupMessage(
-        connection.databaseName, connection.timeZone,
-        username: connection.username);
+        connection!.databaseName, connection!.timeZone,
+        username: connection!.username);
 
-    connection._socket!.add(startupMessage.asBytes());
+    connection!._socket!.add(startupMessage.asBytes());
 
     return this;
   }
@@ -73,7 +73,7 @@ class _PostgreSQLConnectionStateSocketConnected
     if (authMessage.type == AuthenticationMessage.KindOK) {
       return _PostgreSQLConnectionStateAuthenticated(completer);
     } else if (authMessage.type == AuthenticationMessage.KindMD5Password) {
-      connection._salt = authMessage.salt;
+      connection!._salt = authMessage.salt;
 
       return _PostgreSQLConnectionStateAuthenticating(completer);
     }
@@ -98,9 +98,9 @@ class _PostgreSQLConnectionStateAuthenticating
   @override
   _PostgreSQLConnectionState onEnter() {
     final authMessage = AuthMD5Message(
-        connection.username, connection.password, connection._salt!);
+        connection!.username!, connection!.password!, connection!._salt);
 
-    connection._socket!.add(authMessage.asBytes());
+    connection!._socket!.add(authMessage.asBytes());
 
     return this;
   }
@@ -117,10 +117,10 @@ class _PostgreSQLConnectionStateAuthenticating
   @override
   _PostgreSQLConnectionState onMessage(ServerMessage message) {
     if (message is ParameterStatusMessage) {
-      connection.settings[message.name] = message.value;
+      connection!.settings[message.name] = message.value;
     } else if (message is BackendKeyMessage) {
-      connection._processID = message.processID;
-      connection._secretKey = message.secretKey;
+      connection!._processID = message.processID;
+      connection!._secretKey = message.secretKey;
     } else if (message is ReadyForQueryMessage) {
       if (message.state == ReadyForQueryMessage.StateIdle) {
         return _PostgreSQLConnectionStateIdle(openCompleter: completer);
@@ -153,10 +153,10 @@ class _PostgreSQLConnectionStateAuthenticated
   @override
   _PostgreSQLConnectionState onMessage(ServerMessage message) {
     if (message is ParameterStatusMessage) {
-      connection.settings[message.name] = message.value;
+      connection!.settings[message.name] = message.value;
     } else if (message is BackendKeyMessage) {
-      connection._processID = message.processID;
-      connection._secretKey = message.secretKey;
+      connection!._processID = message.processID;
+      connection!._secretKey = message.secretKey;
     } else if (message is ReadyForQueryMessage) {
       if (message.state == ReadyForQueryMessage.StateIdle) {
         return _PostgreSQLConnectionStateIdle(openCompleter: completer);
@@ -178,7 +178,7 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
 
   @override
   _PostgreSQLConnectionState awake() {
-    final pendingQuery = connection._queue.pending;
+    final pendingQuery = connection!._queue.pending;
     if (pendingQuery != null) {
       return processQuery(pendingQuery);
     }
@@ -189,18 +189,18 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionState processQuery(Query<dynamic> q) {
     try {
       if (q.onlyReturnAffectedRowCount) {
-        q.sendSimple(connection._socket!);
+        q.sendSimple(connection!._socket!);
         return _PostgreSQLConnectionStateBusy(q);
       }
 
-      final cached = connection._cache[q.statement];
-      q.sendExtended(connection._socket, cacheQuery: cached);
+      final cached = connection!._cache[q.statement];
+      q.sendExtended(connection!._socket!, cacheQuery: cached);
 
       return _PostgreSQLConnectionStateBusy(q);
     } catch (e, st) {
       scheduleMicrotask(() {
         q.completeError(e, st);
-        connection._transitionToState(_PostgreSQLConnectionStateIdle());
+        connection!._transitionToState(_PostgreSQLConnectionStateIdle());
       });
 
       return _PostgreSQLConnectionStateDeferredFailure();
@@ -256,20 +256,19 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
 
     if (message is ReadyForQueryMessage) {
       if (message.state == ReadyForQueryMessage.StateTransactionError) {
-        query.completeError(returningException);
+        query.completeError(returningException!);
         return _PostgreSQLConnectionStateReadyInTransaction(
-            query.transaction as _TransactionProxy?);
+            query.transaction as _TransactionProxy);
       }
-
       if (returningException != null) {
-        query.completeError(returningException);
+        query.completeError(returningException!);
       } else {
         query.complete(rowsAffected);
       }
 
       if (message.state == ReadyForQueryMessage.StateTransaction) {
         return _PostgreSQLConnectionStateReadyInTransaction(
-            query.transaction as _TransactionProxy?);
+            query.transaction as _TransactionProxy);
       }
 
       return _PostgreSQLConnectionStateIdle();
@@ -298,7 +297,7 @@ class _PostgreSQLConnectionStateReadyInTransaction
     extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateReadyInTransaction(this.transaction);
 
-  _TransactionProxy? transaction;
+  _TransactionProxy transaction;
 
   @override
   _PostgreSQLConnectionState onEnter() {
@@ -307,7 +306,7 @@ class _PostgreSQLConnectionStateReadyInTransaction
 
   @override
   _PostgreSQLConnectionState awake() {
-    final pendingQuery = transaction!._queue.pending;
+    final pendingQuery = transaction._queue.pending;
     if (pendingQuery != null) {
       return processQuery(pendingQuery);
     }
@@ -318,12 +317,12 @@ class _PostgreSQLConnectionStateReadyInTransaction
   _PostgreSQLConnectionState processQuery(Query<dynamic> q) {
     try {
       if (q.onlyReturnAffectedRowCount) {
-        q.sendSimple(connection._socket!);
+        q.sendSimple(connection!._socket!);
         return _PostgreSQLConnectionStateBusy(q);
       }
 
-      final cached = connection._cache[q.statement];
-      q.sendExtended(connection._socket, cacheQuery: cached);
+      final cached = connection!._cache[q.statement];
+      q.sendExtended(connection!._socket!, cacheQuery: cached);
 
       return _PostgreSQLConnectionStateBusy(q);
     } catch (e, st) {

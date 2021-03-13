@@ -110,7 +110,7 @@ class PostgresTextEncoder {
     return value ? 'TRUE' : 'FALSE';
   }
 
-  String _encodeDateTime(DateTime value, {required bool isDateOnly}) {
+  String _encodeDateTime(DateTime value, {bool isDateOnly = false}) {
     var string = value.toIso8601String();
 
     if (isDateOnly) {

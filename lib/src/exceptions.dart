@@ -1,4 +1,3 @@
-import 'package:collection/collection.dart' show IterableExtension;
 part of postgres.connection;
 
 /// The severity level of a [PostgreSQLException].
@@ -41,33 +40,34 @@ class PostgreSQLException implements Exception {
   }
 
   PostgreSQLException._(List<ErrorField> errorFields, {this.stackTrace}) {
-    final finder = (int identifer) => (errorFields.firstWhereOrNull(
-        (ErrorField e) => e.identificationToken == identifer));
+    final finder = (int identifer) => (errorFields.firstWhere(
+        (ErrorField e) => e.identificationToken == identifer,
+        orElse: () => ErrorField(null, null)));
 
     severity = ErrorField.severityFromString(
-        finder(ErrorField.SeverityIdentifier)!.text);
-    code = finder(ErrorField.CodeIdentifier)!.text;
-    message = finder(ErrorField.MessageIdentifier)!.text;
-    detail = finder(ErrorField.DetailIdentifier)?.text;
-    hint = finder(ErrorField.HintIdentifier)?.text;
+        finder(ErrorField.SeverityIdentifier).text);
+    code = finder(ErrorField.CodeIdentifier).text;
+    message = finder(ErrorField.MessageIdentifier).text;
+    detail = finder(ErrorField.DetailIdentifier).text;
+    hint = finder(ErrorField.HintIdentifier).text;
 
-    internalQuery = finder(ErrorField.InternalQueryIdentifier)?.text;
-    trace = finder(ErrorField.WhereIdentifier)?.text;
-    schemaName = finder(ErrorField.SchemaIdentifier)?.text;
-    tableName = finder(ErrorField.TableIdentifier)?.text;
-    columnName = finder(ErrorField.ColumnIdentifier)?.text;
-    dataTypeName = finder(ErrorField.DataTypeIdentifier)?.text;
-    constraintName = finder(ErrorField.ConstraintIdentifier)?.text;
-    fileName = finder(ErrorField.FileIdentifier)?.text;
-    routineName = finder(ErrorField.RoutineIdentifier)?.text;
+    internalQuery = finder(ErrorField.InternalQueryIdentifier).text;
+    trace = finder(ErrorField.WhereIdentifier).text;
+    schemaName = finder(ErrorField.SchemaIdentifier).text;
+    tableName = finder(ErrorField.TableIdentifier).text;
+    columnName = finder(ErrorField.ColumnIdentifier).text;
+    dataTypeName = finder(ErrorField.DataTypeIdentifier).text;
+    constraintName = finder(ErrorField.ConstraintIdentifier).text;
+    fileName = finder(ErrorField.FileIdentifier).text;
+    routineName = finder(ErrorField.RoutineIdentifier).text;
 
-    var i = finder(ErrorField.PositionIdentifier)?.text;
+    var i = finder(ErrorField.PositionIdentifier).text;
     position = (i != null ? int.parse(i) : null);
 
-    i = finder(ErrorField.InternalPositionIdentifier)?.text;
+    i = finder(ErrorField.InternalPositionIdentifier).text;
     internalPosition = (i != null ? int.parse(i) : null);
 
-    i = finder(ErrorField.LineIdentifier)?.text;
+    i = finder(ErrorField.LineIdentifier).text;
     lineNumber = (i != null ? int.parse(i) : null);
   }
 
