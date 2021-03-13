@@ -3,6 +3,7 @@
 ## 2.3.0-null-safety.0
 
 - Migrate to null safety. (Thanks to [j4qfrost](https://github.com/j4qfrost), [#153](https://github.com/stablekernel/postgresql-dart/pull/153)).
+- Documentation fix (by [saward](https://github.com/saward)).
 
 ## 2.2.0
 

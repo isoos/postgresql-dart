@@ -204,7 +204,7 @@ class PostgreSQLConnection extends Object
   /// Queries within a transaction may be executed asynchronously or be awaited on. The order is still guaranteed. Example:
   ///
   ///         connection.transaction((ctx) {
-  ///           var rows = await ctx.query("SELECT id FROM t);
+  ///           var rows = await ctx.query("SELECT id FROM t");
   ///           if (!rows.contains([2])) {
   ///             ctx.query("INSERT INTO t (id) VALUES (2)");
   ///           }
