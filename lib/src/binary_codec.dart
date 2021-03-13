@@ -28,13 +28,13 @@ final _hex = <String>[
   'f',
 ];
 
-class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
-  final PostgreSQLDataType _dataType;
+class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
+  final PostgreSQLDataType? _dataType;
 
   const PostgresBinaryEncoder(this._dataType);
 
   @override
-  Uint8List convert(dynamic value) {
+  Uint8List? convert(dynamic value) {
     if (value == null) {
       return null;
     }
@@ -169,7 +169,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
                 'Invalid type for parameter value. Expected: String Got: ${value.runtimeType}');
           }
 
-          final hexBytes = (value as String)
+          final hexBytes = value
               .toLowerCase()
               .codeUnits
               .where((c) => c != _dashUnit)
@@ -208,11 +208,11 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
 class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
   const PostgresBinaryDecoder(this.typeCode);
 
-  final int typeCode;
+  final int? typeCode;
 
   @override
-  dynamic convert(Uint8List value) {
-    final dataType = typeMap[typeCode];
+  dynamic convert(Uint8List? value) {
+    final dataType = typeMap[typeCode!];
 
     if (value == null) {
       return null;

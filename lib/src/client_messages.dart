@@ -37,16 +37,16 @@ abstract class ClientMessage {
 }
 
 void _applyStringToBuffer(UTF8BackedString string, ByteDataWriter buffer) {
-  buffer.write(string.utf8Bytes);
+  buffer.write(string.utf8Bytes!);
   buffer.writeInt8(0);
 }
 
 class StartupMessage extends ClientMessage {
-  final UTF8BackedString _username;
+  final UTF8BackedString? _username;
   final UTF8BackedString _databaseName;
   final UTF8BackedString _timeZone;
 
-  StartupMessage(String databaseName, String timeZone, {String username})
+  StartupMessage(String databaseName, String timeZone, {String? username})
       : _databaseName = UTF8BackedString(databaseName),
         _timeZone = UTF8BackedString(timeZone),
         _username = username == null ? null : UTF8BackedString(username);
@@ -58,7 +58,7 @@ class StartupMessage extends ClientMessage {
 
     if (_username != null) {
       fixedLength += 5;
-      variableLength += _username.utf8Length + 1;
+      variableLength += _username!.utf8Length + 1;
     }
 
     buffer.writeInt32(fixedLength + variableLength);
@@ -66,7 +66,7 @@ class StartupMessage extends ClientMessage {
 
     if (_username != null) {
       buffer.write(UTF8ByteConstants.user);
-      _applyStringToBuffer(_username, buffer);
+      _applyStringToBuffer(_username!, buffer);
     }
 
     buffer.write(UTF8ByteConstants.database);
@@ -83,9 +83,9 @@ class StartupMessage extends ClientMessage {
 }
 
 class AuthMD5Message extends ClientMessage {
-  UTF8BackedString _hashedAuthString;
+  late UTF8BackedString _hashedAuthString;
 
-  AuthMD5Message(String username, String password, List<int> saltBytes) {
+  AuthMD5Message(String? username, String? password, List<int> saltBytes) {
     final passwordHash = md5.convert('$password$username'.codeUnits).toString();
     final saltString = String.fromCharCodes(saltBytes);
     final md5Hash =
@@ -157,13 +157,13 @@ class BindMessage extends ClientMessage {
   final List<ParameterValue> _parameters;
   final UTF8BackedString _statementName;
   final int _typeSpecCount;
-  int _cachedLength;
+  int? _cachedLength;
 
-  BindMessage(this._parameters, {String statementName = ''})
+  BindMessage(this._parameters, {String? statementName = ''})
       : _typeSpecCount = _parameters.where((p) => p.isBinary).length,
         _statementName = UTF8BackedString(statementName);
 
-  int get length {
+  int? get length {
     if (_cachedLength == null) {
       var inputParameterElementCount = _parameters.length;
       if (_typeSpecCount == _parameters.length || _typeSpecCount == 0) {
@@ -188,7 +188,7 @@ class BindMessage extends ClientMessage {
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.BindIdentifier);
-    buffer.writeUint32(length - 1);
+    buffer.writeUint32(length! - 1);
 
     // Name of portal - currently unnamed portal.
     buffer.writeUint8(0);
@@ -221,7 +221,7 @@ class BindMessage extends ClientMessage {
         buffer.writeInt32(-1);
       } else {
         buffer.writeInt32(p.length);
-        buffer.write(p.bytes);
+        buffer.write(p.bytes!);
       }
     });
 

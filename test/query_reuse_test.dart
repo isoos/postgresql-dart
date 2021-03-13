@@ -11,7 +11,7 @@ String sid(String id, PostgreSQLDataType dt) =>
 
 void main() {
   group('Retaining type information', () {
-    PostgreSQLConnection connection;
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -281,7 +281,7 @@ void main() {
   });
 
   group('Mixing prepared statements', () {
-    PostgreSQLConnection connection;
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -340,7 +340,7 @@ void main() {
           hasCachedQueryNamed(
               connection, 'select i1, i2 from t where i1 > @i1'),
           true);
-      expect(getQueryCache(connection).length, 1);
+      expect(getQueryCache(connection)!.length, 1);
     });
 
     test('Call query multiple times, mixing in other named queries, succeeds',
@@ -382,7 +382,7 @@ void main() {
       expect(
           hasCachedQueryNamed(connection, 'select i1,i2 from t where i2 < @i2'),
           true);
-      expect(getQueryCache(connection).length, 2);
+      expect(getQueryCache(connection)!.length, 2);
     });
 
     test(
@@ -467,7 +467,7 @@ void main() {
         // ignore
       }
 
-      expect(getQueryCache(connection).isEmpty, true);
+      expect(getQueryCache(connection)!.isEmpty, true);
     });
 
     test(
@@ -484,7 +484,7 @@ void main() {
         // ignore
       }
 
-      expect(getQueryCache(connection).length, 0);
+      expect(getQueryCache(connection)!.length, 0);
     });
 
     test(
@@ -564,19 +564,19 @@ void main() {
       expect(results, [
         [1, 2]
       ]);
-      expect(getQueryCache(connection).length, 1);
+      expect(getQueryCache(connection)!.length, 1);
       expect(hasCachedQueryNamed(connection, string), true);
     });
   });
 }
 
-QueryCache getQueryCache(PostgreSQLConnection connection) {
+QueryCache? getQueryCache(PostgreSQLConnection connection) {
   final cacheMirror = reflect(connection).type.declarations.values.firstWhere(
       (DeclarationMirror dm) => dm.simpleName.toString().contains('_cache'));
   return reflect(connection).getField(cacheMirror.simpleName).reflectee
-      as QueryCache;
+      as QueryCache?;
 }
 
 bool hasCachedQueryNamed(PostgreSQLConnection connection, String name) {
-  return getQueryCache(connection)[name] != null;
+  return getQueryCache(connection)![name] != null;
 }

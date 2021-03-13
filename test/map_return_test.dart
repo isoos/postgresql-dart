@@ -4,7 +4,7 @@ import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
 void main() {
-  PostgreSQLConnection connection;
+  late PostgreSQLConnection connection;
 
   setUp(() async {
     connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -141,7 +141,7 @@ void clearOidQueryCount(PostgreSQLConnection connection) {
   (reflect(connection).getField(oidCacheMirror.simpleName).reflectee).clear();
 }
 
-int getOidQueryCount(PostgreSQLConnection connection) {
+int? getOidQueryCount(PostgreSQLConnection connection) {
   final oidCacheMirror = reflect(connection)
       .type
       .declarations
@@ -149,5 +149,5 @@ int getOidQueryCount(PostgreSQLConnection connection) {
       .firstWhere((DeclarationMirror dm) =>
           dm.simpleName.toString().contains('_oidCache'));
   return (reflect(connection).getField(oidCacheMirror.simpleName).reflectee)
-      .queryCount as int;
+      .queryCount as int?;
 }

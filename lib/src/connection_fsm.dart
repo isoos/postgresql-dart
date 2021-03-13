@@ -1,7 +1,7 @@
 part of postgres.connection;
 
 abstract class _PostgreSQLConnectionState {
-  PostgreSQLConnection connection;
+  late PostgreSQLConnection connection;
 
   _PostgreSQLConnectionState onEnter() {
     return this;
@@ -51,7 +51,7 @@ class _PostgreSQLConnectionStateSocketConnected
         connection.databaseName, connection.timeZone,
         username: connection.username);
 
-    connection._socket.add(startupMessage.asBytes());
+    connection._socket!.add(startupMessage.asBytes());
 
     return this;
   }
@@ -98,9 +98,9 @@ class _PostgreSQLConnectionStateAuthenticating
   @override
   _PostgreSQLConnectionState onEnter() {
     final authMessage = AuthMD5Message(
-        connection.username, connection.password, connection._salt);
+        connection.username, connection.password, connection._salt!);
 
-    connection._socket.add(authMessage.asBytes());
+    connection._socket!.add(authMessage.asBytes());
 
     return this;
   }
@@ -174,7 +174,7 @@ class _PostgreSQLConnectionStateAuthenticated
 class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateIdle({this.openCompleter});
 
-  Completer openCompleter;
+  Completer? openCompleter;
 
   @override
   _PostgreSQLConnectionState awake() {
@@ -189,7 +189,7 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionState processQuery(Query<dynamic> q) {
     try {
       if (q.onlyReturnAffectedRowCount) {
-        q.sendSimple(connection._socket);
+        q.sendSimple(connection._socket!);
         return _PostgreSQLConnectionStateBusy(q);
       }
 
@@ -228,7 +228,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateBusy(this.query);
 
   Query<dynamic> query;
-  PostgreSQLException returningException;
+  PostgreSQLException? returningException;
   int rowsAffected = 0;
 
   @override
@@ -258,7 +258,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
       if (message.state == ReadyForQueryMessage.StateTransactionError) {
         query.completeError(returningException);
         return _PostgreSQLConnectionStateReadyInTransaction(
-            query.transaction as _TransactionProxy);
+            query.transaction as _TransactionProxy?);
       }
 
       if (returningException != null) {
@@ -269,7 +269,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
 
       if (message.state == ReadyForQueryMessage.StateTransaction) {
         return _PostgreSQLConnectionStateReadyInTransaction(
-            query.transaction as _TransactionProxy);
+            query.transaction as _TransactionProxy?);
       }
 
       return _PostgreSQLConnectionStateIdle();
@@ -298,7 +298,7 @@ class _PostgreSQLConnectionStateReadyInTransaction
     extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateReadyInTransaction(this.transaction);
 
-  _TransactionProxy transaction;
+  _TransactionProxy? transaction;
 
   @override
   _PostgreSQLConnectionState onEnter() {
@@ -307,7 +307,7 @@ class _PostgreSQLConnectionStateReadyInTransaction
 
   @override
   _PostgreSQLConnectionState awake() {
-    final pendingQuery = transaction._queue.pending;
+    final pendingQuery = transaction!._queue.pending;
     if (pendingQuery != null) {
       return processQuery(pendingQuery);
     }
@@ -318,7 +318,7 @@ class _PostgreSQLConnectionStateReadyInTransaction
   _PostgreSQLConnectionState processQuery(Query<dynamic> q) {
     try {
       if (q.onlyReturnAffectedRowCount) {
-        q.sendSimple(connection._socket);
+        q.sendSimple(connection._socket!);
         return _PostgreSQLConnectionStateBusy(q);
       }
 

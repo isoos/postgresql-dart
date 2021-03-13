@@ -9,18 +9,18 @@ import 'package:postgres/src/text_codec.dart';
 import 'package:postgres/src/types.dart';
 import 'package:postgres/src/utf8_backed_string.dart';
 
-PostgreSQLConnection conn;
+PostgreSQLConnection? conn;
 
 void main() {
   group('Binary encoders', () {
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'dart', password: 'dart');
-      await conn.open();
+      await conn!.open();
     });
 
     tearDown(() async {
-      await conn.close();
+      await conn!.close();
       conn = null;
     });
 
@@ -32,7 +32,7 @@ void main() {
       await expectInverse(true, PostgreSQLDataType.boolean);
       await expectInverse(false, PostgreSQLDataType.boolean);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:boolean)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:boolean)',
             substitutionValues: {'v': 'not-bool'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -45,7 +45,7 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.smallInteger);
       await expectInverse(1, PostgreSQLDataType.smallInteger);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int2)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:int2)',
             substitutionValues: {'v': 'not-int2'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -58,7 +58,7 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.integer);
       await expectInverse(1, PostgreSQLDataType.integer);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int4)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:int4)',
             substitutionValues: {'v': 'not-int4'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -70,7 +70,7 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.serial);
       await expectInverse(1, PostgreSQLDataType.serial);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int4)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:int4)',
             substitutionValues: {'v': 'not-serial'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -83,7 +83,7 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.bigInteger);
       await expectInverse(1, PostgreSQLDataType.bigInteger);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int8)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:int8)',
             substitutionValues: {'v': 'not-int8'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -95,7 +95,7 @@ void main() {
       await expectInverse(0, PostgreSQLDataType.bigSerial);
       await expectInverse(1, PostgreSQLDataType.bigSerial);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int8)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:int8)',
             substitutionValues: {'v': 'not-bigserial'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -109,7 +109,7 @@ void main() {
       await expectInverse('foo\n', PostgreSQLDataType.text);
       await expectInverse('foo\nbar;s', PostgreSQLDataType.text);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:text)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:text)',
             substitutionValues: {'v': 0});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -122,7 +122,7 @@ void main() {
       await expectInverse(0.0, PostgreSQLDataType.real);
       await expectInverse(1.0, PostgreSQLDataType.real);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:float4)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:float4)',
             substitutionValues: {'v': 'not-real'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -135,7 +135,7 @@ void main() {
       await expectInverse(0.0, PostgreSQLDataType.double);
       await expectInverse(1.0, PostgreSQLDataType.double);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:float8)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:float8)',
             substitutionValues: {'v': 'not-double'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -148,7 +148,7 @@ void main() {
       await expectInverse(DateTime.utc(2120, 10, 5), PostgreSQLDataType.date);
       await expectInverse(DateTime.utc(2016, 10, 1), PostgreSQLDataType.date);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:date)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:date)',
             substitutionValues: {'v': 'not-date'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -162,7 +162,7 @@ void main() {
       await expectInverse(DateTime.utc(2120, 10, 5),
           PostgreSQLDataType.timestampWithoutTimezone);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:timestamp)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:timestamp)',
             substitutionValues: {'v': 'not-timestamp'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -176,7 +176,7 @@ void main() {
       await expectInverse(
           DateTime.utc(2120, 10, 5), PostgreSQLDataType.timestampWithTimezone);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:timestamptz)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:timestamptz)',
             substitutionValues: {'v': 'not-timestamptz'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -195,7 +195,7 @@ void main() {
       }, PostgreSQLDataType.json);
 
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:jsonb)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:jsonb)',
             substitutionValues: {'v': DateTime.now()});
         fail('unreachable');
       } on JsonUnsupportedObjectError catch (_) {}
@@ -207,7 +207,7 @@ void main() {
       await expectInverse([255, 254, 253], PostgreSQLDataType.byteArray);
 
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:bytea)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:bytea)',
             substitutionValues: {'v': DateTime.now()});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -222,7 +222,7 @@ void main() {
           '12345678-abcd-efab-cdef-012345678901', PostgreSQLDataType.uuid);
 
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:uuid)',
+        await conn!.query('INSERT INTO t (v) VALUES (@v:uuid)',
             substitutionValues: {'v': DateTime.now()});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -390,8 +390,8 @@ void main() {
 Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
   final type = PostgreSQLFormat.dataTypeStringForDataType(dataType);
 
-  await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $type)');
-  final result = await conn.query(
+  await conn!.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $type)');
+  final result = await conn!.query(
       'INSERT INTO t (v) VALUES (${PostgreSQLFormat.id('v', type: dataType)}) RETURNING v',
       substitutionValues: {'v': value});
   expect(result.first.first, equals(value));
@@ -404,7 +404,7 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
   } else if (dataType == PostgreSQLDataType.bigSerial) {
     dataType = PostgreSQLDataType.bigInteger;
   }
-  int code;
+  int? code;
   PostgresBinaryDecoder.typeMap.forEach((key, type) {
     if (type == dataType) {
       code = key;

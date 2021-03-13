@@ -13,7 +13,7 @@ void main() {
       expect(PostgreSQLFormatIdentifier.typeStringToCodeMap.values.contains(t),
           true);
       final code = PostgreSQLFormat.dataTypeStringForDataType(t);
-      expect(PostgreSQLFormatIdentifier.typeStringToCodeMap[code], t);
+      expect(PostgreSQLFormatIdentifier.typeStringToCodeMap[code!], t);
     });
   });
 

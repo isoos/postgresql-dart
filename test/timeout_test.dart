@@ -5,7 +5,7 @@ import 'package:test/test.dart';
 import 'package:postgres/postgres.dart';
 
 void main() {
-  PostgreSQLConnection conn;
+  late PostgreSQLConnection conn;
 
   setUp(() async {
     conn = PostgreSQLConnection('localhost', 5432, 'dart_test',

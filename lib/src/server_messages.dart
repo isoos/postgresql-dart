@@ -14,8 +14,8 @@ class ErrorResponseMessage implements ServerMessage {
   ErrorResponseMessage(Uint8List bytes) {
     final reader = ByteDataReader()..add(bytes);
 
-    int identificationToken;
-    StringBuffer sb;
+    int? identificationToken;
+    StringBuffer? sb;
 
     while (reader.remainingLength > 0) {
       final byte = reader.readUint8();
@@ -27,7 +27,7 @@ class ErrorResponseMessage implements ServerMessage {
         identificationToken = null;
         sb = null;
       } else {
-        sb.writeCharCode(byte);
+        sb!.writeCharCode(byte);
       }
     }
     if (identificationToken != null && sb != null) {
@@ -47,14 +47,14 @@ class AuthenticationMessage implements ServerMessage {
   static const int KindSSPI = 9;
 
   final int type;
-  final List<int> salt;
+  final List<int>? salt;
 
   AuthenticationMessage._(this.type, this.salt);
 
   factory AuthenticationMessage(Uint8List bytes) {
     final reader = ByteDataReader()..add(bytes);
     final type = reader.readUint32();
-    List<int> salt;
+    List<int>? salt;
     if (type == KindMD5Password) {
       salt = reader.read(4, copy: true);
     }
@@ -115,7 +115,7 @@ class RowDescriptionMessage extends ServerMessage {
 }
 
 class DataRowMessage extends ServerMessage {
-  final values = <Uint8List>[];
+  final values = <Uint8List?>[];
 
   DataRowMessage(Uint8List bytes) {
     final reader = ByteDataReader()..add(bytes);
@@ -166,7 +166,7 @@ class CommandCompleteMessage extends ServerMessage {
 
   factory CommandCompleteMessage(Uint8List bytes) {
     final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
-    final match = identifierExpression.firstMatch(str);
+    final match = identifierExpression.firstMatch(str)!;
     var rowsAffected = 0;
     if (match.end < str.length) {
       rowsAffected = int.parse(str.split(' ').last);
@@ -210,7 +210,7 @@ class NoDataMessage extends ServerMessage {
 }
 
 class UnknownMessage extends ServerMessage {
-  final int code;
+  final int? code;
   final Uint8List bytes;
 
   UnknownMessage(this.code, this.bytes);

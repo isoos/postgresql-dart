@@ -11,14 +11,14 @@ class _TransactionProxy extends Object
     _beginQuery = Query<int>('BEGIN', {}, _connection, this,
         onlyReturnAffectedRowCount: true);
 
-    _beginQuery.future.then(startTransaction).catchError((err, StackTrace st) {
+    _beginQuery!.future.then(startTransaction).catchError((err, StackTrace st) {
       Future(() {
         _completer.completeError(err, st);
       });
     });
   }
 
-  Query<dynamic> _beginQuery;
+  Query<dynamic>? _beginQuery;
   final _completer = Completer();
 
   Future get future => _completer.future;
@@ -30,12 +30,12 @@ class _TransactionProxy extends Object
   PostgreSQLExecutionContext get _transaction => this;
 
   final _TransactionQuerySignature executionBlock;
-  final int commitTimeoutInSeconds;
+  final int? commitTimeoutInSeconds;
   bool _hasFailed = false;
   bool _hasRolledBack = false;
 
   @override
-  void cancelTransaction({String reason}) {
+  void cancelTransaction({String? reason}) {
     throw _TransactionRollbackException(reason);
   }
 
@@ -70,7 +70,7 @@ class _TransactionProxy extends Object
     }
   }
 
-  Future _cancelAndRollback(dynamic object, [StackTrace trace]) async {
+  Future _cancelAndRollback(dynamic object, [StackTrace? trace]) async {
     if (_hasRolledBack) {
       return;
     }
@@ -79,7 +79,7 @@ class _TransactionProxy extends Object
     // We'll wrap each query in an error handler here to make sure the query cancellation error
     // is only emitted from the transaction itself.
     _queue.forEach((q) {
-      q.future.catchError((_) {});
+      q!.future.catchError((_) {});
     });
 
     final err = PostgreSQLException('Query failed prior to execution. '
@@ -91,7 +91,7 @@ class _TransactionProxy extends Object
         onlyReturnAffectedRowCount: true);
     _queue.addEvenIfCancelled(rollback);
 
-    _connection._transitionToState(_connection._connectionState.awake());
+    _connection._transitionToState(_connection._connectionState!.awake());
 
     try {
       await rollback.future.timeout(Duration(seconds: 30));
@@ -106,7 +106,7 @@ class _TransactionProxy extends Object
     }
   }
 
-  Future _transactionFailed(dynamic error, [StackTrace trace]) async {
+  Future _transactionFailed(dynamic error, [StackTrace? trace]) async {
     if (_hasFailed) {
       return;
     }
@@ -117,7 +117,7 @@ class _TransactionProxy extends Object
   }
 
   @override
-  Future _onQueryError(Query query, dynamic error, [StackTrace trace]) {
+  Future _onQueryError(Query? query, dynamic error, [StackTrace? trace]) {
     return _transactionFailed(error, trace);
   }
 }
@@ -131,7 +131,7 @@ class PostgreSQLRollback {
   PostgreSQLRollback._(this.reason);
 
   /// The reason the transaction was cancelled.
-  final String reason;
+  final String? reason;
 
   @override
   String toString() => 'PostgreSQLRollback: $reason';

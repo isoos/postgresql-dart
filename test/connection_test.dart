@@ -20,7 +20,7 @@ void main() {
   }
 
   group('Connection lifecycle', () {
-    PostgreSQLConnection conn;
+    PostgreSQLConnection? conn;
 
     tearDown(() async {
       await conn?.close();
@@ -30,18 +30,18 @@ void main() {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'dart', password: 'dart');
 
-      await conn.open();
+      await conn!.open();
 
-      expect(await conn.execute('select 1'), equals(1));
+      expect(await conn!.execute('select 1'), equals(1));
     });
 
     test('SSL Connect with md5 auth required', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'dart', password: 'dart', useSSL: true);
 
-      await conn.open();
+      await conn!.open();
 
-      expect(await conn.execute('select 1'), equals(1));
+      expect(await conn!.execute('select 1'), equals(1));
       final socketMirror = reflect(conn).type.declarations.values.firstWhere(
           (DeclarationMirror dm) =>
               dm.simpleName.toString().contains('_socket'));
@@ -53,26 +53,26 @@ void main() {
     test('Connect with no auth required', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust');
-      await conn.open();
+      await conn!.open();
 
-      expect(await conn.execute('select 1'), equals(1));
+      expect(await conn!.execute('select 1'), equals(1));
     });
 
     test('SSL Connect with no auth required', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust', useSSL: true);
-      await conn.open();
+      await conn!.open();
 
-      expect(await conn.execute('select 1'), equals(1));
+      expect(await conn!.execute('select 1'), equals(1));
     });
 
     test('Closing idle connection succeeds, closes underlying socket',
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust');
-      await conn.open();
+      await conn!.open();
 
-      await conn.close();
+      await conn!.close();
 
       final socketMirror = reflect(conn).type.declarations.values.firstWhere(
           (DeclarationMirror dm) =>
@@ -88,9 +88,9 @@ void main() {
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust', useSSL: true);
-      await conn.open();
+      await conn!.open();
 
-      await conn.close();
+      await conn!.close();
 
       final socketMirror = reflect(conn).type.declarations.values.firstWhere(
           (DeclarationMirror dm) =>
@@ -107,7 +107,7 @@ void main() {
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust');
-      await conn.open();
+      await conn!.open();
 
       final errors = [];
       final catcher = (e) {
@@ -115,14 +115,14 @@ void main() {
         return null;
       };
       final futures = [
-        conn.query('select 1', allowReuse: false).catchError(catcher),
-        conn.query('select 2', allowReuse: false).catchError(catcher),
-        conn.query('select 3', allowReuse: false).catchError(catcher),
-        conn.query('select 4', allowReuse: false).catchError(catcher),
-        conn.query('select 5', allowReuse: false).catchError(catcher),
+        conn!.query('select 1', allowReuse: false).catchError(catcher),
+        conn!.query('select 2', allowReuse: false).catchError(catcher),
+        conn!.query('select 3', allowReuse: false).catchError(catcher),
+        conn!.query('select 4', allowReuse: false).catchError(catcher),
+        conn!.query('select 5', allowReuse: false).catchError(catcher),
       ];
 
-      await conn.close();
+      await conn!.close();
       await Future.wait(futures);
       expect(errors.length, 5);
       expect(errors.map((e) => e.message),
@@ -134,7 +134,7 @@ void main() {
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust', useSSL: true);
-      await conn.open();
+      await conn!.open();
 
       final errors = [];
       final catcher = (e) {
@@ -142,14 +142,14 @@ void main() {
         return null;
       };
       final futures = [
-        conn.query('select 1', allowReuse: false).catchError(catcher),
-        conn.query('select 2', allowReuse: false).catchError(catcher),
-        conn.query('select 3', allowReuse: false).catchError(catcher),
-        conn.query('select 4', allowReuse: false).catchError(catcher),
-        conn.query('select 5', allowReuse: false).catchError(catcher),
+        conn!.query('select 1', allowReuse: false).catchError(catcher),
+        conn!.query('select 2', allowReuse: false).catchError(catcher),
+        conn!.query('select 3', allowReuse: false).catchError(catcher),
+        conn!.query('select 4', allowReuse: false).catchError(catcher),
+        conn!.query('select 5', allowReuse: false).catchError(catcher),
       ];
 
-      await conn.close();
+      await conn!.close();
       await Future.wait(futures);
       expect(errors.length, 5);
       expect(errors.map((e) => e.message),
@@ -158,7 +158,7 @@ void main() {
   });
 
   group('Successful queries over time', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -234,8 +234,8 @@ void main() {
   });
 
   group('Unintended user-error situations', () {
-    PostgreSQLConnection conn;
-    Future openFuture;
+    PostgreSQLConnection? conn;
+    Future? openFuture;
 
     tearDown(() async {
       await openFuture;
@@ -245,10 +245,10 @@ void main() {
     test('Sending queries to opening connection triggers error', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust');
-      openFuture = conn.open();
+      openFuture = conn!.open();
 
       try {
-        await conn.execute('select 1');
+        await conn!.execute('select 1');
         expect(true, false);
       } on PostgreSQLException catch (e) {
         expect(e.message, contains('connection is not open'));
@@ -258,10 +258,10 @@ void main() {
     test('SSL Sending queries to opening connection triggers error', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust', useSSL: true);
-      openFuture = conn.open();
+      openFuture = conn!.open();
 
       try {
-        await conn.execute('select 1');
+        await conn!.execute('select 1');
         expect(true, false);
       } on PostgreSQLException catch (e) {
         expect(e.message, contains('connection is not open'));
@@ -272,10 +272,10 @@ void main() {
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust');
-      openFuture = conn.open();
+      openFuture = conn!.open();
 
       try {
-        await conn.transaction((ctx) async {
+        await conn!.transaction((ctx) async {
           await ctx.execute('select 1');
         });
         expect(true, false);
@@ -288,10 +288,10 @@ void main() {
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust', useSSL: true);
-      openFuture = conn.open();
+      openFuture = conn!.open();
 
       try {
-        await conn.transaction((ctx) async {
+        await conn!.transaction((ctx) async {
           await ctx.execute('select 1');
         });
         expect(true, false);
@@ -306,13 +306,13 @@ void main() {
           username: 'dart', password: 'notdart');
 
       try {
-        await conn.open();
+        await conn!.open();
         expect(true, false);
       } on PostgreSQLException catch (e) {
         expect(e.message, contains('password authentication failed'));
       }
 
-      await expectConnectionIsInvalid(conn);
+      await expectConnectionIsInvalid(conn!);
     });
 
     test('SSL Invalid password reports error, conn is closed, disables conn',
@@ -321,31 +321,31 @@ void main() {
           username: 'dart', password: 'notdart', useSSL: true);
 
       try {
-        await conn.open();
+        await conn!.open();
         expect(true, false);
       } on PostgreSQLException catch (e) {
         expect(e.message, contains('password authentication failed'));
       }
 
-      await expectConnectionIsInvalid(conn);
+      await expectConnectionIsInvalid(conn!);
     });
 
     test('A query error maintains connectivity, allows future queries',
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust');
-      await conn.open();
+      await conn!.open();
 
-      await conn.execute('CREATE TEMPORARY TABLE t (i int unique)');
-      await conn.execute('INSERT INTO t (i) VALUES (1)');
+      await conn!.execute('CREATE TEMPORARY TABLE t (i int unique)');
+      await conn!.execute('INSERT INTO t (i) VALUES (1)');
       try {
-        await conn.execute('INSERT INTO t (i) VALUES (1)');
+        await conn!.execute('INSERT INTO t (i) VALUES (1)');
         expect(true, false);
       } on PostgreSQLException catch (e) {
         expect(e.message, contains('duplicate key value violates'));
       }
 
-      await conn.execute('INSERT INTO t (i) VALUES (2)');
+      await conn!.execute('INSERT INTO t (i) VALUES (2)');
     });
 
     test(
@@ -353,20 +353,20 @@ void main() {
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust');
-      await conn.open();
+      await conn!.open();
 
-      await conn.execute('CREATE TEMPORARY TABLE t (i int unique)');
+      await conn!.execute('CREATE TEMPORARY TABLE t (i int unique)');
 
-      await conn.execute('INSERT INTO t (i) VALUES (1)');
+      await conn!.execute('INSERT INTO t (i) VALUES (1)');
       //ignore: unawaited_futures
-      conn.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
+      conn!.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
         // ignore
       });
 
       final futures = [
-        conn.query('select 1', allowReuse: false),
-        conn.query('select 2', allowReuse: false),
-        conn.query('select 3', allowReuse: false),
+        conn!.query('select 1', allowReuse: false),
+        conn!.query('select 2', allowReuse: false),
+        conn!.query('select 3', allowReuse: false),
       ];
       final results = await Future.wait(futures);
 
@@ -386,7 +386,7 @@ void main() {
           (DeclarationMirror dm) =>
               dm.simpleName.toString().contains('_queue'));
       final queue =
-          reflect(conn).getField(queueMirror.simpleName).reflectee as List;
+          reflect(conn).getField(queueMirror.simpleName).reflectee as List?;
       expect(queue, isEmpty);
     });
 
@@ -395,22 +395,22 @@ void main() {
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust');
-      await conn.open();
+      await conn!.open();
 
-      await conn.execute('CREATE TEMPORARY TABLE t (i int unique)');
-      await conn.execute('INSERT INTO t (i) VALUES (1)');
+      await conn!.execute('CREATE TEMPORARY TABLE t (i int unique)');
+      await conn!.execute('INSERT INTO t (i) VALUES (1)');
 
       final orderEnsurer = [];
 
       // this will emit a query error
       //ignore: unawaited_futures
-      conn.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
+      conn!.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
         orderEnsurer.add(1);
         // ignore
       });
 
       orderEnsurer.add(2);
-      final res = await conn.transaction((ctx) async {
+      final res = await conn!.transaction((ctx) async {
         orderEnsurer.add(3);
         return await ctx.query('SELECT i FROM t');
       });
@@ -427,16 +427,16 @@ void main() {
         () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust');
-      await conn.open();
+      await conn!.open();
 
       // Make some async queries that'll exit the event loop, but then fail on a query that'll die early
-      conn.execute('askdl').catchError((err, st) {});
-      conn.execute('abdef').catchError((err, st) {});
-      conn.execute('select @a').catchError((err, st) {});
+      conn!.execute('askdl').catchError((err, st) {});
+      conn!.execute('abdef').catchError((err, st) {});
+      conn!.execute('select @a').catchError((err, st) {});
 
       final futures = [
-        conn.query('select 1', allowReuse: false),
-        conn.query('select 2', allowReuse: false),
+        conn!.query('select 1', allowReuse: false),
+        conn!.query('select 2', allowReuse: false),
       ];
       final results = await Future.wait(futures);
 
@@ -453,14 +453,14 @@ void main() {
           (DeclarationMirror dm) =>
               dm.simpleName.toString().contains('_queue'));
       final queue =
-          reflect(conn).getField(queueMirror.simpleName).reflectee as List;
+          reflect(conn).getField(queueMirror.simpleName).reflectee as List?;
       expect(queue, isEmpty);
     });
   });
 
   group('Network error situations', () {
-    ServerSocket serverSocket;
-    Socket socket;
+    late ServerSocket serverSocket;
+    Socket? socket;
 
     tearDown(() async {
       await serverSocket?.close();

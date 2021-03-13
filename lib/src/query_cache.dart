@@ -1,7 +1,7 @@
 import 'query.dart';
 
 class QueryCache {
-  final Map<String, CachedQuery> _queries = {};
+  final Map<String, CachedQuery?> _queries = {};
   int _idCounter = 0;
 
   int get length => _queries.length;
@@ -12,12 +12,12 @@ class QueryCache {
       return;
     }
 
-    if (query.cache.isValid) {
+    if (query.cache!.isValid) {
       _queries[query.statement] = query.cache;
     }
   }
 
-  CachedQuery operator [](String statementId) {
+  CachedQuery? operator [](String statementId) {
     if (statementId == null) {
       return null;
     }
@@ -25,7 +25,7 @@ class QueryCache {
     return _queries[statementId];
   }
 
-  String identifierForQuery(Query<dynamic> query) {
+  String? identifierForQuery(Query<dynamic> query) {
     final existing = _queries[query.statement];
     if (existing != null) {
       return existing.preparedStatementName;

@@ -7,7 +7,7 @@ import 'package:postgres/postgres.dart';
 
 void main() {
   group('Transaction behavior', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -295,7 +295,7 @@ void main() {
   // After a transaction fails, the changes must be rolled back, it should continue with pending queries, pending transactions, later queries, later transactions
 
   group('Transaction:Query recovery', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -396,7 +396,7 @@ void main() {
   });
 
   group('Transaction:Exception recovery', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -542,7 +542,7 @@ void main() {
   });
 
   group('Transaction:Rollback recovery', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
