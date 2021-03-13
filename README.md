@@ -1,6 +1,6 @@
 # postgres
 
-[![Build Status](https://travis-ci.org/stablekernel/postgresql-dart.svg?branch=master)](https://travis-ci.org/stablekernel/postgresql-dart) [![codecov](https://codecov.io/gh/stablekernel/postgresql-dart/branch/master/graph/badge.svg)](https://codecov.io/gh/stablekernel/postgresql-dart)
+[![CI](https://github.com/isoos/postgresql-dart/actions/workflows/dart.yml/badge.svg)](https://github.com/isoos/postgresql-dart/actions/workflows/dart.yml)
 
 A library for connecting to and querying PostgreSQL databases.
 
@@ -57,6 +57,8 @@ See the API documentation: https://pub.dev/documentation/postgres/latest/
 
 ## Features and bugs
 
+This library is a fork of [StableKernel's postgres library](https://github.com/stablekernel/postgresql-dart).
+
 Please file feature requests and bugs at the [issue tracker][tracker].
 
-[tracker]: https://github.com/stablekernel/postgresql-dart/issues
+[tracker]: https://github.com/isoos/postgresql-dart/issues
