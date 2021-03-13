@@ -11,7 +11,7 @@ String sid(String id, PostgreSQLDataType dt) =>
 
 void main() {
   group('Retaining type information', () {
-    PostgreSQLConnection connection;
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -281,7 +281,7 @@ void main() {
   });
 
   group('Mixing prepared statements', () {
-    PostgreSQLConnection connection;
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -440,8 +440,7 @@ void main() {
   });
 
   group('Failure cases', () {
-    var connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',

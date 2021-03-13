@@ -2,7 +2,7 @@ import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
 void main() {
-  PostgreSQLConnection connection;
+  late PostgreSQLConnection connection;
 
   setUp(() async {
     connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -15,7 +15,7 @@ void main() {
   });
 
   tearDown(() async {
-    await connection?.close();
+    await connection.close();
   });
 
   group('Storage', () {

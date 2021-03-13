@@ -29,10 +29,10 @@ abstract class PostgreSQLExecutionContext {
   /// By default, instances of this class will reuse queries. This allows significantly more efficient transport to and from the database. You do not have to do
   /// anything to opt in to this behavior, this connection will track the necessary information required to reuse queries without intervention. (The [fmtString] is
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
-  Future<PostgreSQLResult> query(String fmtString,
+  Future<PostgreSQLResult?> query(String fmtString,
       {Map<String, dynamic> substitutionValues,
       bool allowReuse,
-      int timeoutInSeconds});
+      int? timeoutInSeconds});
 
   /// Executes a query on this context.
   ///
@@ -41,8 +41,8 @@ abstract class PostgreSQLExecutionContext {
   /// This method returns the number of rows affected and no additional information. This method uses the least efficient and less secure command
   /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
   /// or return rows.
-  Future<int> execute(String fmtString,
-      {Map<String, dynamic> substitutionValues, int timeoutInSeconds});
+  Future<int?> execute(String fmtString,
+      {Map<String, dynamic> substitutionValues, int? timeoutInSeconds});
 
   /// Cancels a transaction on this context.
   ///
@@ -80,7 +80,7 @@ abstract class PostgreSQLExecutionContext {
   ///           "company: {"name": "stable|kernel"}
   ///         }
   ///       ]
-  Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
+  Future<List<Map<String?, Map<String, dynamic>>>> mappedResultsQuery(
       String fmtString,
       {Map<String, dynamic> substitutionValues,
       bool allowReuse,
@@ -93,18 +93,18 @@ abstract class ColumnDescription {
   String get columnName;
 
   /// The resolved name of the referenced table.
-  String get tableName;
+  String? get tableName;
 }
 
 /// A single row of a query result.
 ///
 /// Column values can be accessed through the `[]` operator.
 abstract class PostgreSQLResultRow implements List {
-  List<ColumnDescription> get columnDescriptions;
+  List<ColumnDescription?> get columnDescriptions;
 
   /// Returns a two-level map that on the first level contains the resolved
   /// table name, and on the second level the column name (or its alias).
-  Map<String, Map<String, dynamic>> toTableColumnMap();
+  Map<String?, Map<String, dynamic>> toTableColumnMap();
 
   /// Returns a single-level map that maps the column name (or its alias) to the
   /// value returned on that position.
@@ -117,5 +117,5 @@ abstract class PostgreSQLResultRow implements List {
 abstract class PostgreSQLResult implements List<PostgreSQLResultRow> {
   /// How many rows did this query affect?
   int get affectedRowCount;
-  List<ColumnDescription> get columnDescriptions;
+  List<ColumnDescription?> get columnDescriptions;
 }

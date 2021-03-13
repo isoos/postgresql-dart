@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.0-null-safety.0
+
+- Migrate to null safety. (Thanks to [j4qfrost](https://github.com/j4qfrost), [#153](https://github.com/stablekernel/postgresql-dart/pull/153)).
+
 ## 2.2.0
 
 - Supporting Unix socket connections. (Thanks to [grillbiff](https://github.com/grillbiff),

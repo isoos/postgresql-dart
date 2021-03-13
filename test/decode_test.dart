@@ -2,7 +2,7 @@ import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
 void main() {
-  PostgreSQLConnection connection;
+  late PostgreSQLConnection connection;
   setUp(() async {
     connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
         username: 'dart', password: 'dart');
@@ -34,13 +34,13 @@ void main() {
         'VALUES (null, null, null, null, null, null, null, null, null, null, null, null, null)');
   });
   tearDown(() async {
-    await connection?.close();
+    await connection.close();
   });
 
   test('Fetch em', () async {
     final res = await connection.query('select * from t');
 
-    final row1 = res[0];
+    final row1 = res![0];
     final row2 = res[1];
     final row3 = res[2];
 

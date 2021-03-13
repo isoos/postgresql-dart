@@ -13,14 +13,14 @@ class QueryQueue extends ListBase<Query<dynamic>>
   PostgreSQLException get _cancellationException => PostgreSQLException(
       'Query cancelled due to the database connection closing.');
 
-  Query<dynamic> get pending {
+  Query<dynamic>? get pending {
     if (_inner.isEmpty) {
       return null;
     }
     return _inner.first;
   }
 
-  void cancel([dynamic error, StackTrace stackTrace]) {
+  void cancel([Object? error, StackTrace? stackTrace]) {
     _isCancelled = true;
     error ??= _cancellationException;
     final existing = _inner;
@@ -30,8 +30,8 @@ class QueryQueue extends ListBase<Query<dynamic>>
     // get the error and not the close message, since completeError is
     // synchronous.
     scheduleMicrotask(() {
-      existing?.forEach((q) {
-        q.completeError(error, stackTrace);
+      existing.forEach((q) {
+        q.completeError(error!, stackTrace);
       });
     });
   }
