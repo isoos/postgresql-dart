@@ -40,7 +40,7 @@ void main() {
   test('Fetch em', () async {
     final res = await connection.query('select * from t');
 
-    final row1 = res![0];
+    final row1 = res[0];
     final row2 = res[1];
     final row3 = res[2];
 

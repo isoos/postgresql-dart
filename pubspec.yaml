@@ -1,13 +1,13 @@
 name: postgres
 description: PostgreSQL database driver. Supports statement reuse and binary protocol.
-version: 2.3.0-null-safety.0
+version: 2.3.0-null-safety.1
 homepage: https://github.com/isoos/postgresql-dart
 
 environment:
   sdk: '>=2.12.0 <3.0.0'
 
 dependencies:
-  buffer: ^1.0.6
+  buffer: ^1.1.0
   crypto: ^3.0.0
   collection: ^1.15.0-nullsafety.4
 

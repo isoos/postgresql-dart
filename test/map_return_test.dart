@@ -125,7 +125,7 @@ void main() {
     final result = await connection.mappedResultsQuery('SELECT 1');
     expect(result, [
       {
-        null: {'?column?': 1}
+        '': {'?column?': 1}
       }
     ]);
   });

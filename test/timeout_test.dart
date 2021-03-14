@@ -75,10 +75,9 @@ void main() {
   });
 
   test('Query times out, next query in the queue runs', () async {
+    final rs = await conn.query('SELECT 1');
     //ignore: unawaited_futures
-    conn
-        .query('SELECT pg_sleep(2)', timeoutInSeconds: 1)
-        .catchError((_) => null);
+    conn.query('SELECT pg_sleep(2)', timeoutInSeconds: 1).catchError((_) => rs);
 
     expect(await conn.query('SELECT 1'), [
       [1]
@@ -91,9 +90,10 @@ void main() {
   });
 
   test('Query that fails does not timeout', () async {
+    final rs = await conn.query('SELECT 1');
     await conn
         .query("INSERT INTO t (id) VALUES ('foo')", timeoutInSeconds: 1)
-        .catchError((_) => null);
+        .catchError((_) => rs);
     expect(Future.delayed(Duration(seconds: 2)), completes);
   });
 }

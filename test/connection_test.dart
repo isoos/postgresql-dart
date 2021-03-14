@@ -105,10 +105,11 @@ void main() {
           username: 'darttrust');
       await conn.open();
 
+      final rs = await conn.query('select 1');
       final errors = [];
       final catcher = (e) {
         errors.add(e);
-        return null;
+        return rs;
       };
       final futures = [
         conn.query('select 1', allowReuse: false).catchError(catcher),
@@ -131,11 +132,12 @@ void main() {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust', useSSL: true);
       await conn.open();
+      final rs = await conn.query('select 1');
 
       final errors = [];
       final catcher = (e) {
         errors.add(e);
-        return null;
+        return rs;
       };
       final futures = [
         conn.query('select 1', allowReuse: false).catchError(catcher),
