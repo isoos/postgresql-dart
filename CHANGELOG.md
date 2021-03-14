@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.0-null-safety.2
+
+- Fixing query API optional parameters.
+
 ## 2.3.0-null-safety.1
 
 - Updated public API to always return non-nullable results.
