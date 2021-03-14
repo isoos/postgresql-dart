@@ -393,7 +393,7 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
   final result = await conn.query(
       'INSERT INTO t (v) VALUES (${PostgreSQLFormat.id('v', type: dataType)}) RETURNING v',
       substitutionValues: {'v': value});
-  expect(result!.first.first, equals(value));
+  expect(result.first.first, equals(value));
 
   final encoder = PostgresBinaryEncoder(dataType);
   final encodedValue = encoder.convert(value);

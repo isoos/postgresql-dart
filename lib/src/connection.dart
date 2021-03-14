@@ -390,10 +390,6 @@ class _OidCache {
       resolveOids: false,
     );
 
-    if (orderedTableNames == null) {
-      return;
-    }
-
     final iterator = oids.iterator;
     orderedTableNames.forEach((tableName) {
       iterator.moveNext();
@@ -416,7 +412,7 @@ abstract class _PostgreSQLExecutionContextMixin
   int get queueSize => _queue.length;
 
   @override
-  Future<PostgreSQLResult?> query(
+  Future<PostgreSQLResult> query(
     String fmtString, {
     Map<String, dynamic>? substitutionValues,
     bool allowReuse = true,
@@ -429,7 +425,7 @@ abstract class _PostgreSQLExecutionContextMixin
         timeoutInSeconds: timeoutInSeconds,
       );
 
-  Future<PostgreSQLResult?> _query(
+  Future<PostgreSQLResult> _query(
     String fmtString, {
     Map<String, dynamic>? substitutionValues,
     required bool allowReuse,
@@ -458,18 +454,16 @@ abstract class _PostgreSQLExecutionContextMixin
     }
     final metaData = _PostgreSQLResultMetaData(columnDescriptions!);
 
-    return queryResult != null
-        ? _PostgreSQLResult(
-            queryResult.affectedRowCount,
-            metaData,
-            queryResult.value!
-                .map((columns) => _PostgreSQLResultRow(metaData, columns))
-                .toList())
-        : null;
+    return _PostgreSQLResult(
+        queryResult.affectedRowCount,
+        metaData,
+        queryResult.value!
+            .map((columns) => _PostgreSQLResultRow(metaData, columns))
+            .toList());
   }
 
   @override
-  Future<List<Map<String?, Map<String, dynamic>>>> mappedResultsQuery(
+  Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
       String fmtString,
       {Map<String, dynamic> substitutionValues = const {},
       bool allowReuse = false,
@@ -481,14 +475,11 @@ abstract class _PostgreSQLExecutionContextMixin
       timeoutInSeconds: timeoutInSeconds,
     );
 
-    if (rs == null) {
-      return Future.value();
-    }
     return rs.map((row) => row.toTableColumnMap()).toList();
   }
 
   @override
-  Future<int?> execute(String fmtString,
+  Future<int> execute(String fmtString,
       {Map<String, dynamic> substitutionValues = const {},
       int? timeoutInSeconds}) async {
     timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
@@ -502,13 +493,13 @@ abstract class _PostgreSQLExecutionContextMixin
         onlyReturnAffectedRowCount: true);
 
     final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
-    return result != null ? result.affectedRowCount : null;
+    return result.affectedRowCount;
   }
 
   @override
-  void cancelTransaction({String reason});
+  void cancelTransaction({String? reason});
 
-  Future<QueryResult<T>?> _enqueue<T>(Query<T> query,
+  Future<QueryResult<T>> _enqueue<T>(Query<T> query,
       {int timeoutInSeconds = 30}) async {
     if (_queue.add(query)) {
       _connection._transitionToState(_connection._connectionState.awake());
@@ -518,7 +509,7 @@ abstract class _PostgreSQLExecutionContextMixin
             await query.future.timeout(Duration(seconds: timeoutInSeconds));
         _connection._cache.add(query);
         _queue.remove(query);
-        return result;
+        return result!;
       } catch (e, st) {
         _queue.remove(query);
         await _onQueryError(query, e, st);
@@ -529,7 +520,7 @@ abstract class _PostgreSQLExecutionContextMixin
       // the caller behaves correctly in this condition. otherwise,
       // the caller would complete synchronously. This future
       // will always complete as a cancellation error.
-      return Future(() async => query.future);
+      return Future(() async => (await query.future)!);
     }
   }
 
@@ -537,12 +528,12 @@ abstract class _PostgreSQLExecutionContextMixin
 }
 
 class _PostgreSQLResultMetaData {
-  final List<ColumnDescription?> columnDescriptions;
+  final List<ColumnDescription> columnDescriptions;
   late List<String?> _tableNames;
 
   _PostgreSQLResultMetaData(this.columnDescriptions) {
     _tableNames =
-        columnDescriptions.map((column) => column!.tableName).toSet().toList();
+        columnDescriptions.map((column) => column.tableName).toSet().toList();
   }
 
   List<String?> get tableNames {
@@ -561,7 +552,7 @@ class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
       : super(rows);
 
   @override
-  List<ColumnDescription?> get columnDescriptions =>
+  List<ColumnDescription> get columnDescriptions =>
       _metaData.columnDescriptions;
 }
 
@@ -572,18 +563,18 @@ class _PostgreSQLResultRow extends UnmodifiableListView
   _PostgreSQLResultRow(this._metaData, List columns) : super(columns);
 
   @override
-  List<ColumnDescription?> get columnDescriptions =>
+  List<ColumnDescription> get columnDescriptions =>
       _metaData.columnDescriptions;
 
   @override
-  Map<String?, Map<String, dynamic>> toTableColumnMap() {
-    final rowMap = <String?, Map<String, dynamic>>{};
+  Map<String, Map<String, dynamic>> toTableColumnMap() {
+    final rowMap = <String, Map<String, dynamic>>{};
     _metaData.tableNames.forEach((tableName) {
-      rowMap[tableName] = <String, dynamic>{};
+      rowMap[tableName ?? ''] = <String, dynamic>{};
     });
     for (var i = 0; i < _metaData.columnDescriptions.length; i++) {
       final col = _metaData.columnDescriptions[i];
-      rowMap[col!.tableName]![col.columnName] = this[i];
+      rowMap[col.tableName]![col.columnName] = this[i];
     }
     return rowMap;
   }
@@ -593,7 +584,7 @@ class _PostgreSQLResultRow extends UnmodifiableListView
     final rowMap = <String, dynamic>{};
     for (var i = 0; i < _metaData.columnDescriptions.length; i++) {
       final col = _metaData.columnDescriptions[i];
-      rowMap[col!.columnName] = this[i];
+      rowMap[col.columnName] = this[i];
     }
     return rowMap;
   }

@@ -244,7 +244,7 @@ class FieldDescription implements ColumnDescription {
   final int formatCode;
 
   @override
-  final String? tableName;
+  final String tableName;
 
   FieldDescription._(
     this.converter,
@@ -281,7 +281,7 @@ class FieldDescription implements ColumnDescription {
     return FieldDescription._(
       converter, fieldName, tableID, columnID, typeID,
       dataTypeSize, typeModifier, formatCode,
-      null, // tableName
+      '', // tableName
     );
   }
 

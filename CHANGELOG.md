@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.0-null-safety.1
+
+- Updated public API to always return non-nullable results.
+- **BREAKING CHANGE**: unknown mapped table name is no longer `null`, it is empty string (`''`).
+
 ## 2.3.0-null-safety.0
 
 - Migrate to null safety. (Thanks to [j4qfrost](https://github.com/j4qfrost), [#153](https://github.com/stablekernel/postgresql-dart/pull/153)).
