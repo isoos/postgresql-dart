@@ -249,6 +249,25 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
           throw FormatException(
               'Invalid type for parameter value. Expected: List<double> Got: ${value.runtimeType}');
         }
+
+      case PostgreSQLDataType.jsonbArray:
+        {
+          if (value is List<Object>) {
+            final bytesArray = value.map((v) {
+              final jsonBytes = utf8.encode(json.encode(v));
+              final writer = ByteDataWriter(bufferLength: jsonBytes.length + 1);
+              writer.writeUint8(1);
+              writer.write(jsonBytes);
+              return writer.toBytes();
+            });
+            return writeListBytes<Uint8List>(
+                bytesArray, 3802, (item) => item.length, (bd, offset, item) {
+              item.forEach((i) => bd.setUint8(offset++, i));
+            });
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: List<Object> Got: ${value.runtimeType}');
+        }
     }
 
     throw PostgreSQLException('Unsupported datatype');
@@ -362,14 +381,19 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
             buffer, (offset, _) => buffer.getInt32(offset));
 
       case PostgreSQLDataType.textArray:
-        return readListBytes<String>(
-            buffer,
-            (offset, length) =>
-                utf8.decode(value.sublist(offset, offset + length)));
+        return readListBytes<String>(buffer, (offset, length) {
+          return utf8.decode(value.sublist(offset, offset + length));
+        });
 
       case PostgreSQLDataType.doubleArray:
         return readListBytes<double>(
             buffer, (offset, _) => buffer.getFloat64(offset));
+
+      case PostgreSQLDataType.jsonbArray:
+        return readListBytes<dynamic>(buffer, (offset, length) {
+          final bytes = value.sublist(offset, offset + length);
+          return json.decode(utf8.decode(bytes));
+        });
     }
 
     // prepend type-code and return raw bytes
@@ -421,6 +445,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     1184: PostgreSQLDataType.timestampWithTimezone,
     2950: PostgreSQLDataType.uuid,
     3802: PostgreSQLDataType.jsonb,
+    3807: PostgreSQLDataType.jsonbArray,
   };
 }
 

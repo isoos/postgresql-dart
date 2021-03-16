@@ -330,6 +330,7 @@ class PostgreSQLFormatIdentifier {
     '_text': PostgreSQLDataType.textArray,
     '_float8': PostgreSQLDataType.doubleArray,
     'varchar': PostgreSQLDataType.varChar,
+    '_jsonb': PostgreSQLDataType.jsonbArray,
   };
 
   factory PostgreSQLFormatIdentifier(String t) {
