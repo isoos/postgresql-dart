@@ -391,7 +391,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
 
       case PostgreSQLDataType.jsonbArray:
         return readListBytes<dynamic>(buffer, (offset, length) {
-          final bytes = value.sublist(offset, offset + length);
+          final bytes = value.sublist(offset + 1, offset + length - 1);
           return json.decode(utf8.decode(bytes));
         });
     }
