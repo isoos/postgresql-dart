@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.0
+
+- Finalized null-safe release.
+
 ## 2.3.0-null-safety.2
 
 - Fixing query API optional parameters.
