@@ -71,7 +71,7 @@ enum PostgreSQLDataType {
   /// When returned from database, format will be xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
   uuid,
 
-  /// Must be a [LatLng]
+  /// Must be a [PgPoint]
   point,
 
   /// Must be a [List<int>]
