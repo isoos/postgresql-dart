@@ -30,9 +30,9 @@ abstract class PostgreSQLExecutionContext {
   /// anything to opt in to this behavior, this connection will track the necessary information required to reuse queries without intervention. (The [fmtString] is
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
   Future<PostgreSQLResult> query(String fmtString,
-      {Map<String, dynamic> substitutionValues,
-      bool allowReuse,
-      int timeoutInSeconds});
+      {Map<String, dynamic>? substitutionValues,
+      bool? allowReuse,
+      int? timeoutInSeconds});
 
   /// Executes a query on this context.
   ///
@@ -42,13 +42,13 @@ abstract class PostgreSQLExecutionContext {
   /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
   /// or return rows.
   Future<int> execute(String fmtString,
-      {Map<String, dynamic> substitutionValues, int timeoutInSeconds});
+      {Map<String, dynamic>? substitutionValues, int? timeoutInSeconds});
 
   /// Cancels a transaction on this context.
   ///
   /// If this context is an instance of [PostgreSQLConnection], this method has no effect. If the context is a transaction context (passed as the argument
   /// to [PostgreSQLConnection.transaction]), this will rollback the transaction.
-  void cancelTransaction({String reason});
+  void cancelTransaction({String? reason});
 
   /// Executes a query on this connection and returns each row as a [Map].
   ///
@@ -82,9 +82,9 @@ abstract class PostgreSQLExecutionContext {
   ///       ]
   Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
       String fmtString,
-      {Map<String, dynamic> substitutionValues,
-      bool allowReuse,
-      int timeoutInSeconds});
+      {Map<String, dynamic>? substitutionValues,
+      bool? allowReuse,
+      int? timeoutInSeconds});
 }
 
 /// A description of a column.

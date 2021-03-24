@@ -8,7 +8,7 @@ import 'package:postgres/src/message_window.dart';
 import 'package:postgres/src/server_messages.dart';
 
 void main() {
-  MessageFramer framer;
+  late MessageFramer framer;
   setUp(() {
     framer = MessageFramer();
   });

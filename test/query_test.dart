@@ -4,8 +4,7 @@ import 'package:postgres/src/types.dart';
 
 void main() {
   group('Successful queries', () {
-    var connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -332,8 +331,7 @@ void main() {
   });
 
   group('Unsuccesful queries', () {
-    var connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',

@@ -9,7 +9,7 @@ import 'package:postgres/src/text_codec.dart';
 import 'package:postgres/src/types.dart';
 import 'package:postgres/src/utf8_backed_string.dart';
 
-PostgreSQLConnection conn;
+late PostgreSQLConnection conn;
 
 void main() {
   group('Binary encoders', () {
@@ -21,7 +21,6 @@ void main() {
 
     tearDown(() async {
       await conn.close();
-      conn = null;
     });
 
     // expectInverse ensures that:
@@ -404,7 +403,7 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
   } else if (dataType == PostgreSQLDataType.bigSerial) {
     dataType = PostgreSQLDataType.bigInteger;
   }
-  int code;
+  late int code;
   PostgresBinaryDecoder.typeMap.forEach((key, type) {
     if (type == dataType) {
       code = key;

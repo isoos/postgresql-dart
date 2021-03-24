@@ -30,8 +30,8 @@ class MessageFramer {
   final _reader = ByteDataReader();
   final messageQueue = Queue<ServerMessage>();
 
-  int _type;
-  int _expectedLength;
+  int? _type;
+  int _expectedLength = 0;
 
   bool get _hasReadHeader => _type != null;
   bool get _canReadHeader => _reader.remainingLength >= _headerByteSize;
@@ -59,7 +59,7 @@ class MessageFramer {
             msgMaker == null ? UnknownMessage(_type, data) : msgMaker(data);
         messageQueue.add(msg);
         _type = null;
-        _expectedLength = null;
+        _expectedLength = 0;
         evaluateNextMessage = true;
       }
     }

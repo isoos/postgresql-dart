@@ -9,11 +9,21 @@ import 'package:test/test.dart';
 import 'package:postgres/postgres.dart';
 
 void main() {
+  // These tests are disabled, as we'd need to setup ci/pg_hba.conf into the CI
+  // postgres instance first.
+  // TODO: re-enable these tests after pg_hba.conf is used
+  if (Platform.environment.containsKey('GITHUB_ACTION')) {
+    test('NO CONNECTION TEST IS RUNNING.', () {
+      // no-op
+    });
+    return;
+  }
+
   group('Connection lifecycle', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test('Connect with md5 auth required', () async {
@@ -70,8 +80,6 @@ void main() {
       final underlyingSocket =
           reflect(conn).getField(socketMirror.simpleName).reflectee as Socket;
       expect(await underlyingSocket.done, isNotNull);
-
-      conn = null;
     });
 
     test('SSL Closing idle connection succeeds, closes underlying socket',
@@ -88,8 +96,6 @@ void main() {
       final underlyingSocket =
           reflect(conn).getField(socketMirror.simpleName).reflectee as Socket;
       expect(await underlyingSocket.done, isNotNull);
-
-      conn = null;
     });
 
     test(
@@ -99,10 +105,11 @@ void main() {
           username: 'darttrust');
       await conn.open();
 
+      final rs = await conn.query('select 1');
       final errors = [];
       final catcher = (e) {
         errors.add(e);
-        return null;
+        return rs;
       };
       final futures = [
         conn.query('select 1', allowReuse: false).catchError(catcher),
@@ -125,11 +132,12 @@ void main() {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust', useSSL: true);
       await conn.open();
+      final rs = await conn.query('select 1');
 
       final errors = [];
       final catcher = (e) {
         errors.add(e);
-        return null;
+        return rs;
       };
       final futures = [
         conn.query('select 1', allowReuse: false).catchError(catcher),
@@ -148,7 +156,7 @@ void main() {
   });
 
   group('Successful queries over time', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -157,7 +165,7 @@ void main() {
     });
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test(
@@ -224,12 +232,12 @@ void main() {
   });
 
   group('Unintended user-error situations', () {
-    PostgreSQLConnection conn;
-    Future openFuture;
+    late PostgreSQLConnection conn;
+    late Future openFuture;
 
     tearDown(() async {
       await openFuture;
-      await conn?.close();
+      await conn.close();
     });
 
     test('Sending queries to opening connection triggers error', () async {
@@ -348,7 +356,6 @@ void main() {
       await conn.execute('CREATE TEMPORARY TABLE t (i int unique)');
 
       await conn.execute('INSERT INTO t (i) VALUES (1)');
-      //ignore: unawaited_futures
       conn.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
         // ignore
       });
@@ -393,7 +400,6 @@ void main() {
       final orderEnsurer = [];
 
       // this will emit a query error
-      //ignore: unawaited_futures
       conn.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
         orderEnsurer.add(1);
         // ignore
@@ -449,12 +455,16 @@ void main() {
   });
 
   group('Network error situations', () {
-    ServerSocket serverSocket;
-    Socket socket;
+    ServerSocket? serverSocket;
+    Socket? socket;
 
     tearDown(() async {
-      await serverSocket?.close();
-      await socket?.close();
+      if (serverSocket != null) {
+        await serverSocket!.close();
+      }
+      if (socket != null) {
+        await socket!.close();
+      }
     });
 
     test(
@@ -493,7 +503,7 @@ void main() {
         () async {
       serverSocket =
           await ServerSocket.bind(InternetAddress.loopbackIPv4, 5433);
-      serverSocket.listen((s) {
+      serverSocket!.listen((s) {
         socket = s;
         // Don't respond on purpose
         s.listen((bytes) {});
@@ -517,7 +527,7 @@ void main() {
         () async {
       serverSocket =
           await ServerSocket.bind(InternetAddress.loopbackIPv4, 5433);
-      serverSocket.listen((s) {
+      serverSocket!.listen((s) {
         socket = s;
         // Don't respond on purpose
         s.listen((bytes) {});
@@ -541,7 +551,7 @@ void main() {
       final openCompleter = Completer();
       serverSocket =
           await ServerSocket.bind(InternetAddress.loopbackIPv4, 5433);
-      serverSocket.listen((s) {
+      serverSocket!.listen((s) {
         socket = s;
         // Don't respond on purpose
         s.listen((bytes) {});
@@ -567,7 +577,7 @@ void main() {
       final openCompleter = Completer();
       serverSocket =
           await ServerSocket.bind(InternetAddress.loopbackIPv4, 5433);
-      serverSocket.listen((s) {
+      serverSocket!.listen((s) {
         socket = s;
         // Don't respond on purpose
         s.listen((bytes) {});

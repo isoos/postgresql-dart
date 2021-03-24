@@ -14,8 +14,8 @@ class ErrorResponseMessage implements ServerMessage {
   ErrorResponseMessage(Uint8List bytes) {
     final reader = ByteDataReader()..add(bytes);
 
-    int identificationToken;
-    StringBuffer sb;
+    int? identificationToken;
+    StringBuffer? sb;
 
     while (reader.remainingLength > 0) {
       final byte = reader.readUint8();
@@ -27,7 +27,7 @@ class ErrorResponseMessage implements ServerMessage {
         identificationToken = null;
         sb = null;
       } else {
-        sb.writeCharCode(byte);
+        sb!.writeCharCode(byte);
       }
     }
     if (identificationToken != null && sb != null) {
@@ -54,9 +54,9 @@ class AuthenticationMessage implements ServerMessage {
   factory AuthenticationMessage(Uint8List bytes) {
     final reader = ByteDataReader()..add(bytes);
     final type = reader.readUint32();
-    List<int> salt;
+    final salt = <int>[];
     if (type == KindMD5Password) {
-      salt = reader.read(4, copy: true);
+      salt.addAll(reader.read(4, copy: true));
     }
     return AuthenticationMessage._(type, salt);
   }
@@ -115,7 +115,7 @@ class RowDescriptionMessage extends ServerMessage {
 }
 
 class DataRowMessage extends ServerMessage {
-  final values = <Uint8List>[];
+  final values = <Uint8List?>[];
 
   DataRowMessage(Uint8List bytes) {
     final reader = ByteDataReader()..add(bytes);
@@ -168,7 +168,7 @@ class CommandCompleteMessage extends ServerMessage {
     final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
     final match = identifierExpression.firstMatch(str);
     var rowsAffected = 0;
-    if (match.end < str.length) {
+    if (match != null && match.end < str.length) {
       rowsAffected = int.parse(str.split(' ').last);
     }
     return CommandCompleteMessage._(rowsAffected);
@@ -210,8 +210,8 @@ class NoDataMessage extends ServerMessage {
 }
 
 class UnknownMessage extends ServerMessage {
-  final int code;
-  final Uint8List bytes;
+  final int? code;
+  final Uint8List? bytes;
 
   UnknownMessage(this.code, this.bytes);
 
@@ -223,11 +223,11 @@ class UnknownMessage extends ServerMessage {
   @override
   bool operator ==(dynamic other) {
     if (bytes != null) {
-      if (bytes.length != other.bytes.length) {
+      if (bytes!.length != other.bytes.length) {
         return false;
       }
-      for (var i = 0; i < bytes.length; i++) {
-        if (bytes[i] != other.bytes[i]) {
+      for (var i = 0; i < bytes!.length; i++) {
+        if (bytes![i] != other.bytes[i]) {
           return false;
         }
       }
@@ -259,7 +259,7 @@ class ErrorField {
   static const int LineIdentifier = 76;
   static const int RoutineIdentifier = 82;
 
-  static PostgreSQLSeverity severityFromString(String str) {
+  static PostgreSQLSeverity severityFromString(String? str) {
     switch (str) {
       case 'ERROR':
         return PostgreSQLSeverity.error;
@@ -277,13 +277,13 @@ class ErrorField {
         return PostgreSQLSeverity.info;
       case 'LOG':
         return PostgreSQLSeverity.log;
+      default:
+        return PostgreSQLSeverity.unknown;
     }
-
-    return PostgreSQLSeverity.unknown;
   }
 
-  final int identificationToken;
-  final String text;
+  final int? identificationToken;
+  final String? text;
 
   ErrorField(this.identificationToken, this.text);
 }
