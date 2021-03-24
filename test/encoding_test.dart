@@ -450,7 +450,7 @@ void main() {
 
     test('Attempt to infer unknown type throws exception', () {
       try {
-        encoder.convert([]);
+        encoder.convert(Object());
         fail('unreachable');
       } on PostgreSQLException catch (e) {
         expect(e.toString(), contains('Could not infer type'));
