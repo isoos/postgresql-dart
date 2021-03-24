@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:test/test.dart';
-
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/binary_codec.dart';
 import 'package:postgres/src/text_codec.dart';
 import 'package:postgres/src/types.dart';
 import 'package:postgres/src/utf8_backed_string.dart';
+import 'package:test/test.dart';
 
 PostgreSQLConnection conn;
 
@@ -228,6 +227,123 @@ void main() {
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: String'));
       }
+    });
+
+    test('varchar', () async {
+      await expectInverse('', PostgreSQLDataType.varChar);
+      await expectInverse('foo', PostgreSQLDataType.varChar);
+      await expectInverse('foo\n', PostgreSQLDataType.varChar);
+      await expectInverse('foo\nbar;s', PostgreSQLDataType.varChar);
+      try {
+        await conn.query('INSERT INTO t (v) VALUES (@v:varchar)',
+            substitutionValues: {'v': 0});
+        fail('unreachable');
+      } on FormatException catch (e) {
+        expect(e.toString(), contains('Expected: String'));
+      }
+    });
+
+    test('json', () async {
+      await expectInverse('string', PostgreSQLDataType.json);
+      await expectInverse(2, PostgreSQLDataType.json);
+      await expectInverse(['foo'], PostgreSQLDataType.json);
+      await expectInverse({
+        'key': 'val',
+        'key1': 1,
+        'array': ['foo']
+      }, PostgreSQLDataType.json);
+
+      try {
+        await conn.query('INSERT INTO t (v) VALUES (@v:json)',
+            substitutionValues: {'v': DateTime.now()});
+        fail('unreachable');
+      } on JsonUnsupportedObjectError catch (_) {}
+    });
+
+    test('point', () async {
+      await expectInverse(PgPoint(0, 0), PostgreSQLDataType.point);
+      await expectInverse(PgPoint(100, 123.456), PostgreSQLDataType.point);
+      await expectInverse(PgPoint(0.001, -999), PostgreSQLDataType.point);
+
+      try {
+        await conn.query('INSERT INTO t (v) VALUES (@v:point)',
+            substitutionValues: {'v': 'text'});
+        fail('unreachable');
+      } on FormatException catch (e) {
+        expect(e.toString(), contains('Expected: PgPoint'));
+      }
+    });
+
+    test('integerArray', () async {
+      await expectInverse(<int>[], PostgreSQLDataType.integerArray);
+      await expectInverse([-1, 0, 200], PostgreSQLDataType.integerArray);
+      await expectInverse([-123], PostgreSQLDataType.integerArray);
+      try {
+        await conn.query('INSERT INTO t (v) VALUES (@v:_int4)',
+            substitutionValues: {'v': 'not-list-int'});
+        fail('unreachable');
+      } on FormatException catch (e) {
+        expect(e.toString(), contains('Expected: List<int>'));
+      }
+    });
+
+    test('doubleArray', () async {
+      await expectInverse(<double>[], PostgreSQLDataType.doubleArray);
+      await expectInverse([-123.0, 0.0, 1.0], PostgreSQLDataType.doubleArray);
+      await expectInverse([0.001, 45.678], PostgreSQLDataType.doubleArray);
+      try {
+        await conn.query('INSERT INTO t (v) VALUES (@v:_float8)',
+            substitutionValues: {'v': 'not-list-double'});
+        fail('unreachable');
+      } on FormatException catch (e) {
+        expect(e.toString(), contains('Expected: List<double>'));
+      }
+    });
+
+    test('textArray', () async {
+      await expectInverse(<String>[], PostgreSQLDataType.textArray);
+      await expectInverse(['', 'foo', 'foo\n'], PostgreSQLDataType.textArray);
+      await expectInverse(['foo\nbar;s', '"\'"'], PostgreSQLDataType.textArray);
+      try {
+        await conn.query('INSERT INTO t (v) VALUES (@v:_text)',
+            substitutionValues: {'v': 0});
+        fail('unreachable');
+      } on FormatException catch (e) {
+        expect(e.toString(), contains('Expected: List<String>'));
+      }
+    });
+
+    test('jsonbArray', () async {
+      await expectInverse(['string', 2, 0.1], PostgreSQLDataType.jsonbArray);
+      await expectInverse([
+        1,
+        {},
+        {'a': 'b'}
+      ], PostgreSQLDataType.jsonbArray);
+      await expectInverse([
+        ['foo'],
+        [
+          1,
+          {
+            'a': ['b']
+          }
+        ]
+      ], PostgreSQLDataType.jsonbArray);
+      await expectInverse([
+        {
+          'key': 'val',
+          'key1': 1,
+          'array': ['foo']
+        }
+      ], PostgreSQLDataType.jsonbArray);
+
+      try {
+        await conn
+            .query('INSERT INTO t (v) VALUES (@v:_jsonb)', substitutionValues: {
+          'v': [DateTime.now()]
+        });
+        fail('unreachable');
+      } on JsonUnsupportedObjectError catch (_) {}
     });
   });
 

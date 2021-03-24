@@ -1,6 +1,6 @@
 import 'package:postgres/postgres.dart';
-import 'package:test/test.dart';
 import 'package:postgres/src/types.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Successful queries', () {
@@ -15,7 +15,8 @@ void main() {
           '(i int, s serial, bi bigint, '
           'bs bigserial, bl boolean, si smallint, '
           't text, f real, d double precision, '
-          'dt date, ts timestamp, tsz timestamptz, j jsonb, u uuid)');
+          'dt date, ts timestamp, tsz timestamptz, j jsonb, u uuid, '
+          'v varchar, p point, jj json, ia _int4, ta _text, da _float8, ja _jsonb)');
       await connection.execute(
           'CREATE TEMPORARY TABLE u (i1 int not null, i2 int not null);');
       await connection
@@ -110,7 +111,7 @@ void main() {
 
     test('Query without specifying types', () async {
       var result = await connection.query(
-          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u) values '
+          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja) values '
           '(${PostgreSQLFormat.id('i')},'
           '${PostgreSQLFormat.id('bi')},'
           '${PostgreSQLFormat.id('bl')},'
@@ -122,8 +123,15 @@ void main() {
           '${PostgreSQLFormat.id('ts')},'
           '${PostgreSQLFormat.id('tsz')},'
           '${PostgreSQLFormat.id('j')},'
-          '${PostgreSQLFormat.id('u')}'
-          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u',
+          '${PostgreSQLFormat.id('u')},'
+          '${PostgreSQLFormat.id('v')},'
+          '${PostgreSQLFormat.id('p')},'
+          '${PostgreSQLFormat.id('jj')},'
+          '${PostgreSQLFormat.id('ia')},'
+          '${PostgreSQLFormat.id('ta')},'
+          '${PostgreSQLFormat.id('da')},'
+          '${PostgreSQLFormat.id('ja')}'
+          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja',
           substitutionValues: {
             'i': 1,
             'bi': 2,
@@ -136,7 +144,18 @@ void main() {
             'ts': DateTime.utc(2000, 2),
             'tsz': DateTime.utc(2000, 3),
             'j': {'a': 'b'},
-            'u': '01234567-89ab-cdef-0123-0123456789ab'
+            'u': '01234567-89ab-cdef-0123-0123456789ab',
+            'v': 'abcdef',
+            'p': PgPoint(1.0, 0.1),
+            'jj': {'k': 'v'},
+            'ia': [1, 2, 3],
+            'ta': ['a', 'b"\'\\"'],
+            'da': [0.1, 2.3, 1],
+            'ja': [
+              1,
+              'a"\'\\"',
+              {'k': 'v"\'\\"'}
+            ],
           });
 
       final expectedRow = [
@@ -153,22 +172,33 @@ void main() {
         DateTime.utc(2000, 2),
         DateTime.utc(2000, 3),
         {'a': 'b'},
-        '01234567-89ab-cdef-0123-0123456789ab'
+        '01234567-89ab-cdef-0123-0123456789ab',
+        'abcdef',
+        PgPoint(1.0, 0.1),
+        {'k': 'v'},
+        [1, 2, 3],
+        ['a', 'b"\'\\"'],
+        [0.1, 2.3, 1],
+        [
+          1,
+          'a"\'\\"',
+          {'k': 'v"\'\\"'}
+        ]
       ];
-      expect(result.columnDescriptions, hasLength(14));
+      expect(result.columnDescriptions, hasLength(21));
       expect(result.columnDescriptions.first.tableName, 't');
       expect(result.columnDescriptions.first.columnName, 'i');
       expect(result.columnDescriptions.last.tableName, 't');
-      expect(result.columnDescriptions.last.columnName, 'u');
+      expect(result.columnDescriptions.last.columnName, 'ja');
       expect(result, [expectedRow]);
       result = await connection.query(
-          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u from t');
+          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja from t');
       expect(result, [expectedRow]);
     });
 
     test('Query by specifying all types', () async {
       var result = await connection.query(
-          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u) values '
+          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja) values '
           '(${PostgreSQLFormat.id('i', type: PostgreSQLDataType.integer)},'
           '${PostgreSQLFormat.id('bi', type: PostgreSQLDataType.bigInteger)},'
           '${PostgreSQLFormat.id('bl', type: PostgreSQLDataType.boolean)},'
@@ -180,8 +210,15 @@ void main() {
           '${PostgreSQLFormat.id('ts', type: PostgreSQLDataType.timestampWithoutTimezone)},'
           '${PostgreSQLFormat.id('tsz', type: PostgreSQLDataType.timestampWithTimezone)},'
           '${PostgreSQLFormat.id('j', type: PostgreSQLDataType.jsonb)},'
-          '${PostgreSQLFormat.id('u', type: PostgreSQLDataType.uuid)})'
-          ' returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u',
+          '${PostgreSQLFormat.id('u', type: PostgreSQLDataType.uuid)},'
+          '${PostgreSQLFormat.id('v', type: PostgreSQLDataType.varChar)},'
+          '${PostgreSQLFormat.id('p', type: PostgreSQLDataType.point)},'
+          '${PostgreSQLFormat.id('jj', type: PostgreSQLDataType.json)},'
+          '${PostgreSQLFormat.id('ia', type: PostgreSQLDataType.integerArray)},'
+          '${PostgreSQLFormat.id('ta', type: PostgreSQLDataType.textArray)},'
+          '${PostgreSQLFormat.id('da', type: PostgreSQLDataType.doubleArray)},'
+          '${PostgreSQLFormat.id('ja', type: PostgreSQLDataType.jsonbArray)}'
+          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja',
           substitutionValues: {
             'i': 1,
             'bi': 2,
@@ -194,7 +231,18 @@ void main() {
             'ts': DateTime.utc(2000, 2),
             'tsz': DateTime.utc(2000, 3),
             'j': {'key': 'value'},
-            'u': '01234567-89ab-cdef-0123-0123456789ab'
+            'u': '01234567-89ab-cdef-0123-0123456789ab',
+            'v': 'abcdef',
+            'p': PgPoint(1.0, 0.1),
+            'jj': {'k': 'v'},
+            'ia': [1, 2, 3],
+            'ta': ['a', 'b'],
+            'da': [0.1, 2.3, 1.0],
+            'ja': [
+              1,
+              'a',
+              {'k': 'v'}
+            ],
           });
 
       final expectedRow = [
@@ -211,12 +259,23 @@ void main() {
         DateTime.utc(2000, 2),
         DateTime.utc(2000, 3),
         {'key': 'value'},
-        '01234567-89ab-cdef-0123-0123456789ab'
+        '01234567-89ab-cdef-0123-0123456789ab',
+        'abcdef',
+        PgPoint(1.0, 0.1),
+        {'k': 'v'},
+        [1, 2, 3],
+        ['a', 'b'],
+        [0.1, 2.3, 1],
+        [
+          1,
+          'a',
+          {'k': 'v'}
+        ],
       ];
       expect(result, [expectedRow]);
 
       result = await connection.query(
-          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u from t');
+          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja from t');
       expect(result, [expectedRow]);
     });
 
