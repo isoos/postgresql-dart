@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:latlong/latlong.dart';
+import 'package:latlng/latlng.dart';
 
 import '../postgres.dart';
 import 'types.dart';
@@ -396,12 +396,16 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
         });
     }
 
-    // prepend type-code and return raw bytes
+    // We'll try and decode this as a utf8 string and return that
+    // for many internal types, this is valid. If it fails,
+    // we just return the bytes and let the caller figure out what to
+    // do with it.
 
-    final writer = ByteDataWriter(bufferLength: value.length + 4);
-    writer.writeUint32(typeCode);
-    writer.write(value);
-    return writer.toBytes();
+    try {
+      return utf8.decode(value);
+    } catch (_) {
+      return value;
+    }
   }
 
   List<T> readListBytes<T>(
@@ -448,11 +452,3 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     3807: PostgreSQLDataType.jsonbArray,
   };
 }
-
-/*
-        [0,0,0,1,0,0,0,0,0,0,2,189,0,0,0,2,0,0,0,1,0,0,0,8,64,0,0,0,0,0,0,0,0,0,0,8,64,16,0,0,0,0,0,0]
-         dim     ign     type      size    index   len1    int1             len2    int2
-
-        [0,0,0,1,0,0,0,0,0,0,0,25,0,0,0,1,0,0,0,1,0,0,0,13,84,101,115,108,97,32,77,111,100,101,108,32,83]
-         dim     ign     type     size    index   len1     str1
-       */
