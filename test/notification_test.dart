@@ -5,9 +5,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('Successful notifications', () {
-    var connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
-
+    late PostgreSQLConnection connection;
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'dart', password: 'dart');

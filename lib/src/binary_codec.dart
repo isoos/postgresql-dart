@@ -28,13 +28,13 @@ final _hex = <String>[
   'f',
 ];
 
-class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
+class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
   final PostgreSQLDataType _dataType;
 
   const PostgresBinaryEncoder(this._dataType);
 
   @override
-  Uint8List convert(dynamic value) {
+  Uint8List? convert(dynamic value) {
     if (value == null) {
       return null;
     }
@@ -173,7 +173,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
                 'Invalid type for parameter value. Expected: String Got: ${value.runtimeType}');
           }
 
-          final hexBytes = (value as String)
+          final hexBytes = value
               .toLowerCase()
               .codeUnits
               .where((c) => c != _dashUnit)
@@ -260,9 +260,10 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
           throw FormatException(
               'Invalid type for parameter value. Expected: List<Object> Got: ${value.runtimeType}');
         }
+        
+      default:
+        throw PostgreSQLException('Unsupported datatype');
     }
-
-    throw PostgreSQLException('Unsupported datatype');
   }
 
   Uint8List writeListBytes<T>(
@@ -294,12 +295,12 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
   final int typeCode;
 
   @override
-  dynamic convert(Uint8List value) {
-    final dataType = typeMap[typeCode];
-
+  dynamic convert(Uint8List? value) {
     if (value == null) {
       return null;
     }
+
+    final dataType = typeMap[typeCode];
 
     final buffer =
         ByteData.view(value.buffer, value.offsetInBytes, value.lengthInBytes);
@@ -386,17 +387,19 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
           final bytes = reader.read(length - 1);
           return json.decode(utf8.decode(bytes));
         });
-    }
-
-    // We'll try and decode this as a utf8 string and return that
-    // for many internal types, this is valid. If it fails,
-    // we just return the bytes and let the caller figure out what to
-    // do with it.
-
-    try {
-      return utf8.decode(value);
-    } catch (_) {
-      return value;
+    
+      default:
+        {
+          // We'll try and decode this as a utf8 string and return that
+          // for many internal types, this is valid. If it fails,
+          // we just return the bytes and let the caller figure out what to
+          // do with it.
+          try {
+            return utf8.decode(value);
+          } catch (_) {
+            return value;
+          }
+        }
     }
   }
 

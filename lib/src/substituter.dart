@@ -5,7 +5,7 @@ import 'types.dart';
 class PostgreSQLFormat {
   static final int _atSignCodeUnit = '@'.codeUnitAt(0);
 
-  static String id(String name, {PostgreSQLDataType type}) {
+  static String id(String name, {PostgreSQLDataType? type}) {
     if (type != null) {
       return '@$name:${dataTypeStringForDataType(type)}';
     }
@@ -13,7 +13,7 @@ class PostgreSQLFormat {
     return '@$name';
   }
 
-  static String dataTypeStringForDataType(PostgreSQLDataType dt) {
+  static String? dataTypeStringForDataType(PostgreSQLDataType? dt) {
     switch (dt) {
       case PostgreSQLDataType.text:
         return 'text';
@@ -61,19 +61,19 @@ class PostgreSQLFormat {
         return 'varchar';
       case PostgreSQLDataType.jsonbArray:
         return '_jsonb';
+      default:
+        return null;
     }
-
-    return null;
   }
 
-  static String substitute(String fmtString, Map<String, dynamic> values,
-      {SQLReplaceIdentifierFunction replace}) {
+  static String substitute(String fmtString, Map<String, dynamic>? values,
+      {SQLReplaceIdentifierFunction? replace}) {
     final converter = PostgresTextEncoder();
-    values ??= <String, dynamic>{};
-    replace ??= (spec, index) => converter.convert(values[spec.name]);
+    values ??= const {};
+    replace ??= (spec, index) => converter.convert(values![spec.name]);
 
     final items = <PostgreSQLFormatToken>[];
-    PostgreSQLFormatToken currentPtr;
+    PostgreSQLFormatToken? currentPtr;
     final iterator = RuneIterator(fmtString);
 
     while (iterator.moveNext()) {
@@ -129,13 +129,13 @@ class PostgreSQLFormat {
       } else {
         final identifier = PostgreSQLFormatIdentifier(t.buffer.toString());
 
-        if (!values.containsKey(identifier.name)) {
+        if (values != null && !values.containsKey(identifier.name)) {
           // Format string specified identifier with name ${identifier.name},
           // but key was not present in values.
           return t.buffer;
         }
 
-        final val = replace(identifier, idx);
+        final val = replace!(identifier, idx);
         idx++;
 
         if (identifier.typeCast != null) {

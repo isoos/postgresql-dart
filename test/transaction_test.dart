@@ -7,7 +7,7 @@ import 'package:postgres/postgres.dart';
 
 void main() {
   group('Transaction behavior', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -17,7 +17,7 @@ void main() {
     });
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test('Rows are Lists of column values', () async {
@@ -208,10 +208,11 @@ void main() {
         "A transaction doesn't have to await on queries, when the last query fails, it still emits an error from the transaction",
         () async {
       dynamic transactionError;
+      final rs = await conn.query('SELECT 1');
       await conn.transaction((ctx) async {
         ctx.query('INSERT INTO t (id) VALUES (1)');
         ctx.query('INSERT INTO t (id) VALUES (2)');
-        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((e) {});
+        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((e) => rs);
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);
@@ -226,13 +227,16 @@ void main() {
       dynamic failingQueryError;
       dynamic pendingQueryError;
       dynamic transactionError;
+      final rs = await conn.query('SELECT 1');
       await conn.transaction((ctx) async {
         ctx.query('INSERT INTO t (id) VALUES (1)');
         ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((e) {
           failingQueryError = e;
+          return rs;
         });
         ctx.query('INSERT INTO t (id) VALUES (2)').catchError((e) {
           pendingQueryError = e;
+          return rs;
         });
       }).catchError((e) => transactionError = e);
       expect(transactionError, isNotNull);
@@ -246,10 +250,15 @@ void main() {
     test(
         'A transaction with a rollback and non-await queries rolls back transaction',
         () async {
+      final rs = await conn.query('select 1');
       final errs = [];
       await conn.transaction((ctx) async {
-        ctx.query('INSERT INTO t (id) VALUES (1)').catchError(errs.add);
-        ctx.query('INSERT INTO t (id) VALUES (2)').catchError(errs.add);
+        final errsAdd = (e) {
+          errs.add(e);
+          return rs;
+        };
+        ctx.query('INSERT INTO t (id) VALUES (1)').catchError(errsAdd);
+        ctx.query('INSERT INTO t (id) VALUES (2)').catchError(errsAdd);
         ctx.cancelTransaction();
         ctx.query('INSERT INTO t (id) VALUES (3)').catchError((e) {});
       });
@@ -279,10 +288,11 @@ void main() {
         'A transaction that mixes awaiting and non-awaiting queries fails gracefully when an unawaited query fails',
         () async {
       dynamic transactionError;
+      final rs = conn.query('SELECT 1');
       await conn.transaction((ctx) async {
         await ctx.query('INSERT INTO t (id) VALUES (1)');
-        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((_) {});
-        await ctx.query('INSERT INTO t (id) VALUES (2)').catchError((_) {});
+        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((_) => rs);
+        await ctx.query('INSERT INTO t (id) VALUES (2)').catchError((_) => rs);
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);
@@ -295,7 +305,7 @@ void main() {
   // After a transaction fails, the changes must be rolled back, it should continue with pending queries, pending transactions, later queries, later transactions
 
   group('Transaction:Query recovery', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -305,7 +315,7 @@ void main() {
     });
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test('Is rolled back/executes later query', () async {
@@ -396,7 +406,7 @@ void main() {
   });
 
   group('Transaction:Exception recovery', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -406,7 +416,7 @@ void main() {
     });
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test('Is rolled back/executes later query', () async {
@@ -483,11 +493,12 @@ void main() {
         'If exception thrown while preparing query, transaction gets rolled back',
         () async {
       try {
+        final rs = conn.query('SELECT 1');
         await conn.transaction((c) async {
           await c.query('INSERT INTO t (id) VALUES (1)');
 
           c.query('INSERT INTO t (id) VALUES (@id:int4)',
-              substitutionValues: {'id': 'foobar'}).catchError((_) => null);
+              substitutionValues: {'id': 'foobar'}).catchError((_) => rs);
           await c.query('INSERT INTO t (id) VALUES (2)');
         });
         expect(true, false);
@@ -499,7 +510,7 @@ void main() {
       expect(noRows, []);
     });
 
-    test('Async query failure prevents closure from continuning', () async {
+    test('Async query failure prevents closure from continuing', () async {
       var reached = false;
 
       try {
@@ -524,11 +535,12 @@ void main() {
         'When exception thrown in unawaited on future, transaction is rolled back',
         () async {
       try {
+        final rs = conn.query('SELECT 1');
         await conn.transaction((c) async {
           await c.query('INSERT INTO t (id) VALUES (1)');
           c
               .query("INSERT INTO t (id) VALUE ('foo') RETURNING id")
-              .catchError((_) => null);
+              .catchError((_) => rs);
           await c.query('INSERT INTO t (id) VALUES (2)');
         });
         fail('unreachable');
@@ -542,7 +554,7 @@ void main() {
   });
 
   group('Transaction:Rollback recovery', () {
-    PostgreSQLConnection conn;
+    late PostgreSQLConnection conn;
 
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -552,7 +564,7 @@ void main() {
     });
 
     tearDown(() async {
-      await conn?.close();
+      await conn.close();
     });
 
     test('Is rolled back/executes later query', () async {

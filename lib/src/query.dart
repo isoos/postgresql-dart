@@ -24,26 +24,26 @@ class Query<T> {
 
   final bool onlyReturnAffectedRowCount;
 
-  String statementIdentifier;
+  String? statementIdentifier;
 
-  Future<QueryResult<T>> get future => _onComplete.future;
+  Future<QueryResult<T>?> get future => _onComplete.future;
 
   final String statement;
-  final Map<String, dynamic> substitutionValues;
+  final Map<String, dynamic>? substitutionValues;
   final PostgreSQLExecutionContext transaction;
   final PostgreSQLConnection connection;
 
-  List<PostgreSQLDataType> _specifiedParameterTypeCodes;
+  late List<PostgreSQLDataType?> _specifiedParameterTypeCodes;
   final rows = <List<dynamic>>[];
 
-  CachedQuery cache;
+  CachedQuery? cache;
 
-  final _onComplete = Completer<QueryResult<T>>.sync();
-  List<FieldDescription> _fieldDescriptions;
+  final _onComplete = Completer<QueryResult<T>?>.sync();
+  List<FieldDescription>? _fieldDescriptions;
 
-  List<FieldDescription> get fieldDescriptions => _fieldDescriptions;
+  List<FieldDescription>? get fieldDescriptions => _fieldDescriptions;
 
-  set fieldDescriptions(List<FieldDescription> fds) {
+  set fieldDescriptions(List<FieldDescription>? fds) {
     _fieldDescriptions = fds;
     cache?.fieldDescriptions = fds;
   }
@@ -56,9 +56,9 @@ class Query<T> {
     socket.add(queryMessage.asBytes());
   }
 
-  void sendExtended(Socket socket, {CachedQuery cacheQuery}) {
+  void sendExtended(Socket socket, {CachedQuery? cacheQuery}) {
     if (cacheQuery != null) {
-      fieldDescriptions = cacheQuery.fieldDescriptions;
+      fieldDescriptions = cacheQuery.fieldDescriptions!;
       sendCachedQuery(socket, cacheQuery, substitutionValues);
 
       return;
@@ -89,21 +89,21 @@ class Query<T> {
     ];
 
     if (statementIdentifier != null) {
-      cache = CachedQuery(statementIdentifier, formatIdentifiers);
+      cache = CachedQuery(statementIdentifier!, formatIdentifiers);
     }
 
     socket.add(ClientMessage.aggregateBytes(messages));
   }
 
   void sendCachedQuery(Socket socket, CachedQuery cacheQuery,
-      Map<String, dynamic> substitutionValues) {
+      Map<String, dynamic>? substitutionValues) {
     final statementName = cacheQuery.preparedStatementName;
-    final parameterList = cacheQuery.orderedParameters
+    final parameterList = cacheQuery.orderedParameters!
         .map((identifier) => ParameterValue(identifier, substitutionValues))
         .toList();
 
     final bytes = ClientMessage.aggregateBytes([
-      BindMessage(parameterList, statementName: statementName),
+      BindMessage(parameterList, statementName: statementName!),
       ExecuteMessage(),
       SyncMessage()
     ]);
@@ -111,7 +111,7 @@ class Query<T> {
     socket.add(bytes);
   }
 
-  PostgreSQLException validateParameters(List<int> parameterTypeIDs) {
+  PostgreSQLException? validateParameters(List<int> parameterTypeIDs) {
     final actualParameterTypeCodeIterator = parameterTypeIDs.iterator;
     final parametersAreMismatched =
         _specifiedParameterTypeCodes.map((specifiedType) {
@@ -134,12 +134,12 @@ class Query<T> {
     return null;
   }
 
-  void addRow(List<Uint8List> rawRowData) {
-    if (onlyReturnAffectedRowCount) {
+  void addRow(List<Uint8List?> rawRowData) {
+    if (onlyReturnAffectedRowCount || fieldDescriptions == null) {
       return;
     }
 
-    final iterator = fieldDescriptions.iterator;
+    final iterator = fieldDescriptions!.iterator;
     final lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
       return iterator.current.converter.convert(bd);
@@ -161,7 +161,7 @@ class Query<T> {
     _onComplete.complete(QueryResult(rowsAffected, rows as T));
   }
 
-  void completeError(dynamic error, [StackTrace stackTrace]) {
+  void completeError(Object error, [StackTrace? stackTrace]) {
     if (_onComplete.isCompleted) {
       return;
     }
@@ -175,7 +175,7 @@ class Query<T> {
 
 class QueryResult<T> {
   final int affectedRowCount;
-  final T value;
+  final T? value;
 
   const QueryResult(this.affectedRowCount, this.value);
 }
@@ -183,9 +183,9 @@ class QueryResult<T> {
 class CachedQuery {
   CachedQuery(this.preparedStatementName, this.orderedParameters);
 
-  final String preparedStatementName;
-  final List<PostgreSQLFormatIdentifier> orderedParameters;
-  List<FieldDescription> fieldDescriptions;
+  final String? preparedStatementName;
+  final List<PostgreSQLFormatIdentifier>? orderedParameters;
+  List<FieldDescription>? fieldDescriptions;
 
   bool get isValid {
     return preparedStatementName != null &&
@@ -196,13 +196,13 @@ class CachedQuery {
 
 class ParameterValue {
   factory ParameterValue(PostgreSQLFormatIdentifier identifier,
-      Map<String, dynamic> substitutionValues) {
+      Map<String, dynamic>? substitutionValues) {
     if (identifier.type == null) {
-      return ParameterValue.text(substitutionValues[identifier.name]);
+      return ParameterValue.text(substitutionValues?[identifier.name]);
     }
 
     return ParameterValue.binary(
-        substitutionValues[identifier.name], identifier.type);
+        substitutionValues?[identifier.name], identifier.type!);
   }
 
   factory ParameterValue.binary(
@@ -214,7 +214,7 @@ class ParameterValue {
   }
 
   factory ParameterValue.text(dynamic value) {
-    Uint8List bytes;
+    Uint8List? bytes;
     if (value != null) {
       final converter = PostgresTextEncoder();
       bytes = castBytes(
@@ -227,7 +227,7 @@ class ParameterValue {
   ParameterValue._(this.isBinary, this.bytes, this.length);
 
   final bool isBinary;
-  final Uint8List bytes;
+  final Uint8List? bytes;
   final int length;
 }
 
@@ -281,11 +281,11 @@ class FieldDescription implements ColumnDescription {
     return FieldDescription._(
       converter, fieldName, tableID, columnID, typeID,
       dataTypeSize, typeModifier, formatCode,
-      null, // tableName
+      '', // tableName
     );
   }
 
-  FieldDescription change({String tableName}) {
+  FieldDescription change({String? tableName}) {
     return FieldDescription._(converter, columnName, tableID, columnID, typeID,
         dataTypeSize, typeModifier, formatCode, tableName ?? this.tableName);
   }
@@ -335,8 +335,8 @@ class PostgreSQLFormatIdentifier {
 
   factory PostgreSQLFormatIdentifier(String t) {
     String name;
-    PostgreSQLDataType type;
-    String typeCast;
+    PostgreSQLDataType? type;
+    String? typeCast;
 
     final components = t.split('::');
     if (components.length > 1) {
@@ -350,12 +350,11 @@ class PostgreSQLFormatIdentifier {
       name = variableComponents.first;
 
       final dataTypeString = variableComponents.last;
-      if (dataTypeString != null) {
-        type = typeStringToCodeMap[dataTypeString];
-        if (type == null) {
-          throw FormatException(
-              "Invalid type code in substitution variable '$t'");
-        }
+      try {
+        type = typeStringToCodeMap[dataTypeString]!;
+      } catch (e) {
+        throw FormatException(
+            "Invalid type code in substitution variable '$t'");
       }
     } else {
       throw FormatException(
@@ -370,6 +369,6 @@ class PostgreSQLFormatIdentifier {
   PostgreSQLFormatIdentifier._(this.name, this.type, this.typeCast);
 
   final String name;
-  final PostgreSQLDataType type;
-  final String typeCast;
+  final PostgreSQLDataType? type;
+  final String? typeCast;
 }

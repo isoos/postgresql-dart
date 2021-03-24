@@ -11,7 +11,7 @@ String sid(String id, PostgreSQLDataType dt) =>
 
 void main() {
   group('Retaining type information', () {
-    PostgreSQLConnection connection;
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -281,7 +281,7 @@ void main() {
   });
 
   group('Mixing prepared statements', () {
-    PostgreSQLConnection connection;
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -440,8 +440,7 @@ void main() {
   });
 
   group('Failure cases', () {
-    var connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
+    late PostgreSQLConnection connection;
 
     setUp(() async {
       connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -548,6 +547,7 @@ void main() {
     test(
         'Send two queries that will be the same prepared statement async, first one fails on bind',
         () async {
+      final rs = await connection.query('SELECT 1');
       await connection.query(
           'insert into u (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2',
           substitutionValues: {'i1': 1, 'i2': 2},
@@ -555,8 +555,8 @@ void main() {
 
       final string = 'select i1, i2 from u where i1 = @i:int4';
       // ignore: unawaited_futures
-      connection
-          .query(string, substitutionValues: {'i': 'foo'}).catchError((e) {});
+      connection.query(string,
+          substitutionValues: {'i': 'foo'}).catchError((e) => rs);
 
       final results =
           await connection.query(string, substitutionValues: {'i': 1});
@@ -564,7 +564,7 @@ void main() {
       expect(results, [
         [1, 2]
       ]);
-      expect(getQueryCache(connection).length, 1);
+      expect(getQueryCache(connection).length, 2); // 1: SELECT 1
       expect(hasCachedQueryNamed(connection, string), true);
     });
   });
