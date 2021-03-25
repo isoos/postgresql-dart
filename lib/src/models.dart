@@ -1,3 +1,4 @@
+/// Describes PostgreSQL's geometric type: `point`.
 class PgPoint {
   final double latitude;
   final double longitude;

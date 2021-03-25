@@ -260,7 +260,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
           throw FormatException(
               'Invalid type for parameter value. Expected: List<Object> Got: ${value.runtimeType}');
         }
-        
+
       default:
         throw PostgreSQLException('Unsupported datatype');
     }
@@ -387,7 +387,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
           final bytes = reader.read(length - 1);
           return json.decode(utf8.decode(bytes));
         });
-    
+
       default:
         {
           // We'll try and decode this as a utf8 string and return that

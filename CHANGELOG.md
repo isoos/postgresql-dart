@@ -2,7 +2,8 @@
 
 ## 2.3.1
 
-- Added support for types varchar, point, integerArray, doubleArray, textArray and jsonArray.
+- Added support for types `varchar`, `point`, `integerArray`, `doubleArray`, `textArray` and `jsonArray`.
+  (Thanks to [schultek](https://github.com/schultek), [#3](https://github.com/isoos/postgresql-dart/pull/3))
 
 ## 2.3.0
 
