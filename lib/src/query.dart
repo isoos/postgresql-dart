@@ -320,10 +320,17 @@ class PostgreSQLFormatIdentifier {
     'date': PostgreSQLDataType.date,
     'timestamp': PostgreSQLDataType.timestampWithoutTimezone,
     'timestamptz': PostgreSQLDataType.timestampWithTimezone,
-    'jsonb': PostgreSQLDataType.json,
+    'jsonb': PostgreSQLDataType.jsonb,
     'bytea': PostgreSQLDataType.byteArray,
     'name': PostgreSQLDataType.name,
-    'uuid': PostgreSQLDataType.uuid
+    'uuid': PostgreSQLDataType.uuid,
+    'json': PostgreSQLDataType.json,
+    'point': PostgreSQLDataType.point,
+    '_int4': PostgreSQLDataType.integerArray,
+    '_text': PostgreSQLDataType.textArray,
+    '_float8': PostgreSQLDataType.doubleArray,
+    'varchar': PostgreSQLDataType.varChar,
+    '_jsonb': PostgreSQLDataType.jsonbArray,
   };
 
   factory PostgreSQLFormatIdentifier(String t) {

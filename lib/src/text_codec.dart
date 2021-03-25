@@ -32,6 +32,14 @@ class PostgresTextEncoder {
       return _encodeJSON(value);
     }
 
+    if (value is PgPoint) {
+      return _encodePoint(value);
+    }
+
+    if (value is List) {
+      return _encodeList(value);
+    }
+
     // TODO: use custom type encoders
 
     throw PostgreSQLException("Could not infer type of value '$value'.");
@@ -154,5 +162,47 @@ class PostgresTextEncoder {
     }
 
     return json.encode(value);
+  }
+
+  String _encodePoint(PgPoint value) {
+    return '(${_encodeDouble(value.latitude)}, ${_encodeDouble(value.longitude)})';
+  }
+
+  String _encodeList(List value) {
+    if (value.isEmpty) {
+      return '{}';
+    }
+
+    final type = value.fold(value.first.runtimeType, (type, item) {
+      if (type == item.runtimeType) {
+        return type;
+      } else if ((type == int || type == double) && item is num) {
+        return double;
+      } else {
+        return Map;
+      }
+    });
+
+    if (type == int || type == double) {
+      return '{${value.cast<num>().map((s) => s is double ? _encodeDouble(s) : _encodeNumber(s)).join(',')}}';
+    }
+
+    if (type == String) {
+      return '{${value.cast<String>().map((s) {
+        final escaped = s.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+        return '"$escaped"';
+      }).join(',')}}';
+    }
+
+    if (type == Map) {
+      return '{${value.map((s) {
+        final escaped =
+            json.encode(s).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+
+        return '"$escaped"';
+      }).join(',')}}';
+    }
+
+    throw PostgreSQLException("Could not infer array type of value '$value'.");
   }
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.1
+
+- Added support for types varchar, point, integerArray, doubleArray, textArray and jsonArray.
+
 ## 2.3.0
 
 - Finalized null-safe release.

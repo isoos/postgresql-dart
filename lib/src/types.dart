@@ -48,6 +48,11 @@ enum PostgreSQLDataType {
   /// Must be encodable via [json.encode].
   ///
   /// Values will be encoded via [json.encode] before being sent to the database.
+  jsonb,
+
+  /// Must be encodable via [json.encode].
+  ///
+  /// Values will be encoded via [json.encode] before being sent to the database.
   json,
 
   /// Must be a [List] of [int].
@@ -64,5 +69,23 @@ enum PostgreSQLDataType {
   ///
   /// Must contain 32 hexadecimal characters. May contain any number of '-' characters.
   /// When returned from database, format will be xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
-  uuid
+  uuid,
+
+  /// Must be a [PgPoint]
+  point,
+
+  /// Must be a [List<int>]
+  integerArray,
+
+  /// Must be a [List<String>]
+  textArray,
+
+  /// Must be a [List<double>]
+  doubleArray,
+
+  /// Must be a [String]
+  varChar,
+
+  /// Must be a [List] of encodable objects
+  jsonbArray,
 }

@@ -39,7 +39,7 @@ class PostgreSQLFormat {
         return 'timestamptz';
       case PostgreSQLDataType.date:
         return 'date';
-      case PostgreSQLDataType.json:
+      case PostgreSQLDataType.jsonb:
         return 'jsonb';
       case PostgreSQLDataType.byteArray:
         return 'bytea';
@@ -47,6 +47,20 @@ class PostgreSQLFormat {
         return 'name';
       case PostgreSQLDataType.uuid:
         return 'uuid';
+      case PostgreSQLDataType.point:
+        return 'point';
+      case PostgreSQLDataType.json:
+        return 'json';
+      case PostgreSQLDataType.integerArray:
+        return '_int4';
+      case PostgreSQLDataType.textArray:
+        return '_text';
+      case PostgreSQLDataType.doubleArray:
+        return '_float8';
+      case PostgreSQLDataType.varChar:
+        return 'varchar';
+      case PostgreSQLDataType.jsonbArray:
+        return '_jsonb';
       default:
         return null;
     }

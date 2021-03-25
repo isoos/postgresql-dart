@@ -12,26 +12,30 @@ void main() {
         CREATE TEMPORARY TABLE t (
           i int, s serial, bi bigint, bs bigserial, bl boolean, si smallint, 
           t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz, j jsonb, ba bytea,
-          u uuid)
+          u uuid, v varchar, p point, jj json, ia _int4, ta _text, da _float8, ja _jsonb)
     ''');
 
     await connection.execute(
-        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, ba, u) '
+        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, ba, u, v, p, jj, ia, ta, da, ja) '
         'VALUES (-2147483648, -9223372036854775808, TRUE, -32768, '
         "'string', 10.0, 10.0, '1983-11-06', "
         "'1983-11-06 06:00:00.000000', '1983-11-06 06:00:00.000000', "
-        "'{\"key\":\"value\"}', E'\\\\000', '00000000-0000-0000-0000-000000000000')");
+        "'{\"key\":\"value\"}', E'\\\\000', '00000000-0000-0000-0000-000000000000', "
+        "'abcdef', '(0.01, 12.34)', '{\"key\": \"value\"}', '{}', '{}', '{}', '{}')");
     await connection.execute(
-        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, ba, u) '
+        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, ba, u, v, p, jj, ia, ta, da, ja) '
         'VALUES (2147483647, 9223372036854775807, FALSE, 32767, '
         "'a significantly longer string to the point where i doubt this actually matters', "
         "10.25, 10.125, '2183-11-06', '2183-11-06 00:00:00.111111', "
         "'2183-11-06 00:00:00.999999', "
-        "'[{\"key\":1}]', E'\\\\377', 'FFFFFFFF-ffff-ffff-ffff-ffffffffffff')");
+        "'[{\"key\":1}]', E'\\\\377', 'FFFFFFFF-ffff-ffff-ffff-ffffffffffff', "
+        "'01234', '(0.2, 100)', '{}', '{-123, 999}', '{\"a\", \"lorem ipsum\", \"\"}', "
+        "'{1, 2, 4.5, 1234.5}', '{1, \"\\\"test\\\"\", \"{\\\"a\\\": \\\"b\\\"}\"}')");
 
     await connection.execute(
-        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, ba, u) '
-        'VALUES (null, null, null, null, null, null, null, null, null, null, null, null, null)');
+        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, ba, u, v, p, jj, ia, ta, da, ja) '
+        'VALUES (null, null, null, null, null, null, null, null, null, null, null, null, null, '
+        'null, null, null, null, null, null, null )');
   });
   tearDown(() async {
     await connection.close();
@@ -62,6 +66,13 @@ void main() {
     expect(row1[12], equals({'key': 'value'}));
     expect(row1[13], equals([0]));
     expect(row1[14], equals('00000000-0000-0000-0000-000000000000'));
+    expect(row1[15], equals('abcdef'));
+    expect(row1[16], equals(PgPoint(0.01, 12.34)));
+    expect(row1[17], equals({'key': 'value'}));
+    expect(row1[18], equals(<int>[]));
+    expect(row1[19], equals(<String>[]));
+    expect(row1[20], equals(<double>[]));
+    expect(row1[21], equals([]));
 
     // upper bound row
     expect(row2[0], equals(2147483647));
@@ -88,6 +99,19 @@ void main() {
         ]));
     expect(row2[13], equals([255]));
     expect(row2[14], equals('ffffffff-ffff-ffff-ffff-ffffffffffff'));
+    expect(row2[15], equals('01234'));
+    expect(row2[16], equals(PgPoint(0.2, 100)));
+    expect(row2[17], equals({}));
+    expect(row2[18], equals(<int>[-123, 999]));
+    expect(row2[19], equals(<String>['a', 'lorem ipsum', '']));
+    expect(row2[20], equals(<double>[1, 2, 4.5, 1234.5]));
+    expect(
+        row2[21],
+        equals([
+          1,
+          'test',
+          {'a': 'b'}
+        ]));
 
     // all null row
     expect(row3[0], isNull);
@@ -105,6 +129,13 @@ void main() {
     expect(row3[12], isNull);
     expect(row3[13], isNull);
     expect(row3[14], isNull);
+    expect(row3[15], isNull);
+    expect(row3[16], isNull);
+    expect(row3[17], isNull);
+    expect(row3[18], isNull);
+    expect(row3[19], isNull);
+    expect(row3[20], isNull);
+    expect(row3[21], isNull);
   });
 
   test('Fetch/insert empty string', () async {
