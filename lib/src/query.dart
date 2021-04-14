@@ -238,7 +238,8 @@ class FieldDescription implements ColumnDescription {
   final String columnName;
   final int tableID;
   final int columnID;
-  final int typeID;
+  @override
+  final int typeId;
   final int dataTypeSize;
   final int typeModifier;
   final int formatCode;
@@ -251,7 +252,7 @@ class FieldDescription implements ColumnDescription {
     this.columnName,
     this.tableID,
     this.columnID,
-    this.typeID,
+    this.typeId,
     this.dataTypeSize,
     this.typeModifier,
     this.formatCode,
@@ -272,27 +273,27 @@ class FieldDescription implements ColumnDescription {
 
     final tableID = reader.readUint32();
     final columnID = reader.readUint16();
-    final typeID = reader.readUint32();
+    final typeOid = reader.readUint32();
     final dataTypeSize = reader.readUint16();
     final typeModifier = reader.readInt32();
     final formatCode = reader.readUint16();
 
-    final converter = PostgresBinaryDecoder(typeID);
+    final converter = PostgresBinaryDecoder(typeOid);
     return FieldDescription._(
-      converter, fieldName, tableID, columnID, typeID,
+      converter, fieldName, tableID, columnID, typeOid,
       dataTypeSize, typeModifier, formatCode,
       '', // tableName
     );
   }
 
   FieldDescription change({String? tableName}) {
-    return FieldDescription._(converter, columnName, tableID, columnID, typeID,
+    return FieldDescription._(converter, columnName, tableID, columnID, typeId,
         dataTypeSize, typeModifier, formatCode, tableName ?? this.tableName);
   }
 
   @override
   String toString() {
-    return '$columnName $tableID $columnID $typeID $dataTypeSize $typeModifier $formatCode';
+    return '$columnName $tableID $columnID $typeId $dataTypeSize $typeModifier $formatCode';
   }
 }
 

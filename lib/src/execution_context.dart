@@ -94,6 +94,9 @@ abstract class ColumnDescription {
 
   /// The resolved name of the referenced table.
   String get tableName;
+
+  /// The Object Identifier of the column type.
+  int get typeId;
 }
 
 /// A single row of a query result.

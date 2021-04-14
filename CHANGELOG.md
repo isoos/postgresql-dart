@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.2
+
+- Expose `ColumnDescription.typeId`.
+
 ## 2.3.1
 
 - Added support for types `varchar`, `point`, `integerArray`, `doubleArray`, `textArray` and `jsonArray`.
