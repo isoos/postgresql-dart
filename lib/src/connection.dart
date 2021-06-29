@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'auth/auth.dart';
 
 import 'client_messages.dart';
 import 'execution_context.dart';
@@ -72,6 +73,9 @@ class PostgreSQLConnection extends Object
   /// Password for authenticating this connection.
   final String? password;
 
+  /// AuthenticationScheme for authenticating this connection.
+  AuthenticationScheme authenticationScheme = AuthenticationScheme.MD5;
+
   /// Whether or not this connection should connect securely.
   final bool useSSL;
 
@@ -118,7 +122,6 @@ class PostgreSQLConnection extends Object
   late int _processID;
   // ignore: unused_field
   late int _secretKey;
-  late List<int> _salt;
 
   bool _hasConnectedPreviously = false;
   late _PostgreSQLConnectionState _connectionState;
@@ -128,6 +131,8 @@ class PostgreSQLConnection extends Object
 
   @override
   PostgreSQLConnection get _connection => this;
+
+  Socket? get socket => _socket;
 
   /// Establishes a connection with a PostgreSQL database.
   ///
@@ -246,8 +251,7 @@ class PostgreSQLConnection extends Object
     _connectionState = newState;
     _connectionState.connection = this;
 
-    _connectionState = _connectionState.onEnter();
-    _connectionState.connection = this;
+    _transitionToState(_connectionState.onEnter());
   }
 
   Future _close([dynamic error, StackTrace? trace]) async {

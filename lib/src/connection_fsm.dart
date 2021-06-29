@@ -53,7 +53,7 @@ class _PostgreSQLConnectionStateSocketConnected
 
     connection!._socket!.add(startupMessage.asBytes());
 
-    return this;
+    return _PostgreSQLConnectionStateAuthenticating(completer);
   }
 
   @override
@@ -67,19 +67,9 @@ class _PostgreSQLConnectionStateSocketConnected
 
   @override
   _PostgreSQLConnectionState onMessage(ServerMessage message) {
-    final authMessage = message as AuthenticationMessage;
-
-    // Pass on the pending op to subsequent stages
-    if (authMessage.type == AuthenticationMessage.KindOK) {
-      return _PostgreSQLConnectionStateAuthenticated(completer);
-    } else if (authMessage.type == AuthenticationMessage.KindMD5Password) {
-      connection!._salt = authMessage.salt;
-
-      return _PostgreSQLConnectionStateAuthenticating(completer);
-    }
 
     completer.completeError(PostgreSQLException(
-        'Unsupported authentication type ${authMessage.type}, closing connection.'));
+        'Unsupported message ${message.toString()}, closing connection.'));
 
     return _PostgreSQLConnectionStateClosed();
   }
@@ -94,14 +84,10 @@ class _PostgreSQLConnectionStateAuthenticating
   _PostgreSQLConnectionStateAuthenticating(this.completer);
 
   Completer completer;
+  late Authenticator _authenticator;
 
   @override
   _PostgreSQLConnectionState onEnter() {
-    final authMessage = AuthMD5Message(
-        connection!.username!, connection!.password!, connection!._salt);
-
-    connection!._socket!.add(authMessage.asBytes());
-
     return this;
   }
 
@@ -116,7 +102,33 @@ class _PostgreSQLConnectionStateAuthenticating
 
   @override
   _PostgreSQLConnectionState onMessage(ServerMessage message) {
-    if (message is ParameterStatusMessage) {
+    if (message is AuthenticationMessage) {
+      // Pass on the pending op to subsequent stages
+      switch (message.type) {
+        case AuthenticationMessage.KindOK:
+          return _PostgreSQLConnectionStateAuthenticated(completer);
+        case AuthenticationMessage.KindMD5Password:
+          // Change default auth scheme
+          connection!.authenticationScheme = AuthenticationScheme.MD5;
+          continue authInit;
+        authInit:
+        case AuthenticationMessage.KindSASL:
+          final credential = UsernamePasswordCredential()
+            ..username = connection!.username
+            ..password = connection!.password;
+          _authenticator = createAuthenticator(connection!, credential);
+          _authenticator.init();
+          continue authMsg;
+        authMsg:
+        case AuthenticationMessage.KindSASLContinue:
+        case AuthenticationMessage.KindSASLFinal:
+          _authenticator.onMessage(message);
+          return this;
+      }
+
+      completer.completeError(PostgreSQLException(
+          'Unsupported authentication type ${message.type}, closing connection.'));
+    } else if (message is ParameterStatusMessage) {
       connection!.settings[message.name] = message.value;
     } else if (message is BackendKeyMessage) {
       connection!._processID = message.processID;
