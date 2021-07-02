@@ -47,9 +47,9 @@ abstract class Authenticator {
 Authenticator createAuthenticator(PostgreSQLConnection connection, UsernamePasswordCredential credentials) {
   switch (connection.authenticationScheme) {
     case AuthenticationScheme.MD5:
-      return MD5Authenticator(credentials);
-    // case AuthenticationScheme.SCRAM_SHA_256:
-    //   return ScramSha256Authenticator(credentials);
+      return MD5Authenticator(connection, credentials);
+    case AuthenticationScheme.SCRAM_SHA_256:
+      return ScramSha256Authenticator(connection, credentials);
     default:
       throw PostgreSQLException("Authenticator wasn't specified");
   }

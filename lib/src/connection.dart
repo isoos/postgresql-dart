@@ -74,7 +74,7 @@ class PostgreSQLConnection extends Object
   final String? password;
 
   /// AuthenticationScheme for authenticating this connection.
-  AuthenticationScheme authenticationScheme = AuthenticationScheme.MD5;
+  AuthenticationScheme authenticationScheme = AuthenticationScheme.SCRAM_SHA_256;
 
   /// Whether or not this connection should connect securely.
   final bool useSSL;
