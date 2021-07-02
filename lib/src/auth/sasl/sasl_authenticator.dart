@@ -108,7 +108,7 @@ class SaslClientFirstMessage extends ClientMessage {
     final length = 4 + utf8CachedMechanismName.utf8Length + 1 + 4 + msgLength;
 
     buffer.writeUint32(length);
-    applyStringToBuffer(utf8CachedMechanismName, buffer);
+    utf8CachedMechanismName.applyToBuffer(buffer);
 
     // do not add the msg byte count for whatever reason
     buffer.writeUint32(msgLength);

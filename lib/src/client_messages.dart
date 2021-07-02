@@ -35,11 +35,6 @@ abstract class ClientMessage {
   }
 }
 
-void applyStringToBuffer(UTF8BackedString string, ByteDataWriter buffer) {
-  buffer.write(string.utf8Bytes);
-  buffer.writeInt8(0);
-}
-
 class StartupMessage extends ClientMessage {
   final UTF8BackedString? _username;
   final UTF8BackedString _databaseName;
@@ -65,17 +60,17 @@ class StartupMessage extends ClientMessage {
 
     if (_username != null) {
       buffer.write(UTF8ByteConstants.user);
-      applyStringToBuffer(_username!, buffer);
+      _username!.applyToBuffer(buffer);
     }
 
     buffer.write(UTF8ByteConstants.database);
-    applyStringToBuffer(_databaseName, buffer);
+    _databaseName.applyToBuffer(buffer);
 
     buffer.write(UTF8ByteConstants.clientEncoding);
     buffer.write(UTF8ByteConstants.utf8);
 
     buffer.write(UTF8ByteConstants.timeZone);
-    applyStringToBuffer(_timeZone, buffer);
+    _timeZone.applyToBuffer(buffer);
 
     buffer.writeInt8(0);
   }
@@ -92,7 +87,7 @@ class QueryMessage extends ClientMessage {
     buffer.writeUint8(ClientMessage.QueryIdentifier);
     final length = 5 + _queryString.utf8Length;
     buffer.writeUint32(length);
-    applyStringToBuffer(_queryString, buffer);
+    _queryString.applyToBuffer(buffer);
   }
 }
 
@@ -110,8 +105,8 @@ class ParseMessage extends ClientMessage {
     final length = 8 + _statement.utf8Length + _statementName.utf8Length;
     buffer.writeUint32(length);
     // Name of prepared statement
-    applyStringToBuffer(_statementName, buffer);
-    applyStringToBuffer(_statement, buffer); // Query string
+    _statementName.applyToBuffer(buffer);
+    _statement.applyToBuffer(buffer); // Query string
     buffer.writeUint16(0);
   }
 }
@@ -128,7 +123,7 @@ class DescribeMessage extends ClientMessage {
     final length = 6 + _statementName.utf8Length;
     buffer.writeUint32(length);
     buffer.writeUint8(83);
-    applyStringToBuffer(_statementName, buffer); // Name of prepared statement
+    _statementName.applyToBuffer(buffer); // Name of prepared statement
   }
 }
 
@@ -172,7 +167,7 @@ class BindMessage extends ClientMessage {
     // Name of portal - currently unnamed portal.
     buffer.writeUint8(0);
     // Name of prepared statement.
-    applyStringToBuffer(_statementName, buffer);
+    _statementName.applyToBuffer(buffer);
 
     // OK, if we have no specified types at all, we can use 0. If we have all specified types, we can use 1. If we have a mix, we have to individually
     // call out each type.

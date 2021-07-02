@@ -44,6 +44,6 @@ class AuthMD5Message extends ClientMessage {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
     final length = 5 + _hashedAuthString!.utf8Length;
     buffer.writeUint32(length);
-    applyStringToBuffer(_hashedAuthString!, buffer);
+    _hashedAuthString!.applyToBuffer(buffer);
   }
 }
