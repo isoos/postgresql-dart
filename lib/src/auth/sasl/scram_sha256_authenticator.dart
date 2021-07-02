@@ -28,9 +28,9 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart' as crypto;
-import 'package:postgres/src/server_messages.dart';
 
 import '../../../postgres.dart';
+import '../../server_messages.dart';
 import '../auth.dart';
 import 'sasl_authenticator.dart';
 

@@ -26,11 +26,11 @@
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/utf8_backed_string.dart';
 
 import '../../../postgres.dart';
 import '../../client_messages.dart';
 import '../../server_messages.dart';
+import '../../utf8_backed_string.dart';
 import '../auth.dart';
 
 abstract class SaslMechanism {

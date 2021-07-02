@@ -25,11 +25,10 @@
 
 import 'dart:math';
 
-import 'package:postgres/src/auth/sasl/scram_sha256_authenticator.dart';
-
 import '../../postgres.dart';
 import '../server_messages.dart';
 import 'md5/md5_authenticator.dart';
+import 'sasl/scram_sha256_authenticator.dart';
 
 enum AuthenticationScheme { MD5, SCRAM_SHA_256 }
 
