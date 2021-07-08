@@ -35,20 +35,20 @@ void main() {
       expect(await conn.execute('select 1'), equals(1));
     });
 
-    // test('SSL Connect with md5 or scram-sha-256 auth required', () async {
-    //   conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
-    //       username: 'dart', password: 'dart', useSSL: true);
-    //
-    //   await conn.open();
-    //
-    //   expect(await conn.execute('select 1'), equals(1));
-    //   final socketMirror = reflect(conn).type.declarations.values.firstWhere(
-    //       (DeclarationMirror dm) =>
-    //           dm.simpleName.toString().contains('_socket'));
-    //   final underlyingSocket =
-    //       reflect(conn).getField(socketMirror.simpleName).reflectee;
-    //   expect(underlyingSocket is SecureSocket, true);
-    // });
+    test('SSL Connect with md5 or scram-sha-256 auth required', () async {
+      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+          username: 'dart', password: 'dart', useSSL: true);
+
+      await conn.open();
+
+      expect(await conn.execute('select 1'), equals(1));
+      final socketMirror = reflect(conn).type.declarations.values.firstWhere(
+          (DeclarationMirror dm) =>
+              dm.simpleName.toString().contains('_socket'));
+      final underlyingSocket =
+          reflect(conn).getField(socketMirror.simpleName).reflectee;
+      expect(underlyingSocket is SecureSocket, true);
+    });
 
     test('Connect with no auth required', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',

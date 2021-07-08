@@ -297,7 +297,7 @@ class PostgreSQLConnection extends Object
     originalSocket.listen((data) {
       if (data.length != 1) {
         sslCompleter.completeError(PostgreSQLException(
-            'Could not initalize SSL connection, received unknown byte stream.'));
+            'Could not initialize SSL connection, received unknown byte stream.'));
         return;
       }
 
