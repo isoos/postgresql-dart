@@ -4,11 +4,11 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
 import 'package:sasl_scram/sasl_scram.dart';
 
-import '../../../postgres.dart';
-import '../../client_messages.dart';
-import '../../server_messages.dart';
-import '../../utf8_backed_string.dart';
-import '../auth.dart';
+import '../../postgres.dart';
+import '../client_messages.dart';
+import '../server_messages.dart';
+import '../utf8_backed_string.dart';
+import 'auth.dart';
 
 /// Structure for SASL Authenticator
 class PostgresSaslAuthenticator extends PostgresAuthenticator {

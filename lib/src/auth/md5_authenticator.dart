@@ -2,11 +2,11 @@ import 'package:buffer/buffer.dart';
 import 'package:crypto/crypto.dart';
 import 'package:sasl_scram/sasl_scram.dart';
 
-import '../../../postgres.dart';
-import '../../client_messages.dart';
-import '../../server_messages.dart';
-import '../../utf8_backed_string.dart';
-import '../auth.dart';
+import '../../postgres.dart';
+import '../client_messages.dart';
+import '../server_messages.dart';
+import '../utf8_backed_string.dart';
+import 'auth.dart';
 
 class MD5Authenticator extends PostgresAuthenticator {
   static final String name = 'MD5';

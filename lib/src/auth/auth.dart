@@ -1,12 +1,12 @@
 /// Source:  https://github.com/mongo-dart/mongo_dart/blob/c761839efbf47ec556f853dec85debb4cb9370f7/lib/src/auth/auth.dart
 
 import 'package:crypto/crypto.dart';
-import 'package:postgres/src/auth/sasl/sasl_authenticator.dart';
+import 'package:postgres/src/auth/sasl_authenticator.dart';
 import 'package:sasl_scram/sasl_scram.dart';
 
 import '../../postgres.dart';
 import '../server_messages.dart';
-import 'md5/md5_authenticator.dart';
+import 'md5_authenticator.dart';
 
 enum AuthenticationScheme { MD5, SCRAM_SHA_256 }
 
