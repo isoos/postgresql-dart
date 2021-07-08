@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:sasl_scram/sasl_scram.dart';
 import 'auth/auth.dart';
 
 import 'client_messages.dart';

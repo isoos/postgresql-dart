@@ -1,31 +1,8 @@
 /// Source:  https://github.com/mongo-dart/mongo_dart/blob/c761839efbf47ec556f853dec85debb4cb9370f7/lib/src/auth/sasl_authenticator.dart
-
-// (The MIT License)
-//
-// Copyright (c) 2012 Vadim Tsushko (vadimtsushko@gmail.com)
-//
-// Permission is hereby granted, free of charge, to any person obtaining
-// a copy of this software and associated documentation files (the
-// 'Software'), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to
-// permit persons to whom the Software is furnished to do so, subject to
-// the following conditions:
-//
-// The above copyright notice and this permission notice shall be
-// included in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:sasl_scram/sasl_scram.dart';
 
 import '../../../postgres.dart';
 import '../../client_messages.dart';
@@ -33,56 +10,28 @@ import '../../server_messages.dart';
 import '../../utf8_backed_string.dart';
 import '../auth.dart';
 
-abstract class SaslMechanism {
-  String get name;
-
-  SaslStep initialize(PostgreSQLConnection connection);
-}
-
-abstract class SaslStep {
-  Uint8List bytesToSendToServer;
-  bool isComplete = false;
-
-  SaslStep(this.bytesToSendToServer, {this.isComplete = false});
-
-  SaslStep transition(SaslConversation conversation, List<int> bytesReceivedFromServer);
-}
-
-class SaslConversation {
-  PostgreSQLConnection connection;
-
-  SaslConversation(this.connection);
-}
-
 /// Structure for SASL Authenticator
-abstract class SaslAuthenticator extends Authenticator {
-  static const int DefaultNonceLength = 24;
+class PostgresSaslAuthenticator extends PostgresAuthenticator {
+  final SaslAuthenticator authenticator;
 
-  SaslMechanism mechanism;
-  late SaslStep currentStep;
-  late SaslConversation conversation;
-
-  SaslAuthenticator(PostgreSQLConnection connection, this.mechanism) : super(connection);
-
-  @override
-  void init() {
-    conversation = SaslConversation(connection);
-  }
+  PostgresSaslAuthenticator(PostgreSQLConnection connection, this.authenticator) : super(connection);
 
   @override
   void onMessage(AuthenticationMessage message) {
     ClientMessage msg;
     switch (message.type) {
       case AuthenticationMessage.KindSASL:
-        currentStep = mechanism.initialize(connection);
-        msg = SaslClientFirstMessage(currentStep, mechanism);
+        final bytesToSend = authenticator.handleMessage(SaslMessageType.AuthenticationSASL, message.bytes);
+        if (bytesToSend == null) throw PostgreSQLException('KindSASL: No bytes to send');
+        msg = SaslClientFirstMessage(bytesToSend, authenticator.mechanism.name);
         break;
       case AuthenticationMessage.KindSASLContinue:
-        currentStep = currentStep.transition(conversation, message.bytes);
-        msg = SaslClientLastMessage(currentStep);
+        final bytesToSend = authenticator.handleMessage(SaslMessageType.AuthenticationSASLContinue, message.bytes);
+        if (bytesToSend == null) throw PostgreSQLException('KindSASLContinue: No bytes to send');
+        msg = SaslClientLastMessage(bytesToSend);
         break;
       case AuthenticationMessage.KindSASLFinal:
-        currentStep = currentStep.transition(conversation, message.bytes);
+        authenticator.handleMessage(SaslMessageType.AuthenticationSASLFinal, message.bytes);
         return;
       default:
         throw PostgreSQLException('Unsupported authentication type ${message.type}, closing connection.');
@@ -92,18 +41,18 @@ abstract class SaslAuthenticator extends Authenticator {
 }
 
 class SaslClientFirstMessage extends ClientMessage {
-  SaslStep saslStep;
-  SaslMechanism mechanism;
+  Uint8List bytesToSendToServer;
+  String mechanismName;
 
-  SaslClientFirstMessage(this.saslStep, this.mechanism);
+  SaslClientFirstMessage(this.bytesToSendToServer, this.mechanismName);
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
 
-    final utf8CachedMechanismName = UTF8BackedString(mechanism.name);
+    final utf8CachedMechanismName = UTF8BackedString(mechanismName);
 
-    final msgLength = saslStep.bytesToSendToServer.length;
+    final msgLength = bytesToSendToServer.length;
     // No Identifier bit + 4 byte counts (for whole length) + mechanism bytes + zero byte + 4 byte counts (for msg length) + msg bytes
     final length = 4 + utf8CachedMechanismName.utf8Length + 1 + 4 + msgLength;
 
@@ -112,23 +61,23 @@ class SaslClientFirstMessage extends ClientMessage {
 
     // do not add the msg byte count for whatever reason
     buffer.writeUint32(msgLength);
-    buffer.write(saslStep.bytesToSendToServer);
+    buffer.write(bytesToSendToServer);
   }
 }
 
 class SaslClientLastMessage extends ClientMessage {
-  SaslStep saslStep;
+  Uint8List bytesToSendToServer;
 
-  SaslClientLastMessage(this.saslStep);
+  SaslClientLastMessage(this.bytesToSendToServer);
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
 
     // No Identifier bit + 4 byte counts (for msg length) + msg bytes
-    final length = 4 + saslStep.bytesToSendToServer.length;
+    final length = 4 + bytesToSendToServer.length;
 
     buffer.writeUint32(length);
-    buffer.write(saslStep.bytesToSendToServer);
+    buffer.write(bytesToSendToServer);
   }
 }

@@ -84,7 +84,7 @@ class _PostgreSQLConnectionStateAuthenticating
   _PostgreSQLConnectionStateAuthenticating(this.completer);
 
   Completer completer;
-  late Authenticator _authenticator;
+  late PostgresAuthenticator _authenticator;
 
   @override
   _PostgreSQLConnectionState onEnter() {
@@ -113,11 +113,9 @@ class _PostgreSQLConnectionStateAuthenticating
           continue authInit;
         authInit:
         case AuthenticationMessage.KindSASL:
-          final credential = UsernamePasswordCredential()
-            ..username = connection!.username
-            ..password = connection!.password;
+          final credential = UsernamePasswordCredential(
+              username: connection!.username, password: connection!.password);
           _authenticator = createAuthenticator(connection!, credential);
-          _authenticator.init();
           continue authMsg;
         authMsg:
         case AuthenticationMessage.KindSASLContinue:

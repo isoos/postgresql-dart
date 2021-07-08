@@ -10,6 +10,10 @@ dependencies:
   buffer: ^1.1.0
   crypto: ^3.0.0
   collection: ^1.15.0
+  sasl_scram:
+    git:
+      url: https://github.com/Oberhauser-Dev/sasl_scram_dart.git
+      ref: main
 
 dev_dependencies:
   pedantic: ^1.0.0
