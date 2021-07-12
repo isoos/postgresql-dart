@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:postgres/postgres.dart';
+import 'package:postgres/src/binary_codec.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -166,5 +169,21 @@ void main() {
     expect(results, [
       [null]
     ]);
+  });
+
+  test('Decode Numeric to String', () {
+    // -123400000.2
+    final binary1 = [0, 4, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 0, 7, 208];
+
+    // -123400001.01234
+    final binary2 = [0, 5, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 1, 0, 0, 7, 208];
+
+    final decoder = PostgresBinaryDecoder(1700);
+    final uint8List1 = Uint8List.fromList(binary1);
+    final uint8List2 = Uint8List.fromList(binary2);
+    final res1 = decoder.convert(uint8List1);
+    final res2 = decoder.convert(uint8List2);
+    expect(res1, '-123400000.20000');
+    expect(res2, '-123400001.00002');
   });
 }

@@ -329,6 +329,9 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
         return DateTime.utc(2000)
             .add(Duration(microseconds: buffer.getInt64(0)));
 
+      case PostgreSQLDataType.numeric:
+        return _decodeNumeric(buffer);
+
       case PostgreSQLDataType.date:
         return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0)));
 
@@ -425,6 +428,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     return decoded;
   }
 
+  /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
   static final Map<int, PostgreSQLDataType> typeMap = {
     16: PostgreSQLDataType.boolean,
     17: PostgreSQLDataType.byteArray,
@@ -444,8 +448,33 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     1082: PostgreSQLDataType.date,
     1114: PostgreSQLDataType.timestampWithoutTimezone,
     1184: PostgreSQLDataType.timestampWithTimezone,
+    1700: PostgreSQLDataType.numeric,
     2950: PostgreSQLDataType.uuid,
     3802: PostgreSQLDataType.jsonb,
     3807: PostgreSQLDataType.jsonbArray,
   };
+
+  /// Decode numeric / decimal to String without loosing precision.
+  /// See encoding: https://github.com/postgres/postgres/blob/0e39a608ed5545cc6b9d538ac937c3c1ee8cdc36/src/backend/utils/adt/numeric.c#L305
+  /// See implementation: https://github.com/charmander/pg-numeric/blob/0c310eeb11dc680dffb7747821e61d542831108b/index.js#L13
+  static String _decodeNumeric(ByteData buffer) {
+    final nDigits = buffer.getInt16(0); // non-zero digits, data buffer length = 2 * nDigits
+    var weight = buffer.getInt16(2); // weight of first digit
+    final signByte = buffer.getInt16(4); // NUMERIC_POS, NEG, NAN, PINF, or NINF
+    final dScale = buffer.getInt16(6); // display scale
+    if (signByte == 0xc000) return 'NaN';
+    final sign = signByte == 0x4000 ? '-' : '';
+    var intPart = '';
+    var fractPart = '';
+    final prependBytes = 8;
+    for (var i = prependBytes; i < (nDigits * 2 + prependBytes); i += 2) {
+      if (weight >= 0) {
+        intPart += buffer.getUint16(i).toString().padLeft(4, '0');
+      } else {
+        fractPart += buffer.getUint16(i).toString().padLeft(4, '0');
+      }
+      weight--;
+    }
+    return '$sign${intPart.replaceAll(RegExp(r'^0+'), '')}.${fractPart.padRight(dScale, '0').substring(0, dScale)}';
+  }
 }
