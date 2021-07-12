@@ -12,7 +12,7 @@ dependencies:
   collection: ^1.15.0
   sasl_scram:
     git:
-      url: https://github.com/Oberhauser-Dev/sasl_scram_dart.git
+      url: https://github.com/mongo-dart/sasl_scram.git
       ref: main
 
 dev_dependencies:
