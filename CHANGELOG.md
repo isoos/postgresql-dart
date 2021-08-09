@@ -2,6 +2,7 @@
 
 ## Unreleased 
 
+- Support SASL / SCRAM-SHA-256 Authentication, [#6](https://github.com/isoos/postgresql-dart/pull/6).
 - Decoder for type `numeric` / `decimal`, [#7](https://github.com/isoos/postgresql-dart/pull/7).
 
 ## 2.3.2
