@@ -10,7 +10,6 @@ import 'auth.dart';
 
 class MD5Authenticator extends PostgresAuthenticator {
   static final String name = 'MD5';
-  late List<int> _salt;
 
   final UsernamePasswordCredential credentials;
 
@@ -19,9 +18,9 @@ class MD5Authenticator extends PostgresAuthenticator {
   @override
   void onMessage(AuthenticationMessage message) {
     final reader = ByteDataReader()..add(message.bytes);
-    _salt = reader.read(4, copy: true);
+    final salt = reader.read(4, copy: true);
 
-    final authMessage = AuthMD5Message(connection.username!, connection.password!, _salt);
+    final authMessage = AuthMD5Message(connection.username!, connection.password!, salt);
 
     connection.socket!.add(authMessage.asBytes());
   }

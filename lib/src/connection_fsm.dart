@@ -69,7 +69,7 @@ class _PostgreSQLConnectionStateSocketConnected
   _PostgreSQLConnectionState onMessage(ServerMessage message) {
 
     completer.completeError(PostgreSQLException(
-        'Unsupported message ${message.toString()}, closing connection.'));
+        'Unsupported message "${message.toString()}", closing connection.'));
 
     return _PostgreSQLConnectionStateClosed();
   }

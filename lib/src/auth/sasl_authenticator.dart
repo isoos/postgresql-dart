@@ -1,4 +1,3 @@
-/// Source:  https://github.com/mongo-dart/mongo_dart/blob/c761839efbf47ec556f853dec85debb4cb9370f7/lib/src/auth/sasl_authenticator.dart
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
