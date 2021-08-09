@@ -141,8 +141,19 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
                 0, value.toUtc().difference(DateTime.utc(2000)).inMicroseconds);
             return bd.buffer.asUint8List();
           }
+          throw FormatException('Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}');
+        }
+
+      case PostgreSQLDataType.numeric:
+        {
+          if (value is double || value is int) {
+            value = value.toString();
+          }
+          if (value is String) {
+            return _encodeNumeric(value);
+          }
           throw FormatException(
-              'Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}');
+              'Invalid type for parameter value. Expected: String|double|int Got: ${value.runtimeType}');
         }
 
       case PostgreSQLDataType.jsonb:
@@ -286,6 +297,81 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
     }
 
     return writer.toBytes();
+  }
+
+  /// Encode String / double / int to numeric / decimal  without loosing precision.
+  /// Compare implementation: https://github.com/frohoff/jdk8u-dev-jdk/blob/da0da73ab82ed714dc5be94acd2f0d00fbdfe2e9/src/share/classes/java/math/BigDecimal.java#L409
+  Uint8List _encodeNumeric(String value) {
+    value = value.trim();
+    var signByte = 0x0000;
+    if (value.toLowerCase() == 'nan') {
+      signByte = 0xc000;
+      value = '';
+    } else if (value.startsWith('-')) {
+      value = value.substring(1);
+      signByte = 0x4000;
+    } else if (value.startsWith('+')) {
+      value = value.substring(1);
+    }
+    final numericPattern = RegExp(r'^(\d*)(\.\d*)?$');
+    if (!numericPattern.hasMatch(value)) {
+      throw FormatException('Invalid format for parameter value. Expected: String which matches "/^(\\d*)(\\.\\d*)?\$/" Got: ${value}');
+    }
+    final parts = value.split('.');
+
+    final patternLeadingZeros = RegExp(r'^0+');
+    final patternTrailingZeros = RegExp(r'0+$');
+
+    var intPart = parts[0].replaceAll(patternLeadingZeros, '');
+    var intWeight = intPart.isEmpty ? -1 : (intPart.length - 1) ~/ 4;
+    intPart = intPart.padLeft((intWeight + 1) * 4, '0');
+
+    var fractPart = parts.length > 1 ? parts[1] : '';
+    final dScale = fractPart.length;
+    fractPart = fractPart.replaceAll(patternTrailingZeros, '');
+    var fractWeight = fractPart.isEmpty ? -1 : (fractPart.length - 1) ~/ 4;
+    fractPart = fractPart.padRight((fractWeight + 1) * 4, '0');
+
+    var weight = intWeight;
+    if (intWeight < 0) {
+      // If int part has no weight, handle leading zeros in fractional part.
+      if (fractPart.isEmpty) {
+        // Weight of value 0 or '' is 0;
+        weight = 0;
+      } else {
+        final leadingZeros = patternLeadingZeros.firstMatch(fractPart)?.group(0);
+        if (leadingZeros != null) {
+          final leadingZerosWeight = leadingZeros.length ~/ 4; // Get count of leading zeros '0000'
+          fractPart = fractPart.substring(leadingZerosWeight * 4); // Remove leading zeros '0000'
+          fractWeight -= leadingZerosWeight;
+          weight = -(leadingZerosWeight + 1); // Ignore leading zeros in weight
+        }
+      }
+    } else if (fractWeight < 0) {
+      // If int fract has no weight, handle trailing zeros in int part.
+      final trailingZeros = patternTrailingZeros.firstMatch(intPart)?.group(0);
+      if (trailingZeros != null) {
+        final trailingZerosWeight = trailingZeros.length ~/ 4; // Get count of trailing zeros '0000'
+        intPart = intPart.substring(0, intPart.length - trailingZerosWeight * 4); // Remove leading zeros '0000'
+        intWeight -= trailingZerosWeight;
+      }
+    }
+
+    final nDigits = intWeight + fractWeight + 2;
+
+    final writer = ByteDataWriter();
+    writer.writeInt16(nDigits);
+    writer.writeInt16(weight);
+    writer.writeUint16(signByte);
+    writer.writeInt16(dScale);
+    for (var i = 0; i <= intWeight * 4; i += 4) {
+      writer.writeInt16(int.parse(intPart.substring(i, i + 4)));
+    }
+    for (var i = 0; i <= fractWeight * 4; i += 4) {
+      writer.writeInt16(int.parse(fractPart.substring(i, i + 4)));
+    }
+    final as = writer.toBytes();
+    return as;
   }
 }
 
