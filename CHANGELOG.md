@@ -2,7 +2,7 @@
 
 ## Unreleased 
 
-- Decoder for type `numeric` / `decimal`, [#7](https://github.com/isoos/postgresql-dart/pull/7).
+- Support for type `numeric` / `decimal` ([#7](https://github.com/isoos/postgresql-dart/pull/7), [#9](https://github.com/isoos/postgresql-dart/pull/9)).
 
 ## 2.3.2
 
