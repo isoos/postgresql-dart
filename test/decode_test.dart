@@ -177,18 +177,21 @@ void main() {
   });
 
   test('Decode Numeric to String', () {
-    // -123400000.2
-    final binary1 = [0, 4, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 0, 7, 208];
-
-    // -123400001.01234
-    final binary2 = [0, 5, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 1, 0, 0, 7, 208];
+    final binaries = {
+      '-123400000.20000': [0, 4, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 0, 7, 208],
+      '-123400001.00002': [0, 5, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 1, 0, 0, 7, 208],
+      '0.00001': [0, 1, 255, 254, 0, 0, 0, 5, 3, 232],
+      '10000.000000000': [0, 1, 0, 1, 0, 0, 0, 9, 0, 1],
+      'NaN': [0, 0, 0, 0, 192, 0, 0, 0],
+      '0': [0, 0, 0, 0, 0, 0, 0, 0], // 0 or 0.
+      '0.0': [0, 0, 0, 0, 0, 0, 0, 1], // .0 or 0.0
+    };
 
     final decoder = PostgresBinaryDecoder(1700);
-    final uint8List1 = Uint8List.fromList(binary1);
-    final uint8List2 = Uint8List.fromList(binary2);
-    final res1 = decoder.convert(uint8List1);
-    final res2 = decoder.convert(uint8List2);
-    expect(res1, '-123400000.20000');
-    expect(res2, '-123400001.00002');
+    binaries.forEach((key, value) {
+      final uint8List = Uint8List.fromList(value);
+      final res = decoder.convert(uint8List);
+      expect(res, key);
+    });
   });
 }

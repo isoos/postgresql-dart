@@ -547,12 +547,19 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     final reader = ByteDataReader()..add(value);
     final nDigits = reader.readInt16(); // non-zero digits, data buffer length = 2 * nDigits
     var weight = reader.readInt16(); // weight of first digit
-    final signByte = reader.readInt16(); // NUMERIC_POS, NEG, NAN, PINF, or NINF
+    final signByte = reader.readUint16(); // NUMERIC_POS, NEG, NAN, PINF, or NINF
     final dScale = reader.readInt16(); // display scale
     if (signByte == 0xc000) return 'NaN';
     final sign = signByte == 0x4000 ? '-' : '';
     var intPart = '';
     var fractPart = '';
+
+    final fractOmitted = -(weight + 1);
+    if (fractOmitted > 0) {
+      // If value < 0, the leading zeros in fractional part were omitted.
+      fractPart += '0000' * fractOmitted;
+    }
+
     for (var i = 0; i < nDigits; i++) {
       if (weight >= 0) {
         intPart += reader.readInt16().toString().padLeft(4, '0');
@@ -561,6 +568,18 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
       }
       weight--;
     }
-    return '$sign${intPart.replaceAll(RegExp(r'^0+'), '')}.${fractPart.padRight(dScale, '0').substring(0, dScale)}';
+
+    if (weight >= 0) {
+      // Trailing zeros were omitted
+      intPart += '0000' * (weight + 1);
+    }
+
+    var result = '$sign${intPart.replaceAll(RegExp(r'^0+'), '')}';
+    if (result.isEmpty) result = '0'; // Show at least 0, if no int value is given.
+    if (dScale > 0) {
+      // Only add fractional digits, if dScale allows
+      result += '.${fractPart.padRight(dScale, '0').substring(0, dScale)}';
+    }
+    return result;
   }
 }
