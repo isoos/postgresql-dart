@@ -27,6 +27,9 @@ final _hex = <String>[
   'e',
   'f',
 ];
+final _numericRegExp = RegExp(r'^(\d*)(\.\d*)?$');
+final _leadingZerosRegExp = RegExp(r'^0+');
+final _trailingZerosRegExp = RegExp(r'0+$');
 
 class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
   final PostgreSQLDataType _dataType;
@@ -141,8 +144,19 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
                 0, value.toUtc().difference(DateTime.utc(2000)).inMicroseconds);
             return bd.buffer.asUint8List();
           }
+          throw FormatException('Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}');
+        }
+
+      case PostgreSQLDataType.numeric:
+        {
+          if (value is double || value is int) {
+            value = value.toString();
+          }
+          if (value is String) {
+            return _encodeNumeric(value);
+          }
           throw FormatException(
-              'Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}');
+              'Invalid type for parameter value. Expected: String|double|int Got: ${value.runtimeType}');
         }
 
       case PostgreSQLDataType.jsonb:
@@ -285,6 +299,76 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
       valueEncoder(writer, i);
     }
 
+    return writer.toBytes();
+  }
+
+  /// Encode String / double / int to numeric / decimal  without loosing precision.
+  /// Compare implementation: https://github.com/frohoff/jdk8u-dev-jdk/blob/da0da73ab82ed714dc5be94acd2f0d00fbdfe2e9/src/share/classes/java/math/BigDecimal.java#L409
+  Uint8List _encodeNumeric(String value) {
+    value = value.trim();
+    var signByte = 0x0000;
+    if (value.toLowerCase() == 'nan') {
+      signByte = 0xc000;
+      value = '';
+    } else if (value.startsWith('-')) {
+      value = value.substring(1);
+      signByte = 0x4000;
+    } else if (value.startsWith('+')) {
+      value = value.substring(1);
+    }
+    if (!_numericRegExp.hasMatch(value)) {
+      throw FormatException('Invalid format for parameter value. Expected: String which matches "/^(\\d*)(\\.\\d*)?\$/" Got: ${value}');
+    }
+    final parts = value.split('.');
+
+    var intPart = parts[0].replaceAll(_leadingZerosRegExp, '');
+    var intWeight = intPart.isEmpty ? -1 : (intPart.length - 1) ~/ 4;
+    intPart = intPart.padLeft((intWeight + 1) * 4, '0');
+
+    var fractPart = parts.length > 1 ? parts[1] : '';
+    final dScale = fractPart.length;
+    fractPart = fractPart.replaceAll(_trailingZerosRegExp, '');
+    var fractWeight = fractPart.isEmpty ? -1 : (fractPart.length - 1) ~/ 4;
+    fractPart = fractPart.padRight((fractWeight + 1) * 4, '0');
+
+    var weight = intWeight;
+    if (intWeight < 0) {
+      // If int part has no weight, handle leading zeros in fractional part.
+      if (fractPart.isEmpty) {
+        // Weight of value 0 or '' is 0;
+        weight = 0;
+      } else {
+        final leadingZeros = _leadingZerosRegExp.firstMatch(fractPart)?.group(0);
+        if (leadingZeros != null) {
+          final leadingZerosWeight = leadingZeros.length ~/ 4; // Get count of leading zeros '0000'
+          fractPart = fractPart.substring(leadingZerosWeight * 4); // Remove leading zeros '0000'
+          fractWeight -= leadingZerosWeight;
+          weight = -(leadingZerosWeight + 1); // Ignore leading zeros in weight
+        }
+      }
+    } else if (fractWeight < 0) {
+      // If int fract has no weight, handle trailing zeros in int part.
+      final trailingZeros = _trailingZerosRegExp.firstMatch(intPart)?.group(0);
+      if (trailingZeros != null) {
+        final trailingZerosWeight = trailingZeros.length ~/ 4; // Get count of trailing zeros '0000'
+        intPart = intPart.substring(0, intPart.length - trailingZerosWeight * 4); // Remove leading zeros '0000'
+        intWeight -= trailingZerosWeight;
+      }
+    }
+
+    final nDigits = intWeight + fractWeight + 2;
+
+    final writer = ByteDataWriter();
+    writer.writeInt16(nDigits);
+    writer.writeInt16(weight);
+    writer.writeUint16(signByte);
+    writer.writeInt16(dScale);
+    for (var i = 0; i <= intWeight * 4; i += 4) {
+      writer.writeInt16(int.parse(intPart.substring(i, i + 4)));
+    }
+    for (var i = 0; i <= fractWeight * 4; i += 4) {
+      writer.writeInt16(int.parse(fractPart.substring(i, i + 4)));
+    }
     return writer.toBytes();
   }
 }
@@ -461,12 +545,19 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     final reader = ByteDataReader()..add(value);
     final nDigits = reader.readInt16(); // non-zero digits, data buffer length = 2 * nDigits
     var weight = reader.readInt16(); // weight of first digit
-    final signByte = reader.readInt16(); // NUMERIC_POS, NEG, NAN, PINF, or NINF
+    final signByte = reader.readUint16(); // NUMERIC_POS, NEG, NAN, PINF, or NINF
     final dScale = reader.readInt16(); // display scale
     if (signByte == 0xc000) return 'NaN';
     final sign = signByte == 0x4000 ? '-' : '';
     var intPart = '';
     var fractPart = '';
+
+    final fractOmitted = -(weight + 1);
+    if (fractOmitted > 0) {
+      // If value < 0, the leading zeros in fractional part were omitted.
+      fractPart += '0000' * fractOmitted;
+    }
+
     for (var i = 0; i < nDigits; i++) {
       if (weight >= 0) {
         intPart += reader.readInt16().toString().padLeft(4, '0');
@@ -475,6 +566,18 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
       }
       weight--;
     }
-    return '$sign${intPart.replaceAll(RegExp(r'^0+'), '')}.${fractPart.padRight(dScale, '0').substring(0, dScale)}';
+
+    if (weight >= 0) {
+      // Trailing zeros were omitted
+      intPart += '0000' * (weight + 1);
+    }
+
+    var result = '$sign${intPart.replaceAll(_leadingZerosRegExp, '')}';
+    if (result.isEmpty) result = '0'; // Show at least 0, if no int value is given.
+    if (dScale > 0) {
+      // Only add fractional digits, if dScale allows
+      result += '.${fractPart.padRight(dScale, '0').substring(0, dScale)}';
+    }
+    return result;
   }
 }
