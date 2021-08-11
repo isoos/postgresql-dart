@@ -1,6 +1,5 @@
 import 'package:buffer/buffer.dart';
 import 'package:crypto/crypto.dart';
-import 'package:sasl_scram/sasl_scram.dart';
 
 import '../../postgres.dart';
 import '../client_messages.dart';
@@ -11,9 +10,7 @@ import 'auth.dart';
 class MD5Authenticator extends PostgresAuthenticator {
   static final String name = 'MD5';
 
-  final UsernamePasswordCredential credentials;
-
-  MD5Authenticator(PostgreSQLConnection connection, this.credentials) : super(connection);
+  MD5Authenticator(PostgreSQLConnection connection) : super(connection);
 
   @override
   void onMessage(AuthenticationMessage message) {

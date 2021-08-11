@@ -113,9 +113,7 @@ class _PostgreSQLConnectionStateAuthenticating
           continue authInit;
         authInit:
         case AuthenticationMessage.KindSASL:
-          final credential = UsernamePasswordCredential(
-              username: connection!.username, password: connection!.password);
-          _authenticator = createAuthenticator(connection!, credential);
+          _authenticator = createAuthenticator(connection!);
           continue authMsg;
         authMsg:
         case AuthenticationMessage.KindSASLContinue:
