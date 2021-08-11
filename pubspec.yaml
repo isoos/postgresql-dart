@@ -10,6 +10,7 @@ dependencies:
   buffer: ^1.1.0
   crypto: ^3.0.0
   collection: ^1.15.0
+  sasl_scram: ^0.1.0
 
 dev_dependencies:
   pedantic: ^1.0.0

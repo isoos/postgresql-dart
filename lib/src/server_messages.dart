@@ -45,20 +45,18 @@ class AuthenticationMessage implements ServerMessage {
   static const int KindGSS = 7;
   static const int KindGSSContinue = 8;
   static const int KindSSPI = 9;
+  static const int KindSASL = 10;
+  static const int KindSASLContinue = 11;
+  static const int KindSASLFinal = 12;
 
   final int type;
-  final List<int> salt;
+  late final Uint8List bytes;
 
-  AuthenticationMessage._(this.type, this.salt);
+  AuthenticationMessage._(this.type, this.bytes);
 
   factory AuthenticationMessage(Uint8List bytes) {
-    final reader = ByteDataReader()..add(bytes);
-    final type = reader.readUint32();
-    final salt = <int>[];
-    if (type == KindMD5Password) {
-      salt.addAll(reader.read(4, copy: true));
-    }
-    return AuthenticationMessage._(type, salt);
+    final type = ByteData.view(bytes.buffer, bytes.offsetInBytes).getUint32(0);
+    return AuthenticationMessage._(type, bytes.sublist(4));
   }
 }
 

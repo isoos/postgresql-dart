@@ -26,7 +26,7 @@ void main() {
       await conn.close();
     });
 
-    test('Connect with md5 auth required', () async {
+    test('Connect with md5 or scram-sha-256 auth required', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'dart', password: 'dart');
 
@@ -35,7 +35,7 @@ void main() {
       expect(await conn.execute('select 1'), equals(1));
     });
 
-    test('SSL Connect with md5 auth required', () async {
+    test('SSL Connect with md5 or scram-sha-256 auth required', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'dart', password: 'dart', useSSL: true);
 
