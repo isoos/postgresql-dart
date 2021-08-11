@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:crypto/crypto.dart';
 
 import 'constants.dart';
 import 'query.dart';
@@ -13,13 +12,13 @@ abstract class ClientMessage {
 
   static const int ProtocolVersion = 196608;
 
-  static const int BindIdentifier = 66;
-  static const int DescribeIdentifier = 68;
-  static const int ExecuteIdentifier = 69;
-  static const int ParseIdentifier = 80;
-  static const int QueryIdentifier = 81;
-  static const int SyncIdentifier = 83;
-  static const int PasswordIdentifier = 112;
+  static const int BindIdentifier = 66; // B
+  static const int DescribeIdentifier = 68; // D
+  static const int ExecuteIdentifier = 69; // E
+  static const int ParseIdentifier = 80; //P
+  static const int QueryIdentifier = 81; // Q
+  static const int SyncIdentifier = 83; // S
+  static const int PasswordIdentifier = 112;  //p
 
   void applyToBuffer(ByteDataWriter buffer);
 
@@ -34,11 +33,6 @@ abstract class ClientMessage {
     messages.forEach((cm) => cm.applyToBuffer(buffer));
     return buffer.toBytes();
   }
-}
-
-void _applyStringToBuffer(UTF8BackedString string, ByteDataWriter buffer) {
-  buffer.write(string.utf8Bytes);
-  buffer.writeInt8(0);
 }
 
 class StartupMessage extends ClientMessage {
@@ -66,39 +60,19 @@ class StartupMessage extends ClientMessage {
 
     if (_username != null) {
       buffer.write(UTF8ByteConstants.user);
-      _applyStringToBuffer(_username!, buffer);
+      _username!.applyToBuffer(buffer);
     }
 
     buffer.write(UTF8ByteConstants.database);
-    _applyStringToBuffer(_databaseName, buffer);
+    _databaseName.applyToBuffer(buffer);
 
     buffer.write(UTF8ByteConstants.clientEncoding);
     buffer.write(UTF8ByteConstants.utf8);
 
     buffer.write(UTF8ByteConstants.timeZone);
-    _applyStringToBuffer(_timeZone, buffer);
+    _timeZone.applyToBuffer(buffer);
 
     buffer.writeInt8(0);
-  }
-}
-
-class AuthMD5Message extends ClientMessage {
-  UTF8BackedString? _hashedAuthString;
-
-  AuthMD5Message(String username, String password, List<int> saltBytes) {
-    final passwordHash = md5.convert('$password$username'.codeUnits).toString();
-    final saltString = String.fromCharCodes(saltBytes);
-    final md5Hash =
-        md5.convert('$passwordHash$saltString'.codeUnits).toString();
-    _hashedAuthString = UTF8BackedString('md5$md5Hash');
-  }
-
-  @override
-  void applyToBuffer(ByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.PasswordIdentifier);
-    final length = 5 + _hashedAuthString!.utf8Length;
-    buffer.writeUint32(length);
-    _applyStringToBuffer(_hashedAuthString!, buffer);
   }
 }
 
@@ -113,7 +87,7 @@ class QueryMessage extends ClientMessage {
     buffer.writeUint8(ClientMessage.QueryIdentifier);
     final length = 5 + _queryString.utf8Length;
     buffer.writeUint32(length);
-    _applyStringToBuffer(_queryString, buffer);
+    _queryString.applyToBuffer(buffer);
   }
 }
 
@@ -131,8 +105,8 @@ class ParseMessage extends ClientMessage {
     final length = 8 + _statement.utf8Length + _statementName.utf8Length;
     buffer.writeUint32(length);
     // Name of prepared statement
-    _applyStringToBuffer(_statementName, buffer);
-    _applyStringToBuffer(_statement, buffer); // Query string
+    _statementName.applyToBuffer(buffer);
+    _statement.applyToBuffer(buffer); // Query string
     buffer.writeUint16(0);
   }
 }
@@ -149,7 +123,7 @@ class DescribeMessage extends ClientMessage {
     final length = 6 + _statementName.utf8Length;
     buffer.writeUint32(length);
     buffer.writeUint8(83);
-    _applyStringToBuffer(_statementName, buffer); // Name of prepared statement
+    _statementName.applyToBuffer(buffer); // Name of prepared statement
   }
 }
 
@@ -193,7 +167,7 @@ class BindMessage extends ClientMessage {
     // Name of portal - currently unnamed portal.
     buffer.writeUint8(0);
     // Name of prepared statement.
-    _applyStringToBuffer(_statementName, buffer);
+    _statementName.applyToBuffer(buffer);
 
     // OK, if we have no specified types at all, we can use 0. If we have all specified types, we can use 1. If we have a mix, we have to individually
     // call out each type.
