@@ -144,7 +144,8 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
                 0, value.toUtc().difference(DateTime.utc(2000)).inMicroseconds);
             return bd.buffer.asUint8List();
           }
-          throw FormatException('Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}');
+          throw FormatException(
+              'Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}');
         }
 
       case PostgreSQLDataType.numeric:
@@ -317,7 +318,8 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
       value = value.substring(1);
     }
     if (!_numericRegExp.hasMatch(value)) {
-      throw FormatException('Invalid format for parameter value. Expected: String which matches "/^(\\d*)(\\.\\d*)?\$/" Got: ${value}');
+      throw FormatException(
+          'Invalid format for parameter value. Expected: String which matches "/^(\\d*)(\\.\\d*)?\$/" Got: ${value}');
     }
     final parts = value.split('.');
 
@@ -338,10 +340,13 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
         // Weight of value 0 or '' is 0;
         weight = 0;
       } else {
-        final leadingZeros = _leadingZerosRegExp.firstMatch(fractPart)?.group(0);
+        final leadingZeros =
+            _leadingZerosRegExp.firstMatch(fractPart)?.group(0);
         if (leadingZeros != null) {
-          final leadingZerosWeight = leadingZeros.length ~/ 4; // Get count of leading zeros '0000'
-          fractPart = fractPart.substring(leadingZerosWeight * 4); // Remove leading zeros '0000'
+          final leadingZerosWeight =
+              leadingZeros.length ~/ 4; // Get count of leading zeros '0000'
+          fractPart = fractPart
+              .substring(leadingZerosWeight * 4); // Remove leading zeros '0000'
           fractWeight -= leadingZerosWeight;
           weight = -(leadingZerosWeight + 1); // Ignore leading zeros in weight
         }
@@ -350,8 +355,12 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
       // If int fract has no weight, handle trailing zeros in int part.
       final trailingZeros = _trailingZerosRegExp.firstMatch(intPart)?.group(0);
       if (trailingZeros != null) {
-        final trailingZerosWeight = trailingZeros.length ~/ 4; // Get count of trailing zeros '0000'
-        intPart = intPart.substring(0, intPart.length - trailingZerosWeight * 4); // Remove leading zeros '0000'
+        final trailingZerosWeight =
+            trailingZeros.length ~/ 4; // Get count of trailing zeros '0000'
+        intPart = intPart.substring(
+            0,
+            intPart.length -
+                trailingZerosWeight * 4); // Remove leading zeros '0000'
         intWeight -= trailingZerosWeight;
       }
     }
@@ -543,9 +552,11 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
   /// See implementation: https://github.com/charmander/pg-numeric/blob/0c310eeb11dc680dffb7747821e61d542831108b/index.js#L13
   static String _decodeNumeric(Uint8List value) {
     final reader = ByteDataReader()..add(value);
-    final nDigits = reader.readInt16(); // non-zero digits, data buffer length = 2 * nDigits
+    final nDigits =
+        reader.readInt16(); // non-zero digits, data buffer length = 2 * nDigits
     var weight = reader.readInt16(); // weight of first digit
-    final signByte = reader.readUint16(); // NUMERIC_POS, NEG, NAN, PINF, or NINF
+    final signByte =
+        reader.readUint16(); // NUMERIC_POS, NEG, NAN, PINF, or NINF
     final dScale = reader.readInt16(); // display scale
     if (signByte == 0xc000) return 'NaN';
     final sign = signByte == 0x4000 ? '-' : '';
@@ -573,7 +584,8 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     }
 
     var result = '$sign${intPart.replaceAll(_leadingZerosRegExp, '')}';
-    if (result.isEmpty) result = '0'; // Show at least 0, if no int value is given.
+    if (result.isEmpty)
+      result = '0'; // Show at least 0, if no int value is given.
     if (dScale > 0) {
       // Only add fractional digits, if dScale allows
       result += '.${fractPart.padRight(dScale, '0').substring(0, dScale)}';

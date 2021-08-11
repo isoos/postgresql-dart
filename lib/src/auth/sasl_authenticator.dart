@@ -13,27 +13,34 @@ import 'auth.dart';
 class PostgresSaslAuthenticator extends PostgresAuthenticator {
   final SaslAuthenticator authenticator;
 
-  PostgresSaslAuthenticator(PostgreSQLConnection connection, this.authenticator) : super(connection);
+  PostgresSaslAuthenticator(PostgreSQLConnection connection, this.authenticator)
+      : super(connection);
 
   @override
   void onMessage(AuthenticationMessage message) {
     ClientMessage msg;
     switch (message.type) {
       case AuthenticationMessage.KindSASL:
-        final bytesToSend = authenticator.handleMessage(SaslMessageType.AuthenticationSASL, message.bytes);
-        if (bytesToSend == null) throw PostgreSQLException('KindSASL: No bytes to send');
+        final bytesToSend = authenticator.handleMessage(
+            SaslMessageType.AuthenticationSASL, message.bytes);
+        if (bytesToSend == null)
+          throw PostgreSQLException('KindSASL: No bytes to send');
         msg = SaslClientFirstMessage(bytesToSend, authenticator.mechanism.name);
         break;
       case AuthenticationMessage.KindSASLContinue:
-        final bytesToSend = authenticator.handleMessage(SaslMessageType.AuthenticationSASLContinue, message.bytes);
-        if (bytesToSend == null) throw PostgreSQLException('KindSASLContinue: No bytes to send');
+        final bytesToSend = authenticator.handleMessage(
+            SaslMessageType.AuthenticationSASLContinue, message.bytes);
+        if (bytesToSend == null)
+          throw PostgreSQLException('KindSASLContinue: No bytes to send');
         msg = SaslClientLastMessage(bytesToSend);
         break;
       case AuthenticationMessage.KindSASLFinal:
-        authenticator.handleMessage(SaslMessageType.AuthenticationSASLFinal, message.bytes);
+        authenticator.handleMessage(
+            SaslMessageType.AuthenticationSASLFinal, message.bytes);
         return;
       default:
-        throw PostgreSQLException('Unsupported authentication type ${message.type}, closing connection.');
+        throw PostgreSQLException(
+            'Unsupported authentication type ${message.type}, closing connection.');
     }
     connection.socket!.add(msg.asBytes());
   }

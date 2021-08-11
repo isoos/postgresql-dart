@@ -185,8 +185,44 @@ void main() {
 
     test('numeric', () async {
       final binaries = {
-        '-123400000.20000': [0, 4, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 0, 7, 208],
-        '-123400001.00002': [0, 5, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 1, 0, 0, 7, 208],
+        '-123400000.20000': [
+          0,
+          4,
+          0,
+          2,
+          64,
+          0,
+          0,
+          5,
+          0,
+          1,
+          9,
+          36,
+          0,
+          0,
+          7,
+          208
+        ],
+        '-123400001.00002': [
+          0,
+          5,
+          0,
+          2,
+          64,
+          0,
+          0,
+          5,
+          0,
+          1,
+          9,
+          36,
+          0,
+          1,
+          0,
+          0,
+          7,
+          208
+        ],
         '0.00001': [0, 1, 255, 254, 0, 0, 0, 5, 3, 232],
         '10000.000000000': [0, 1, 0, 1, 0, 0, 0, 9, 0, 1],
         'NaN': [0, 0, 0, 0, 192, 0, 0, 0],
@@ -201,9 +237,15 @@ void main() {
         expect(res, uint8List);
       });
 
-      await expectInverse('1000000000000000000000000000.0000000000000000000000000001', PostgreSQLDataType.numeric);
-      await expectInverse('3141592653589793238462643383279502.1618033988749894848204586834365638', PostgreSQLDataType.numeric);
-      await expectInverse('-3141592653589793238462643383279502.1618033988749894848204586834365638', PostgreSQLDataType.numeric);
+      await expectInverse(
+          '1000000000000000000000000000.0000000000000000000000000001',
+          PostgreSQLDataType.numeric);
+      await expectInverse(
+          '3141592653589793238462643383279502.1618033988749894848204586834365638',
+          PostgreSQLDataType.numeric);
+      await expectInverse(
+          '-3141592653589793238462643383279502.1618033988749894848204586834365638',
+          PostgreSQLDataType.numeric);
       await expectInverse('0.0', PostgreSQLDataType.numeric);
       await expectInverse('0.1', PostgreSQLDataType.numeric);
       await expectInverse('0.0001', PostgreSQLDataType.numeric);

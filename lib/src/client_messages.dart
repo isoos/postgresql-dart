@@ -18,7 +18,7 @@ abstract class ClientMessage {
   static const int ParseIdentifier = 80; //P
   static const int QueryIdentifier = 81; // Q
   static const int SyncIdentifier = 83; // S
-  static const int PasswordIdentifier = 112;  //p
+  static const int PasswordIdentifier = 112; //p
 
   void applyToBuffer(ByteDataWriter buffer);
 

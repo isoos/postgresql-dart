@@ -17,7 +17,8 @@ class MD5Authenticator extends PostgresAuthenticator {
     final reader = ByteDataReader()..add(message.bytes);
     final salt = reader.read(4, copy: true);
 
-    final authMessage = AuthMD5Message(connection.username!, connection.password!, salt);
+    final authMessage =
+        AuthMD5Message(connection.username!, connection.password!, salt);
 
     connection.socket!.add(authMessage.asBytes());
   }
@@ -29,7 +30,8 @@ class AuthMD5Message extends ClientMessage {
   AuthMD5Message(String username, String password, List<int> saltBytes) {
     final passwordHash = md5.convert('$password$username'.codeUnits).toString();
     final saltString = String.fromCharCodes(saltBytes);
-    final md5Hash = md5.convert('$passwordHash$saltString'.codeUnits).toString();
+    final md5Hash =
+        md5.convert('$passwordHash$saltString'.codeUnits).toString();
     _hashedAuthString = UTF8BackedString('md5$md5Hash');
   }
 

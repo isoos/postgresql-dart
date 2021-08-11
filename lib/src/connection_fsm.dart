@@ -67,7 +67,6 @@ class _PostgreSQLConnectionStateSocketConnected
 
   @override
   _PostgreSQLConnectionState onMessage(ServerMessage message) {
-
     completer.completeError(PostgreSQLException(
         'Unsupported message "$message", closing connection.'));
 
@@ -108,10 +107,12 @@ class _PostgreSQLConnectionStateAuthenticating
         case AuthenticationMessage.KindOK:
           return _PostgreSQLConnectionStateAuthenticated(completer);
         case AuthenticationMessage.KindMD5Password:
-          _authenticator = createAuthenticator(connection!, AuthenticationScheme.MD5);
+          _authenticator =
+              createAuthenticator(connection!, AuthenticationScheme.MD5);
           continue authMsg;
         case AuthenticationMessage.KindSASL:
-          _authenticator = createAuthenticator(connection!, AuthenticationScheme.SCRAM_SHA_256);
+          _authenticator = createAuthenticator(
+              connection!, AuthenticationScheme.SCRAM_SHA_256);
           continue authMsg;
         authMsg:
         case AuthenticationMessage.KindSASLContinue:

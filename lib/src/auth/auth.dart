@@ -17,13 +17,16 @@ abstract class PostgresAuthenticator {
   void onMessage(AuthenticationMessage message);
 }
 
-PostgresAuthenticator createAuthenticator(PostgreSQLConnection connection, AuthenticationScheme authenticationScheme) {
+PostgresAuthenticator createAuthenticator(PostgreSQLConnection connection,
+    AuthenticationScheme authenticationScheme) {
   switch (authenticationScheme) {
     case AuthenticationScheme.MD5:
       return MD5Authenticator(connection);
     case AuthenticationScheme.SCRAM_SHA_256:
-      final credentials = UsernamePasswordCredential(username: connection.username, password: connection.password);
-      return PostgresSaslAuthenticator(connection, ScramAuthenticator('SCRAM-SHA-256', sha256, credentials));
+      final credentials = UsernamePasswordCredential(
+          username: connection.username, password: connection.password);
+      return PostgresSaslAuthenticator(
+          connection, ScramAuthenticator('SCRAM-SHA-256', sha256, credentials));
     default:
       throw PostgreSQLException("Authenticator wasn't specified");
   }
