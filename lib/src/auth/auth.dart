@@ -17,8 +17,8 @@ abstract class PostgresAuthenticator {
   void onMessage(AuthenticationMessage message);
 }
 
-PostgresAuthenticator createAuthenticator(PostgreSQLConnection connection) {
-  switch (connection.authenticationScheme) {
+PostgresAuthenticator createAuthenticator(PostgreSQLConnection connection, AuthenticationScheme authenticationScheme) {
+  switch (authenticationScheme) {
     case AuthenticationScheme.MD5:
       return MD5Authenticator(connection);
     case AuthenticationScheme.SCRAM_SHA_256:

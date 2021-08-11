@@ -6,7 +6,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:sasl_scram/sasl_scram.dart';
 import 'auth/auth.dart';
 
 import 'client_messages.dart';
@@ -73,9 +72,6 @@ class PostgreSQLConnection extends Object
 
   /// Password for authenticating this connection.
   final String? password;
-
-  /// AuthenticationScheme for authenticating this connection.
-  AuthenticationScheme authenticationScheme = AuthenticationScheme.SCRAM_SHA_256;
 
   /// Whether or not this connection should connect securely.
   final bool useSSL;

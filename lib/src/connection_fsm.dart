@@ -108,12 +108,10 @@ class _PostgreSQLConnectionStateAuthenticating
         case AuthenticationMessage.KindOK:
           return _PostgreSQLConnectionStateAuthenticated(completer);
         case AuthenticationMessage.KindMD5Password:
-          // Change default auth scheme
-          connection!.authenticationScheme = AuthenticationScheme.MD5;
-          continue authInit;
-        authInit:
+          _authenticator = createAuthenticator(connection!, AuthenticationScheme.MD5);
+          continue authMsg;
         case AuthenticationMessage.KindSASL:
-          _authenticator = createAuthenticator(connection!);
+          _authenticator = createAuthenticator(connection!, AuthenticationScheme.SCRAM_SHA_256);
           continue authMsg;
         authMsg:
         case AuthenticationMessage.KindSASLContinue:
