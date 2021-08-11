@@ -27,9 +27,9 @@ final _hex = <String>[
   'e',
   'f',
 ];
-final _numericPattern = RegExp(r'^(\d*)(\.\d*)?$');
-final _patternLeadingZeros = RegExp(r'^0+');
-final _patternTrailingZeros = RegExp(r'0+$');
+final _numericRegExp = RegExp(r'^(\d*)(\.\d*)?$');
+final _leadingZerosRegExp = RegExp(r'^0+');
+final _trailingZerosRegExp = RegExp(r'0+$');
 
 class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
   final PostgreSQLDataType _dataType;
@@ -316,18 +316,18 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
     } else if (value.startsWith('+')) {
       value = value.substring(1);
     }
-    if (!_numericPattern.hasMatch(value)) {
+    if (!_numericRegExp.hasMatch(value)) {
       throw FormatException('Invalid format for parameter value. Expected: String which matches "/^(\\d*)(\\.\\d*)?\$/" Got: ${value}');
     }
     final parts = value.split('.');
 
-    var intPart = parts[0].replaceAll(_patternLeadingZeros, '');
+    var intPart = parts[0].replaceAll(_leadingZerosRegExp, '');
     var intWeight = intPart.isEmpty ? -1 : (intPart.length - 1) ~/ 4;
     intPart = intPart.padLeft((intWeight + 1) * 4, '0');
 
     var fractPart = parts.length > 1 ? parts[1] : '';
     final dScale = fractPart.length;
-    fractPart = fractPart.replaceAll(_patternTrailingZeros, '');
+    fractPart = fractPart.replaceAll(_trailingZerosRegExp, '');
     var fractWeight = fractPart.isEmpty ? -1 : (fractPart.length - 1) ~/ 4;
     fractPart = fractPart.padRight((fractWeight + 1) * 4, '0');
 
@@ -338,7 +338,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
         // Weight of value 0 or '' is 0;
         weight = 0;
       } else {
-        final leadingZeros = _patternLeadingZeros.firstMatch(fractPart)?.group(0);
+        final leadingZeros = _leadingZerosRegExp.firstMatch(fractPart)?.group(0);
         if (leadingZeros != null) {
           final leadingZerosWeight = leadingZeros.length ~/ 4; // Get count of leading zeros '0000'
           fractPart = fractPart.substring(leadingZerosWeight * 4); // Remove leading zeros '0000'
@@ -348,7 +348,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
       }
     } else if (fractWeight < 0) {
       // If int fract has no weight, handle trailing zeros in int part.
-      final trailingZeros = _patternTrailingZeros.firstMatch(intPart)?.group(0);
+      final trailingZeros = _trailingZerosRegExp.firstMatch(intPart)?.group(0);
       if (trailingZeros != null) {
         final trailingZerosWeight = trailingZeros.length ~/ 4; // Get count of trailing zeros '0000'
         intPart = intPart.substring(0, intPart.length - trailingZerosWeight * 4); // Remove leading zeros '0000'
@@ -572,7 +572,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
       intPart += '0000' * (weight + 1);
     }
 
-    var result = '$sign${intPart.replaceAll(_patternLeadingZeros, '')}';
+    var result = '$sign${intPart.replaceAll(_leadingZerosRegExp, '')}';
     if (result.isEmpty) result = '0'; // Show at least 0, if no int value is given.
     if (dScale > 0) {
       // Only add fractional digits, if dScale allows
