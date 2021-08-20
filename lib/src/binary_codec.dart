@@ -148,6 +148,17 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
               'Invalid type for parameter value. Expected: DateTime Got: ${value.runtimeType}');
         }
 
+      case PostgreSQLDataType.interval:
+        {
+          if (value is Duration) {
+            final bd = ByteData(8);
+            bd.setInt64(0, value.inMicroseconds);
+            return bd.buffer.asUint8List();
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: Duration Got: ${value.runtimeType}');
+        }
+
       case PostgreSQLDataType.numeric:
         {
           if (value is double || value is int) {
@@ -422,6 +433,9 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
         return DateTime.utc(2000)
             .add(Duration(microseconds: buffer.getInt64(0)));
 
+      case PostgreSQLDataType.interval:
+        return Duration(microseconds: buffer.getInt64(0));
+
       case PostgreSQLDataType.numeric:
         return _decodeNumeric(value);
 
@@ -541,6 +555,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     1082: PostgreSQLDataType.date,
     1114: PostgreSQLDataType.timestampWithoutTimezone,
     1184: PostgreSQLDataType.timestampWithTimezone,
+    1186: PostgreSQLDataType.interval,
     1700: PostgreSQLDataType.numeric,
     2950: PostgreSQLDataType.uuid,
     3802: PostgreSQLDataType.jsonb,

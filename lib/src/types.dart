@@ -42,6 +42,9 @@ enum PostgreSQLDataType {
   /// Must be a [DateTime] (microsecond date and time precision)
   timestampWithTimezone,
 
+  /// Must be a [Duration]
+  interval,
+
   /// Must be a [List<int>]
   numeric,
 
