@@ -189,6 +189,10 @@ void main() {
           Duration(days: 1, minutes: 15), PostgreSQLDataType.interval);
       await expectInverse(
           -Duration(days: 1, seconds: 5), PostgreSQLDataType.interval);
+      await expectInverse(Duration(days: 365 * 100000, microseconds: 1),
+          PostgreSQLDataType.interval);
+      await expectInverse(-Duration(days: 365 * 100000, microseconds: 1),
+          PostgreSQLDataType.interval);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:interval)',
             substitutionValues: {'v': 'not-interval'});
