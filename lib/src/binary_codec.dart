@@ -151,8 +151,9 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
       case PostgreSQLDataType.interval:
         {
           if (value is Duration) {
-            final bd = ByteData(8);
+            final bd = ByteData(16);
             bd.setInt64(0, value.inMicroseconds);
+            // ignoring the second 8 bytes
             return bd.buffer.asUint8List();
           }
           throw FormatException(
@@ -434,6 +435,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
             .add(Duration(microseconds: buffer.getInt64(0)));
 
       case PostgreSQLDataType.interval:
+        if (buffer.getInt64(8) != 0) throw UnimplementedError();
         return Duration(microseconds: buffer.getInt64(0));
 
       case PostgreSQLDataType.numeric:
