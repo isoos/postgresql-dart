@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.1
+
+- Support for type `interval`, [#10](https://github.com/isoos/postgresql-dart/pull/10).
+
 ## 2.4.0
 
 - Support for type `numeric` / `decimal` ([#7](https://github.com/isoos/postgresql-dart/pull/7), [#9](https://github.com/isoos/postgresql-dart/pull/9)).

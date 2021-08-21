@@ -37,6 +37,8 @@ class PostgreSQLFormat {
         return 'timestamp';
       case PostgreSQLDataType.timestampWithTimezone:
         return 'timestamptz';
+      case PostgreSQLDataType.interval:
+        return 'interval';
       case PostgreSQLDataType.numeric:
         return 'numeric';
       case PostgreSQLDataType.date:
