@@ -435,8 +435,10 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
             .add(Duration(microseconds: buffer.getInt64(0)));
 
       case PostgreSQLDataType.interval:
-        if (buffer.getInt64(8) != 0) throw UnimplementedError();
-        return Duration(microseconds: buffer.getInt64(0));
+        {
+          if (buffer.getInt64(8) != 0) throw UnimplementedError();
+          return Duration(microseconds: buffer.getInt64(0));
+        }
 
       case PostgreSQLDataType.numeric:
         return _decodeNumeric(value);
