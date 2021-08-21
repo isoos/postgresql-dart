@@ -183,6 +183,21 @@ void main() {
       }
     });
 
+    test('interval', () async {
+      await expectInverse(Duration(minutes: 15), PostgreSQLDataType.interval);
+      await expectInverse(
+          Duration(days: 1, minutes: 15), PostgreSQLDataType.interval);
+      await expectInverse(
+          -Duration(days: 1, seconds: 5), PostgreSQLDataType.interval);
+      try {
+        await conn.query('INSERT INTO t (v) VALUES (@v:interval)',
+            substitutionValues: {'v': 'not-interval'});
+        fail('unreachable');
+      } on FormatException catch (e) {
+        expect(e.toString(), contains('Expected: Duration'));
+      }
+    });
+
     test('numeric', () async {
       final binaries = {
         '-123400000.20000': [
