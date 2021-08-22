@@ -103,6 +103,20 @@ void main() {
         ]
       ]);
     });
+    test('Can store JSON map with execute', () async {
+      final result = await connection.execute(
+          'INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j',
+          substitutionValues: {
+            'a': {'a': 4}
+          });
+      expect(result, 1);
+      final resultQuery = await connection.query('SELECT j FROM t');
+      expect(resultQuery, [
+        [
+          {'a': 4}
+        ]
+      ]);
+    });
 
     test('Can store JSON list', () async {
       var result = await connection
