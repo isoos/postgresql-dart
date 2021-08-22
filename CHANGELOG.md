@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.1+2
+
+- Fix error when sending json data with `execute()` [#11](https://github.com/isoos/postgresql-dart/pull/11)
+
 ## 2.4.1+1
 
 - Fix error when passing `allowReuse: null` into `query()` [#8](https://github.com/isoos/postgresql-dart/pull/8)
