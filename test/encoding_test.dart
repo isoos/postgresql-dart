@@ -546,9 +546,12 @@ void main() {
     });
 
     test('Encode JSONB', () {
-      expect(encoder.convert({'a': 'b'}), '{"a":"b"}');
-      expect(encoder.convert({'a': true}), '{"a":true}');
-      expect(encoder.convert({'b': false}), '{"b":false}');
+      expect(encoder.convert({'a': 'b'}, escapeStrings: false), '{"a":"b"}');
+      expect(encoder.convert({'a': true}, escapeStrings: false), '{"a":true}');
+      expect(
+          encoder.convert({'b': false}, escapeStrings: false), '{"b":false}');
+      expect(encoder.convert({'a': true}), '\'{"a":true}\'');
+      expect(encoder.convert({'b': false}), '\'{"b":false}\'');
     });
 
     test('Attempt to infer unknown type throws exception', () {

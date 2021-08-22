@@ -29,7 +29,7 @@ class PostgresTextEncoder {
     }
 
     if (value is Map) {
-      return _encodeJSON(value);
+      return _encodeJSON(value, escapeStrings);
     }
 
     if (value is PgPoint) {
@@ -152,7 +152,7 @@ class PostgresTextEncoder {
     return "'$string'";
   }
 
-  String _encodeJSON(dynamic value) {
+  String _encodeJSON(dynamic value, bool escapeStrings) {
     if (value == null) {
       return 'null';
     }
@@ -161,7 +161,7 @@ class PostgresTextEncoder {
       return "'${json.encode(value)}'";
     }
 
-    return json.encode(value);
+    return _encodeString(json.encode(value), escapeStrings);
   }
 
   String _encodePoint(PgPoint value) {
