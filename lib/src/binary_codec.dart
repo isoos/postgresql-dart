@@ -331,7 +331,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
     }
     if (!_numericRegExp.hasMatch(value)) {
       throw FormatException(
-          'Invalid format for parameter value. Expected: String which matches "/^(\\d*)(\\.\\d*)?\$/" Got: ${value}');
+          'Invalid format for parameter value. Expected: String which matches "/^(\\d*)(\\.\\d*)?\$/" Got: $value');
     }
     final parts = value.split('.');
 
@@ -603,8 +603,9 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     }
 
     var result = '$sign${intPart.replaceAll(_leadingZerosRegExp, '')}';
-    if (result.isEmpty)
+    if (result.isEmpty) {
       result = '0'; // Show at least 0, if no int value is given.
+    }
     if (dScale > 0) {
       // Only add fractional digits, if dScale allows
       result += '.${fractPart.padRight(dScale, '0').substring(0, dScale)}';
