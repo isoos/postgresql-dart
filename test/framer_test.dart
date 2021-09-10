@@ -2,10 +2,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:test/test.dart';
-
 import 'package:postgres/src/message_window.dart';
 import 'package:postgres/src/server_messages.dart';
+import 'package:test/test.dart';
 
 void main() {
   late MessageFramer framer;

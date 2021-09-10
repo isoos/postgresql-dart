@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:test/test.dart';
-
 import 'package:postgres/postgres.dart';
+import 'package:test/test.dart';
 
 void main() {
   late PostgreSQLConnection conn;

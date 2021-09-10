@@ -1,9 +1,8 @@
 // ignore_for_file: unawaited_futures
 import 'dart:async';
 
-import 'package:test/test.dart';
-
 import 'package:postgres/postgres.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Transaction behavior', () {

@@ -4,9 +4,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:mirrors';
 
-import 'package:test/test.dart';
-
 import 'package:postgres/postgres.dart';
+import 'package:test/test.dart';
 
 void main() {
   // These tests are disabled, as we'd need to setup ci/pg_hba.conf into the CI
