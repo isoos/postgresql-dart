@@ -3,8 +3,8 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-Future<void> main() async {
-  await startPostgresContainer();
+void main() {
+  usePostgresDocker();
 
   test('Reports stacktrace correctly', () async {
     final conn = PostgreSQLConnection('localhost', 5432, 'dart_test', username: 'dart', password: 'dart');
