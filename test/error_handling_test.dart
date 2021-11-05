@@ -7,16 +7,35 @@ void main() {
   usePostgresDocker();
 
   test('Reports stacktrace correctly', () async {
-    final conn = PostgreSQLConnection('localhost', 5432, 'dart_test', username: 'dart', password: 'dart');
+    final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+        username: 'dart', password: 'dart');
     await conn.open();
     addTearDown(() async => conn.close());
 
+    // Root connection
     try {
       await conn.query('SELECT hello');
       fail('Should not reach');
     } catch (e, st) {
-      expect(st.toString(), isNotEmpty);
-      expect(st.toString(), contains('postgresql-dart/test/error_handling_test.dart'));
+      expect(e.toString(), contains('column "hello" does not exist'));
+      expect(
+        st.toString(),
+        contains('postgresql-dart/test/error_handling_test.dart'),
+      );
+    }
+
+    // Inside transaction
+    try {
+      await conn.transaction((conn) async {
+        await conn.query('SELECT hello');
+        fail('Should not reach');
+      });
+    } catch (e, st) {
+      expect(e.toString(), contains('column "hello" does not exist'));
+      expect(
+        st.toString(),
+        contains('postgresql-dart/test/error_handling_test.dart'),
+      );
     }
   });
 }
