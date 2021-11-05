@@ -12,12 +12,25 @@ void main() {
     await conn.open();
     addTearDown(() async => conn.close());
 
-    // Root connection
+    // Root connection query
     try {
       await conn.query('SELECT hello');
       fail('Should not reach');
     } catch (e, st) {
       expect(e.toString(), contains('column "hello" does not exist'));
+      expect(
+        st.toString(),
+        contains('postgresql-dart/test/error_handling_test.dart'),
+      );
+    }
+
+    // Root connection execute
+    try {
+      await conn.execute('DELETE FROM hello');
+      fail('Should not reach');
+    } catch (e, st) {
+      print(e);
+      expect(e.toString(), contains('relation "hello" does not exist'));
       expect(
         st.toString(),
         contains('postgresql-dart/test/error_handling_test.dart'),
