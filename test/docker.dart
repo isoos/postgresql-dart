@@ -43,5 +43,9 @@ Future<bool> _isPostgresContainerRunning() async {
     'docker',
     ['ps', '--format', '{{.Names}}'],
   );
-  return pr.stdout.toString().split('\n').map((s) => s.trim()).contains(_kContainerName);
+  return pr.stdout
+      .toString()
+      .split('\n')
+      .map((s) => s.trim())
+      .contains(_kContainerName);
 }

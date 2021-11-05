@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.2
+
+- Include original stacktrace when query fails.
+  ([#15](https://github.com/isoos/postgresql-dart/pull/15) by [davidmartos96](https://github.com/davidmartos96))
+
 ## 2.4.1+2
 
 - Fix error when sending json data with `execute()` [#11](https://github.com/isoos/postgresql-dart/pull/11)
