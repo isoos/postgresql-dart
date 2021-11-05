@@ -15,8 +15,8 @@ void main() {
       await conn.query('SELECT hello');
       fail('Should not reach');
     } catch (e, st) {
-      // TODO: This expectation fails
-      //expect(st.toString(), isNotEmpty);
+      expect(st.toString(), isNotEmpty);
+      expect(st.toString(), contains('postgresql-dart/test/error_handling_test.dart'));
     }
   });
 }

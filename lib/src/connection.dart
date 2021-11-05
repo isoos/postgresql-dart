@@ -370,7 +370,7 @@ class _OidCache {
         .toSet()
         .where((oid) => oid > 0 && !_tableOIDNameMap.containsKey(oid))
         .toList()
-          ..sort();
+      ..sort();
 
     if (unresolvedTableOIDs.isNotEmpty) {
       await _resolveTableOIDs(c, unresolvedTableOIDs);
@@ -441,7 +441,12 @@ abstract class _PostgreSQLExecutionContextMixin
     }
 
     final query = Query<List<List<dynamic>>>(
-        fmtString, substitutionValues, _connection, _transaction);
+      fmtString,
+      substitutionValues,
+      _connection,
+      _transaction,
+      StackTrace.current,
+    );
     if (allowReuse) {
       query.statementIdentifier = _connection._cache.identifierForQuery(query);
     }
@@ -489,8 +494,8 @@ abstract class _PostgreSQLExecutionContextMixin
           'Attempting to execute query, but connection is not open.');
     }
 
-    final query = Query<void>(
-        fmtString, substitutionValues, _connection, _transaction,
+    final query = Query<void>(fmtString, substitutionValues, _connection,
+        _transaction, StackTrace.current,
         onlyReturnAffectedRowCount: true);
 
     final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);

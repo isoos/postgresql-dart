@@ -18,7 +18,8 @@ class Query<T> {
     this.statement,
     this.substitutionValues,
     this.connection,
-    this.transaction, {
+    this.transaction,
+    this.queryStackTrace, {
     this.onlyReturnAffectedRowCount = false,
   });
 
@@ -42,6 +43,8 @@ class Query<T> {
   List<FieldDescription>? _fieldDescriptions;
 
   List<FieldDescription>? get fieldDescriptions => _fieldDescriptions;
+
+  final StackTrace queryStackTrace;
 
   set fieldDescriptions(List<FieldDescription>? fds) {
     _fieldDescriptions = fds;
@@ -166,7 +169,7 @@ class Query<T> {
       return;
     }
 
-    _onComplete.completeError(error, stackTrace);
+    _onComplete.completeError(error, stackTrace ?? queryStackTrace);
   }
 
   @override
