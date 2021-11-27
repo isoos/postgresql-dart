@@ -119,6 +119,10 @@ class _PostgreSQLConnectionStateAuthenticating
         case AuthenticationMessage.KindSASLFinal:
           _authenticator.onMessage(message);
           return this;
+        case AuthenticationMessage.KindClearTextPassword:
+          _authenticator =
+              createAuthenticator(connection!, AuthenticationScheme.CLEAR);
+          continue authMsg;
       }
 
       completer.completeError(PostgreSQLException(
