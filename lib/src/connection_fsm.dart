@@ -110,6 +110,15 @@ class _PostgreSQLConnectionStateAuthenticating
           _authenticator =
               createAuthenticator(connection!, AuthenticationScheme.MD5);
           continue authMsg;
+        case AuthenticationMessage.KindClearTextPassword:
+          if (connection!.allowClearTextPassword) {
+            _authenticator =
+                createAuthenticator(connection!, AuthenticationScheme.CLEAR);
+            continue authMsg;
+          }
+          else {
+            break;
+          }
         case AuthenticationMessage.KindSASL:
           _authenticator = createAuthenticator(
               connection!, AuthenticationScheme.SCRAM_SHA_256);
@@ -119,10 +128,6 @@ class _PostgreSQLConnectionStateAuthenticating
         case AuthenticationMessage.KindSASLFinal:
           _authenticator.onMessage(message);
           return this;
-        case AuthenticationMessage.KindClearTextPassword:
-          _authenticator =
-              createAuthenticator(connection!, AuthenticationScheme.CLEAR);
-          continue authMsg;
       }
 
       completer.completeError(PostgreSQLException(

@@ -39,6 +39,7 @@ class PostgreSQLConnection extends Object
   /// [queryTimeoutInSeconds] refers to the default timeout for [PostgreSQLExecutionContext]'s execute and query methods.
   /// [timeZone] is the timezone the connection is in. Defaults to 'UTC'.
   /// [useSSL] when true, uses a secure socket when connecting to a PostgreSQL database.
+  /// [allowClearTextPassword] when true, allows sending the password during authentication in clear text. Use only when required by the database server and under encrypted connections, this feature may lead to security issues
   PostgreSQLConnection(
     this.host,
     this.port,
@@ -50,6 +51,7 @@ class PostgreSQLConnection extends Object
     this.timeZone = 'UTC',
     this.useSSL = false,
     this.isUnixSocket = false,
+    this.allowClearTextPassword = false,
   }) {
     _connectionState = _PostgreSQLConnectionStateClosed();
     _connectionState.connection = this;
@@ -90,6 +92,9 @@ class PostgreSQLConnection extends Object
 
   /// If true, connection is made via unix socket.
   final bool isUnixSocket;
+
+  /// If true, allows password in clear text for aunthentication
+  final bool allowClearTextPassword;
 
   /// Stream of notification from the database.
   ///
