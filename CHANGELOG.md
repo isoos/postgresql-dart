@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.3
+- Add authenticator for passwords required as ClearText. Fixes connections issues with Azure Database for PostgreSQL.
+- Added a new boolean parameter in connection as 'allowClearTextPassword' to activate / deactivate the feature.
+
 ## 2.4.2
 
 - Include original stacktrace when query fails.
