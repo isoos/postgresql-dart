@@ -116,6 +116,8 @@ class _PostgreSQLConnectionStateAuthenticating
                 createAuthenticator(connection!, AuthenticationScheme.CLEAR);
             continue authMsg;
           } else {
+            completer.completeError(PostgreSQLException(
+                'type ${message.type} connections disabled. Set AllowClearTextPassword flag on PostgreSQLConnection to enable this feature.'));
             break;
           }
         case AuthenticationMessage.KindSASL:
