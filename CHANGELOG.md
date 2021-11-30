@@ -1,8 +1,7 @@
 # Changelog
 
 ## 2.4.3
-- Add authenticator for passwords required as ClearText. Fixes connections issues with Azure Database for PostgreSQL.
-- Added a new boolean parameter in connection as 'allowClearTextPassword' to activate / deactivate the feature.
+- Support for clear text passwords using a boolean parameter in connection as 'allowClearTextPassword' to activate / deactivate the feature. [#20](https://github.com/isoos/postgresql-dart/pull/20).
 
 ## 2.4.2
 

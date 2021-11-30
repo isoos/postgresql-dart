@@ -115,8 +115,7 @@ class _PostgreSQLConnectionStateAuthenticating
             _authenticator =
                 createAuthenticator(connection!, AuthenticationScheme.CLEAR);
             continue authMsg;
-          }
-          else {
+          } else {
             break;
           }
         case AuthenticationMessage.KindSASL:

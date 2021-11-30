@@ -3,7 +3,7 @@ import 'package:sasl_scram/sasl_scram.dart';
 
 import '../../postgres.dart';
 import '../server_messages.dart';
-import 'clearText_authenticator.dart';
+import 'clear_text_authenticator.dart';
 import 'md5_authenticator.dart';
 import 'sasl_authenticator.dart';
 
