@@ -110,6 +110,16 @@ class _PostgreSQLConnectionStateAuthenticating
           _authenticator =
               createAuthenticator(connection!, AuthenticationScheme.MD5);
           continue authMsg;
+        case AuthenticationMessage.KindClearTextPassword:
+          if (connection!.allowClearTextPassword) {
+            _authenticator =
+                createAuthenticator(connection!, AuthenticationScheme.CLEAR);
+            continue authMsg;
+          } else {
+            completer.completeError(PostgreSQLException(
+                'type ${message.type} connections disabled. Set AllowClearTextPassword flag on PostgreSQLConnection to enable this feature.'));
+            break;
+          }
         case AuthenticationMessage.KindSASL:
           _authenticator = createAuthenticator(
               connection!, AuthenticationScheme.SCRAM_SHA_256);
