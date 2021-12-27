@@ -3,7 +3,8 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-import '../postgres.dart';
+import '../postgres.dart' show PostgreSQLException;
+import 'models.dart';
 import 'types.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;

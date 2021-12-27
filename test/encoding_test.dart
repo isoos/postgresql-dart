@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/binary_codec.dart';
 import 'package:postgres/src/text_codec.dart';
-import 'package:postgres/src/types.dart';
 import 'package:postgres/src/utf8_backed_string.dart';
 import 'package:test/test.dart';
 

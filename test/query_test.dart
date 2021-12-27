@@ -1,5 +1,4 @@
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/types.dart';
 import 'package:test/test.dart';
 
 void main() {
