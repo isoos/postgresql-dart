@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.4
+
+- Use `async` `Completer` in query internals, hopefully fixing missing exception propagation and stacktrace.
+
 ## 2.4.3
 - Support for clear text passwords using a boolean parameter in connection as 'allowClearTextPassword' to activate / deactivate the feature. [#20](https://github.com/isoos/postgresql-dart/pull/20).
 
