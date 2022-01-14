@@ -7,7 +7,80 @@ import 'dart:mirrors';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
+import 'docker.dart';
+
 void main() {
+  group('connection state', () {
+    usePostgresDocker();
+
+    test('pre-open failure', () async {
+      final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+          username: 'dart', password: 'dart');
+      await expectLater(
+          () => conn.query('SELECT 1;'),
+          throwsA(isA<Exception>().having(
+            (e) => '$e',
+            'text',
+            contains(
+                'Attempting to execute query, but connection is not open.'),
+          )));
+      await conn.open();
+      final rs = await conn.query('SELECT 1');
+      expect(rs.first.first, 1);
+      await conn.close();
+    });
+
+    test('pre-open failure with transaction', () async {
+      final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+          username: 'dart', password: 'dart');
+      await expectLater(
+          () => conn.transaction((_) async {}),
+          throwsA(isA<Exception>().having(
+            (e) => '$e',
+            'text',
+            contains(
+                'Attempting to execute query, but connection is not open.'),
+          )));
+      await conn.open();
+      await conn.transaction((_) async {});
+      await conn.close();
+    });
+
+    test('post-close failure', () async {
+      final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+          username: 'dart', password: 'dart');
+      await conn.open();
+      final rs = await conn.query('SELECT 1');
+      expect(rs.first.first, 1);
+      await conn.close();
+      await expectLater(
+          () => conn.query('SELECT 1;'),
+          throwsA(isA<Exception>().having(
+            (e) => '$e',
+            'text',
+            contains(
+                'Attempting to execute query, but connection is not open.'),
+          )));
+    });
+
+    test('reopen closed connection', () async {
+      final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+          username: 'dart', password: 'dart');
+      await conn.open();
+      final rs = await conn.query('SELECT 1');
+      expect(rs.first.first, 1);
+      await conn.close();
+      await expectLater(
+          conn.open,
+          throwsA(isA<Exception>().having(
+            (e) => '$e',
+            'text',
+            contains(
+                'Attempting to reopen a closed connection. Create a instance instead.'),
+          )));
+    });
+  });
+
   // These tests are disabled, as we'd need to setup ci/pg_hba.conf into the CI
   // postgres instance first.
   // TODO: re-enable these tests after pg_hba.conf is used
