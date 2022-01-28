@@ -104,7 +104,7 @@ class PostgreSQLConnection extends Object
   /// to [Notification.processID].
   Stream<Notification> get notifications => _notifications.stream;
 
-  /// Whether or not this connection is open or not.
+  /// Reports on the latest known status of the connection: whether it was open or failed for some reason.
   ///
   /// This is `true` when this instance is first created and after it has been closed or encountered an unrecoverable error.
   /// If a connection has already been opened and this value is now true, the connection cannot be reopened and a instance
