@@ -254,6 +254,17 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
               'Invalid type for parameter value. Expected: List<int> Got: ${value.runtimeType}');
         }
 
+      case PostgreSQLDataType.varCharArray:
+        {
+          if (value is List<String>) {
+            final bytesArray = value.map((v) => utf8.encode(v));
+            return writeListBytes<List<int>>(bytesArray, 1043,
+                    (item) => item.length, (writer, item) => writer.write(item));
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: List<String> Got: ${value.runtimeType}');
+        }
+
       case PostgreSQLDataType.textArray:
         {
           if (value is List<String>) {
@@ -487,6 +498,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
       case PostgreSQLDataType.integerArray:
         return readListBytes<int>(value, (reader, _) => reader.readInt32());
 
+      case PostgreSQLDataType.varCharArray:
       case PostgreSQLDataType.textArray:
         return readListBytes<String>(value, (reader, length) {
           return utf8.decode(length > 0 ? reader.read(length) : []);
@@ -555,6 +567,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     701: PostgreSQLDataType.double,
     1007: PostgreSQLDataType.integerArray,
     1009: PostgreSQLDataType.textArray,
+    1015: PostgreSQLDataType.varCharArray,
     1043: PostgreSQLDataType.varChar,
     1022: PostgreSQLDataType.doubleArray,
     1082: PostgreSQLDataType.date,
