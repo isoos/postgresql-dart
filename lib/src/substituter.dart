@@ -63,6 +63,8 @@ class PostgreSQLFormat {
         return '_float8';
       case PostgreSQLDataType.varChar:
         return 'varchar';
+      case PostgreSQLDataType.varCharArray:
+        return '_varchar';
       case PostgreSQLDataType.jsonbArray:
         return '_jsonb';
       default:

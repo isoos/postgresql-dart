@@ -92,6 +92,9 @@ enum PostgreSQLDataType {
   /// Must be a [String]
   varChar,
 
+  /// Must be a [List<String>]
+  varCharArray,
+
   /// Must be a [List] of encodable objects
   jsonbArray,
 }
