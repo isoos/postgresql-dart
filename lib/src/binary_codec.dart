@@ -259,7 +259,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
           if (value is List<String>) {
             final bytesArray = value.map((v) => utf8.encode(v));
             return writeListBytes<List<int>>(bytesArray, 1043,
-                    (item) => item.length, (writer, item) => writer.write(item));
+                (item) => item.length, (writer, item) => writer.write(item));
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<String> Got: ${value.runtimeType}');

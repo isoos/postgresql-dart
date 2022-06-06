@@ -39,7 +39,7 @@ class PostgreSQLException implements Exception {
     code = '';
   }
 
-  PostgreSQLException._(List<ErrorField> errorFields, {this.stackTrace}) {
+  PostgreSQLException._(List<ErrorField> errorFields) {
     final finder = (int identifer) => (errorFields.firstWhere(
         (ErrorField e) => e.identificationToken == identifer,
         orElse: () => ErrorField(null, null)));

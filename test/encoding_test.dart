@@ -403,8 +403,10 @@ void main() {
 
     test('varCharArray', () async {
       await expectInverse(<String>[], PostgreSQLDataType.varCharArray);
-      await expectInverse(['', 'foo', 'foo\n'], PostgreSQLDataType.varCharArray);
-      await expectInverse(['foo\nbar;s', '"\'"'], PostgreSQLDataType.varCharArray);
+      await expectInverse(
+          ['', 'foo', 'foo\n'], PostgreSQLDataType.varCharArray);
+      await expectInverse(
+          ['foo\nbar;s', '"\'"'], PostgreSQLDataType.varCharArray);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:_varchar(10))',
             substitutionValues: {'v': 0});
