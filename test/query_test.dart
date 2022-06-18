@@ -14,7 +14,9 @@ void main() {
           'bs bigserial, bl boolean, si smallint, '
           't text, f real, d double precision, '
           'dt date, ts timestamp, tsz timestamptz, j jsonb, u uuid, '
-          'v varchar, p point, jj json, ia _int4, ta _text, da _float8, ja _jsonb, va _varchar(20))');
+          'v varchar, p point, jj json, ia _int4, ta _text, da _float8, ja _jsonb, va _varchar(20), '
+          'ba _bool'
+          ')');
       await connection.execute(
           'CREATE TEMPORARY TABLE u (i1 int not null, i2 int not null);');
       await connection
@@ -109,7 +111,7 @@ void main() {
 
     test('Query without specifying types', () async {
       var result = await connection.query(
-          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va) values '
+          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba) values '
           '(${PostgreSQLFormat.id('i')},'
           '${PostgreSQLFormat.id('bi')},'
           '${PostgreSQLFormat.id('bl')},'
@@ -129,8 +131,9 @@ void main() {
           '${PostgreSQLFormat.id('ta')},'
           '${PostgreSQLFormat.id('da')},'
           '${PostgreSQLFormat.id('ja')},'
-          '${PostgreSQLFormat.id('va')}'
-          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va',
+          '${PostgreSQLFormat.id('va')},'
+          '${PostgreSQLFormat.id('ba')}'
+          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba',
           substitutionValues: {
             'i': 1,
             'bi': 2,
@@ -155,7 +158,8 @@ void main() {
               'a"\'\\"',
               {'k': 'v"\'\\"'}
             ],
-            'va': ['a', 'b', 'c', 'd', 'e', 'f']
+            'va': ['a', 'b', 'c', 'd', 'e', 'f'],
+            'ba': [false, true, false],
           });
 
       final expectedRow = [
@@ -184,22 +188,23 @@ void main() {
           'a"\'\\"',
           {'k': 'v"\'\\"'}
         ],
-        ['a', 'b', 'c', 'd', 'e', 'f']
+        ['a', 'b', 'c', 'd', 'e', 'f'],
+        [false, true, false]
       ];
-      expect(result.columnDescriptions, hasLength(22));
+      expect(result.columnDescriptions, hasLength(23));
       expect(result.columnDescriptions.first.tableName, 't');
       expect(result.columnDescriptions.first.columnName, 'i');
       expect(result.columnDescriptions.last.tableName, 't');
-      expect(result.columnDescriptions.last.columnName, 'va');
+      expect(result.columnDescriptions.last.columnName, 'ba');
       expect(result, [expectedRow]);
       result = await connection.query(
-          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va from t');
+          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba from t');
       expect(result, [expectedRow]);
     });
 
     test('Query by specifying all types', () async {
       var result = await connection.query(
-          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va) values '
+          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba) values '
           '(${PostgreSQLFormat.id('i', type: PostgreSQLDataType.integer)},'
           '${PostgreSQLFormat.id('bi', type: PostgreSQLDataType.bigInteger)},'
           '${PostgreSQLFormat.id('bl', type: PostgreSQLDataType.boolean)},'
@@ -219,8 +224,9 @@ void main() {
           '${PostgreSQLFormat.id('ta', type: PostgreSQLDataType.textArray)},'
           '${PostgreSQLFormat.id('da', type: PostgreSQLDataType.doubleArray)},'
           '${PostgreSQLFormat.id('ja', type: PostgreSQLDataType.jsonbArray)},'
-          '${PostgreSQLFormat.id('va', type: PostgreSQLDataType.varCharArray)}'
-          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va',
+          '${PostgreSQLFormat.id('va', type: PostgreSQLDataType.varCharArray)},'
+          '${PostgreSQLFormat.id('ba', type: PostgreSQLDataType.booleanArray)}'
+          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba',
           substitutionValues: {
             'i': 1,
             'bi': 2,
@@ -245,7 +251,8 @@ void main() {
               'a',
               {'k': 'v'}
             ],
-            'va': ['a', 'b', 'c', 'd', 'e', 'f']
+            'va': ['a', 'b', 'c', 'd', 'e', 'f'],
+            'ba': [false, true, true, false],
           });
 
       final expectedRow = [
@@ -274,12 +281,13 @@ void main() {
           'a',
           {'k': 'v'}
         ],
-        ['a', 'b', 'c', 'd', 'e', 'f']
+        ['a', 'b', 'c', 'd', 'e', 'f'],
+        [false, true, true, false],
       ];
       expect(result, [expectedRow]);
 
       result = await connection.query(
-          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va from t');
+          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba from t');
       expect(result, [expectedRow]);
     });
 

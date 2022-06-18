@@ -332,6 +332,7 @@ class PostgreSQLFormatIdentifier {
     'uuid': PostgreSQLDataType.uuid,
     'json': PostgreSQLDataType.json,
     'point': PostgreSQLDataType.point,
+    '_bool': PostgreSQLDataType.booleanArray,
     '_int4': PostgreSQLDataType.integerArray,
     '_text': PostgreSQLDataType.textArray,
     '_float8': PostgreSQLDataType.doubleArray,

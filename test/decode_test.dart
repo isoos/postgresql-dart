@@ -7,28 +7,33 @@ import 'package:test/test.dart';
 void main() {
   late PostgreSQLConnection connection;
   setUp(() async {
-    connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
+    connection =
+        PostgreSQLConnection('localhost', 5432, 'dart_test', username: 'dart', password: 'dart');
     await connection.open();
 
     await connection.execute('''
         CREATE TEMPORARY TABLE t (
           i int, s serial, bi bigint, bs bigserial, bl boolean, si smallint, 
           t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz, n numeric, j jsonb, ba bytea,
-          u uuid, v varchar, p point, jj json, ia _int4, ta _text, da _float8, ja _jsonb, va varchar(20)[])
+          u uuid, v varchar, p point, jj json, ia _int4, ta _text, da _float8, ja _jsonb, va varchar(20)[],
+          boola _bool
+        )
     ''');
 
     await connection.execute(
-        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, n, j, ba, u, v, p, jj, ia, ta, da, ja, va) '
+        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, n, j, ba, u, v, p, jj, ia, ta, da, ja, va, boola) '
         'VALUES (-2147483648, -9223372036854775808, TRUE, -32768, '
         "'string', 10.0, 10.0, '1983-11-06', "
         "'1983-11-06 06:00:00.000000', '1983-11-06 06:00:00.000000', "
         "'-1234567890.0987654321', "
         "'{\"key\":\"value\"}', E'\\\\000', '00000000-0000-0000-0000-000000000000', "
         "'abcdef', '(0.01, 12.34)', '{\"key\": \"value\"}', '{}', '{}', '{}', '{}', "
-        "'{\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"}')");
+        "'{\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"}', "
+        "'{true, false, false}'"
+        ')');
+
     await connection.execute(
-        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, n, j, ba, u, v, p, jj, ia, ta, da, ja, va) '
+        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, n, j, ba, u, v, p, jj, ia, ta, da, ja, va, boola) '
         'VALUES (2147483647, 9223372036854775807, FALSE, 32767, '
         "'a significantly longer string to the point where i doubt this actually matters', "
         "10.25, 10.125, '2183-11-06', '2183-11-06 00:00:00.111111', "
@@ -37,18 +42,20 @@ void main() {
         "'[{\"key\":1}]', E'\\\\377', 'FFFFFFFF-ffff-ffff-ffff-ffffffffffff', "
         "'01234', '(0.2, 100)', '{}', '{-123, 999}', '{\"a\", \"lorem ipsum\", \"\"}', "
         "'{1, 2, 4.5, 1234.5}', '{1, \"\\\"test\\\"\", \"{\\\"a\\\": \\\"b\\\"}\"}', "
-        "'{\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"}')");
+        "'{\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"}', "
+        "'{false, false, true}' "
+        ')');
 
     await connection.execute(
-        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, n, j, ba, u, v, p, jj, ia, ta, da, ja, va) '
+        'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, n, j, ba, u, v, p, jj, ia, ta, da, ja, va, boola) '
         'VALUES (null, null, null, null, null, null, null, null, null, null, null, null, null, '
-        'null, null, null, null, null, null, null, null, null)');
+        'null, null, null, null, null, null, null, null, null, null)');
   });
   tearDown(() async {
     await connection.close();
   });
 
-  test('Fetch em', () async {
+  test(' Fetch em', () async {
     final res = await connection.query('select * from t');
 
     final row1 = res[0];
@@ -83,6 +90,8 @@ void main() {
     expect(row1[22], equals([]));
     expect(row1[23] is List<String>, true);
     expect(row1[23], equals(['a', 'b', 'c', 'd', 'e', 'f']));
+    expect(row1[24] is List<bool>, true);
+    expect(row1[24], equals([true, false, false]));
 
     // upper bound row
     expect(row2[0], equals(2147483647));
@@ -91,10 +100,8 @@ void main() {
     expect(row2[3], equals(2));
     expect(row2[4], equals(false));
     expect(row2[5], equals(32767));
-    expect(
-        row2[6],
-        equals(
-            'a significantly longer string to the point where i doubt this actually matters'));
+    expect(row2[6],
+        equals('a significantly longer string to the point where i doubt this actually matters'));
     expect(row2[7] is double, true);
     expect(row2[7], equals(10.25));
     expect(row2[8] is double, true);
@@ -102,8 +109,7 @@ void main() {
     expect(row2[9], equals(DateTime.utc(2183, 11, 6)));
     expect(row2[10], equals(DateTime.utc(2183, 11, 6, 0, 0, 0, 111, 111)));
     expect(row2[11], equals(DateTime.utc(2183, 11, 6, 0, 0, 0, 999, 999)));
-    expect(row2[12],
-        equals('1000000000000000000000000000.0000000000000000000000000001'));
+    expect(row2[12], equals('1000000000000000000000000000.0000000000000000000000000001'));
     expect(
         row2[13],
         equals([
@@ -124,6 +130,10 @@ void main() {
           'test',
           {'a': 'b'}
         ]));
+    expect(row2[23] is List<String>, true);
+    expect(row2[23], equals(['a', 'b', 'c', 'd', 'e', 'f']));
+    expect(row2[24] is List<bool>, true);
+    expect(row2[24], equals([false, false, true]));
 
     // all null row
     expect(row3[0], isNull);
@@ -150,13 +160,13 @@ void main() {
     expect(row3[21], isNull);
     expect(row3[22], isNull);
     expect(row3[23], isNull);
+    expect(row3[24], isNull);
   });
 
   test('Fetch/insert empty string', () async {
     await connection.execute('CREATE TEMPORARY TABLE u (t text)');
-    var results = await connection.query(
-        'INSERT INTO u (t) VALUES (@t:text) returning t',
-        substitutionValues: {'t': ''});
+    var results = await connection
+        .query('INSERT INTO u (t) VALUES (@t:text) returning t', substitutionValues: {'t': ''});
     expect(results, [
       ['']
     ]);
@@ -169,9 +179,8 @@ void main() {
 
   test('Fetch/insert null value', () async {
     await connection.execute('CREATE TEMPORARY TABLE u (t text)');
-    var results = await connection.query(
-        'INSERT INTO u (t) VALUES (@t:text) returning t',
-        substitutionValues: {'t': null});
+    var results = await connection
+        .query('INSERT INTO u (t) VALUES (@t:text) returning t', substitutionValues: {'t': null});
     expect(results, [
       [null]
     ]);
@@ -185,26 +194,7 @@ void main() {
   test('Decode Numeric to String', () {
     final binaries = {
       '-123400000.20000': [0, 4, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 0, 7, 208],
-      '-123400001.00002': [
-        0,
-        5,
-        0,
-        2,
-        64,
-        0,
-        0,
-        5,
-        0,
-        1,
-        9,
-        36,
-        0,
-        1,
-        0,
-        0,
-        7,
-        208
-      ],
+      '-123400001.00002': [0, 5, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 1, 0, 0, 7, 208],
       '0.00001': [0, 1, 255, 254, 0, 0, 0, 5, 3, 232],
       '10000.000000000': [0, 1, 0, 1, 0, 0, 0, 9, 0, 1],
       'NaN': [0, 0, 0, 0, 192, 0, 0, 0],

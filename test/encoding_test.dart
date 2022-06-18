@@ -375,6 +375,19 @@ void main() {
       }
     });
 
+    test('booleanArray', () async {
+      await expectInverse(<bool>[], PostgreSQLDataType.booleanArray);
+      await expectInverse([false, true], PostgreSQLDataType.booleanArray);
+      await expectInverse([true], PostgreSQLDataType.booleanArray);
+      try {
+        await conn.query('INSERT INTO t (v) VALUES (@v:_bool)',
+            substitutionValues: {'v': 'not-list-bool'});
+        fail('unreachable');
+      } on FormatException catch (e) {
+        expect(e.toString(), contains('Expected: List<bool>'));
+      }
+    });
+
     test('integerArray', () async {
       await expectInverse(<int>[], PostgreSQLDataType.integerArray);
       await expectInverse([-1, 0, 200], PostgreSQLDataType.integerArray);
