@@ -3,8 +3,10 @@
 
   1. add item to this enumeration
   2. update all switch statements on this type
-  3. add pg type code -> enumeration item in PostgresBinaryDecoder.typeMap (lookup type code: https://doxygen.postgresql.org/include_2catalog_2pg__type_8h_source.html)
+  3. add pg type code -> enumeration item in PostgresBinaryDecoder.typeMap
+     (lookup type code: https://doxygen.postgresql.org/pg__type_8h_source.html)
   4. add identifying key to PostgreSQLFormatIdentifier.typeStringToCodeMap.
+  5. add identifying key to PostgreSQLFormat.dataTypeStringForDataType
  */
 
 /// Supported data types.
@@ -79,6 +81,9 @@ enum PostgreSQLDataType {
 
   /// Must be a [PgPoint]
   point,
+
+  /// Must be a [List<bool>]
+  booleanArray,
 
   /// Must be a [List<int>]
   integerArray,

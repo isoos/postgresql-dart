@@ -183,6 +183,10 @@ class PostgresTextEncoder {
       }
     });
 
+    if (type == bool) {
+      return '{${value.cast<bool>().map((s) => s.toString()).join(',')}}';
+    }
+
     if (type == int || type == double) {
       return '{${value.cast<num>().map((s) => s is double ? _encodeDouble(s) : _encodeNumber(s)).join(',')}}';
     }

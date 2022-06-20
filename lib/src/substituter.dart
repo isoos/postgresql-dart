@@ -55,6 +55,8 @@ class PostgreSQLFormat {
         return 'point';
       case PostgreSQLDataType.json:
         return 'json';
+      case PostgreSQLDataType.booleanArray:
+        return '_bool';
       case PostgreSQLDataType.integerArray:
         return '_int4';
       case PostgreSQLDataType.textArray:
