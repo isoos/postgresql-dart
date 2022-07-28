@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.6
+
+- Fix crash when manually issuing a transaction statement like `BEGIN` without
+  using the high-level transaction APIs. [#47](https://github.com/isoos/postgresql-dart/pull/47) by [simolus3](https://github.com/simolus3).
+
 ## 2.4.5
 
 - Added support for boolean arrays. [#41](https://github.com/isoos/postgresql-dart/pull/41) by [slightfoot](https://github.com/slightfoot).
