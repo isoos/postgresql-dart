@@ -275,7 +275,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
       if (message.state == ReadyForQueryMessage.StateTransactionError) {
         query.completeError(returningException!);
         return _PostgreSQLConnectionStateReadyInTransaction(
-            query.transaction as _TransactionProxy);
+            query.transaction as _PostgreSQLExecutionContextMixin);
       }
       if (returningException != null) {
         query.completeError(returningException!);
@@ -285,7 +285,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
 
       if (message.state == ReadyForQueryMessage.StateTransaction) {
         return _PostgreSQLConnectionStateReadyInTransaction(
-            query.transaction as _TransactionProxy);
+            query.transaction as _PostgreSQLExecutionContextMixin);
       }
 
       return _PostgreSQLConnectionStateIdle();
@@ -314,7 +314,7 @@ class _PostgreSQLConnectionStateReadyInTransaction
     extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateReadyInTransaction(this.transaction);
 
-  _TransactionProxy transaction;
+  _PostgreSQLExecutionContextMixin transaction;
 
   @override
   _PostgreSQLConnectionState onEnter() {

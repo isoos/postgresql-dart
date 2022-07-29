@@ -633,5 +633,16 @@ void main() {
       });
       expect(result, []);
     });
+
+    test('can start transactions manually', () async {
+      await conn.execute('BEGIN');
+      await conn.execute(
+        'INSERT INTO t VALUES (@a)',
+        substitutionValues: {'a': 123},
+      );
+      await conn.execute('ROLLBACK');
+
+      await expectLater(conn.query('SELECT * FROM t'), completion(isEmpty));
+    });
   });
 }
