@@ -247,8 +247,8 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
       case PostgreSQLDataType.booleanArray:
         {
           if (value is List<bool>) {
-            return writeListBytes<bool>(
-                value, 16, (_) => 1, (writer, item) => writer.writeUint8(item ? 1 : 0));
+            return writeListBytes<bool>(value, 16, (_) => 1,
+                (writer, item) => writer.writeUint8(item ? 1 : 0));
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<bool> Got: ${value.runtimeType}');
@@ -506,7 +506,8 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
         return PgPoint(buffer.getFloat64(0), buffer.getFloat64(8));
 
       case PostgreSQLDataType.booleanArray:
-        return readListBytes<bool>(value, (reader, _) => reader.readUint8() != 0);
+        return readListBytes<bool>(
+            value, (reader, _) => reader.readUint8() != 0);
 
       case PostgreSQLDataType.integerArray:
         return readListBytes<int>(value, (reader, _) => reader.readInt32());

@@ -7,8 +7,8 @@ import 'package:test/test.dart';
 void main() {
   late PostgreSQLConnection connection;
   setUp(() async {
-    connection =
-        PostgreSQLConnection('localhost', 5432, 'dart_test', username: 'dart', password: 'dart');
+    connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
+        username: 'dart', password: 'dart');
     await connection.open();
 
     await connection.execute('''
@@ -100,8 +100,10 @@ void main() {
     expect(row2[3], equals(2));
     expect(row2[4], equals(false));
     expect(row2[5], equals(32767));
-    expect(row2[6],
-        equals('a significantly longer string to the point where i doubt this actually matters'));
+    expect(
+        row2[6],
+        equals(
+            'a significantly longer string to the point where i doubt this actually matters'));
     expect(row2[7] is double, true);
     expect(row2[7], equals(10.25));
     expect(row2[8] is double, true);
@@ -109,7 +111,8 @@ void main() {
     expect(row2[9], equals(DateTime.utc(2183, 11, 6)));
     expect(row2[10], equals(DateTime.utc(2183, 11, 6, 0, 0, 0, 111, 111)));
     expect(row2[11], equals(DateTime.utc(2183, 11, 6, 0, 0, 0, 999, 999)));
-    expect(row2[12], equals('1000000000000000000000000000.0000000000000000000000000001'));
+    expect(row2[12],
+        equals('1000000000000000000000000000.0000000000000000000000000001'));
     expect(
         row2[13],
         equals([
@@ -165,8 +168,9 @@ void main() {
 
   test('Fetch/insert empty string', () async {
     await connection.execute('CREATE TEMPORARY TABLE u (t text)');
-    var results = await connection
-        .query('INSERT INTO u (t) VALUES (@t:text) returning t', substitutionValues: {'t': ''});
+    var results = await connection.query(
+        'INSERT INTO u (t) VALUES (@t:text) returning t',
+        substitutionValues: {'t': ''});
     expect(results, [
       ['']
     ]);
@@ -179,8 +183,9 @@ void main() {
 
   test('Fetch/insert null value', () async {
     await connection.execute('CREATE TEMPORARY TABLE u (t text)');
-    var results = await connection
-        .query('INSERT INTO u (t) VALUES (@t:text) returning t', substitutionValues: {'t': null});
+    var results = await connection.query(
+        'INSERT INTO u (t) VALUES (@t:text) returning t',
+        substitutionValues: {'t': null});
     expect(results, [
       [null]
     ]);
@@ -194,7 +199,26 @@ void main() {
   test('Decode Numeric to String', () {
     final binaries = {
       '-123400000.20000': [0, 4, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 0, 7, 208],
-      '-123400001.00002': [0, 5, 0, 2, 64, 0, 0, 5, 0, 1, 9, 36, 0, 1, 0, 0, 7, 208],
+      '-123400001.00002': [
+        0,
+        5,
+        0,
+        2,
+        64,
+        0,
+        0,
+        5,
+        0,
+        1,
+        9,
+        36,
+        0,
+        1,
+        0,
+        0,
+        7,
+        208
+      ],
       '0.00001': [0, 1, 255, 254, 0, 0, 0, 5, 3, 232],
       '10000.000000000': [0, 1, 0, 1, 0, 0, 0, 9, 0, 1],
       'NaN': [0, 0, 0, 0, 192, 0, 0, 0],
