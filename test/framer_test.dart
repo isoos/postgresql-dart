@@ -1,8 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/messages.dart';
+import 'package:postgres/postgres.dart';
 import 'package:postgres/src/message_window.dart';
-import 'package:postgres/src/server_messages.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -172,6 +173,118 @@ void main() {
 
     final messages = framer.messageQueue.toList();
     expect(messages, [UnknownMessage(10, Uint8List(0))]);
+  });
+
+  test('Identify CopyDoneMessage with length equals size length (min)', () {
+    // min length
+    final length = 4;
+    final bytes = Uint8List.fromList(
+        [SharedMessages.copyDoneIdentifier, 0, 0, 0, length]);
+    framer.addBytes(bytes);
+
+    final message = framer.messageQueue.toList().first;
+    expect(message, isA<CopyDoneMessage>());
+    expect((message as CopyDoneMessage).length, length);
+  });
+
+  test('Identify CopyDoneMessage when length larger than size length', () {
+    final length = 255;
+    final bytes = Uint8List.fromList([
+      SharedMessages.copyDoneIdentifier,
+      length,
+      length,
+      length,
+      length,
+    ]);
+    framer.addBytes(bytes);
+
+    final message = framer.messageQueue.toList().first;
+    expect(message, isA<CopyDoneMessage>());
+    expect((message as CopyDoneMessage).length, 4294967295); // i.e. 2^32 - 1
+  });
+
+  test('Adds XLogDataMessage to queue', () {
+    final bits64 = (ByteData(8)..setUint64(0, 42)).buffer.asUint8List();
+
+    final xlogDataBytes = <int>[
+      ReplicationMessage.xLogDataIdentifier,
+      ...bits64,
+      ...bits64,
+      ...bits64,
+      ...bits64
+    ];
+    final length = ByteData(4)..setUint32(0, xlogDataBytes.length + 4);
+    final copyDataBytes = <int>[
+      100,
+      ...length.buffer.asUint8List(),
+      ...xlogDataBytes,
+    ];
+
+    framer.addBytes(Uint8List.fromList(copyDataBytes));
+    final message = framer.messageQueue.toList().first;
+    expect(message, isA<XLogDataMessage>());
+  });
+
+  test('Adds XLogDataLogicalMessage to queue', () {
+    framer = MessageFramer(ReplicationMode.logical);
+    final bits64 = (ByteData(8)..setUint64(0, 42)).buffer.asUint8List();
+
+    final xlogDataBytes = <int>[
+      ReplicationMessage.xLogDataIdentifier,
+      ...bits64,
+      ...bits64,
+      ...bits64,
+      ...bits64
+    ];
+    final length = ByteData(4)..setUint32(0, xlogDataBytes.length + 4);
+    final copyDataBytes = <int>[
+      100,
+      ...length.buffer.asUint8List(),
+      ...xlogDataBytes,
+    ];
+
+    framer.addBytes(Uint8List.fromList(copyDataBytes));
+    final message = framer.messageQueue.toList().first;
+    expect(message, isA<XLogDataLogicalMessage>());
+
+    flush(framer);
+  });
+
+  test('Adds PrimaryKeepAliveMessage to queue', () {
+    final bits64 = (ByteData(8)..setUint64(0, 42)).buffer.asUint8List();
+
+    final xlogDataBytes = <int>[
+      ReplicationMessage.primaryKeepAliveIdentifier,
+      ...bits64,
+      ...bits64,
+      0,
+    ];
+    final length = ByteData(4)..setUint32(0, xlogDataBytes.length + 4);
+    final copyDataBytes = <int>[
+      100,
+      ...length.buffer.asUint8List(),
+      ...xlogDataBytes,
+    ];
+
+    framer.addBytes(Uint8List.fromList(copyDataBytes));
+    final message = framer.messageQueue.toList().first;
+    expect(message, isA<PrimaryKeepAliveMessage>());
+  });
+
+  test('Adds raw CopyDataMessage for unknown stream message', () {
+    final xlogDataBytes = <int>[
+      -1, // unknown id
+    ];
+    final length = ByteData(4)..setUint32(0, xlogDataBytes.length + 4);
+    final copyDataBytes = <int>[
+      100,
+      ...length.buffer.asUint8List(),
+      ...xlogDataBytes,
+    ];
+
+    framer.addBytes(Uint8List.fromList(copyDataBytes));
+    final message = framer.messageQueue.toList().first;
+    expect(message, isA<CopyDataMessage>());
   });
 }
 

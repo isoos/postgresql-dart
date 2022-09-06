@@ -10,8 +10,8 @@ import 'package:test/test.dart';
 import 'docker.dart';
 
 void main() {
+  usePostgresDocker();
   group('connection state', () {
-    usePostgresDocker();
 
     test('pre-open failure', () async {
       final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
@@ -107,6 +107,37 @@ void main() {
       expect(await conn.execute('select 1'), equals(1));
     });
 
+
+    test('Connect with no Replication mode', () async {
+      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+          username: 'dart', password: 'dart', replicationMode: ReplicationMode.none);
+
+      await conn.open();
+
+      expect(await conn.execute('select 1'), equals(1));
+    });
+
+    test('Connect with logical Replication mode', () async {
+      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+          username: 'dart', password: 'dart', replicationMode: ReplicationMode.logical);
+
+      await conn.open();
+
+      expect(await conn.execute('select 1'), equals(1));
+    });
+
+    // TODO: test with Replication.physical once `pg_hba.conf` entry 
+    //       for replication connection is setup 
+    // test('Connect with physical Replication mode', () async {
+    //   conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+    //       username: 'dart', password: 'dart', replication: ReplicationMode.physical);
+
+    //   await conn.open();
+
+    //   expect(await conn.execute('select 1'), equals(1));
+    // });
+
+
     test('SSL Connect with md5 or scram-sha-256 auth required', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'dart', password: 'dart', useSSL: true);
@@ -194,7 +225,7 @@ void main() {
       await conn.close();
       await Future.wait(futures);
       expect(errors.length, 5);
-      expect(errors.map((e) => e.message),
+      expect(errors.map((e) => e._message),
           everyElement(contains('Query cancelled')));
     });
 
@@ -222,7 +253,7 @@ void main() {
       await conn.close();
       await Future.wait(futures);
       expect(errors.length, 5);
-      expect(errors.map((e) => e.message),
+      expect(errors.map((e) => e._message),
           everyElement(contains('Query cancelled')));
     });
   });

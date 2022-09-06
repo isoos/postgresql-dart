@@ -14,6 +14,7 @@ import 'message_window.dart';
 import 'query.dart';
 import 'query_cache.dart';
 import 'query_queue.dart';
+import 'replication.dart';
 import 'server_messages.dart';
 
 part 'connection_fsm.dart';
@@ -52,6 +53,8 @@ class PostgreSQLConnection extends Object
     this.useSSL = false,
     this.isUnixSocket = false,
     this.allowClearTextPassword = false,
+    this.replicationMode = ReplicationMode.none,
+    this.logicalDecodingPlugin = LogicalDecodingPlugin.pgoutput,
   }) {
     _connectionState = _PostgreSQLConnectionStateClosed();
     _connectionState.connection = this;
@@ -59,6 +62,9 @@ class PostgreSQLConnection extends Object
 
   final StreamController<Notification> _notifications =
       StreamController<Notification>.broadcast();
+
+  final StreamController<ServerMessage> _messages =
+      StreamController<ServerMessage>.broadcast();
 
   /// Hostname of database this connection refers to.
   final String host;
@@ -96,6 +102,20 @@ class PostgreSQLConnection extends Object
   /// If true, allows password in clear text for authentication.
   final bool allowClearTextPassword;
 
+  /// The replication mode for connecting in streaming replication mode.
+  ///
+  /// When the value is set to either [ReplicationMode.physical] or [ReplicationMode.logical],
+  /// the query protocol will no longer work as the connection will be switched to a replication
+  /// connection. In other words, using [query] or [mappedResultsQuery] will throw an error. Use
+  /// [execute] for executing statements while in replication mode.
+  final ReplicationMode replicationMode;
+
+  /// The Logical Decoding Output for streaming replication mode
+  ///
+  /// The default value is [LogicalDecodingPlugin.pgoutput]. This value is only used
+  /// when [replicationMode] is not equal to [ReplicationMode.none].
+  final LogicalDecodingPlugin logicalDecodingPlugin;
+
   /// Stream of notification from the database.
   ///
   /// Listen to this [Stream] to receive events from PostgreSQL NOTIFY commands.
@@ -103,6 +123,11 @@ class PostgreSQLConnection extends Object
   /// To determine whether or not the NOTIFY came from this instance, compare [processID]
   /// to [Notification.processID].
   Stream<Notification> get notifications => _notifications.stream;
+
+  /// Stream of server messages from the database
+  ///
+  // TODO: clarify the usage -- this is kinda like an interceptor
+  Stream<ServerMessage> get messages => _messages.stream;
 
   /// Reports on the latest known status of the connection: whether it was open or failed for some reason.
   ///
@@ -120,7 +145,8 @@ class PostgreSQLConnection extends Object
   final _cache = QueryCache();
   final _oidCache = _OidCache();
   Socket? _socket;
-  MessageFramer _framer = MessageFramer();
+  late MessageFramer _framer =
+      MessageFramer(replicationMode, logicalDecodingPlugin);
   late int _processID;
   // ignore: unused_field
   late int _secretKey;
@@ -161,7 +187,7 @@ class PostgreSQLConnection extends Object
             .timeout(Duration(seconds: timeoutInSeconds));
       }
 
-      _framer = MessageFramer();
+      _framer = MessageFramer(replicationMode, logicalDecodingPlugin);
       if (useSSL) {
         _socket =
             await _upgradeSocketToSSL(_socket!, timeout: timeoutInSeconds);
@@ -264,6 +290,8 @@ class PostgreSQLConnection extends Object
     }
     await _notifications.close();
 
+    await _messages.close();
+
     _queue.cancel(error, trace);
   }
 
@@ -277,6 +305,7 @@ class PostgreSQLConnection extends Object
     while (_framer.hasMessage) {
       final msg = _framer.popMessage();
       try {
+        _messages.add(msg);
         if (msg is ErrorResponseMessage) {
           _transitionToState(_connectionState.onErrorResponse(msg));
         } else if (msg is NotificationResponseMessage) {
@@ -504,6 +533,40 @@ abstract class _PostgreSQLExecutionContextMixin
         onlyReturnAffectedRowCount: true);
 
     final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
+    return result.affectedRowCount;
+  }
+
+  @override
+  Future<dynamic> executeSimple(String fmtString,
+      {Map<String, dynamic>? substitutionValues = const {},
+      int? timeoutInSeconds}) async {
+    timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
+    if (_connection.isClosed) {
+      throw PostgreSQLException(
+          'Attempting to execute query, but connection is not open.');
+    }
+
+    final query = Query<dynamic>(fmtString, substitutionValues, _connection,
+        _transaction, StackTrace.current,
+        useSendSimple: true);
+
+    final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
+
+    final columnDescriptions = query.fieldDescriptions;
+    if (columnDescriptions != null) {
+      final metaData = _PostgreSQLResultMetaData(columnDescriptions);
+      final value = result.value;
+
+      if (value != null && value is List<List>) {
+        return _PostgreSQLResult(
+            result.affectedRowCount,
+            metaData,
+            value
+                .map((columns) => _PostgreSQLResultRow(metaData, columns))
+                .toList());
+      }
+    }
+
     return result.affectedRowCount;
   }
 

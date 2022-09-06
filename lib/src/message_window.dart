@@ -1,9 +1,12 @@
+// ignore_for_file: unnecessary_lambdas
+
 import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/messages.dart';
 
-import 'server_messages.dart';
+import 'replication.dart';
 
 const int _headerByteSize = 5;
 final _emptyData = Uint8List(0);
@@ -21,7 +24,9 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
   82: (d) => AuthenticationMessage(d),
   83: (d) => ParameterStatusMessage(d),
   84: (d) => RowDescriptionMessage(d),
+  87: (d) => CopyBothResponseMessage(d),
   90: (d) => ReadyForQueryMessage(d),
+  100: (d) => CopyDataMessage(d),
   110: (d) => NoDataMessage(),
   116: (d) => ParameterDescriptionMessage(d),
 };
@@ -29,6 +34,13 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
 class MessageFramer {
   final _reader = ByteDataReader();
   final messageQueue = Queue<ServerMessage>();
+  final ReplicationMode replicationMode;
+  final LogicalDecodingPlugin logicalDecodingPlugin;
+
+  MessageFramer([
+    this.replicationMode = ReplicationMode.none,
+    this.logicalDecodingPlugin = LogicalDecodingPlugin.pgoutput,
+  ]);
 
   int? _type;
   int _expectedLength = 0;
@@ -51,17 +63,54 @@ class MessageFramer {
         _expectedLength = _reader.readUint32() - 4;
       }
 
-      if (_hasReadHeader && _isComplete) {
+      // special case
+      if (_type == SharedMessages.copyDoneIdentifier) {
+        // unlike other messages, CopyDoneMessage takes the data length only
+        // including the length bytes.
+        final msg = CopyDoneMessage(_expectedLength + 4);
+        _addMsg(msg);
+        evaluateNextMessage = true;
+      } else if (_hasReadHeader && _isComplete) {
         final data =
             _expectedLength == 0 ? _emptyData : _reader.read(_expectedLength);
         final msgMaker = _messageTypeMap[_type];
-        final msg =
+        var msg =
             msgMaker == null ? UnknownMessage(_type, data) : msgMaker(data);
-        messageQueue.add(msg);
-        _type = null;
-        _expectedLength = 0;
+
+        // Copy Data message is usually a wrapper around data stream messages
+        // such as replication messages.
+        if (msg is CopyDataMessage) {
+          msg = _extractReplicationMessageIfAny(msg);
+        }
+
+        _addMsg(msg);
         evaluateNextMessage = true;
       }
+    }
+  }
+
+  void _addMsg(ServerMessage msg) {
+    messageQueue.add(msg);
+    _type = null;
+    _expectedLength = 0;
+  }
+
+  /// Returns a [ReplicationMessage] if the [CopyDataMessage] contains such message.
+  /// Otherwise, it'll return just return the provided [copyData].
+  ServerMessage _extractReplicationMessageIfAny(CopyDataMessage copyData) {
+    final bytes = copyData.bytes;
+    final code = bytes.first;
+    final data = bytes.sublist(1);
+    if (code == ReplicationMessage.primaryKeepAliveIdentifier) {
+      return PrimaryKeepAliveMessage(data);
+    } else if (code == ReplicationMessage.xLogDataIdentifier) {
+      if (replicationMode == ReplicationMode.logical) {
+        return XLogDataLogicalMessage(data);
+      } else {
+        return XLogDataMessage(data);
+      }
+    } else {
+      return copyData;
     }
   }
 

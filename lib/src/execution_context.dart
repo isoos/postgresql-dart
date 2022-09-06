@@ -85,6 +85,25 @@ abstract class PostgreSQLExecutionContext {
       {Map<String, dynamic>? substitutionValues,
       bool? allowReuse,
       int? timeoutInSeconds});
+
+  /// Executes a simple query on this context.
+  ///
+  /// Unlike [execute], if the executed query returns data, then this method
+  /// returns [PostgreSQLResult]. If the query does not return data, then
+  /// the affected row count is returned as [int].
+  ///
+  /// Unlike [query], all column values will be of type [String] even if they
+  /// have different type in the database. For instance, the value of an int4
+  /// column will be returned as a [String] instead of an [int]. This a simple
+  /// query limitation.
+  ///
+  /// This method is useful during the Streaming Replication Mode since the
+  /// extended query protocol cannot be used in a replication connection. In
+  /// such case, when data must be retrieved from the database, this method
+  /// can be safely used.
+  Future<dynamic> executeSimple(String fmtString,
+      {Map<String, dynamic>? substitutionValues = const {},
+      int? timeoutInSeconds});
 }
 
 /// A description of a column.
