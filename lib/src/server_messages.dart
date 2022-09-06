@@ -5,6 +5,9 @@ import 'package:buffer/buffer.dart';
 
 import 'connection.dart';
 import 'query.dart';
+import 'shared_messages.dart';
+import 'time_converters.dart';
+import 'types.dart';
 
 abstract class ServerMessage {}
 
@@ -222,6 +225,80 @@ class NoDataMessage extends ServerMessage {
 
   @override
   String toString() => 'No Data Message';
+}
+
+/// Identifies the message as a Start Copy Both response.
+/// This message is used only for Streaming Replication.
+class CopyBothResponseMessage implements ServerMessage {
+  /// 0 indicates the overall COPY format is textual (rows separated by newlines,
+  /// columns separated by separator characters, etc). 1 indicates the overall copy
+  /// format is binary (similar to DataRow format).
+  late final int copyFormat;
+
+  /// The format codes to be used for each column. Each must presently be zero (text)
+  /// or one (binary). All must be zero if the overall copy format is textual
+  final columnsFormatCode = <int>[];
+
+  CopyBothResponseMessage(Uint8List bytes) {
+    final reader = ByteDataReader()..add(bytes);
+    copyFormat = reader.readInt8();
+
+    final numberOfColumns = reader.readInt16();
+
+    for (var i = 0; i < numberOfColumns; i++) {
+      columnsFormatCode.add(reader.readInt16());
+    }
+  }
+
+  @override
+  String toString() {
+    final format = copyFormat == 0 ? 'textual' : 'binary';
+    return 'CopyBothResponseMessage with $format COPY format for ${columnsFormatCode.length}-columns';
+  }
+}
+
+class PrimaryKeepAliveMessage implements ReplicationMessage, ServerMessage {
+  /// The current end of WAL on the server.
+  late final LSN walEnd;
+  late final DateTime time;
+  // If `true`, it means that the client should reply to this message as soon as possible,
+  // to avoid a timeout disconnect.
+  late final bool mustReply;
+
+  PrimaryKeepAliveMessage(Uint8List bytes) {
+    final reader = ByteDataReader()..add(bytes);
+    walEnd = LSN(reader.readUint64());
+    time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
+    mustReply = reader.readUint8() != 0;
+  }
+
+  @override
+  String toString() =>
+      'PrimaryKeepAliveMessage(walEnd: $walEnd, time: $time, mustReply: $mustReply)';
+}
+
+class XLogDataMessage implements ReplicationMessage, ServerMessage {
+  late final LSN walStart;
+  late final LSN walEnd;
+  late final DateTime time;
+  late final Uint8List bytes;
+  // this is used for standby msg
+  LSN get walDataLength => LSN(bytes.length);
+
+  /// For physical replication, this is the raw [bytes]
+  /// For logical replication, see [XLogDataLogicalMessage]
+  Object get data => bytes;
+
+  XLogDataMessage(Uint8List bytes) {
+    final reader = ByteDataReader()..add(bytes);
+    walStart = LSN(reader.readUint64());
+    walEnd = LSN(reader.readUint64());
+    time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
+    this.bytes = reader.read(reader.remainingLength);
+  }
+  @override
+  String toString() =>
+      'XLogDataMessage(walStart: $walStart, walEnd: $walEnd, time: $time, data: $data)';
 }
 
 class UnknownMessage extends ServerMessage {
