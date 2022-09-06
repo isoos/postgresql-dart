@@ -103,3 +103,54 @@ enum PostgreSQLDataType {
   /// Must be a [List] of encodable objects
   jsonbArray,
 }
+
+/// LSN is a PostgreSQL Log Sequence Number.
+///
+/// For more details, see: https://www.postgresql.org/docs/current/datatype-pg-lsn.html
+class LSN {
+  final int value;
+
+  /// Construct an LSN from a 64-bit integer.
+  LSN(this.value);
+
+  /// Construct an LSN from XXX/XXX format used by PostgreSQL
+  LSN.fromString(String string) : value = _parseLSNString(string);
+
+  /// Formats the LSN value into the XXX/XXX format which is the text format
+  /// used by PostgreSQL.
+  @override
+  String toString() {
+    return '${(value >> 32).toRadixString(16).toUpperCase()}/${value.toUnsigned(32).toRadixString(16).toUpperCase()}';
+  }
+
+  static int _parseLSNString(String string) {
+    int upperhalf;
+    int lowerhalf;
+    final halves = string.split('/');
+    if (halves.length != 2) {
+      throw Exception('Invalid LSN String was given ($string)');
+    }
+    upperhalf = int.parse(halves[0], radix: 16) << 32;
+    lowerhalf = int.parse(halves[1], radix: 16);
+
+    return (upperhalf + lowerhalf).toInt();
+  }
+
+  LSN operator +(LSN other) {
+    return LSN(value + other.value);
+  }
+
+  LSN operator -(LSN other) {
+    return LSN(value + other.value);
+  }
+
+  @override
+  bool operator ==(covariant LSN other) {
+    if (identical(this, other)) return true;
+
+    return other.value == value;
+  }
+
+  @override
+  int get hashCode => value.hashCode;
+}
