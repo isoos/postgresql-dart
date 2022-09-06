@@ -49,3 +49,8 @@ Future<bool> _isPostgresContainerRunning() async {
       .map((s) => s.trim())
       .contains(_kContainerName);
 }
+
+
+Future<void> restartContainer() async {
+   await Process.run('docker', ['restart', _kContainerName]);
+}
