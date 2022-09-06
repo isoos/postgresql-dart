@@ -22,3 +22,6 @@ doc/api/
 *.iml
 *.ipr
 *.iws
+
+# VS Code IDE
+.vscode/
