@@ -175,13 +175,13 @@ class CommandCompleteMessage extends ServerMessage {
   ///  INSERT 0 42
   ///  ```
   ///  *oid is only used with `INSERT` and it's always 0.
-  static RegExp identifierExpression = RegExp(r'\d+$');
+  static final _affectedRowsExp = RegExp(r'\d+$');
 
   CommandCompleteMessage._(this.rowsAffected);
 
   factory CommandCompleteMessage(Uint8List bytes) {
     final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
-    final match = identifierExpression.firstMatch(str);
+    final match = _affectedRowsExp.firstMatch(str);
     var rowsAffected = 0;
     if (match != null) {
       rowsAffected = int.parse(match.group(0)!);
