@@ -60,6 +60,9 @@ class PostgreSQLConnection extends Object
   final StreamController<Notification> _notifications =
       StreamController<Notification>.broadcast();
 
+  final StreamController<ServerMessage> _messages =
+      StreamController<ServerMessage>.broadcast();
+
   /// Hostname of database this connection refers to.
   final String host;
 
@@ -103,6 +106,14 @@ class PostgreSQLConnection extends Object
   /// To determine whether or not the NOTIFY came from this instance, compare [processID]
   /// to [Notification.processID].
   Stream<Notification> get notifications => _notifications.stream;
+
+  /// Stream of server messages
+  ///
+  /// Listen to this [Stream] to receive events for all PostgreSQL server messages
+  ///
+  /// This includes all messages whether from Extended Query Protocol, Simple Query Protocol
+  /// or Streaming Replication Protocol.
+  Stream<ServerMessage> get messages => _messages.stream;
 
   /// Reports on the latest known status of the connection: whether it was open or failed for some reason.
   ///
@@ -192,6 +203,19 @@ class PostgreSQLConnection extends Object
   /// After the returned [Future] completes, this connection can no longer be used to execute queries. Any queries in progress or queued are cancelled.
   Future close() => _close();
 
+  /// Adds a Client Message to the existing connection
+  ///
+  /// This is a low level API and the message must follow the protocol of this
+  /// connection. It's the responsiblity of the caller to ensure this message
+  /// does not interfere with any running queries or transactions.
+  void addMessage(ClientMessage message) {
+    if (isClosed) {
+      throw PostgreSQLException(
+          'Attempting to add a message, but connection is not open.');
+    }
+    _socket!.add(message.asBytes());
+  }
+
   /// Executes a series of queries inside a transaction on this connection.
   ///
   /// Queries executed inside [queryBlock] will be grouped together in a transaction. The return value of the [queryBlock]
@@ -264,6 +288,8 @@ class PostgreSQLConnection extends Object
     }
     await _notifications.close();
 
+    await _messages.close();
+
     _queue.cancel(error, trace);
   }
 
@@ -277,6 +303,9 @@ class PostgreSQLConnection extends Object
     while (_framer.hasMessage) {
       final msg = _framer.popMessage();
       try {
+        if (_messages.hasListener) {
+          _messages.add(msg);
+        }
         if (msg is ErrorResponseMessage) {
           _transitionToState(_connectionState.onErrorResponse(msg));
         } else if (msg is NotificationResponseMessage) {
@@ -423,11 +452,13 @@ abstract class _PostgreSQLExecutionContextMixin
     Map<String, dynamic>? substitutionValues,
     bool? allowReuse,
     int? timeoutInSeconds,
+    bool? useSimpleQueryProtocol,
   }) =>
       _query(
         fmtString,
         substitutionValues: substitutionValues,
         allowReuse: allowReuse ?? true,
+        useSimpleQueryProtocol: useSimpleQueryProtocol ?? false,
         timeoutInSeconds: timeoutInSeconds,
       );
 
@@ -437,8 +468,19 @@ abstract class _PostgreSQLExecutionContextMixin
     required bool allowReuse,
     int? timeoutInSeconds,
     bool resolveOids = true,
+    bool useSimpleQueryProtocol = false,
   }) async {
     timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
+
+    if (useSimpleQueryProtocol) {
+      // re-route the query to the `_execute` method which will execute the query
+      // using the Simple Query Protocol.
+      return _execute(
+        fmtString,
+        timeoutInSeconds: timeoutInSeconds,
+        onlyReturnAffectedRows: false,
+      );
+    }
 
     if (_connection.isClosed) {
       throw PostgreSQLException(
@@ -493,18 +535,61 @@ abstract class _PostgreSQLExecutionContextMixin
   Future<int> execute(String fmtString,
       {Map<String, dynamic>? substitutionValues = const {},
       int? timeoutInSeconds}) async {
-    timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
+    final result = await _execute(
+      fmtString,
+      substitutionValues: substitutionValues,
+      timeoutInSeconds: _connection.queryTimeoutInSeconds,
+      onlyReturnAffectedRows: true,
+    );
+    return result.affectedRowCount;
+  }
+
+  // TODO: replace [execute] with [_execute] and remove `useSimpleQueryProtocol`
+  //       from the [query] method in the future major breaking change.
+  Future<PostgreSQLResult> _execute(
+    String fmtString, {
+    Map<String, dynamic>? substitutionValues = const {},
+    required int timeoutInSeconds,
+    required bool onlyReturnAffectedRows,
+  }) async {
     if (_connection.isClosed) {
       throw PostgreSQLException(
           'Attempting to execute query, but connection is not open.');
     }
 
-    final query = Query<void>(fmtString, substitutionValues, _connection,
-        _transaction, StackTrace.current,
-        onlyReturnAffectedRowCount: true);
+    final query = Query<dynamic>(
+      fmtString,
+      substitutionValues,
+      _connection,
+      _transaction,
+      StackTrace.current,
+      useSendSimple: true,
+      // TODO: this could be removed from Query since useSendSimple covers the
+      //       functionality. 
+      onlyReturnAffectedRowCount: onlyReturnAffectedRows,
+    );
 
     final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
-    return result.affectedRowCount;
+
+    final affectedRowCount = result.affectedRowCount;
+    final columnDescriptions = query.fieldDescriptions ?? [];
+    final metaData = _PostgreSQLResultMetaData(columnDescriptions);
+
+    final value = result.value;
+    late final List<PostgreSQLResultRow> rows;
+    if (value != null && value is List<List>) {
+      rows = value
+          .map((columns) => _PostgreSQLResultRow(metaData, columns))
+          .toList();
+    } else {
+      rows = [];
+    }
+
+    return _PostgreSQLResult(
+      affectedRowCount,
+      metaData,
+      rows,
+    );
   }
 
   @override

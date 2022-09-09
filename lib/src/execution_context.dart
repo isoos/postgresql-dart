@@ -29,10 +29,31 @@ abstract class PostgreSQLExecutionContext {
   /// By default, instances of this class will reuse queries. This allows significantly more efficient transport to and from the database. You do not have to do
   /// anything to opt in to this behavior, this connection will track the necessary information required to reuse queries without intervention. (The [fmtString] is
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
+  /// 
+  /// [useSimpleQueryProtocol] indicates that the query will be executed using 
+  /// the [Simple Query Protocol][]. This is similar to runing [execute] but 
+  /// instead of receiving the `affectedRowCount` only, this method will return
+  /// [PostgreSQLResult] which contains `affectedRowCount` in addition to any 
+  /// data returned by the executed statement. 
+  /// 
+  /// It's important to understand that when [useSimpleQueryProtocol] is `true`,
+  /// all values will be of type [String] even if they have different type in the
+  /// database. For instance, the value of an `int4` column will be returned as
+  /// a [String] instead of an [int].
+  ///
+  /// Setting [useSimpleQueryProtocol] to `true` is mainly useful for when the 
+  /// connection is established using the Streaming Replication Protocol. When 
+  /// the connection is in replication mode, the default Extended Query Protocol
+  /// cannot be used as the database will throw an error and drop the connection. 
+  /// In other words, only the Simple Query Protocol can be used with Streaming 
+  /// Replication Protocol.
+  /// 
+  /// [Simple Query Protocol]: https://www.postgresql.org/docs/current/protocol-flow.html#id-1.10.5.7.4
   Future<PostgreSQLResult> query(String fmtString,
       {Map<String, dynamic>? substitutionValues,
       bool? allowReuse,
-      int? timeoutInSeconds});
+      int? timeoutInSeconds,
+      bool? useSimpleQueryProtocol});
 
   /// Executes a query on this context.
   ///
@@ -85,6 +106,7 @@ abstract class PostgreSQLExecutionContext {
       {Map<String, dynamic>? substitutionValues,
       bool? allowReuse,
       int? timeoutInSeconds});
+
 }
 
 /// A description of a column.

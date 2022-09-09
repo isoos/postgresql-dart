@@ -21,9 +21,12 @@ class Query<T> {
     this.transaction,
     this.queryStackTrace, {
     this.onlyReturnAffectedRowCount = false,
+    this.useSendSimple = false,
   });
 
   final bool onlyReturnAffectedRowCount;
+
+  final bool useSendSimple;
 
   String? statementIdentifier;
 
@@ -139,6 +142,22 @@ class Query<T> {
 
   void addRow(List<Uint8List?> rawRowData) {
     if (onlyReturnAffectedRowCount || fieldDescriptions == null) {
+      return;
+    }
+
+    // Simple queries do not follow the same binary codecs. All values will be
+    // returned as strings.
+    //
+    // For instance, a column can be defined as `int4` which is expected to be
+    // 4 bytes long (i.e. decoded using bytes.getUint32) but when using simple
+    // query (i.e. sendSimple), the value will be returned as a string.
+    //
+    // See Simple Query section in Protocol Message Flow:
+    // "In simple Query mode, the format of retrieved values is always text"
+    //  https://www.postgresql.org/docs/current/protocol-flow.html#id-1.10.5.7.4
+    if (useSendSimple) {
+      final data = rawRowData.map((e) => utf8.decode(e!));
+      rows.add(data.toList());
       return;
     }
 
