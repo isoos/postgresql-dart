@@ -60,6 +60,9 @@ class PostgreSQLConnection extends Object
   final StreamController<Notification> _notifications =
       StreamController<Notification>.broadcast();
 
+  final StreamController<ServerMessage> _messages =
+      StreamController<ServerMessage>.broadcast();
+
   /// Hostname of database this connection refers to.
   final String host;
 
@@ -103,6 +106,14 @@ class PostgreSQLConnection extends Object
   /// To determine whether or not the NOTIFY came from this instance, compare [processID]
   /// to [Notification.processID].
   Stream<Notification> get notifications => _notifications.stream;
+
+  /// Stream of server messages
+  ///
+  /// Listen to this [Stream] to receive events for all PostgreSQL server messages
+  ///
+  /// This includes all messages whether from Extended Query Protocol, Simple Query Protocol
+  /// or Streaming Replication Protocol.
+  Stream<ServerMessage> get messages => _messages.stream;
 
   /// Reports on the latest known status of the connection: whether it was open or failed for some reason.
   ///
@@ -277,6 +288,8 @@ class PostgreSQLConnection extends Object
     }
     await _notifications.close();
 
+    await _messages.close();
+
     _queue.cancel(error, trace);
   }
 
@@ -290,6 +303,9 @@ class PostgreSQLConnection extends Object
     while (_framer.hasMessage) {
       final msg = _framer.popMessage();
       try {
+        if (_messages.hasListener) {
+          _messages.add(msg);
+        }
         if (msg is ErrorResponseMessage) {
           _transitionToState(_connectionState.onErrorResponse(msg));
         } else if (msg is NotificationResponseMessage) {
