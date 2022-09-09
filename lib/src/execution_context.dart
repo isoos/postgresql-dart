@@ -29,10 +29,31 @@ abstract class PostgreSQLExecutionContext {
   /// By default, instances of this class will reuse queries. This allows significantly more efficient transport to and from the database. You do not have to do
   /// anything to opt in to this behavior, this connection will track the necessary information required to reuse queries without intervention. (The [fmtString] is
   /// the unique identifier to look up reuse information.) You can disable reuse by passing false for [allowReuse].
+  /// 
+  /// [useSimpleQueryProtocol] indicates that the query will be executed using 
+  /// the [Simple Query Protocol][]. This is similar to runing [execute] but 
+  /// instead of receiving the `affectedRowCount` only, this method will return
+  /// [PostgreSQLResult] which contains `affectedRowCount` in addition to any 
+  /// data returned by the executed statement. 
+  /// 
+  /// It's important to understand that when [useSimpleQueryProtocol] is `true`,
+  /// all values will be of type [String] even if they have different type in the
+  /// database. For instance, the value of an `int4` column will be returned as
+  /// a [String] instead of an [int].
+  ///
+  /// Setting [useSimpleQueryProtocol] to `true` is mainly useful for when the 
+  /// connection is established using the Streaming Replication Protocol. When 
+  /// the connection is in replication mode, the default Extended Query Protocol
+  /// cannot be used as the database will throw an error and drop the connection. 
+  /// In other words, only the Simple Query Protocol can be used with Streaming 
+  /// Replication Protocol.
+  /// 
+  /// [Simple Query Protocol]: https://www.postgresql.org/docs/current/protocol-flow.html#id-1.10.5.7.4
   Future<PostgreSQLResult> query(String fmtString,
       {Map<String, dynamic>? substitutionValues,
       bool? allowReuse,
-      int? timeoutInSeconds});
+      int? timeoutInSeconds,
+      bool? useSimpleQueryProtocol});
 
   /// Executes a query on this context.
   ///
@@ -86,29 +107,6 @@ abstract class PostgreSQLExecutionContext {
       bool? allowReuse,
       int? timeoutInSeconds});
 
-  /// Executes a simple query on this context.
-  ///
-  /// This method is similar to [execute] except that it'll return all the data.
-  /// That is, when the query result contains data, the method will return a
-  /// [PostgreSQLResult]. If the query does not return data, then the affected row
-  /// count is returned as [int].
-  ///
-  /// Unlike [query], this method uses the Simple Query Protocol. that means,
-  /// all values will be of type [String] even if they have different type in the
-  /// database. For instance, the value of an `int4` column will be returned as
-  /// a [String] instead of an [int].
-  ///
-  /// This method uses the least efficient and less secure command for executing
-  /// queries in the PostgreSQL protocol; [query] is preferred for queries that
-  /// will be executed more than once, will contain user input, or return rows.
-  ///
-  /// This method is useful during the Streaming Replication Mode since the
-  /// Extended Query Protocol (i.e. [query] and [mappedResultsQuery]) cannot be
-  /// used in a replication connection. In such case, when the result of a query
-  /// is necessary to be retrieved, this method can be used instead of [execute].
-  Future<dynamic> simpleQuery(String fmtString,
-      {Map<String, dynamic>? substitutionValues = const {},
-      int? timeoutInSeconds});
 }
 
 /// A description of a column.

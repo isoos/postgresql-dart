@@ -452,11 +452,13 @@ abstract class _PostgreSQLExecutionContextMixin
     Map<String, dynamic>? substitutionValues,
     bool? allowReuse,
     int? timeoutInSeconds,
+    bool? useSimpleQueryProtocol,
   }) =>
       _query(
         fmtString,
         substitutionValues: substitutionValues,
         allowReuse: allowReuse ?? true,
+        useSimpleQueryProtocol: useSimpleQueryProtocol ?? false,
         timeoutInSeconds: timeoutInSeconds,
       );
 
@@ -466,8 +468,19 @@ abstract class _PostgreSQLExecutionContextMixin
     required bool allowReuse,
     int? timeoutInSeconds,
     bool resolveOids = true,
+    bool useSimpleQueryProtocol = false,
   }) async {
     timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
+
+    if (useSimpleQueryProtocol) {
+      // re-route the query to the `_execute` method which will execute the query
+      // using the Simple Query Protocol.
+      return _execute(
+        fmtString,
+        timeoutInSeconds: timeoutInSeconds,
+        onlyReturnAffectedRows: false,
+      );
+    }
 
     if (_connection.isClosed) {
       throw PostgreSQLException(
@@ -522,52 +535,61 @@ abstract class _PostgreSQLExecutionContextMixin
   Future<int> execute(String fmtString,
       {Map<String, dynamic>? substitutionValues = const {},
       int? timeoutInSeconds}) async {
-    timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
-    if (_connection.isClosed) {
-      throw PostgreSQLException(
-          'Attempting to execute query, but connection is not open.');
-    }
-
-    final query = Query<void>(fmtString, substitutionValues, _connection,
-        _transaction, StackTrace.current,
-        onlyReturnAffectedRowCount: true);
-
-    final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
+    final result = await _execute(
+      fmtString,
+      substitutionValues: substitutionValues,
+      timeoutInSeconds: _connection.queryTimeoutInSeconds,
+      onlyReturnAffectedRows: true,
+    );
     return result.affectedRowCount;
   }
 
-  @override
-  Future<dynamic> simpleQuery(String fmtString,
-      {Map<String, dynamic>? substitutionValues = const {},
-      int? timeoutInSeconds}) async {
-    timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
+  // TODO: replace [execute] with [_execute] and remove `useSimpleQueryProtocol`
+  //       from the [query] method in the future major breaking change.
+  Future<PostgreSQLResult> _execute(
+    String fmtString, {
+    Map<String, dynamic>? substitutionValues = const {},
+    required int timeoutInSeconds,
+    required bool onlyReturnAffectedRows,
+  }) async {
     if (_connection.isClosed) {
       throw PostgreSQLException(
           'Attempting to execute query, but connection is not open.');
     }
 
-    final query = Query<dynamic>(fmtString, substitutionValues, _connection,
-        _transaction, StackTrace.current,
-        useSendSimple: true);
+    final query = Query<dynamic>(
+      fmtString,
+      substitutionValues,
+      _connection,
+      _transaction,
+      StackTrace.current,
+      useSendSimple: true,
+      // TODO: this could be removed from Query since useSendSimple covers the
+      //       functionality. 
+      onlyReturnAffectedRowCount: onlyReturnAffectedRows,
+    );
 
     final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
 
-    final columnDescriptions = query.fieldDescriptions;
-    if (columnDescriptions != null) {
-      final metaData = _PostgreSQLResultMetaData(columnDescriptions);
-      final value = result.value;
+    final affectedRowCount = result.affectedRowCount;
+    final columnDescriptions = query.fieldDescriptions ?? [];
+    final metaData = _PostgreSQLResultMetaData(columnDescriptions);
 
-      if (value != null && value is List<List>) {
-        return _PostgreSQLResult(
-            result.affectedRowCount,
-            metaData,
-            value
-                .map((columns) => _PostgreSQLResultRow(metaData, columns))
-                .toList());
-      }
+    final value = result.value;
+    late final List<PostgreSQLResultRow> rows;
+    if (value != null && value is List<List>) {
+      rows = value
+          .map((columns) => _PostgreSQLResultRow(metaData, columns))
+          .toList();
+    } else {
+      rows = [];
     }
 
-    return result.affectedRowCount;
+    return _PostgreSQLResult(
+      affectedRowCount,
+      metaData,
+      rows,
+    );
   }
 
   @override
