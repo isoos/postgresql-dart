@@ -124,14 +124,12 @@ class LSN {
   }
 
   static int _parseLSNString(String string) {
-    int upperhalf;
-    int lowerhalf;
     final halves = string.split('/');
     if (halves.length != 2) {
-      throw Exception('Invalid LSN String was given ($string)');
+      throw FormatException('Invalid LSN String was given ($string)');
     }
-    upperhalf = int.parse(halves[0], radix: 16) << 32;
-    lowerhalf = int.parse(halves[1], radix: 16);
+    final upperhalf = int.parse(halves[0], radix: 16) << 32;
+    final lowerhalf = int.parse(halves[1], radix: 16);
 
     return (upperhalf + lowerhalf).toInt();
   }
