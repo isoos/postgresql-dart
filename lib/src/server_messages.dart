@@ -158,7 +158,24 @@ class NotificationResponseMessage extends ServerMessage {
 class CommandCompleteMessage extends ServerMessage {
   final int rowsAffected;
 
-  static RegExp identifierExpression = RegExp(r'[A-Z ]*');
+  /// Match the digits at the end of the string.
+  /// Possible values are:
+  ///  ```
+  ///  command-tag | #rows
+  ///  SELECT 1
+  ///  UPDATE 1234
+  ///  DELETE 568
+  ///  MOVE 42
+  ///  FETCH 60
+  ///  COPY 314
+  ///  ```
+  ///  For INSERT, there are three columns:
+  ///  ```
+  ///  | command tag | oid* | #rows |
+  ///  INSERT 0 42
+  ///  ```
+  ///  *oid is only used with `INSERT` and it's always 0.
+  static RegExp identifierExpression = RegExp(r'\d+$');
 
   CommandCompleteMessage._(this.rowsAffected);
 
@@ -166,8 +183,8 @@ class CommandCompleteMessage extends ServerMessage {
     final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
     final match = identifierExpression.firstMatch(str);
     var rowsAffected = 0;
-    if (match != null && match.end < str.length) {
-      rowsAffected = int.parse(str.split(' ').last);
+    if (match != null) {
+      rowsAffected = int.parse(match.group(0)!);
     }
     return CommandCompleteMessage._(rowsAffected);
   }
