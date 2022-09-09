@@ -192,6 +192,19 @@ class PostgreSQLConnection extends Object
   /// After the returned [Future] completes, this connection can no longer be used to execute queries. Any queries in progress or queued are cancelled.
   Future close() => _close();
 
+  /// Adds a Client Message to the existing connection
+  ///
+  /// This is a low level API and the message must follow the protocol of this
+  /// connection. It's the responsiblity of the caller to ensure this message
+  /// does not interfere with any running queries or transactions.
+  void addMessage(ClientMessage message) {
+    if (isClosed) {
+      throw PostgreSQLException(
+          'Attempting to add a message, but connection is not open.');
+    }
+    _socket!.add(message.asBytes());
+  }
+
   /// Executes a series of queries inside a transaction on this connection.
   ///
   /// Queries executed inside [queryBlock] will be grouped together in a transaction. The return value of the [queryBlock]
