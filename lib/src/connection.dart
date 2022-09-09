@@ -508,6 +508,40 @@ abstract class _PostgreSQLExecutionContextMixin
   }
 
   @override
+  Future<dynamic> simpleQuery(String fmtString,
+      {Map<String, dynamic>? substitutionValues = const {},
+      int? timeoutInSeconds}) async {
+    timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
+    if (_connection.isClosed) {
+      throw PostgreSQLException(
+          'Attempting to execute query, but connection is not open.');
+    }
+
+    final query = Query<dynamic>(fmtString, substitutionValues, _connection,
+        _transaction, StackTrace.current,
+        useSendSimple: true);
+
+    final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
+
+    final columnDescriptions = query.fieldDescriptions;
+    if (columnDescriptions != null) {
+      final metaData = _PostgreSQLResultMetaData(columnDescriptions);
+      final value = result.value;
+
+      if (value != null && value is List<List>) {
+        return _PostgreSQLResult(
+            result.affectedRowCount,
+            metaData,
+            value
+                .map((columns) => _PostgreSQLResultRow(metaData, columns))
+                .toList());
+      }
+    }
+
+    return result.affectedRowCount;
+  }
+
+  @override
   void cancelTransaction({String? reason});
 
   Future<QueryResult<T>> _enqueue<T>(Query<T> query,
