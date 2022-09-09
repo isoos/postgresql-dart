@@ -81,7 +81,8 @@ void main() {
           )));
     });
 
-    test('Connect with ReplicationMode.none', () async {
+    test('Connecting with ReplicationMode.none uses Extended Query Protocol',
+        () async {
       final conn = PostgreSQLConnection(
         'localhost',
         5432,
@@ -92,8 +93,9 @@ void main() {
       );
 
       await conn.open();
-
-      expect(await conn.execute('select 1'), equals(1));
+      // This would throw for ReplicationMode.logical or ReplicationMode.physical
+      final result = await conn.query('select 1');
+      expect(result.affectedRowCount, equals(1));
     });
 
     test('Connect with logical ReplicationMode.logical', () async {
