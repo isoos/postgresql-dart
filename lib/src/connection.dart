@@ -106,14 +106,25 @@ class PostgreSQLConnection extends Object
   ///
   /// When the value is set to either [ReplicationMode.physical] or [ReplicationMode.logical],
   /// the query protocol will no longer work as the connection will be switched to a replication
-  /// connection. In other words, using [query] or [mappedResultsQuery] will throw an error. Use
-  /// [execute] for executing statements while in replication mode.
+  /// connection. In other words, using the default [query] or [mappedResultsQuery] will cause
+  /// the database to throw an error and drop the connection.
+  /// 
+  /// Use [query] `useSimpleQueryProtocol` set to `true` or [execute] for executing statements 
+  /// while in replication mode.
+  /// 
+  /// For more info, see [Streaming Replication Protocol]
+  /// 
+  /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
   final ReplicationMode replicationMode;
 
   /// The Logical Decoding Output for streaming replication mode
   ///
-  /// The default value is [LogicalDecodingPlugin.pgoutput]. This value is only used
-  /// when [replicationMode] is not equal to [ReplicationMode.none].
+  /// The default value is [LogicalDecodingPlugin.pgoutput]. To use [LogicalDecodingPlugin.wal2json],
+  /// the [wal2json] plugin must be installed in the database. 
+  /// 
+  /// [logicalDecodingPlugin] is only used when [replicationMode] is not equal to [ReplicationMode.none].
+  /// 
+  /// [wal2json]: https://github.com/eulerto/wal2json
   final LogicalDecodingPlugin logicalDecodingPlugin;
 
   /// Stream of notification from the database.
