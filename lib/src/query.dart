@@ -152,8 +152,9 @@ class Query<T> {
     // 4 bytes long (i.e. decoded using bytes.getUint32) but when using simple
     // query (i.e. sendSimple), the value will be returned as a string.
     //
-    // See response to:
-    // https://postgresql.org/message-id/17325-f45d35e03971e979%40postgresql.org
+    // See Simple Query section in Protocol Message Flow:
+    // "In simple Query mode, the format of retrieved values is always text"
+    //  https://www.postgresql.org/docs/current/protocol-flow.html#id-1.10.5.7.4
     if (useSendSimple) {
       final data = rawRowData.map((e) => utf8.decode(e!));
       rows.add(data.toList());
