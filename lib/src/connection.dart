@@ -124,12 +124,12 @@ class PostgreSQLConnection extends Object
   /// to [Notification.processID].
   Stream<Notification> get notifications => _notifications.stream;
 
-  /// Stream of server messages 
-  /// 
+  /// Stream of server messages
+  ///
   /// Listen to this [Stream] to receive events for all PostgreSQL server messages
-  /// 
-  /// This includes all messages whether from Extended Query Protocol, Simple Query Protocol 
-  /// or Streaming Replication Protocol. 
+  ///
+  /// This includes all messages whether from Extended Query Protocol, Simple Query Protocol
+  /// or Streaming Replication Protocol.
   Stream<ServerMessage> get messages => _messages.stream;
 
   /// Reports on the latest known status of the connection: whether it was open or failed for some reason.
@@ -220,6 +220,19 @@ class PostgreSQLConnection extends Object
   ///
   /// After the returned [Future] completes, this connection can no longer be used to execute queries. Any queries in progress or queued are cancelled.
   Future close() => _close();
+
+  /// Adds a Client Message to the existing connection
+  ///
+  /// This is a low level API and the message must follow the protocol of this
+  /// connection. It's the responsiblity of the caller to ensure this message
+  /// does not interfere with any running queries or transactions.
+  void addMessage(ClientMessage message) {
+    if (isClosed) {
+      throw PostgreSQLException(
+          'Attempting to add a message, but connection is not open.');
+    }
+    _socket!.add(message.asBytes());
+  }
 
   /// Executes a series of queries inside a transaction on this connection.
   ///
