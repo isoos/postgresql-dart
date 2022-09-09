@@ -124,9 +124,12 @@ class PostgreSQLConnection extends Object
   /// to [Notification.processID].
   Stream<Notification> get notifications => _notifications.stream;
 
-  /// Stream of server messages from the database
-  ///
-  // TODO: clarify the usage -- this is kinda like an interceptor
+  /// Stream of server messages 
+  /// 
+  /// Listen to this [Stream] to receive events for all PostgreSQL server messages
+  /// 
+  /// This includes all messages whether from Extended Query Protocol, Simple Query Protocol 
+  /// or Streaming Replication Protocol. 
   Stream<ServerMessage> get messages => _messages.stream;
 
   /// Reports on the latest known status of the connection: whether it was open or failed for some reason.
@@ -305,7 +308,9 @@ class PostgreSQLConnection extends Object
     while (_framer.hasMessage) {
       final msg = _framer.popMessage();
       try {
-        _messages.add(msg);
+        if (_messages.hasListener) {
+          _messages.add(msg);
+        }
         if (msg is ErrorResponseMessage) {
           _transitionToState(_connectionState.onErrorResponse(msg));
         } else if (msg is NotificationResponseMessage) {
@@ -537,7 +542,7 @@ abstract class _PostgreSQLExecutionContextMixin
   }
 
   @override
-  Future<dynamic> executeSimple(String fmtString,
+  Future<dynamic> simpleQuery(String fmtString,
       {Map<String, dynamic>? substitutionValues = const {},
       int? timeoutInSeconds}) async {
     timeoutInSeconds ??= _connection.queryTimeoutInSeconds;

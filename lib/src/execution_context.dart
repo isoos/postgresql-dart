@@ -88,20 +88,25 @@ abstract class PostgreSQLExecutionContext {
 
   /// Executes a simple query on this context.
   ///
-  /// Unlike [execute], if the executed query returns data, then this method
-  /// returns [PostgreSQLResult]. If the query does not return data, then
-  /// the affected row count is returned as [int].
+  /// This method is similar to [execute] except that it'll return all the data.
+  /// That is, when the query result contains data, the method will return a
+  /// [PostgreSQLResult]. If the query does not return data, then the affected row
+  /// count is returned as [int].
   ///
-  /// Unlike [query], all column values will be of type [String] even if they
-  /// have different type in the database. For instance, the value of an int4
-  /// column will be returned as a [String] instead of an [int]. This a simple
-  /// query limitation.
+  /// Unlike [query], this method uses the Simple Query Protocol. that means,
+  /// all values will be of type [String] even if they have different type in the
+  /// database. For instance, the value of an `int4` column will be returned as
+  /// a [String] instead of an [int].
+  ///
+  /// This method uses the least efficient and less secure command for executing
+  /// queries in the PostgreSQL protocol; [query] is preferred for queries that
+  /// will be executed more than once, will contain user input, or return rows.
   ///
   /// This method is useful during the Streaming Replication Mode since the
-  /// extended query protocol cannot be used in a replication connection. In
-  /// such case, when data must be retrieved from the database, this method
-  /// can be safely used.
-  Future<dynamic> executeSimple(String fmtString,
+  /// Extended Query Protocol (i.e. [query] and [mappedResultsQuery]) cannot be
+  /// used in a replication connection. In such case, when the result of a query
+  /// is necessary to be retrieved, this method can be used instead of [execute].
+  Future<dynamic> simpleQuery(String fmtString,
       {Map<String, dynamic>? substitutionValues = const {},
       int? timeoutInSeconds});
 }

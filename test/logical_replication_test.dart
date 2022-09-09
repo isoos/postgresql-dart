@@ -92,7 +92,7 @@ void main() {
       await conn.execute('CREATE PUBLICATION $publicationName FOR ALL TABLES;');
 
       final sysInfoRes =
-          (await conn.executeSimple('IDENTIFY_SYSTEM;')) as PostgreSQLResult;
+          (await conn.simpleQuery('IDENTIFY_SYSTEM;')) as PostgreSQLResult;
 
       final xlogpos = sysInfoRes.first.toColumnMap()['xlogpos'] as String;
 
