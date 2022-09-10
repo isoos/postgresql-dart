@@ -210,7 +210,7 @@ void main() {
     });
     // BeginMessage -> DeleteMessage -> CommitMessage
     test('- Receive DeleteMessage after delete statement', () async {
-      // create table to be truncated
+      // insert data to be delete
       await changesConn
           .execute("insert into temp (value) values ('update_test');");
       // wait to avoid capturing INSERT
@@ -248,7 +248,7 @@ void main() {
     // BeginMessage -> TruncateMessage -> CommitMessage
     test('- Receive TruncateMessage after delete statement', () async {
       final tableName = 'temp_truncate';
-      // insert data to be deleted
+      // create table to be truncated
       await changesConn.execute('''
 create table if not exists $tableName (
     id int GENERATED ALWAYS AS IDENTITY, 

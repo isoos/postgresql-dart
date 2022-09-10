@@ -72,7 +72,7 @@ class MessageFramer {
         // Copy Data message is a wrapper around data stream messages
         // such as replication messages.
         if (msg is CopyDataMessage) {
-          // check if it's a replication message, otherwise return raw CopyDataMessage
+          // checks if it's a replication message, otherwise returns given msg
           msg = _extractReplicationMessageIfAny(msg);
         }
 

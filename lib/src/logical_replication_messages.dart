@@ -51,7 +51,7 @@ class XLogDataLogicalMessage implements XLogDataMessage {
 }
 
 /// Tries to check if the [XLogDataMessage.bytes] is a [LogicalReplicationMessage]
-/// If so, it'll return
+/// If so, it'll return [XLogDataLogicalMessage], otherwise it reutnrs [message]
 XLogDataMessage tryParseLogicalReplicationMessage(XLogDataMessage message) {
   // take the message bytes to check if it's a replication message
   final bytesList = message.bytes;
