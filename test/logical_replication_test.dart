@@ -18,7 +18,7 @@ void main() {
   //       i.e. pre-set wal_level, max_replication_slots, max_wal_senders in
   //       `postgresql.conf` file
   if (Platform.environment.containsKey('GITHUB_ACTION')) {
-    test('NO CONNECTION TEST IS RUNNING.', () {
+    test('NO LOGICAL REPLICATION TESTS ARE RUNNING.', () {
       // no-op
     });
     return;
