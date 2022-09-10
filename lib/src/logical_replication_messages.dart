@@ -15,63 +15,110 @@ import 'types.dart';
 abstract class LogicalReplicationMessage
     implements ReplicationMessage, ServerMessage {}
 
-class XLogDataLogicalMessage extends XLogDataMessage {
-  late final LogicalReplicationMessage _message;
+class XLogDataLogicalMessage implements XLogDataMessage {
+  @override
+  // this and others are `late` to comply with super class
+  late final Uint8List bytes;
 
   @override
-  LogicalReplicationMessage get data => _message;
+  late final DateTime time;
 
-  XLogDataLogicalMessage(Uint8List bytes) : super(bytes) {
-    _message = parseLogicalReplicationMessage(this.bytes);
-  }
+  @override
+  late final LSN walEnd;
+
+  @override
+  late final LSN walStart;
+
+  @override
+  final LSN walDataLength;
+
+  late final LogicalReplicationMessage message;
+
+  @override
+  LogicalReplicationMessage get data => message;
+
+  XLogDataLogicalMessage({
+    required this.message,
+    required this.bytes,
+    required this.time,
+    required this.walEnd,
+    required this.walStart,
+    required this.walDataLength,
+  });
 
   @override
   String toString() => super.toString();
 }
 
-LogicalReplicationMessage parseLogicalReplicationMessage(Uint8List bytesList) {
+/// Tries to check if the [XLogDataMessage.bytes] is a [LogicalReplicationMessage]
+/// If so, it'll return
+XLogDataMessage tryParseLogicalReplicationMessage(XLogDataMessage message) {
+  // take the message bytes to check if it's a replication message
+  final bytesList = message.bytes;
   // the first byte is the msg type
   final firstByte = bytesList.first;
   final msgType = LogicalReplicationMessageTypes.fromByte(firstByte);
-  // remaining bytes are the data 
+  // remaining bytes are the data
+  LogicalReplicationMessage? logicalMessage;
   final bytes = bytesList.sublist(1);
-
   switch (msgType) {
     case LogicalReplicationMessageTypes.Begin:
-      return BeginMessage(bytes);
+      logicalMessage = BeginMessage(bytes);
+      break;
     case LogicalReplicationMessageTypes.Commit:
-      return CommitMessage(bytes);
+      logicalMessage = CommitMessage(bytes);
+      break;
     case LogicalReplicationMessageTypes.Origin:
-      return OriginMessage(bytes);
+      logicalMessage = OriginMessage(bytes);
+      break;
     case LogicalReplicationMessageTypes.Relation:
-      return RelationMessage(bytes);
+      logicalMessage = RelationMessage(bytes);
+      break;
     case LogicalReplicationMessageTypes.Type:
-      return TypeMessage(bytes);
+      logicalMessage = TypeMessage(bytes);
+      break;
     case LogicalReplicationMessageTypes.Insert:
-      return InsertMessage(bytes);
+      logicalMessage = InsertMessage(bytes);
+      break;
     case LogicalReplicationMessageTypes.Update:
-      return UpdateMessage(bytes);
+      logicalMessage = UpdateMessage(bytes);
+      break;
     case LogicalReplicationMessageTypes.Delete:
-      return DeleteMessage(bytes);
+      logicalMessage = DeleteMessage(bytes);
+      break;
     case LogicalReplicationMessageTypes.Truncate:
-      return TruncateMessage(bytes);
+      logicalMessage = TruncateMessage(bytes);
+      break;
     case LogicalReplicationMessageTypes.Unsupported:
     default:
-      return _parseJsonMessageOrReturnUnknownMessage(bytes);
+      // note this needs the full set of bytes unlike other cases
+      logicalMessage = _tryParseJsonMessage(bytesList);
+      break;
+  }
+  if (logicalMessage != null) {
+    return XLogDataLogicalMessage(
+      message: logicalMessage,
+      bytes: message.bytes,
+      time: message.time,
+      walEnd: message.walEnd,
+      walStart: message.walStart,
+      walDataLength: message.walDataLength,
+    );
+  } else {
+    return message;
   }
 }
 
-LogicalReplicationMessage _parseJsonMessageOrReturnUnknownMessage(
-    Uint8List bytes) {
+LogicalReplicationMessage? _tryParseJsonMessage(Uint8List bytes) {
   // wal2json messages starts with `{` as the first byte
   if (bytes.first == '{'.codeUnits.first) {
     try {
       return JsonMessage(utf8.decode(bytes));
     } catch (e) {
-      return UnknownLogicalReplicationMessage(bytes);
+      return null;
     }
   }
-  return UnknownLogicalReplicationMessage(bytes);
+  return null;
 }
 
 enum LogicalReplicationMessageTypes {
