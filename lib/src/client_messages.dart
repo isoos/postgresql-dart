@@ -4,6 +4,7 @@ import 'package:buffer/buffer.dart';
 
 import 'constants.dart';
 import 'query.dart';
+import 'replication.dart';
 import 'utf8_backed_string.dart';
 
 abstract class ClientMessage {
@@ -39,11 +40,14 @@ class StartupMessage extends ClientMessage {
   final UTF8BackedString? _username;
   final UTF8BackedString _databaseName;
   final UTF8BackedString _timeZone;
+  final UTF8BackedString _replication;
 
-  StartupMessage(String databaseName, String timeZone, {String? username})
+  StartupMessage(String databaseName, String timeZone,
+      {String? username, ReplicationMode replication = ReplicationMode.none})
       : _databaseName = UTF8BackedString(databaseName),
         _timeZone = UTF8BackedString(timeZone),
-        _username = username == null ? null : UTF8BackedString(username);
+        _username = username == null ? null : UTF8BackedString(username),
+        _replication = UTF8BackedString(replication.value);
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
@@ -55,12 +59,22 @@ class StartupMessage extends ClientMessage {
       variableLength += _username!.utf8Length + 1;
     }
 
+    if (_replication.string != ReplicationMode.none.value) {
+      fixedLength += UTF8ByteConstants.replication.length;
+      variableLength += _replication.utf8Length + 1;
+    }
+
     buffer.writeInt32(fixedLength + variableLength);
     buffer.writeInt32(ClientMessage.ProtocolVersion);
 
     if (_username != null) {
       buffer.write(UTF8ByteConstants.user);
       _username!.applyToBuffer(buffer);
+    }
+
+    if (_replication.string != ReplicationMode.none.value) {
+      buffer.write(UTF8ByteConstants.replication);
+      _replication.applyToBuffer(buffer);
     }
 
     buffer.write(UTF8ByteConstants.database);
@@ -75,6 +89,7 @@ class StartupMessage extends ClientMessage {
     buffer.writeInt8(0);
   }
 }
+
 
 class QueryMessage extends ClientMessage {
   final UTF8BackedString _queryString;

@@ -14,6 +14,7 @@ import 'message_window.dart';
 import 'query.dart';
 import 'query_cache.dart';
 import 'query_queue.dart';
+import 'replication.dart';
 import 'server_messages.dart';
 
 part 'connection_fsm.dart';
@@ -52,6 +53,7 @@ class PostgreSQLConnection extends Object
     this.useSSL = false,
     this.isUnixSocket = false,
     this.allowClearTextPassword = false,
+    this.replicationMode = ReplicationMode.none,
   }) {
     _connectionState = _PostgreSQLConnectionStateClosed();
     _connectionState.connection = this;
@@ -98,6 +100,21 @@ class PostgreSQLConnection extends Object
 
   /// If true, allows password in clear text for authentication.
   final bool allowClearTextPassword;
+
+  /// The replication mode for connecting in streaming replication mode.
+  ///
+  /// When the value is set to either [ReplicationMode.physical] or [ReplicationMode.logical],
+  /// the query protocol will no longer work as the connection will be switched to a replication
+  /// connection. In other words, using the default [query] or [mappedResultsQuery] will cause
+  /// the database to throw an error and drop the connection.
+  ///
+  /// Use [query] `useSimpleQueryProtocol` set to `true` or [execute] for executing statements
+  /// while in replication mode.
+  ///
+  /// For more info, see [Streaming Replication Protocol]
+  ///
+  /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
+  final ReplicationMode replicationMode;
 
   /// Stream of notification from the database.
   ///
@@ -565,7 +582,7 @@ abstract class _PostgreSQLExecutionContextMixin
       StackTrace.current,
       useSendSimple: true,
       // TODO: this could be removed from Query since useSendSimple covers the
-      //       functionality. 
+      //       functionality.
       onlyReturnAffectedRowCount: onlyReturnAffectedRows,
     );
 

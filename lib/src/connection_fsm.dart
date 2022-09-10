@@ -49,7 +49,8 @@ class _PostgreSQLConnectionStateSocketConnected
   _PostgreSQLConnectionState onEnter() {
     final startupMessage = StartupMessage(
         connection!.databaseName, connection!.timeZone,
-        username: connection!.username);
+        username: connection!.username,
+        replication: connection!.replicationMode);
 
     connection!._socket!.add(startupMessage.asBytes());
 

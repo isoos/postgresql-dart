@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:mirrors';
 
 import 'package:postgres/postgres.dart';
+import 'package:postgres/src/replication.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -79,6 +80,72 @@ void main() {
                 'Attempting to reopen a closed connection. Create a instance instead.'),
           )));
     });
+
+    test('Connecting with ReplicationMode.none uses Extended Query Protocol',
+        () async {
+      final conn = PostgreSQLConnection(
+        'localhost',
+        5432,
+        'dart_test',
+        username: 'dart',
+        password: 'dart',
+        replicationMode: ReplicationMode.none,
+      );
+
+      await conn.open();
+      // This would throw for ReplicationMode.logical or ReplicationMode.physical
+      final result = await conn.query('select 1');
+      expect(result.affectedRowCount, equals(1));
+    });
+
+    test('Connect with logical ReplicationMode.logical', () async {
+      final conn = PostgreSQLConnection(
+        'localhost',
+        5432,
+        'dart_test',
+        username: 'dart',
+        password: 'dart',
+        replicationMode: ReplicationMode.logical,
+      );
+
+      await conn.open();
+
+      expect(await conn.execute('select 1'), equals(1));
+    });
+
+    test('IDENTIFY_SYSTEM returns system information', () async {
+      final conn = PostgreSQLConnection(
+        'localhost',
+        5432,
+        'dart_test',
+        username: 'dart',
+        password: 'dart',
+        replicationMode: ReplicationMode.logical,
+      );
+
+      await conn.open();
+
+      // This query can only be executed in Streaming Replication Protocol
+      // In addition, it can only be executed using Simple Query Protocol:
+      // "In either physical replication or logical replication walsender mode,
+      //  only the simple query protocol can be used."
+      // source and more info:
+      // https://www.postgresql.org/docs/current/protocol-replication.html
+      final result = await conn.query(
+        'IDENTIFY_SYSTEM;',
+        useSimpleQueryProtocol: true,
+      );
+
+      expect(result.length, 1);
+      expect(result.columnDescriptions.length, 4);
+      expect(result.columnDescriptions[0].columnName, 'systemid');
+      expect(result.columnDescriptions[1].columnName, 'timeline');
+      expect(result.columnDescriptions[2].columnName, 'xlogpos');
+      expect(result.columnDescriptions[3].columnName, 'dbname');
+    });
+
+    // TODO: add test for ReplicationMode.physical which requires tuning some
+    //       settings in the pg_hba.conf
   });
 
   // These tests are disabled, as we'd need to setup ci/pg_hba.conf into the CI
