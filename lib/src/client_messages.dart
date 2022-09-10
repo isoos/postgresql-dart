@@ -263,7 +263,7 @@ class StandbyStatusUpdateMessage extends ClientMessage
   ///
   /// The only required field is [walWritePosition]. If either [walFlushPosition]
   /// or [walApplyPosition] are `null`, [walWritePosition] will be assigned to them.
-  /// If [clientTime], then the current time is used.
+  /// If [clientTime] is not given, then the current time is used.
   ///
   /// When sending this message, it must be wrapped within [CopyDataMessage]
   StandbyStatusUpdateMessage({
