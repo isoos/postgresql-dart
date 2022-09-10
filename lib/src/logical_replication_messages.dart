@@ -17,20 +17,19 @@ abstract class LogicalReplicationMessage
 
 class XLogDataLogicalMessage implements XLogDataMessage {
   @override
-  // this and others are `late` to comply with super class
-  late final Uint8List bytes;
+  final Uint8List bytes;
 
   @override
-  late final DateTime time;
+  final DateTime time;
 
   @override
-  late final LSN walEnd;
+  final LSN walEnd;
 
   @override
-  late final LSN walStart;
+  final LSN walStart;
 
   @override
-  final LSN walDataLength;
+  LSN get walDataLength => LSN(bytes.length);
 
   late final LogicalReplicationMessage message;
 
@@ -43,69 +42,53 @@ class XLogDataLogicalMessage implements XLogDataMessage {
     required this.time,
     required this.walEnd,
     required this.walStart,
-    required this.walDataLength,
   });
 
   @override
   String toString() => super.toString();
 }
 
-/// Tries to check if the [XLogDataMessage.bytes] is a [LogicalReplicationMessage]
-/// If so, it'll return [XLogDataLogicalMessage], otherwise it reutnrs [message]
-XLogDataMessage tryParseLogicalReplicationMessage(XLogDataMessage message) {
-  // take the message bytes to check if it's a replication message
-  final bytesList = message.bytes;
+/// Tries to check if the [bytesList] is a [LogicalReplicationMessage]. If so,
+/// [LogicalReplicationMessage] is returned, otherwise `null` is returned.
+LogicalReplicationMessage? tryParseLogicalReplicationMessage(
+    Uint8List bytesList) {
   // the first byte is the msg type
   final firstByte = bytesList.first;
   final msgType = LogicalReplicationMessageTypes.fromByte(firstByte);
   // remaining bytes are the data
-  LogicalReplicationMessage? logicalMessage;
   final bytes = bytesList.sublist(1);
   switch (msgType) {
     case LogicalReplicationMessageTypes.Begin:
-      logicalMessage = BeginMessage(bytes);
-      break;
+      return BeginMessage(bytes);
+
     case LogicalReplicationMessageTypes.Commit:
-      logicalMessage = CommitMessage(bytes);
-      break;
+      return CommitMessage(bytes);
+
     case LogicalReplicationMessageTypes.Origin:
-      logicalMessage = OriginMessage(bytes);
-      break;
+      return OriginMessage(bytes);
+
     case LogicalReplicationMessageTypes.Relation:
-      logicalMessage = RelationMessage(bytes);
-      break;
+      return RelationMessage(bytes);
+
     case LogicalReplicationMessageTypes.Type:
-      logicalMessage = TypeMessage(bytes);
-      break;
+      return TypeMessage(bytes);
+
     case LogicalReplicationMessageTypes.Insert:
-      logicalMessage = InsertMessage(bytes);
-      break;
+      return InsertMessage(bytes);
+
     case LogicalReplicationMessageTypes.Update:
-      logicalMessage = UpdateMessage(bytes);
-      break;
+      return UpdateMessage(bytes);
+
     case LogicalReplicationMessageTypes.Delete:
-      logicalMessage = DeleteMessage(bytes);
-      break;
+      return DeleteMessage(bytes);
+
     case LogicalReplicationMessageTypes.Truncate:
-      logicalMessage = TruncateMessage(bytes);
-      break;
+      return TruncateMessage(bytes);
+
     case LogicalReplicationMessageTypes.Unsupported:
     default:
       // note this needs the full set of bytes unlike other cases
-      logicalMessage = _tryParseJsonMessage(bytesList);
-      break;
-  }
-  if (logicalMessage != null) {
-    return XLogDataLogicalMessage(
-      message: logicalMessage,
-      bytes: message.bytes,
-      time: message.time,
-      walEnd: message.walEnd,
-      walStart: message.walStart,
-      walDataLength: message.walDataLength,
-    );
-  } else {
-    return message;
+      return _tryParseJsonMessage(bytesList);
   }
 }
 

@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-import 'logical_replication_messages.dart';
 import 'server_messages.dart';
 import 'shared_messages.dart';
 
@@ -97,7 +96,7 @@ class MessageFramer {
     if (code == ReplicationMessage.primaryKeepAliveIdentifier) {
       return PrimaryKeepAliveMessage(data);
     } else if (code == ReplicationMessage.xLogDataIdentifier) {
-      return tryParseLogicalReplicationMessage(XLogDataMessage(data));
+      return XLogDataMessage.parse(data);
     } else {
       return copyData;
     }
