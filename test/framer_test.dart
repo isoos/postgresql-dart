@@ -178,10 +178,10 @@ void main() {
 
   test('Identify CopyDoneMessage with length equals size length (min)', () {
     // min length
-    final length = [0, 0, 0, 4]; // min length (4 bytes) as 32-bit 
+    final length = [0, 0, 0, 4]; // min length (4 bytes) as 32-bit
     final bytes = Uint8List.fromList([
       SharedMessages.copyDoneIdentifier,
-      ...length, 
+      ...length,
     ]);
     framer.addBytes(bytes);
 

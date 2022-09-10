@@ -11,9 +11,9 @@ import 'package:postgres/src/server_messages.dart';
 ///
 /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
 abstract class ReplicationMessage {
-  static const int primaryKeepAliveIdentifier = 107; // k 
-  static const int xLogDataIdentifier = 119; // w 
-  static const int hotStandbyFeedbackIdentifier = 104; // h 
+  static const int primaryKeepAliveIdentifier = 107; // k
+  static const int xLogDataIdentifier = 119; // w
+  static const int hotStandbyFeedbackIdentifier = 104; // h
   static const int standbyStatusUpdateIdentifier = 114; // r
 }
 
@@ -23,8 +23,8 @@ abstract class ReplicationMessage {
 ///
 /// [Message Formats]: https://www.postgresql.org/docs/current/protocol-message-formats.html
 abstract class SharedMessages extends ClientMessage implements ServerMessage {
-  static const int copyDoneIdentifier = 99; // c 
-  static const int copyDataIdentifier = 100; // d 
+  static const int copyDoneIdentifier = 99; // c
+  static const int copyDataIdentifier = 100; // d
 }
 
 /// A COPY data message.

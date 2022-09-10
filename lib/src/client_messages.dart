@@ -94,7 +94,6 @@ class StartupMessage extends ClientMessage {
   }
 }
 
-
 class QueryMessage extends ClientMessage {
   final UTF8BackedString _queryString;
 

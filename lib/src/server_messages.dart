@@ -300,7 +300,7 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   /// Parses the XLogDataMessage
   ///
   /// If [XLogDataMessage.data] is a [LogicalReplicationMessage], then the method
-  /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll 
+  /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll
   /// return [XLogDataMessage] with raw data.
   static XLogDataMessage parse(Uint8List bytes) {
     final reader = ByteDataReader()..add(bytes);
