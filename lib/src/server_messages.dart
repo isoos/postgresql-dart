@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/messages.dart';
 
 import 'connection.dart';
 import 'query.dart';
@@ -278,10 +279,10 @@ class PrimaryKeepAliveMessage implements ReplicationMessage, ServerMessage {
 }
 
 class XLogDataMessage implements ReplicationMessage, ServerMessage {
-  late final LSN walStart;
-  late final LSN walEnd;
-  late final DateTime time;
-  late final Uint8List bytes;
+  final LSN walStart;
+  final LSN walEnd;
+  final DateTime time;
+  final Uint8List bytes;
   // this is used for standby msg
   LSN get walDataLength => LSN(bytes.length);
 
@@ -289,13 +290,44 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   /// For logical replication, see [XLogDataLogicalMessage]
   Object get data => bytes;
 
-  XLogDataMessage(Uint8List bytes) {
+  XLogDataMessage({
+    required this.walStart,
+    required this.walEnd,
+    required this.time,
+    required this.bytes,
+  });
+
+  /// Parses the XLogDataMessage
+  ///
+  /// If [XLogDataMessage.data] is a [LogicalReplicationMessage], then the method
+  /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll 
+  /// return [XLogDataMessage] with raw data.
+  static XLogDataMessage parse(Uint8List bytes) {
     final reader = ByteDataReader()..add(bytes);
-    walStart = LSN(reader.readUint64());
-    walEnd = LSN(reader.readUint64());
-    time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
-    this.bytes = reader.read(reader.remainingLength);
+    final walStart = LSN(reader.readUint64());
+    final walEnd = LSN(reader.readUint64());
+    final time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
+    final data = reader.read(reader.remainingLength);
+
+    final message = tryParseLogicalReplicationMessage(data);
+    if (message != null) {
+      return XLogDataLogicalMessage(
+        message: message,
+        bytes: bytes,
+        time: time,
+        walEnd: walEnd,
+        walStart: walStart,
+      );
+    } else {
+      return XLogDataMessage(
+        bytes: bytes,
+        time: time,
+        walEnd: walEnd,
+        walStart: walStart,
+      );
+    }
   }
+
   @override
   String toString() =>
       'XLogDataMessage(walStart: $walStart, walEnd: $walEnd, time: $time, data: $data)';
