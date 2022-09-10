@@ -60,7 +60,7 @@ The library supports connecting to PostgreSQL using the [Streaming Replication P
 
 [Streaming Replication Protocol]: https://www.postgresql.org/docs/13/protocol-replication.html
 [PostgreSQLConnection]: https://pub.dev/documentation/postgres/latest/postgres/PostgreSQLConnection/PostgreSQLConnection.html
-[postgresql-dart-replication-example]: (https://github.com/osaxma/postgresql-dart-replication-example) 
+[postgresql-dart-replication-example]: https://github.com/osaxma/postgresql-dart-replication-example
 ## Features and bugs
 
 This library is a fork of [StableKernel's postgres library](https://github.com/stablekernel/postgresql-dart).
