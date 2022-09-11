@@ -114,7 +114,7 @@ void main() {
 
       // `TEMPORARY` will remove the slot after the connection is closed/dropped
       await replicationConn.execute(
-        'CREATE_REPLICATION_SLOT $slotName TEMPORARY LOGICAL'
+        'CREATE_REPLICATION_SLOT $slotName TEMPORARY LOGICAL '
         '$logicalDecodingPlugin NOEXPORT_SNAPSHOT',
       );
 
