@@ -27,6 +27,13 @@ void usePostgresDocker() {
       pgUser: 'dart',
       pgPassword: 'dart',
       cleanup: true,
+      // These are necessary for logical replication tests and
+      // they won't have an effect on other tests.
+      configurations: [
+        'wal_level=logical',
+        'max_replication_slots=5',
+        'max_wal_senders=5',
+      ],
     );
   });
 
