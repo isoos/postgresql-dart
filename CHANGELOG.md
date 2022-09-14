@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.5.1
+- Use `substitutionValues` with `useSimpleQueryProtocol` [#62](https://github.com/isoos/postgresql-dart/pull/62) by [osaxma](https://github.com/osaxma)
+
 ## 2.5.0
 - Added Support for Streaming Replication Protocol which included the following changes:
   - Replication Mode Messages Handling. [#58](https://github.com/isoos/postgresql-dart/pull/58) by [osaxma](https://github.com/osaxma)

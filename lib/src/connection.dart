@@ -496,6 +496,7 @@ abstract class _PostgreSQLExecutionContextMixin
         fmtString,
         timeoutInSeconds: timeoutInSeconds,
         onlyReturnAffectedRows: false,
+        substitutionValues: substitutionValues,
       );
     }
 
