@@ -5,10 +5,13 @@ import 'package:postgres/postgres.dart';
 import 'package:postgres/src/query_cache.dart';
 import 'package:test/test.dart';
 
+import 'docker.dart';
+
 String sid(String id, PostgreSQLDataType dt) =>
     PostgreSQLFormat.id(id, type: dt);
 
 void main() {
+  usePostgresDocker();
   group('Retaining type information', () {
     late PostgreSQLConnection connection;
 
