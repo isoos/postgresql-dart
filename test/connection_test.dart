@@ -5,15 +5,13 @@ import 'dart:io';
 import 'dart:mirrors';
 
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/replication.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
 
 void main() {
+  usePostgresDocker();
   group('connection state', () {
-    usePostgresDocker();
-
     test('pre-open failure', () async {
       final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'dart', password: 'dart');
@@ -103,8 +101,8 @@ void main() {
         'localhost',
         5432,
         'dart_test',
-        username: 'dart',
-        password: 'dart',
+        username: 'replication',
+        password: 'replication',
         replicationMode: ReplicationMode.logical,
       );
 
@@ -118,8 +116,8 @@ void main() {
         'localhost',
         5432,
         'dart_test',
-        username: 'dart',
-        password: 'dart',
+        username: 'replication',
+        password: 'replication',
         replicationMode: ReplicationMode.logical,
       );
 

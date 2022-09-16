@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:docker_process/containers/postgres.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 const _kContainerName = 'postgres-dart-test';
@@ -19,22 +20,49 @@ void usePostgresDocker() {
       return;
     }
 
-    await startPostgres(
+    final configPath = p.join(Directory.current.path, 'dev', 'pg_configs');
+
+    final dp = await startPostgres(
       name: _kContainerName,
       version: 'latest',
       pgPort: 5432,
-      pgDatabase: 'dart_test',
-      pgUser: 'dart',
-      pgPassword: 'dart',
+      pgDatabase: 'postgres',
+      pgUser: 'postgres',
+      pgPassword: 'postgres',
       cleanup: true,
-      // These are necessary for logical replication tests and
-      // they won't have an effect on other tests.
       configurations: [
+        // These are necessary for logical replication tests and
+        // they won't have an effect on other tests.
         'wal_level=logical',
         'max_replication_slots=5',
         'max_wal_senders=5',
       ],
+      pgHbaConfPath: p.join(configPath, 'pg_hba.conf'),
     );
+
+    // Setup the database to support all kind of tests
+    // see _setupDatabaseStatements definition for details
+    for (var stmt in _setupDatabaseStatements) {
+      final args = [
+        'psql',
+        '-c',
+        stmt,
+        '-U',
+        'postgres',
+      ];
+      final res = await dp.exec(args);
+      if (res.exitCode != 0) {
+        final message =
+            'Failed to setup PostgreSQL database due to the following error:\n'
+            '${res.stderr}';
+        throw ProcessException(
+          'docker exec $_kContainerName',
+          args,
+          message,
+          res.exitCode,
+        );
+      }
+    }
   });
 
   tearDownAll(() async {
@@ -56,3 +84,21 @@ Future<bool> _isPostgresContainerRunning() async {
       .map((s) => s.trim())
       .contains(_kContainerName);
 }
+
+
+// This setup supports old and new test 
+// This is setup is the same as the one from the old travis ci except for the
+// replication user which is a new addition. 
+final _setupDatabaseStatements = <String>[
+  // create testing database
+  'create database dart_test;',
+  // create dart user
+  'create user dart with createdb;',
+  "alter user dart with password 'dart';",
+  'grant all on database dart_test to dart;',
+  // create darttrust user
+  'create user darttrust with createdb;',
+  'grant all on database dart_test to darttrust;',
+  // create replication user
+  "create role replication with replication password 'replication' login;",
+];

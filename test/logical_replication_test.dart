@@ -43,8 +43,8 @@ void main() {
       _host,
       _port,
       _database,
-      username: _username,
-      password: _password,
+      username: 'replication',
+      password: 'replication',
       replicationMode: replicationMode,
     );
 
@@ -71,18 +71,18 @@ void main() {
       // note: primary keys are necessary for replication to work and they are
       //       used as an identity replica (to allow update & delete) on tables
       //       that are part of a publication.
-      await replicationConn.execute('create table $changesTable '
+      await changesConn.execute('create table $changesTable '
           '(id int GENERATED ALWAYS AS IDENTITY, value text, '
           'PRIMARY KEY (id));');
-      await replicationConn.execute('create table $truncateTable '
+      await changesConn.execute('create table $truncateTable '
           '(id int GENERATED ALWAYS AS IDENTITY, value text, '
           'PRIMARY KEY (id));');
 
       // create publication
       final publicationName = 'test_publication';
-      await replicationConn
+      await changesConn
           .execute('DROP PUBLICATION IF EXISTS $publicationName;');
-      await replicationConn.execute(
+      await changesConn.execute(
         'CREATE PUBLICATION $publicationName FOR TABLE $changesTable, $truncateTable;',
       );
 
