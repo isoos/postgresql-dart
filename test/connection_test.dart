@@ -185,6 +185,20 @@ void main() {
       expect(await conn.execute('select 1'), equals(1));
     });
 
+    test('Connect with no auth throws for non trusted users', () async {
+      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+          username: 'dart');
+      try {
+        await conn.open();
+      } catch (e) {
+        expect(e, isA<PostgreSQLException>());
+        expect(
+          (e as PostgreSQLException).message,
+          contains('Password is required'),
+        );
+      }
+    });
+
     test('SSL Connect with no auth required', () async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'darttrust', useSSL: true);

@@ -108,6 +108,14 @@ class _PostgreSQLConnectionStateAuthenticating
         case AuthenticationMessage.KindOK:
           return _PostgreSQLConnectionStateAuthenticated(completer);
         case AuthenticationMessage.KindMD5Password:
+          // this means the server is requesting an md5 challenge
+          // so the password must not be null
+          if (connection!.password == null) {
+            completer.completeError(PostgreSQLException(
+              'Password is required for "${connection!.username}" user to establish a connection',
+            ));
+            break;
+          }
           _authenticator =
               createAuthenticator(connection!, AuthenticationScheme.MD5);
           continue authMsg;
@@ -122,14 +130,29 @@ class _PostgreSQLConnectionStateAuthenticating
             break;
           }
         case AuthenticationMessage.KindSASL:
+          // this means the server is requesting a scram-sha-256 challenge
+          // so the password must not be null
+          if (connection!.password == null) {
+            completer.completeError(PostgreSQLException(
+              'Password is required for "${connection!.username}" user to establish a connection',
+            ));
+            break;
+          }
           _authenticator = createAuthenticator(
               connection!, AuthenticationScheme.SCRAM_SHA_256);
           continue authMsg;
         authMsg:
         case AuthenticationMessage.KindSASLContinue:
         case AuthenticationMessage.KindSASLFinal:
-          _authenticator.onMessage(message);
-          return this;
+          try {
+            _authenticator.onMessage(message);
+            return this;
+          } catch (e, st) {
+            // an exception occurred in the authenticator that isn't a PostgreSQL
+            // Exception (e.g. `Null check operator used on a null value`)
+            completer.completeError(e, st);
+            break;
+          }
       }
 
       completer.completeError(PostgreSQLException(
