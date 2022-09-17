@@ -146,7 +146,6 @@ void main() {
     //       settings in the pg_hba.conf
   });
 
-
   group('Connection lifecycle', () {
     late PostgreSQLConnection conn;
 

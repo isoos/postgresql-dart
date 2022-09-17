@@ -8,7 +8,6 @@ import 'package:test/scaffolding.dart';
 import 'docker.dart';
 
 void main() {
-
   usePostgresDocker();
 
   // NOTES:
@@ -66,8 +65,7 @@ void main() {
 
       // create publication
       final publicationName = 'test_publication';
-      await changesConn
-          .execute('DROP PUBLICATION IF EXISTS $publicationName;');
+      await changesConn.execute('DROP PUBLICATION IF EXISTS $publicationName;');
       await changesConn.execute(
         'CREATE PUBLICATION $publicationName FOR TABLE $changesTable, $truncateTable;',
       );

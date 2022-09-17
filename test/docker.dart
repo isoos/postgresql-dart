@@ -7,9 +7,7 @@ import 'package:test/test.dart';
 const _kContainerName = 'postgres-dart-test';
 
 void usePostgresDocker() {
-
   setUpAll(() async {
-
     final isRunning = await _isPostgresContainerRunning();
     if (isRunning) {
       return;
@@ -78,10 +76,9 @@ Future<bool> _isPostgresContainerRunning() async {
       .contains(_kContainerName);
 }
 
-
-// This setup supports old and new test 
+// This setup supports old and new test
 // This is setup is the same as the one from the old travis ci except for the
-// replication user which is a new addition. 
+// replication user which is a new addition.
 final _setupDatabaseStatements = <String>[
   // create testing database
   'create database dart_test;',

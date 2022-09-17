@@ -7,7 +7,6 @@ import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {
-
   final user = 'abc@def';
   final password = 'pöstgrēs_üšęr_pæsswœêrd';
   final db = 'postgres';
