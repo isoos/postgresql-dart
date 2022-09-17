@@ -147,10 +147,10 @@ class _PostgreSQLConnectionStateAuthenticating
           try {
             _authenticator.onMessage(message);
             return this;
-          } catch (e) {
+          } catch (e, st) {
             // an exception occurred in the authenticator that isn't a PostgreSQL
             // Exception (e.g. `Null check operator used on a null value`)
-            completer.completeError(Exception(e));
+            completer.completeError(e, st);
             break;
           }
       }
