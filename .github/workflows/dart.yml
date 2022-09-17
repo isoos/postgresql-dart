@@ -15,22 +15,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_DB: dart_test
-          POSTGRES_PASSWORD: dart
-          POSTGRES_USER: dart
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v2
 
@@ -51,8 +35,15 @@ jobs:
       - name: Analyze project source
         run: dart analyze
 
-      # Your project will need to have tests in test/ and a dependency on
-      # package:test for this step to succeed. Note that Flutter projects will
-      # want to change this to 'flutter test'.
+      # pre-pull the image so `usePostgresDocker` does not delay which may causes 
+      # tests to timeout
+      - name: pull latest postgres image
+        run: docker pull postgres:latest
+
+      # Run all tests with a concurency of "1" to allow each test to run independently. 
+      #   This is mainly to prevent `tearDownAll` in `usePostgresDocker` from stoping
+      #   the container while another test is using the container. In other words, each
+      #   test file will call `usePostgresDocker` for container setup and teardown and  
+      #   run its test in between. Using concurrency of "1" will ensure this behavior.   
       - name: Run tests
-        run: dart test
+        run: dart test -j 1
