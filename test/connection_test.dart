@@ -97,19 +97,12 @@ void main() {
     });
 
     test('Connect with logical ReplicationMode.logical', () async {
-      // TODO: remove this once `replication` user created on CI
-      late final String username, password;
-      if (Platform.environment.containsKey('GITHUB_ACTION')) {
-        username = password = 'dart';
-      } else {
-        username = password = 'replication';
-      }
       final conn = PostgreSQLConnection(
         'localhost',
         5432,
         'dart_test',
-        username: username,
-        password: password,
+        username: 'replication',
+        password: 'replication',
         replicationMode: ReplicationMode.logical,
       );
 
@@ -119,19 +112,12 @@ void main() {
     });
 
     test('IDENTIFY_SYSTEM returns system information', () async {
-      // TODO: remove this once `replication` user created on CI
-      late final String username, password;
-      if (Platform.environment.containsKey('GITHUB_ACTION')) {
-        username = password = 'dart';
-      } else {
-        username = password = 'replication';
-      }
       final conn = PostgreSQLConnection(
         'localhost',
         5432,
         'dart_test',
-        username: username,
-        password: password,
+        username: 'replication',
+        password: 'replication',
         replicationMode: ReplicationMode.logical,
       );
 
@@ -159,16 +145,6 @@ void main() {
     // TODO: add test for ReplicationMode.physical which requires tuning some
     //       settings in the pg_hba.conf
   });
-
-  // These tests are disabled, as we'd need to setup ci/pg_hba.conf into the CI
-  // postgres instance first.
-  // TODO: re-enable these tests after pg_hba.conf is used
-  if (Platform.environment.containsKey('GITHUB_ACTION')) {
-    test('NO CONNECTION TEST IS RUNNING.', () {
-      // no-op
-    });
-    return;
-  }
 
   group('Connection lifecycle', () {
     late PostgreSQLConnection conn;

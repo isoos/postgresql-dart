@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart';
@@ -9,20 +8,6 @@ import 'package:test/scaffolding.dart';
 import 'docker.dart';
 
 void main() {
-  // Running these tests on the CI will not work as there is no way to pass
-  // image arguments to the `services.postgres` container of github actions.
-  //
-  // TODO: Find a solution to spin up a postgres container where one can enable
-  //       the replication configuration before spinning up the container either
-  //       by passing image arguments or restarting the container after altering
-  //       the database configurations (required for replication configs).
-  if (Platform.environment.containsKey('GITHUB_ACTION')) {
-    test('NO LOGICAL REPLICATION TESTS ARE RUNNING.', () {
-      // no-op
-    });
-    return;
-  }
-
   usePostgresDocker();
 
   // NOTES:
@@ -80,8 +65,7 @@ void main() {
 
       // create publication
       final publicationName = 'test_publication';
-      await changesConn
-          .execute('DROP PUBLICATION IF EXISTS $publicationName;');
+      await changesConn.execute('DROP PUBLICATION IF EXISTS $publicationName;');
       await changesConn.execute(
         'CREATE PUBLICATION $publicationName FOR TABLE $changesTable, $truncateTable;',
       );
