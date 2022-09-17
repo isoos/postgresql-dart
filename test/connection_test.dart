@@ -97,12 +97,19 @@ void main() {
     });
 
     test('Connect with logical ReplicationMode.logical', () async {
+      // TODO: remove this once `replication` user created on CI
+      late final String username, password;
+      if (Platform.environment.containsKey('GITHUB_ACTION')) {
+        username = password = 'dart';
+      } else {
+        username = password = 'replication';
+      }
       final conn = PostgreSQLConnection(
         'localhost',
         5432,
         'dart_test',
-        username: 'replication',
-        password: 'replication',
+        username: username,
+        password: password,
         replicationMode: ReplicationMode.logical,
       );
 
@@ -112,12 +119,19 @@ void main() {
     });
 
     test('IDENTIFY_SYSTEM returns system information', () async {
+      // TODO: remove this once `replication` user created on CI
+      late final String username, password;
+      if (Platform.environment.containsKey('GITHUB_ACTION')) {
+        username = password = 'dart';
+      } else {
+        username = password = 'replication';
+      }
       final conn = PostgreSQLConnection(
         'localhost',
         5432,
         'dart_test',
-        username: 'replication',
-        password: 'replication',
+        username: username,
+        password: password,
         replicationMode: ReplicationMode.logical,
       );
 
