@@ -4,7 +4,10 @@ import 'dart:async';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
+import 'docker.dart';
+
 void main() {
+  usePostgresDocker();
   group('Transaction behavior', () {
     late PostgreSQLConnection conn;
 

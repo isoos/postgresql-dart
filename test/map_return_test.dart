@@ -3,9 +3,11 @@ import 'dart:mirrors';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
+import 'docker.dart';
+
 void main() {
   late PostgreSQLConnection connection;
-
+  usePostgresDocker();
   setUp(() async {
     connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
         username: 'dart', password: 'dart');

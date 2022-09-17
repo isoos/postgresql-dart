@@ -4,7 +4,10 @@ import 'package:postgres/postgres.dart';
 import 'package:postgres/src/binary_codec.dart';
 import 'package:test/test.dart';
 
+import 'docker.dart';
+
 void main() {
+  usePostgresDocker();
   late PostgreSQLConnection connection;
   setUp(() async {
     connection = PostgreSQLConnection('localhost', 5432, 'dart_test',

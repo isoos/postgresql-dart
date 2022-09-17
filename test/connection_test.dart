@@ -5,15 +5,13 @@ import 'dart:io';
 import 'dart:mirrors';
 
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/replication.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
 
 void main() {
+  usePostgresDocker();
   group('connection state', () {
-    usePostgresDocker();
-
     test('pre-open failure', () async {
       final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
           username: 'dart', password: 'dart');
@@ -99,12 +97,19 @@ void main() {
     });
 
     test('Connect with logical ReplicationMode.logical', () async {
+      // TODO: remove this once `replication` user created on CI
+      late final String username, password;
+      if (Platform.environment.containsKey('GITHUB_ACTION')) {
+        username = password = 'dart';
+      } else {
+        username = password = 'replication';
+      }
       final conn = PostgreSQLConnection(
         'localhost',
         5432,
         'dart_test',
-        username: 'dart',
-        password: 'dart',
+        username: username,
+        password: password,
         replicationMode: ReplicationMode.logical,
       );
 
@@ -114,12 +119,19 @@ void main() {
     });
 
     test('IDENTIFY_SYSTEM returns system information', () async {
+      // TODO: remove this once `replication` user created on CI
+      late final String username, password;
+      if (Platform.environment.containsKey('GITHUB_ACTION')) {
+        username = password = 'dart';
+      } else {
+        username = password = 'replication';
+      }
       final conn = PostgreSQLConnection(
         'localhost',
         5432,
         'dart_test',
-        username: 'dart',
-        password: 'dart',
+        username: username,
+        password: password,
         replicationMode: ReplicationMode.logical,
       );
 
@@ -372,7 +384,7 @@ void main() {
 
   group('Unintended user-error situations', () {
     late PostgreSQLConnection conn;
-    late Future openFuture;
+    Future? openFuture;
 
     tearDown(() async {
       await openFuture;
@@ -495,8 +507,10 @@ void main() {
       await conn.execute('CREATE TEMPORARY TABLE t (i int unique)');
 
       await conn.execute('INSERT INTO t (i) VALUES (1)');
-      conn.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
+
+      conn.execute('INSERT INTO t (i) VALUES (1)').catchError((e) {
         // ignore
+        return 0;
       });
 
       final futures = [
@@ -542,6 +556,7 @@ void main() {
       conn.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
         orderEnsurer.add(1);
         // ignore
+        return 0;
       });
 
       orderEnsurer.add(2);
@@ -565,9 +580,9 @@ void main() {
       await conn.open();
 
       // Make some async queries that'll exit the event loop, but then fail on a query that'll die early
-      conn.execute('askdl').catchError((err, st) {});
-      conn.execute('abdef').catchError((err, st) {});
-      conn.execute('select @a').catchError((err, st) {});
+      conn.execute('askdl').catchError((err, st) => 0);
+      conn.execute('abdef').catchError((err, st) => 0);
+      conn.execute('select @a').catchError((err, st) => 0);
 
       final futures = [
         conn.query('select 1', allowReuse: false),

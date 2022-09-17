@@ -8,9 +8,12 @@ import 'package:postgres/src/text_codec.dart';
 import 'package:postgres/src/utf8_backed_string.dart';
 import 'package:test/test.dart';
 
+import 'docker.dart';
+
 late PostgreSQLConnection conn;
 
 void main() {
+  usePostgresDocker();
   group('Binary encoders', () {
     setUp(() async {
       conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
