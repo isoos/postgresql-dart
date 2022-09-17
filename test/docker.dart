@@ -36,6 +36,11 @@ void usePostgresDocker() {
         'wal_level=logical',
         'max_replication_slots=5',
         'max_wal_senders=5',
+        // SSL settings
+        'ssl=on',
+        // The debian image includes a self-signed SSL cert that can be used:
+        'ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem',
+        'ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key',
       ],
       pgHbaConfPath: p.join(configPath, 'pg_hba.conf'),
     );
