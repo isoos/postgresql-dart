@@ -20,7 +20,7 @@ void usePostgresDocker() {
       return;
     }
 
-    final configPath = p.join(Directory.current.path, 'dev', 'pg_configs');
+    final configPath = p.join(Directory.current.path, 'test', 'pg_configs');
 
     final dp = await startPostgres(
       name: _kContainerName,
@@ -31,11 +31,6 @@ void usePostgresDocker() {
       pgPassword: 'postgres',
       cleanup: true,
       configurations: [
-        // These are necessary for logical replication tests and
-        // they won't have an effect on other tests.
-        'wal_level=logical',
-        'max_replication_slots=5',
-        'max_wal_senders=5',
         // SSL settings
         'ssl=on',
         // The debian image includes a self-signed SSL cert that can be used:
@@ -43,6 +38,7 @@ void usePostgresDocker() {
         'ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key',
       ],
       pgHbaConfPath: p.join(configPath, 'pg_hba.conf'),
+      postgresqlConfPath: p.join(configPath, 'postgresql.conf'),
     );
 
     // Setup the database to support all kind of tests
