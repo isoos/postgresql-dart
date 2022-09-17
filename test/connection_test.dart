@@ -372,7 +372,7 @@ void main() {
 
   group('Unintended user-error situations', () {
     late PostgreSQLConnection conn;
-    late Future openFuture;
+    Future? openFuture;
 
     tearDown(() async {
       await openFuture;
@@ -495,8 +495,10 @@ void main() {
       await conn.execute('CREATE TEMPORARY TABLE t (i int unique)');
 
       await conn.execute('INSERT INTO t (i) VALUES (1)');
-      conn.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
+
+      conn.execute('INSERT INTO t (i) VALUES (1)').catchError((e) {
         // ignore
+        return 0;
       });
 
       final futures = [
@@ -542,6 +544,7 @@ void main() {
       conn.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
         orderEnsurer.add(1);
         // ignore
+        return 0;
       });
 
       orderEnsurer.add(2);
@@ -565,9 +568,9 @@ void main() {
       await conn.open();
 
       // Make some async queries that'll exit the event loop, but then fail on a query that'll die early
-      conn.execute('askdl').catchError((err, st) {});
-      conn.execute('abdef').catchError((err, st) {});
-      conn.execute('select @a').catchError((err, st) {});
+      conn.execute('askdl').catchError((err, st) => 0);
+      conn.execute('abdef').catchError((err, st) => 0);
+      conn.execute('select @a').catchError((err, st) => 0);
 
       final futures = [
         conn.query('select 1', allowReuse: false),
