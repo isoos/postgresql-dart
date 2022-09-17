@@ -7,14 +7,7 @@ import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
 void main() {
-  /// This cannot be run on CI as each test requires different pg_hba.conf
-  /// to be mounted to the container. 
-  if (Platform.environment.containsKey('GITHUB_ACTION')) {
-    test('NO NON-ASCII CONNECTION STRINGS TESTS ARE RUNNING.', () {
-      // no-op
-    });
-    return;
-  }
+
   final user = 'abc@def';
   final password = 'pöstgrēs_üšęr_pæsswœêrd';
   final db = 'postgres';
