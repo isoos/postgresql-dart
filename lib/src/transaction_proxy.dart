@@ -80,9 +80,9 @@ class _TransactionProxy extends Object
     _hasRolledBack = true;
     // We'll wrap each query in an error handler here to make sure the query cancellation error
     // is only emitted from the transaction itself.
-    _queue.forEach((q) {
-      q.future.catchError((_) {});
-    });
+    for (final q in _queue) {
+      unawaited(q.future.catchError((_) {}));
+    }
 
     final err = PostgreSQLException('Query failed prior to execution. '
         "This query's transaction encountered an error earlier in the transaction "

@@ -248,10 +248,11 @@ void main() {
 
       final rs = await conn.query('select 1');
       final errors = [];
-      final catcher = (e) {
+      PostgreSQLResult catcher(e) {
         errors.add(e);
         return rs;
-      };
+      }
+
       final futures = [
         conn.query('select 1', allowReuse: false).catchError(catcher),
         conn.query('select 2', allowReuse: false).catchError(catcher),
@@ -276,10 +277,11 @@ void main() {
       final rs = await conn.query('select 1');
 
       final errors = [];
-      final catcher = (e) {
+      PostgreSQLResult catcher(e) {
         errors.add(e);
         return rs;
-      };
+      }
+
       final futures = [
         conn.query('select 1', allowReuse: false).catchError(catcher),
         conn.query('select 2', allowReuse: false).catchError(catcher),

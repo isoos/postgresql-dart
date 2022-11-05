@@ -1,12 +1,19 @@
 # Changelog
 
+## 2.6.0
+
+- Updated to `package:lints`.
+
 ## 2.5.2
+
 - Connecting without a password for non-trusted users throws an exception instead of timing out [#68](https://github.com/isoos/postgresql-dart/pull/68) by [osaxma](https://github.com/osaxma).
 
 ## 2.5.1
+
 - Use `substitutionValues` with `useSimpleQueryProtocol` [#62](https://github.com/isoos/postgresql-dart/pull/62) by [osaxma](https://github.com/osaxma)
 
 ## 2.5.0
+
 - Added Support for Streaming Replication Protocol which included the following changes:
   - Replication Mode Messages Handling. [#58](https://github.com/isoos/postgresql-dart/pull/58) by [osaxma](https://github.com/osaxma)
   - Add new message types for replication. [#57](https://github.com/isoos/postgresql-dart/pull/57) by [osaxma](https://github.com/osaxma)

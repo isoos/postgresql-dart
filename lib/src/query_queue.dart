@@ -30,9 +30,9 @@ class QueryQueue extends ListBase<Query<dynamic>>
     // get the error and not the close message, since completeError is
     // synchronous.
     scheduleMicrotask(() {
-      existing.forEach((q) {
+      for (final q in existing) {
         q.completeError(error!, stackTrace);
-      });
+      }
     });
   }
 

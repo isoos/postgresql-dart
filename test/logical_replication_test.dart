@@ -15,19 +15,19 @@ void main() {
   //    - One for listening to streaming replications (this connection will be locked).
   //    - The other one to modify the database (e.g. insert, delete, update, truncate)
   group('test logical replication with pgoutput for decoding', () {
-    final _host = 'localhost';
-    final _port = 5432;
-    final _username = 'dart';
-    final _password = 'dart';
-    final _database = 'dart_test';
+    final host = 'localhost';
+    final port = 5432;
+    final username = 'dart';
+    final password = 'dart';
+    final database = 'dart_test';
 
     final logicalDecodingPlugin = 'pgoutput';
     final replicationMode = ReplicationMode.logical;
     // use this for listening to messages
     final replicationConn = PostgreSQLConnection(
-      _host,
-      _port,
-      _database,
+      host,
+      port,
+      database,
       username: 'replication',
       password: 'replication',
       replicationMode: replicationMode,
@@ -35,11 +35,11 @@ void main() {
 
     // use this for sending queries
     final changesConn = PostgreSQLConnection(
-      _host,
-      _port,
-      _database,
-      username: _username,
-      password: _password,
+      host,
+      port,
+      database,
+      username: username,
+      password: password,
     );
 
     // this table is for insert, update, and delete tests.

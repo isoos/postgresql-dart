@@ -82,12 +82,12 @@ void main() {
       final channel1 = 'virtual1';
       final channel2 = 'virtual2';
 
-      final notifier = () async {
+      Future<void> notifier() async {
         for (var i = 0; i < 5; i++) {
           await connection.execute('NOTIFY $channel1;'
               'NOTIFY $channel2;');
         }
-      };
+      }
 
       await connection.execute('LISTEN $channel1;');
       await notifier();

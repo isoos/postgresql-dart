@@ -255,10 +255,11 @@ void main() {
       final rs = await conn.query('select 1');
       final errs = [];
       await conn.transaction((ctx) async {
-        final errsAdd = (e) {
+        PostgreSQLResult errsAdd(e) {
           errs.add(e);
           return rs;
-        };
+        }
+
         ctx.query('INSERT INTO t (id) VALUES (1)').catchError(errsAdd);
         ctx.query('INSERT INTO t (id) VALUES (2)').catchError(errsAdd);
         ctx.cancelTransaction();

@@ -35,7 +35,9 @@ abstract class ClientMessage {
 
   static Uint8List aggregateBytes(List<ClientMessage> messages) {
     final buffer = ByteDataWriter();
-    messages.forEach((cm) => cm.applyToBuffer(buffer));
+    for (final cm in messages) {
+      cm.applyToBuffer(buffer);
+    }
     return buffer.toBytes();
   }
 }
@@ -200,22 +202,22 @@ class BindMessage extends ClientMessage {
     } else {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.writeUint16(_parameters.length);
-      _parameters.forEach((p) {
+      for (final p in _parameters) {
         buffer.writeUint16(
             p.isBinary ? ClientMessage.FormatBinary : ClientMessage.FormatText);
-      });
+      }
     }
 
     // This must be the number of $n's in the query.
     buffer.writeUint16(_parameters.length);
-    _parameters.forEach((p) {
+    for (final p in _parameters) {
       if (p.bytes == null) {
         buffer.writeInt32(-1);
       } else {
         buffer.writeInt32(p.length);
         buffer.write(p.bytes!);
       }
-    });
+    }
 
     // Result columns - we always want binary for all of them, so specify 1:1.
     buffer.writeUint16(1);

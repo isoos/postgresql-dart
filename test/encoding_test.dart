@@ -507,8 +507,8 @@ void main() {
           utf8.encode(encoder.convert("''")), equals([39, 39, 39, 39, 39, 39]));
 
       //                                                       '   '   '   '   '   '
-      expect(utf8.encode(encoder.convert("\''")),
-          equals([39, 39, 39, 39, 39, 39]));
+      expect(
+          utf8.encode(encoder.convert("''")), equals([39, 39, 39, 39, 39, 39]));
 
       //                                                       sp   E   '   \   \   '   '   '   '   '
       expect(utf8.encode(encoder.convert("\\''")),
@@ -560,7 +560,7 @@ void main() {
       };
 
       pairs.forEach((k, v) {
-        expect(encoder.convert(v, escapeStrings: false), '$k');
+        expect(encoder.convert(v, escapeStrings: false), k);
       });
     });
 

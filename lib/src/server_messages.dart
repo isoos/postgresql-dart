@@ -6,7 +6,6 @@ import 'package:postgres/messages.dart';
 
 import 'connection.dart';
 import 'query.dart';
-import 'shared_messages.dart';
 import 'time_converters.dart';
 import 'types.dart';
 

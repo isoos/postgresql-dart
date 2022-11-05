@@ -43,9 +43,6 @@ class XLogDataLogicalMessage implements XLogDataMessage {
     required this.walEnd,
     required this.walStart,
   });
-
-  @override
-  String toString() => super.toString();
 }
 
 /// Tries to check if the [bytesList] is a [LogicalReplicationMessage]. If so,

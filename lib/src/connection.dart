@@ -443,12 +443,12 @@ class _OidCache {
     );
 
     final iterator = oids.iterator;
-    orderedTableNames.forEach((tableName) {
+    for (final tableName in orderedTableNames) {
       iterator.moveNext();
       if (tableName.first != null) {
         _tableOIDNameMap[iterator.current] = tableName.first as String;
       }
-    });
+    }
   }
 }
 
@@ -683,9 +683,9 @@ class _PostgreSQLResultRow extends UnmodifiableListView
   @override
   Map<String, Map<String, dynamic>> toTableColumnMap() {
     final rowMap = <String, Map<String, dynamic>>{};
-    _metaData.tableNames.forEach((tableName) {
+    for (final tableName in _metaData.tableNames) {
       rowMap[tableName ?? ''] = <String, dynamic>{};
-    });
+    }
     for (var i = 0; i < _metaData.columnDescriptions.length; i++) {
       final col = _metaData.columnDescriptions[i];
       rowMap[col.tableName]![col.columnName] = this[i];

@@ -75,14 +75,14 @@ class PostgresTextEncoder {
     if (quoteCount == 0 && backslashCount == 0) {
       buf.write(text);
     } else {
-      text.codeUnits.forEach((i) {
+      for (final i in text.codeUnits) {
         if (i == quoteCodeUnit || i == backslashCodeUnit) {
           buf.writeCharCode(i);
           buf.writeCharCode(i);
         } else {
           buf.writeCharCode(i);
         }
-      });
+      }
     }
 
     buf.write("'");
