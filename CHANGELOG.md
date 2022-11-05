@@ -3,6 +3,7 @@
 ## 2.6.0
 
 - Updated to `package:lints`.
+- Adding lowerCase values to `AuthenticationScheme`. 
 
 ## 2.5.2
 

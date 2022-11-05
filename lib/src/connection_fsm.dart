@@ -117,12 +117,12 @@ class _PostgreSQLConnectionStateAuthenticating
             break;
           }
           _authenticator =
-              createAuthenticator(connection!, AuthenticationScheme.MD5);
+              createAuthenticator(connection!, AuthenticationScheme.md5);
           continue authMsg;
         case AuthenticationMessage.KindClearTextPassword:
           if (connection!.allowClearTextPassword) {
             _authenticator =
-                createAuthenticator(connection!, AuthenticationScheme.CLEAR);
+                createAuthenticator(connection!, AuthenticationScheme.clear);
             continue authMsg;
           } else {
             completer.completeError(PostgreSQLException(
@@ -139,7 +139,7 @@ class _PostgreSQLConnectionStateAuthenticating
             break;
           }
           _authenticator = createAuthenticator(
-              connection!, AuthenticationScheme.SCRAM_SHA_256);
+              connection!, AuthenticationScheme.scramSha256);
           continue authMsg;
         authMsg:
         case AuthenticationMessage.KindSASLContinue:
