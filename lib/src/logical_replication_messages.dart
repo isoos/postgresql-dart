@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-import 'binary_codec.dart';
 import 'server_messages.dart';
 import 'shared_messages.dart';
 import 'time_converters.dart';
@@ -354,7 +353,7 @@ class TupleDataColumn {
   final int length;
 
   String get dataTypeName =>
-      PostgresBinaryDecoder.typeMap[dataType]?.name ?? dataType.toString();
+      PostgreSQLDataType.byTypeOid[dataType]?.name ?? dataType.toString();
 
   /// Data is the value of the column, in text format.
   /// n is the above length.

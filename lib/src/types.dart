@@ -1,3 +1,8 @@
+import 'dart:core';
+import 'dart:core' as core;
+
+import 'models.dart';
+
 /*
   Adding a new type:
 
@@ -10,98 +15,108 @@
  */
 
 /// Supported data types.
-enum PostgreSQLDataType {
+enum PostgreSQLDataType<Dart extends Object> {
   /// Must be a [String].
-  text,
+  text<String>(25),
 
   /// Must be an [int] (4-byte integer)
-  integer,
+  integer<int>(23),
 
   /// Must be an [int] (2-byte integer)
-  smallInteger,
+  smallInteger<int>(21),
 
   /// Must be an [int] (8-byte integer)
-  bigInteger,
+  bigInteger<int>(20),
 
   /// Must be an [int] (autoincrementing 4-byte integer)
-  serial,
+  serial(null),
 
   /// Must be an [int] (autoincrementing 8-byte integer)
-  bigSerial,
+  bigSerial(null),
 
   /// Must be a [double] (32-bit floating point value)
-  real,
+  real<core.double>(700),
 
   /// Must be a [double] (64-bit floating point value)
-  double,
+  double<core.double>(701),
 
   /// Must be a [bool]
-  boolean,
+  boolean<bool>(16),
 
   /// Must be a [DateTime] (microsecond date and time precision)
-  timestampWithoutTimezone,
+  timestampWithoutTimezone<DateTime>(1114),
 
   /// Must be a [DateTime] (microsecond date and time precision)
-  timestampWithTimezone,
+  timestampWithTimezone<DateTime>(1184),
 
   /// Must be a [Duration]
-  interval,
+  interval<Duration>(1186),
 
   /// Must be a [List<int>]
-  numeric,
+  numeric<List<int>>(1700),
 
   /// Must be a [DateTime] (contains year, month and day only)
-  date,
+  date<DateTime>(1082),
 
   /// Must be encodable via [json.encode].
   ///
   /// Values will be encoded via [json.encode] before being sent to the database.
-  jsonb,
+  jsonb(3802),
 
-  /// Must be encodable via [json.encode].
+  /// Must be encodable via [core.json.encode].
   ///
-  /// Values will be encoded via [json.encode] before being sent to the database.
-  json,
+  /// Values will be encoded via [core.json.encode] before being sent to the database.
+  json(114),
 
   /// Must be a [List] of [int].
   ///
   /// Each element of the list must fit into a byte (0-255).
-  byteArray,
+  byteArray<List<int>>(17),
 
   /// Must be a [String]
   ///
   /// Used for internal pg structure names
-  name,
+  name<String>(19),
 
   /// Must be a [String].
   ///
   /// Must contain 32 hexadecimal characters. May contain any number of '-' characters.
   /// When returned from database, format will be xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
-  uuid,
+  uuid<String>(2950),
 
   /// Must be a [PgPoint]
-  point,
+  point<PgPoint>(600),
 
   /// Must be a [List<bool>]
-  booleanArray,
+  booleanArray<List<bool>>(1000),
 
   /// Must be a [List<int>]
-  integerArray,
+  integerArray<List<int>>(1007),
 
   /// Must be a [List<String>]
-  textArray,
+  textArray<List<String>>(1009),
 
   /// Must be a [List<double>]
-  doubleArray,
+  doubleArray<List<core.double>>(1022),
 
   /// Must be a [String]
-  varChar,
+  varChar<String>(1043),
 
   /// Must be a [List<String>]
-  varCharArray,
+  varCharArray<List<String>>(1015),
 
   /// Must be a [List] of encodable objects
-  jsonbArray,
+  jsonbArray<List>(3807);
+
+  /// The object ID of this data type.
+  final int? oid;
+
+  const PostgreSQLDataType(this.oid);
+
+  static final Map<int, PostgreSQLDataType> byTypeOid = Map.unmodifiable({
+    for (final type in values)
+      if (type.oid != null) type.oid!: type,
+  });
 }
 
 /// LSN is a PostgreSQL Log Sequence Number.

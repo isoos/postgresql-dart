@@ -229,7 +229,7 @@ class _PostgreSQLConnectionStateIdle extends _PostgreSQLConnectionState {
 
   _PostgreSQLConnectionState processQuery(Query<dynamic> q) {
     try {
-      if (q.onlyReturnAffectedRowCount || q.useSendSimple) {
+      if (q.shouldUseSimpleProtocol) {
         q.sendSimple(connection!._socket!);
         return _PostgreSQLConnectionStateBusy(q);
       }
@@ -357,7 +357,7 @@ class _PostgreSQLConnectionStateReadyInTransaction
 
   _PostgreSQLConnectionState processQuery(Query<dynamic> q) {
     try {
-      if (q.onlyReturnAffectedRowCount || q.useSendSimple) {
+      if (q.shouldUseSimpleProtocol) {
         q.sendSimple(connection!._socket!);
         return _PostgreSQLConnectionStateBusy(q);
       }

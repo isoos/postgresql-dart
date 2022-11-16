@@ -479,13 +479,31 @@ abstract class _PostgreSQLExecutionContextMixin
         timeoutInSeconds: timeoutInSeconds,
       );
 
+  @override
+  Future<PostgreSQLResult> queryDirect({
+    required String sql,
+    required List<ParameterValue> parameters,
+    bool? allowReuse,
+    bool? affectedRowsOnly,
+    int? timeoutInSeconds,
+  }) =>
+      _query(
+        sql,
+        allowReuse: allowReuse ?? true,
+        fixedParameters: parameters,
+        timeoutInSeconds: timeoutInSeconds,
+        affectedRowsOnly: affectedRowsOnly ?? false,
+      );
+
   Future<PostgreSQLResult> _query(
     String fmtString, {
     Map<String, dynamic>? substitutionValues,
+    List<ParameterValue>? fixedParameters,
     required bool allowReuse,
     int? timeoutInSeconds,
     bool resolveOids = true,
     bool useSimpleQueryProtocol = false,
+    bool affectedRowsOnly = false,
   }) async {
     timeoutInSeconds ??= _connection.queryTimeoutInSeconds;
 
@@ -511,6 +529,7 @@ abstract class _PostgreSQLExecutionContextMixin
       _connection,
       _transaction,
       StackTrace.current,
+      fixedParameters: fixedParameters,
     );
     if (allowReuse) {
       query.statementIdentifier = _connection._cache.identifierForQuery(query);
@@ -523,13 +542,15 @@ abstract class _PostgreSQLExecutionContextMixin
       columnDescriptions = await _connection._oidCache
           ._resolveTableNames(this, columnDescriptions);
     }
-    final metaData = _PostgreSQLResultMetaData(columnDescriptions!);
+    final metaData = columnDescriptions != null
+        ? _PostgreSQLResultMetaData(columnDescriptions)
+        : null;
 
     return _PostgreSQLResult(
         queryResult.affectedRowCount,
         metaData,
         queryResult.value!
-            .map((columns) => _PostgreSQLResultRow(metaData, columns))
+            .map((columns) => _PostgreSQLResultRow(metaData!, columns))
             .toList());
   }
 
@@ -659,7 +680,7 @@ class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
     implements PostgreSQLResult {
   @override
   final int affectedRowCount;
-  final _PostgreSQLResultMetaData _metaData;
+  final _PostgreSQLResultMetaData? _metaData;
 
   _PostgreSQLResult(
       this.affectedRowCount, this._metaData, List<PostgreSQLResultRow> rows)
@@ -667,7 +688,7 @@ class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
 
   @override
   List<ColumnDescription> get columnDescriptions =>
-      _metaData.columnDescriptions;
+      _metaData!.columnDescriptions;
 }
 
 class _PostgreSQLResultRow extends UnmodifiableListView

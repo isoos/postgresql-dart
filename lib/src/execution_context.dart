@@ -55,6 +55,21 @@ abstract class PostgreSQLExecutionContext {
       int? timeoutInSeconds,
       bool? useSimpleQueryProtocol});
 
+  /// Runs a query with direct parameters.
+  ///
+  /// This method will send [sql] to the database without any modifications and
+  /// run it with the given [parameters].
+  ///
+  /// Unlike [query], this library will not attempt to inline any parameters
+  /// into the SQL string.
+  Future<PostgreSQLResult> queryDirect({
+    required String sql,
+    required List<ParameterValue> parameters,
+    bool? allowReuse,
+    bool? affectedRowsOnly,
+    int? timeoutInSeconds,
+  });
+
   /// Executes a query on this context.
   ///
   /// This method sends a SQL string to the database this instance is connected to. Parameters can be provided in [fmtString], see [query] for more details.

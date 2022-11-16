@@ -22,11 +22,26 @@ class Query<T> {
     this.queryStackTrace, {
     this.onlyReturnAffectedRowCount = false,
     this.useSendSimple = false,
-  });
+    this.fixedParameters,
+  }) : assert(
+          substitutionValues == null || fixedParameters == null,
+          "Can't both set substitutionValues and fixedParameters",
+        );
 
   final bool onlyReturnAffectedRowCount;
 
+  /// Whether the use of [sendSimple] should be enforced.
+  ///
+  /// To check whether [sendSimple] is a good option to run this query, consult
+  /// [shouldUseSimpleProtocol].
   final bool useSendSimple;
+
+  bool get shouldUseSimpleProtocol {
+    // Fixed parameters require prepared statements
+    if (fixedParameters != null) return false;
+
+    return onlyReturnAffectedRowCount || useSendSimple;
+  }
 
   String? statementIdentifier;
 
@@ -34,6 +49,12 @@ class Query<T> {
 
   final String statement;
   final Map<String, dynamic>? substitutionValues;
+
+  /// By default, we will try to infer indexed parameters from the [statement]
+  /// and the [substitutionValues]. Alternatively, we can use the direct
+  /// parameters and skip any local processing of the SQL statement.
+  final List<ParameterValue>? fixedParameters;
+
   final PostgreSQLExecutionContext transaction;
   final PostgreSQLConnection connection;
 
@@ -55,6 +76,12 @@ class Query<T> {
   }
 
   void sendSimple(Socket socket) {
+    assert(
+      fixedParameters == null,
+      'sendSimple is not available when using fixedParameters, the statement '
+      'needs to be prepared.',
+    );
+
     final sqlString =
         PostgreSQLFormat.substitute(statement, substitutionValues);
     final queryMessage = QueryMessage(sqlString);
@@ -65,29 +92,39 @@ class Query<T> {
   void sendExtended(Socket socket, {CachedQuery? cacheQuery}) {
     if (cacheQuery != null) {
       fieldDescriptions = cacheQuery.fieldDescriptions!;
-      sendCachedQuery(socket, cacheQuery, substitutionValues);
-
-      return;
+      return sendCachedQuery(socket, cacheQuery, substitutionValues);
     }
 
     final statementName = statementIdentifier ?? '';
     final formatIdentifiers = <PostgreSQLFormatIdentifier>[];
-    final sqlString = PostgreSQLFormat.substitute(statement, substitutionValues,
-        replace: (PostgreSQLFormatIdentifier identifier, int index) {
-      formatIdentifiers.add(identifier);
+    var sqlString = statement;
+    var parameterList = fixedParameters;
 
-      return '\$$index';
-    });
+    if (parameterList == null) {
+      // Obtain actual parameters by scanning the query for `@` variables and
+      // the map of parameters to instantiate them with.
+      sqlString = PostgreSQLFormat.substitute(statement, substitutionValues,
+          replace: (PostgreSQLFormatIdentifier identifier, int index) {
+        formatIdentifiers.add(identifier);
 
-    _specifiedParameterTypeCodes =
-        formatIdentifiers.map((i) => i.type).toList();
+        return '\$$index';
+      });
 
-    final parameterList = formatIdentifiers
-        .map((id) => ParameterValue(id, substitutionValues))
-        .toList();
+      _specifiedParameterTypeCodes =
+          formatIdentifiers.map((i) => i.type).toList();
+
+      parameterList = formatIdentifiers
+          .map((id) => ParameterValue(id, substitutionValues))
+          .toList();
+    } else {
+      _specifiedParameterTypeCodes = [
+        for (final param in parameterList) param.type
+      ];
+    }
 
     final messages = [
-      ParseMessage(sqlString, statementName: statementName),
+      ParseMessage(sqlString,
+          statementName: statementName, types: _specifiedParameterTypeCodes),
       DescribeMessage(statementName: statementName),
       BindMessage(parameterList, statementName: statementName),
       ExecuteMessage(),
@@ -104,9 +141,10 @@ class Query<T> {
   void sendCachedQuery(Socket socket, CachedQuery cacheQuery,
       Map<String, dynamic>? substitutionValues) {
     final statementName = cacheQuery.preparedStatementName;
-    final parameterList = cacheQuery.orderedParameters!
-        .map((identifier) => ParameterValue(identifier, substitutionValues))
-        .toList();
+    final parameterList = fixedParameters ??
+        cacheQuery.orderedParameters!
+            .map((identifier) => ParameterValue(identifier, substitutionValues))
+            .toList();
 
     final bytes = ClientMessage.aggregateBytes([
       BindMessage(parameterList, statementName: statementName!),
@@ -127,8 +165,8 @@ class Query<T> {
         return true;
       }
 
-      final actualType = PostgresBinaryDecoder
-          .typeMap[actualParameterTypeCodeIterator.current];
+      final actualType =
+          PostgreSQLDataType.byTypeOid[actualParameterTypeCodeIterator.current];
       return actualType == specifiedType;
     }).any((v) => v == false);
 
@@ -232,7 +270,7 @@ class ParameterValue {
     final converter = PostgresBinaryEncoder(postgresType);
     final bytes = converter.convert(value);
     final length = bytes?.length ?? 0;
-    return ParameterValue._(true, bytes, length);
+    return ParameterValue._(true, bytes, length, postgresType);
   }
 
   factory ParameterValue.text(dynamic value) {
@@ -243,14 +281,15 @@ class ParameterValue {
           utf8.encode(converter.convert(value, escapeStrings: false)));
     }
     final length = bytes?.length ?? 0;
-    return ParameterValue._(false, bytes, length);
+    return ParameterValue._(false, bytes, length, null);
   }
 
-  ParameterValue._(this.isBinary, this.bytes, this.length);
+  ParameterValue._(this.isBinary, this.bytes, this.length, this.type);
 
   final bool isBinary;
   final Uint8List? bytes;
   final int length;
+  final PostgreSQLDataType? type;
 }
 
 class FieldDescription implements ColumnDescription {

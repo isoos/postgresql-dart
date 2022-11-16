@@ -427,7 +427,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
       return null;
     }
 
-    final dataType = typeMap[typeCode];
+    final dataType = PostgreSQLDataType.byTypeOid[typeCode];
 
     final buffer =
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
@@ -565,35 +565,6 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
 
     return decoded;
   }
-
-  /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
-  static final Map<int, PostgreSQLDataType> typeMap = {
-    16: PostgreSQLDataType.boolean,
-    17: PostgreSQLDataType.byteArray,
-    19: PostgreSQLDataType.name,
-    20: PostgreSQLDataType.bigInteger,
-    21: PostgreSQLDataType.smallInteger,
-    23: PostgreSQLDataType.integer,
-    25: PostgreSQLDataType.text,
-    114: PostgreSQLDataType.json,
-    600: PostgreSQLDataType.point,
-    700: PostgreSQLDataType.real,
-    701: PostgreSQLDataType.double,
-    1000: PostgreSQLDataType.booleanArray,
-    1007: PostgreSQLDataType.integerArray,
-    1009: PostgreSQLDataType.textArray,
-    1015: PostgreSQLDataType.varCharArray,
-    1043: PostgreSQLDataType.varChar,
-    1022: PostgreSQLDataType.doubleArray,
-    1082: PostgreSQLDataType.date,
-    1114: PostgreSQLDataType.timestampWithoutTimezone,
-    1184: PostgreSQLDataType.timestampWithTimezone,
-    1186: PostgreSQLDataType.interval,
-    1700: PostgreSQLDataType.numeric,
-    2950: PostgreSQLDataType.uuid,
-    3802: PostgreSQLDataType.jsonb,
-    3807: PostgreSQLDataType.jsonbArray,
-  };
 
   /// Decode numeric / decimal to String without loosing precision.
   /// See encoding: https://github.com/postgres/postgres/blob/0e39a608ed5545cc6b9d538ac937c3c1ee8cdc36/src/backend/utils/adt/numeric.c#L305

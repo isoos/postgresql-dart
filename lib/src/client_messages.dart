@@ -114,20 +114,31 @@ class QueryMessage extends ClientMessage {
 class ParseMessage extends ClientMessage {
   final UTF8BackedString _statementName;
   final UTF8BackedString _statement;
+  final List<PostgreSQLDataType?> _types;
 
-  ParseMessage(String statement, {String statementName = ''})
+  ParseMessage(String statement,
+      {String statementName = '', List<PostgreSQLDataType?> types = const []})
       : _statement = UTF8BackedString(statement),
-        _statementName = UTF8BackedString(statementName);
+        _statementName = UTF8BackedString(statementName),
+        _types = types;
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ParseIdentifier);
-    final length = 8 + _statement.utf8Length + _statementName.utf8Length;
+    final length = 8 +
+        _statement.utf8Length +
+        _statementName.utf8Length +
+        _types.length * 4;
     buffer.writeUint32(length);
     // Name of prepared statement
     _statementName.applyToBuffer(buffer);
     _statement.applyToBuffer(buffer); // Query string
-    buffer.writeUint16(0);
+
+    // Parameters and their types
+    buffer.writeUint16(_types.length);
+    for (final type in _types) {
+      buffer.writeInt32(type?.oid ?? 0);
+    }
   }
 }
 
