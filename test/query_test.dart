@@ -112,6 +112,29 @@ void main() {
       expect(result, 1);
     });
 
+    test('queryDirect', () async {
+      var result = await connection.queryDirect(
+        sql: r'SELECT $1, $2, $3, $4, $5;',
+        parameters: [
+          ParameterValue.typed<int>(null, PostgreSQLDataType.integer),
+          ParameterValue.typed(1, PostgreSQLDataType.integer),
+          ParameterValue.typed('hello', PostgreSQLDataType.text),
+          ParameterValue.typed([1, 2, 3, 4], PostgreSQLDataType.byteArray),
+          ParameterValue.typed(true, PostgreSQLDataType.boolean),
+        ],
+      );
+
+      expect(result, [
+        [
+          null,
+          1,
+          'hello',
+          [1, 2, 3, 4],
+          true
+        ]
+      ]);
+    });
+
     test('Query without specifying types', () async {
       var result = await connection.query(
           'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba) values '

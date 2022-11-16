@@ -273,6 +273,11 @@ class ParameterValue {
     return ParameterValue._(true, bytes, length, postgresType);
   }
 
+  static ParameterValue typed<T extends Object>(
+      T? value, PostgreSQLDataType<T> type) {
+    return ParameterValue.binary(value, type);
+  }
+
   factory ParameterValue.text(dynamic value) {
     Uint8List? bytes;
     if (value != null) {
