@@ -2,8 +2,11 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-import 'package:postgres/src/client_messages.dart';
-import 'package:postgres/src/server_messages.dart';
+import 'client_messages.dart';
+import 'server_messages.dart';
+
+/// Either a [ServerMessage] or a [ClientMessage].
+abstract class BaseMessage {}
 
 /// An abstraction for all client and server replication messages
 ///

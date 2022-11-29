@@ -39,6 +39,11 @@ class PostgreSQLException implements Exception {
     code = '';
   }
 
+  // todo: Remove from public api
+  factory PostgreSQLException.fromFields(List<ErrorField> errorFields) {
+    return PostgreSQLException._(errorFields);
+  }
+
   PostgreSQLException._(List<ErrorField> errorFields) {
     ErrorField finder(int identifer) => (errorFields.firstWhere(
         (ErrorField e) => e.identificationToken == identifer,

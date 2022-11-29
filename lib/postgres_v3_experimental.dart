@@ -1,7 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
+
+import 'src/v3/connection.dart';
+import 'src/v3/query_description.dart';
+import 'src/v3/types.dart';
+
+export 'src/types.dart';
 
 abstract class PgPool implements PgSession, PgSessionExecutor {
   static Future<PgPool> open(
@@ -17,35 +24,25 @@ abstract class PgPool implements PgSession, PgSessionExecutor {
   });
 }
 
+class PgQueryDescription {
+  factory PgQueryDescription.direct(String sql, {List<PgDataType>? types}) =
+      InternalQueryDescription.direct;
+  factory PgQueryDescription.map(String sql, {String substitution}) =
+      InternalQueryDescription.map;
+}
+
 abstract class PgSession {
   // uses extended query protocol
   Future<PgStatement> prepare(
-    String sql, {
-    Object? /* String */ substitution,
-    Object? /* List<PgDataType> | Map<String, PgDataType> */ types,
+    Object /* String | InternalQueryDescription */ query, {
     Duration? timeout,
   });
 
   Future<PgResult> execute(
-    String sql, {
-    Object? /* String */ substitution,
-    Object? /* List<PgDataType> | Map<String, PgDataType> */ types,
+    Object /* String | InternalQueryDescription */ query, {
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */ parameters,
     Duration? timeout,
-  }) async {
-    if (substitution == null && types == null && parameters == null) {}
-    final stmt = await prepare(
-      sql,
-      substitution: substitution,
-      types: types,
-      timeout: timeout,
-    );
-    try {
-      return await stmt.run(parameters);
-    } finally {
-      await stmt.dispose();
-    }
-  }
+  });
 
   Future<void> close();
 }
@@ -60,8 +57,10 @@ abstract class PgConnection implements PgSession, PgSessionExecutor {
   static Future<PgConnection> open(
     PgEndpoint endpoint, {
     PgSessionSettings? sessionSettings,
-  }) async =>
-      throw UnimplementedError();
+  }) {
+    return PgConnectionImplementation.connect(endpoint,
+        sessionSettings: sessionSettings);
+  }
 
   PgChannels get channels;
   PgMessages get messages;
@@ -128,10 +127,6 @@ abstract class PgResultColumn {
   int? get columnOid;
 }
 
-enum PgDataType {
-  text, // ... same as PostgresqlDataType?
-}
-
 abstract class PgChannels {
   Stream<String?> operator [](String channel);
   Future<void> notify(String channel, [String? payload]);
@@ -167,6 +162,10 @@ class PgEndpoint {
     this.requireSsl = false,
     this.isUnixSocket = false,
   });
+
+  Future<PgConnection> connect({PgSessionSettings? sessionSettings}) {
+    return PgConnection.open(this, sessionSettings: sessionSettings);
+  }
 }
 
 class PgSessionSettings {
@@ -176,12 +175,14 @@ class PgSessionSettings {
   final Duration? queryTimeout;
   final String? timeZone;
   final Encoding? encoding;
+  final bool Function(X509Certificate)? onBadSslCertificate;
 
   PgSessionSettings({
     this.connectTimeout,
     this.queryTimeout,
     this.timeZone,
     this.encoding,
+    this.onBadSslCertificate,
   });
 }
 

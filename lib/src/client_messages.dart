@@ -11,7 +11,7 @@ import 'shared_messages.dart';
 import 'types.dart';
 import 'utf8_backed_string.dart';
 
-abstract class ClientMessage {
+abstract class ClientMessage extends BaseMessage {
   static const int FormatText = 0;
   static const int FormatBinary = 1;
 

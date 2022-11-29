@@ -9,7 +9,7 @@ import 'query.dart';
 import 'time_converters.dart';
 import 'types.dart';
 
-abstract class ServerMessage {}
+abstract class ServerMessage extends BaseMessage {}
 
 class ErrorResponseMessage implements ServerMessage {
   final fields = <ErrorField>[];
