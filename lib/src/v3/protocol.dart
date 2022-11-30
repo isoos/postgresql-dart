@@ -25,6 +25,11 @@ class AggregatedClientMessage extends ClientMessage {
       cm.applyToBuffer(buffer);
     }
   }
+
+  @override
+  String toString() {
+    return 'Aggregated $messages';
+  }
 }
 
 StreamChannelTransformer<BaseMessage, List<int>> messageTransformer =

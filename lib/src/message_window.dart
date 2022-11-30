@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:charcode/ascii.dart';
 
 import 'server_messages.dart';
 import 'shared_messages.dart';
@@ -27,6 +28,7 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
   100: CopyDataMessage.new,
   110: (d) => NoDataMessage(),
   116: ParameterDescriptionMessage.new,
+  $B: (d) => CloseCompleteMessage(),
 };
 
 class MessageFramer {

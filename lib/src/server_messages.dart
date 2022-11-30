@@ -207,6 +207,13 @@ class BindCompleteMessage extends ServerMessage {
   String toString() => 'Bind Complete Message';
 }
 
+class CloseCompleteMessage extends ServerMessage {
+  CloseCompleteMessage();
+
+  @override
+  String toString() => 'Bind Complete Message';
+}
+
 class ParameterDescriptionMessage extends ServerMessage {
   final parameterTypeIDs = <int>[];
 

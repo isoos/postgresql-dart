@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'dart:core';
 import 'dart:core' as core;
+import 'dart:typed_data';
+
+import '../binary_codec.dart';
 
 /// Describes PostgreSQL's geometric type: `point`.
 class PgPoint {
@@ -116,10 +120,30 @@ enum PgDataType<Dart extends Object> {
   /// The object ID of this data type.
   final int? oid;
 
+  Codec<Dart?, Uint8List?> get codec {
+    return _codecs.putIfAbsent(this, () => _TypeCodec<Dart>(this))
+        as Codec<Dart?, Uint8List?>;
+  }
+
   const PgDataType(this.oid);
 
   static final Map<int, PgDataType> byTypeOid = Map.unmodifiable({
     for (final type in values)
       if (type.oid != null) type.oid!: type,
   });
+
+  static final Map<PgDataType, _TypeCodec> _codecs = {};
+}
+
+class _TypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
+  @override
+  final Converter<D?, Uint8List?> encoder;
+  @override
+  final Converter<Uint8List?, D?> decoder;
+
+  _TypeCodec(PgDataType<D> type)
+      : encoder = PostgresBinaryEncoder(type),
+        // Only some integer variants have no dedicated oid, they share it with
+        // the normal integer.
+        decoder = PostgresBinaryDecoder(type.oid ?? PgDataType.integer.oid!);
 }

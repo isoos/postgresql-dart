@@ -115,16 +115,53 @@ abstract class PgResultRow implements List<Object?> {
   PgResultSchema get schema;
 }
 
-abstract class PgResultSchema {
-  List<PgResultColumn> get columns;
+class PgResultSchema {
+  final List<PgResultColumn> columns;
+
+  PgResultSchema(this.columns);
+
+  @override
+  String toString() {
+    return 'PgResultSchema(${columns.join(', ')})';
+  }
 }
 
-abstract class PgResultColumn {
-  PgDataType get type;
-  String? get tableName;
-  int? get tableOid;
-  String? get columnName;
-  int? get columnOid;
+class PgResultColumn {
+  final PgDataType type;
+  final String? tableName;
+  final int? tableOid;
+  final String? columnName;
+  final int? columnOid;
+
+  PgResultColumn({
+    required this.type,
+    this.tableName,
+    this.tableOid,
+    this.columnName,
+    this.columnOid,
+  });
+
+  @override
+  String toString() {
+    final buffer = StringBuffer('${type.name} ');
+    if (tableName != null && tableName != '') {
+      buffer
+        ..write(tableName)
+        ..write('.');
+    } else if (tableOid != null && tableOid != 0) {
+      buffer
+        ..write('@$tableOid')
+        ..write('.');
+    }
+
+    if (columnName != null && columnName != '') {
+      buffer.write(columnName);
+    } else if (columnOid != null && columnOid != 0) {
+      buffer.write('@$columnOid');
+    }
+
+    return buffer.toString();
+  }
 }
 
 abstract class PgChannels {

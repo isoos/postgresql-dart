@@ -3,16 +3,22 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:async/async.dart';
 import 'package:buffer/buffer.dart';
-import 'package:meta/meta.dart';
+import 'package:charcode/ascii.dart';
+import 'package:collection/collection.dart';
+import 'package:pool/pool.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
+import 'package:postgres/src/v3/types.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../auth/clear_text_authenticator.dart';
 import '../auth/md5_authenticator.dart';
-import '../charcodes.dart';
 import '../connection.dart' show PostgreSQLException;
 import 'protocol.dart';
+import 'query_description.dart';
+
+const _debugLog = true;
 
 class _ResolvedSettings {
   final PgEndpoint endpoint;
@@ -48,7 +54,22 @@ class PgConnectionImplementation implements PgConnection {
     PgSessionSettings? sessionSettings,
   }) async {
     final settings = _ResolvedSettings(endpoint, sessionSettings);
-    final channel = await _connect(settings);
+    var channel = await _connect(settings);
+
+    if (_debugLog) {
+      channel = channel.transform(StreamChannelTransformer(
+        StreamTransformer.fromHandlers(
+          handleData: (msg, sink) {
+            print('[in] $msg');
+            sink.add(msg);
+          },
+        ),
+        StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
+          print('[out] $msg');
+          sink.add(msg);
+        }),
+      ));
+    }
 
     final connection = PgConnectionImplementation._(channel, settings);
     await connection._startup();
@@ -142,22 +163,33 @@ class PgConnectionImplementation implements PgConnection {
 
   final _ResolvedSettings _settings;
 
+  final Pool _operationLock = Pool(1);
   _PendingOperation? _pending;
+
+  final Map<String, String> _parameters = {};
+  int? _processId;
+  int? _secretKey;
+
+  var _statementCounter = 0;
+  var _portalCounter = 0;
 
   PgConnectionImplementation._(this._channel, this._settings) {
     _serverMessages = _channel.stream.listen(_handleMessage);
   }
 
   Future<void> _startup() {
-    final result = _pending = _AuthenticationProcedure(this);
-    _channel.sink.add(StartupMessage(
-      _settings.endpoint.database,
-      _settings.timeZone,
-      username: _settings.username,
-      // todo: Replication
-    ));
+    return _operationLock.withResource(() {
+      final result = _pending = _AuthenticationProcedure(this);
 
-    return result._done.future;
+      _channel.sink.add(StartupMessage(
+        _settings.endpoint.database,
+        _settings.timeZone,
+        username: _settings.username,
+        // todo: Replication
+      ));
+
+      return result._done.future;
+    });
   }
 
   Future<void> _handleMessage(BaseMessage message) async {
@@ -165,12 +197,51 @@ class PgConnectionImplementation implements PgConnection {
     try {
       message as ServerMessage;
 
-      if (_pending != null) {
+      if (message is ParameterStatusMessage) {
+        _parameters[message.name] = message.value;
+      } else if (message is BackendKeyMessage) {
+        _processId = message.processID;
+        _secretKey = message.secretKey;
+      } else if (_pending != null) {
         await _pending!.handleMessage(message);
       }
     } finally {
       _serverMessages.resume();
     }
+  }
+
+  Future<T> _sendAndWaitForQuery<T extends ServerMessage>(ClientMessage send) {
+    final trace = StackTrace.current;
+
+    return _operationLock.withResource(() {
+      _channel.sink.add(AggregatedClientMessage([send, SyncMessage()]));
+
+      final completer = Completer<T>();
+      final syncComplete = Completer<void>.sync();
+
+      _pending = _CallbackOperation(this, (message) async {
+        if (message is T) {
+          completer.complete(message);
+        } else if (message is ErrorResponseMessage) {
+          completer.completeError(
+              PostgreSQLException.fromFields(message.fields), trace);
+        } else if (message is ReadyForQueryMessage) {
+          if (!completer.isCompleted) {
+            completer.completeError(
+                StateError('Operation did not complete'), trace);
+          }
+
+          syncComplete.complete();
+        } else {
+          completer.completeError(
+              StateError('Unexpected message $message'), trace);
+        }
+      });
+
+      return syncComplete.future
+          .whenComplete(() => _pending = null)
+          .then((value) => completer.future);
+    });
   }
 
   @override
@@ -180,8 +251,17 @@ class PgConnectionImplementation implements PgConnection {
   PgMessages get messages => throw UnimplementedError();
 
   @override
-  Future<PgStatement> prepare(Object query, {Duration? timeout}) {
-    throw UnimplementedError();
+  Future<PgStatement> prepare(Object query, {Duration? timeout}) async {
+    final name = 's/${_statementCounter++}';
+    final description = InternalQueryDescription.wrap(query);
+
+    await _sendAndWaitForQuery<ParseCompleteMessage>(ParseMessage(
+      description.transformedSql,
+      statementName: name,
+      types: description.parameterTypes,
+    ));
+
+    return _PreparedStatement(name, this);
   }
 
   @override
@@ -209,26 +289,168 @@ class PgConnectionImplementation implements PgConnection {
   }
 }
 
+class _PreparedStatement extends PgStatement {
+  final String _name;
+  final PgConnectionImplementation _connection;
+
+  _PreparedStatement(this._name, this._connection);
+
+  @override
+  PgResultStream start(Object? parameters, {Duration? timeout}) {
+    final portalName = 'p/${_connection._portalCounter++}';
+    return _PgResultStream(this, portalName);
+  }
+
+  @override
+  Future<void> dispose() async {
+    await _connection._sendAndWaitForQuery<CloseCompleteMessage>(
+        CloseMessage.statement(_name));
+  }
+}
+
+class _PgResultStream extends Stream<PgResultRow>
+    implements PgResultStream, _PendingOperation {
+  final _PreparedStatement _statement;
+  final String _portalName;
+
+  final List<PgResultRow> _pendingRows = [];
+  final StreamController<PgResultRow> _listener = StreamController();
+
+  Completer<void>? _preparationDone;
+
+  Completer<PgResultSchema> _schema = Completer();
+  PgResultSchema? _resultSchema;
+
+  _PgResultStream(this._statement, this._portalName) {
+    _listener.onListen = () {
+      if (_pendingRows.isNotEmpty) {
+        _pendingRows.forEach(_listener.add);
+      } else {
+        _submit();
+      }
+    };
+  }
+
+  @override
+  PgConnectionImplementation get connection => _statement._connection;
+
+  Future<void> _submit() async {
+    final completer = _preparationDone ??= Completer()
+      ..complete(connection._operationLock.withResource(() async {
+        connection._pending = this;
+
+        connection._channel.sink.add(AggregatedClientMessage([
+          BindMessage(
+            [],
+            portalName: _portalName,
+            statementName: _statement._name,
+          ),
+          DescribeMessage.portal(portalName: _portalName),
+          ExecuteMessage(_portalName),
+          SyncMessage(),
+        ]));
+      }));
+
+    return completer.future;
+  }
+
+  @override
+  Future<int> get affectedRows => throw UnimplementedError();
+
+  @override
+  Future<PgResultSchema> get schema async {
+    await _submit();
+    return await _schema.future;
+  }
+
+  @override
+  StreamSubscription<PgResultRow> listen(
+    void Function(PgResultRow event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) =>
+      _listener.stream.listen(
+        onData,
+        onError: onError,
+        onDone: onDone,
+        cancelOnError: cancelOnError,
+      );
+
+  @override
+  Future<void> handleMessage(ServerMessage message) async {
+    if (message is ErrorResponseMessage) {
+      final error = AsyncError(
+          PostgreSQLException.fromFields(message.fields), StackTrace.current);
+      final completer = _preparationDone;
+
+      if (_listener.hasListener) {
+        _listener!.addError(error);
+      } else if (completer != null && !completer.isCompleted) {
+        completer.completeError(error);
+      } else {
+        // This should never be the case, but...
+        Zone.current.handleUncaughtError(error, StackTrace.current);
+      }
+    } else if (message is BindCompleteMessage) {
+      // Nothing to do
+    } else if (message is RowDescriptionMessage) {
+      final schema = _resultSchema = PgResultSchema([
+        for (final field in message.fieldDescriptions)
+          PgResultColumn(
+            type: PgDataType.byTypeOid[field.typeId] ?? PgDataType.byteArray,
+            tableName: field.tableName,
+            columnName: field.columnName,
+            columnOid: field.columnID,
+            tableOid: field.tableID,
+          ),
+      ]);
+      _schema.complete(schema);
+    } else if (message is DataRowMessage) {
+      final schema = _resultSchema!;
+
+      final row = _ResultRow(schema, [
+        for (var i = 0; i < message.values.length; i++)
+          schema.columns[i].type.codec.decode(message.values[i]),
+      ]);
+
+      if (_listener.hasListener) {
+        _listener.add(row);
+      } else {
+        _pendingRows.add(row);
+      }
+    }
+  }
+}
+
 abstract class _PendingOperation {
   final PgConnectionImplementation connection;
 
   _PendingOperation(this.connection);
 
-  @protected
-  void finish() {
-    assert(connection._pending == this);
-    connection._pending = null;
-  }
-
   Future<void> handleMessage(ServerMessage message);
+}
+
+class _ResultRow extends UnmodifiableListView<Object?> implements PgResultRow {
+  @override
+  final PgResultSchema schema;
+
+  _ResultRow(this.schema, super.source);
+}
+
+class _CallbackOperation extends _PendingOperation {
+  final Future<void> Function(ServerMessage message) handle;
+
+  _CallbackOperation(super.connection, this.handle);
+
+  @override
+  Future<void> handleMessage(ServerMessage message) => handle(message);
 }
 
 class _AuthenticationProcedure extends _PendingOperation {
   final Completer<void> _done = Completer();
 
-  _AuthenticationProcedure(super.connection) {
-    _done.future.whenComplete(finish);
-  }
+  _AuthenticationProcedure(super.connection);
 
   @override
   Future<void> handleMessage(ServerMessage message) async {
@@ -237,7 +459,6 @@ class _AuthenticationProcedure extends _PendingOperation {
     } else if (message is AuthenticationMessage) {
       switch (message.type) {
         case AuthenticationMessage.KindOK:
-          _done.complete();
           break;
         case AuthenticationMessage.KindMD5Password:
           // this means the server is requesting an md5 challenge
@@ -257,6 +478,8 @@ class _AuthenticationProcedure extends _PendingOperation {
         default:
           _done.completeError(PostgreSQLException('Unhandled auth mechanism'));
       }
+    } else if (message is ReadyForQueryMessage) {
+      _done.complete();
     }
   }
 }

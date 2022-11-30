@@ -1,7 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:charcode/ascii.dart';
 import 'package:postgres/src/time_converters.dart';
+import 'package:postgres/src/v3/types.dart';
 
 import 'constants.dart';
 import 'query.dart';
@@ -24,6 +26,7 @@ abstract class ClientMessage extends BaseMessage {
   static const int QueryIdentifier = 81; // Q
   static const int SyncIdentifier = 83; // S
   static const int PasswordIdentifier = 112; //p
+  static const int CloseIdentifier = $B;
 
   void applyToBuffer(ByteDataWriter buffer);
 
@@ -114,47 +117,67 @@ class QueryMessage extends ClientMessage {
 class ParseMessage extends ClientMessage {
   final UTF8BackedString _statementName;
   final UTF8BackedString _statement;
+  final List<PgDataType?> _types;
 
-  ParseMessage(String statement, {String statementName = ''})
+  ParseMessage(String statement,
+      {String statementName = '', List<PgDataType?>? types})
       : _statement = UTF8BackedString(statement),
-        _statementName = UTF8BackedString(statementName);
+        _statementName = UTF8BackedString(statementName),
+        _types = types ?? const [];
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ParseIdentifier);
-    final length = 8 + _statement.utf8Length + _statementName.utf8Length;
+    final length = 8 +
+        _statement.utf8Length +
+        _statementName.utf8Length +
+        _types.length * 4;
     buffer.writeUint32(length);
     // Name of prepared statement
     _statementName.applyToBuffer(buffer);
     _statement.applyToBuffer(buffer); // Query string
-    buffer.writeUint16(0);
+
+    // Parameters and their types
+    buffer.writeUint16(_types.length);
+    for (final type in _types) {
+      buffer.writeInt32(type?.oid ?? 0);
+    }
   }
 }
 
 class DescribeMessage extends ClientMessage {
-  final UTF8BackedString _statementName;
+  final UTF8BackedString _name;
+  final bool _isPortal;
 
   DescribeMessage({String statementName = ''})
-      : _statementName = UTF8BackedString(statementName);
+      : _name = UTF8BackedString(statementName),
+        _isPortal = false;
+
+  DescribeMessage.portal({String portalName = ''})
+      : _name = UTF8BackedString(portalName),
+        _isPortal = true;
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.DescribeIdentifier);
-    final length = 6 + _statementName.utf8Length;
+    final length = 6 + _name.utf8Length;
     buffer.writeUint32(length);
-    buffer.writeUint8(83);
-    _statementName.applyToBuffer(buffer); // Name of prepared statement
+    buffer.writeUint8(_isPortal ? $P : $S);
+    _name.applyToBuffer(buffer); // Name of prepared statement
   }
 }
 
 class BindMessage extends ClientMessage {
   final List<ParameterValue> _parameters;
+  final UTF8BackedString _portalName;
   final UTF8BackedString _statementName;
   final int _typeSpecCount;
   int _cachedLength = -1;
 
-  BindMessage(this._parameters, {String statementName = ''})
+  BindMessage(this._parameters,
+      {String portalName = '', String statementName = ''})
       : _typeSpecCount = _parameters.where((p) => p.isBinary).length,
+        _portalName = UTF8BackedString(portalName),
         _statementName = UTF8BackedString(statementName);
 
   int get length {
@@ -166,6 +189,7 @@ class BindMessage extends ClientMessage {
 
       _cachedLength = 15;
       _cachedLength += _statementName.utf8Length;
+      _cachedLength += _portalName.utf8Length;
       _cachedLength += inputParameterElementCount * 2;
       _cachedLength +=
           _parameters.fold<int>(0, (len, ParameterValue paramValue) {
@@ -184,8 +208,8 @@ class BindMessage extends ClientMessage {
     buffer.writeUint8(ClientMessage.BindIdentifier);
     buffer.writeUint32(length - 1);
 
-    // Name of portal - currently unnamed portal.
-    buffer.writeUint8(0);
+    // Name of portal.
+    _portalName.applyToBuffer(buffer);
     // Name of prepared statement.
     _statementName.applyToBuffer(buffer);
 
@@ -226,12 +250,41 @@ class BindMessage extends ClientMessage {
 }
 
 class ExecuteMessage extends ClientMessage {
+  final UTF8BackedString _portalName;
+
+  ExecuteMessage([String portalName = ''])
+      : _portalName = UTF8BackedString(portalName);
+
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ExecuteIdentifier);
-    buffer.writeUint32(9);
-    buffer.writeUint8(0); // Portal name
+    buffer.writeUint32(9 + _portalName.utf8Length);
+    _portalName.applyToBuffer(buffer);
     buffer.writeUint32(0);
+  }
+}
+
+class CloseMessage extends ClientMessage {
+  final bool isForPortal;
+  final UTF8BackedString name;
+
+  CloseMessage.statement([String name = ''])
+      : name = UTF8BackedString(name),
+        isForPortal = false;
+
+  CloseMessage.portal([String name = ''])
+      : name = UTF8BackedString(name),
+        isForPortal = true;
+
+  @override
+  void applyToBuffer(ByteDataWriter buffer) {
+    final length = 7 + name.utf8Length;
+
+    buffer
+      ..writeUint8(ClientMessage.CloseIdentifier)
+      ..writeInt32(length)
+      ..writeUint8(isForPortal ? $P : $S);
+    name.applyToBuffer(buffer);
   }
 }
 

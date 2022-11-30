@@ -1,1 +1,0 @@
-dart run charcode -o lib/src/charcodes.dart 'SN'
