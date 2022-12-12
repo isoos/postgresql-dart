@@ -37,6 +37,7 @@ class Query<T> {
   final PostgreSQLExecutionContext transaction;
   final PostgreSQLConnection connection;
 
+  late List<String> _specifiedParameterNames;
   late List<PostgreSQLDataType?> _specifiedParameterTypeCodes;
   final rows = <List<dynamic>>[];
 
@@ -79,6 +80,7 @@ class Query<T> {
       return '\$$index';
     });
 
+    _specifiedParameterNames = formatIdentifiers.map((i) => i.name).toList();
     _specifiedParameterTypeCodes =
         formatIdentifiers.map((i) => i.type).toList();
 
@@ -119,22 +121,21 @@ class Query<T> {
 
   PostgreSQLException? validateParameters(List<int> parameterTypeIDs) {
     final actualParameterTypeCodeIterator = parameterTypeIDs.iterator;
-    final parametersAreMismatched =
-        _specifiedParameterTypeCodes.map((specifiedType) {
+    final specifiedParameterIterator = _specifiedParameterNames.iterator;
+    for (var specifiedType in _specifiedParameterTypeCodes) {
+      specifiedParameterIterator.moveNext();
       actualParameterTypeCodeIterator.moveNext();
 
-      if (specifiedType == null) {
-        return true;
+      if (specifiedType != null) {
+        final actualType = PostgresBinaryDecoder
+            .typeMap[actualParameterTypeCodeIterator.current];
+
+        if (actualType != specifiedType) {
+          final paramName = specifiedParameterIterator.current;
+          throw PostgreSQLException(
+              'Specified parameter types do not match column parameter types, expected ${specifiedType.name} but received ${actualType?.name} for $paramName for  in query $statement');
+        }
       }
-
-      final actualType = PostgresBinaryDecoder
-          .typeMap[actualParameterTypeCodeIterator.current];
-      return actualType == specifiedType;
-    }).any((v) => v == false);
-
-    if (parametersAreMismatched) {
-      return PostgreSQLException(
-          'Specified parameter types do not match column parameter types in query $statement');
     }
 
     return null;
