@@ -246,59 +246,87 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
 
       case PostgreSQLDataType.booleanArray:
         {
-          if (input is List<bool>) {
-            return writeListBytes<bool>(input, 16, (_) => 1,
-                (writer, item) => writer.writeUint8(item ? 1 : 0));
+          if (input is List) {
+            return writeListBytes<dynamic>(input, 16, (_) => 1, (writer, item) {
+              if (item is! bool) {
+                throw FormatException(
+                    'Invalid type for parameter value. Expected: bool inside List but got ${input.runtimeType}');
+              }
+              writer.writeUint8(item ? 1 : 0);
+            });
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<bool> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
         }
 
       case PostgreSQLDataType.integerArray:
         {
-          if (input is List<int>) {
-            return writeListBytes<int>(
-                input, 23, (_) => 4, (writer, item) => writer.writeInt32(item));
+          if (input is List) {
+            return writeListBytes<dynamic>(input, 23, (_) => 4, (writer, item) {
+              if (item is! int) {
+                throw FormatException(
+                    'Invalid type for parameter value. Expected: int inside List but got ${input.runtimeType}');
+              }
+              writer.writeInt32(item);
+            });
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
         }
 
       case PostgreSQLDataType.varCharArray:
         {
-          if (input is List<String>) {
-            final bytesArray = input.map((v) => utf8.encode(v));
+          if (input is List) {
+            final bytesArray = input.map((v) {
+              if (v is! String) {
+                throw FormatException(
+                    'Invalid type for parameter value. Expected: String inside List but got ${input.runtimeType}');
+              }
+              return utf8.encode(v);
+            });
             return writeListBytes<List<int>>(bytesArray, 1043,
                 (item) => item.length, (writer, item) => writer.write(item));
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
         }
 
       case PostgreSQLDataType.textArray:
         {
-          if (input is List<String>) {
-            final bytesArray = input.map((v) => utf8.encode(v));
+          if (input is List) {
+            final bytesArray = input.map((v) {
+              if (v is! String) {
+                throw FormatException(
+                    'Invalid type for parameter value. Expected: String inside List but got ${input.runtimeType}');
+              }
+              return utf8.encode(v);
+            });
             return writeListBytes<List<int>>(bytesArray, 25,
                 (item) => item.length, (writer, item) => writer.write(item));
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
         }
 
       case PostgreSQLDataType.doubleArray:
         {
-          if (input is List<double>) {
-            return writeListBytes<double>(input, 701, (_) => 8,
-                (writer, item) => writer.writeFloat64(item));
+          if (input is List) {
+            return writeListBytes<dynamic>(input, 701, (_) => 8,
+                (writer, item) {
+              if (item is! double) {
+                throw FormatException(
+                    'Invalid type for parameter value. Expected: double inside List but got ${input.runtimeType}');
+              }
+              writer.writeFloat64(item);
+            });
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<double> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
         }
 
       case PostgreSQLDataType.jsonbArray:
         {
-          if (input is List<Object>) {
+          if (input is List) {
             final objectsArray = input.map((v) => utf8.encode(json.encode(v)));
             return writeListBytes<List<int>>(
                 objectsArray, 3802, (item) => item.length + 1, (writer, item) {
@@ -307,7 +335,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List?> {
             });
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<Object> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
         }
 
       default:
