@@ -36,4 +36,46 @@ class InternalQueryDescription implements PgQueryDescription {
           'Must either be a String or an InternalQueryDescription');
     }
   }
+
+  List<PgTypedParameter> bindParameters(Object? params) {
+    final knownTypes = parameterTypes;
+
+    if (params == null) {
+      if (knownTypes != null && knownTypes.isNotEmpty) {
+        throw ArgumentError.value(params, 'parameters',
+            'This prepared statement has ${knownTypes.length} parameters that must be set.');
+      }
+
+      return const [];
+    } else if (params is List) {
+      if (knownTypes != null && knownTypes.length != params.length) {
+        throw ArgumentError.value(params, 'parameters',
+            'Expected ${knownTypes.length} parameters, got ${params.length}');
+      }
+
+      final parameters = <PgTypedParameter>[];
+      for (var i = 0; i < params.length; i++) {
+        final param = params[i];
+        if (param is PgTypedParameter) {
+          parameters.add(param);
+        } else if (knownTypes != null) {
+          parameters.add(PgTypedParameter(knownTypes[i], param));
+        } else {
+          throw ArgumentError.value(
+            params,
+            'parameters',
+            'As no types have been set on this prepared statement, all '
+                'parameters must be a `PgTypedParameter`.',
+          );
+        }
+      }
+
+      return parameters;
+    } else if (params is Map) {
+      throw UnimplementedError('todo: Support binding maps');
+    } else {
+      throw ArgumentError.value(
+          params, 'parameters', 'Must either be a list or a map');
+    }
+  }
 }

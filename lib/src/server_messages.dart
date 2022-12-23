@@ -85,6 +85,11 @@ class ReadyForQueryMessage extends ServerMessage {
   final String state;
 
   ReadyForQueryMessage(Uint8List bytes) : state = utf8.decode(bytes);
+
+  @override
+  String toString() {
+    return 'ReadyForQueryMessage(state = $state)';
+  }
 }
 
 class BackendKeyMessage extends ServerMessage {
@@ -190,6 +195,11 @@ class CommandCompleteMessage extends ServerMessage {
       rowsAffected = int.parse(match.group(0)!);
     }
     return CommandCompleteMessage._(rowsAffected);
+  }
+
+  @override
+  String toString() {
+    return 'CommandCompleteMessage($rowsAffected affected rows)';
   }
 }
 

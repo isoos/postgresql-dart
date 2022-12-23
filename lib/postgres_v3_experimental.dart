@@ -8,7 +8,7 @@ import 'src/v3/connection.dart';
 import 'src/v3/query_description.dart';
 import 'src/v3/types.dart';
 
-export 'src/types.dart';
+export 'src/v3/types.dart';
 
 abstract class PgPool implements PgSession, PgSessionExecutor {
   static Future<PgPool> open(
@@ -67,23 +67,32 @@ abstract class PgConnection implements PgSession, PgSessionExecutor {
 }
 
 abstract class PgResultStream implements Stream<PgResultRow> {
+  @override
+  PgResultStreamSubscription listen(void Function(PgResultRow event)? onData,
+      {Function? onError, void Function()? onDone, bool? cancelOnError});
+}
+
+abstract class PgResultStreamSubscription
+    implements StreamSubscription<PgResultRow> {
   Future<int> get affectedRows;
   Future<PgResultSchema> get schema;
 }
 
 abstract class PgStatement {
-  PgResultStream start(
-    Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */ parameters, {
-    Duration? timeout,
-  });
+  PgResultStream bind(
+      Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */ parameters);
 
   Future<PgResult> run(
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */ parameters, {
     Duration? timeout,
   }) async {
-    final stream = start(parameters, timeout: timeout);
-    final items = await stream.toList();
-    return _PgResult(items, await stream.affectedRows, await stream.schema);
+    final items = <PgResultRow>[];
+    final subscription = bind(parameters).listen(items.add);
+    await subscription.asFuture();
+    await subscription.cancel();
+
+    return _PgResult(
+        items, await subscription.affectedRows, await subscription.schema);
   }
 
   Future<void> dispose();
@@ -108,7 +117,14 @@ class _PgResult extends DelegatingList<PgResultRow> implements PgResult {
   @override
   final PgResultSchema schema;
 
-  _PgResult(super.base, this.affectedRows, this.schema);
+  final List<PgResultRow> rows;
+
+  _PgResult(this.rows, this.affectedRows, this.schema) : super(rows);
+
+  @override
+  String toString() {
+    return 'PgResult(schema = $schema, affectedRows = $affectedRows, rows = $rows)';
+  }
 }
 
 abstract class PgResultRow implements List<Object?> {

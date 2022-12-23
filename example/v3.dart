@@ -8,9 +8,18 @@ void main() async {
   final statement =
       await connection.prepare(PgQueryDescription.direct(r"SELECT 'foo';"));
   print('has statement');
+  final result = await statement.run(null);
+  print(result);
+  await statement.dispose();
 
-  final stream = statement.start([]);
-  print(await stream.schema);
-
-  stream.listen(print);
+  final anotherStatement = await connection.prepare(
+      PgQueryDescription.direct(r'SELECT $1;', types: [PgDataType.bigInteger]));
+  final bound = anotherStatement.bind([1]);
+  final subscription = bound.listen((row) {
+    print('row: $row');
+  });
+  await subscription.asFuture();
+  await subscription.cancel();
+  print(await subscription.affectedRows);
+  print(await subscription.schema);
 }

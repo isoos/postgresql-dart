@@ -28,7 +28,7 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
   100: CopyDataMessage.new,
   110: (d) => NoDataMessage(),
   116: ParameterDescriptionMessage.new,
-  $B: (d) => CloseCompleteMessage(),
+  $3: (d) => CloseCompleteMessage(),
 };
 
 class MessageFramer {

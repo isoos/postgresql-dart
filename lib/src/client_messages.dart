@@ -26,7 +26,7 @@ abstract class ClientMessage extends BaseMessage {
   static const int QueryIdentifier = 81; // Q
   static const int SyncIdentifier = 83; // S
   static const int PasswordIdentifier = 112; //p
-  static const int CloseIdentifier = $B;
+  static const int CloseIdentifier = $C;
 
   void applyToBuffer(ByteDataWriter buffer);
 
@@ -278,7 +278,7 @@ class CloseMessage extends ClientMessage {
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
-    final length = 7 + name.utf8Length;
+    final length = 6 + name.utf8Length;
 
     buffer
       ..writeUint8(ClientMessage.CloseIdentifier)

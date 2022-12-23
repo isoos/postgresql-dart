@@ -9,7 +9,7 @@ import 'package:charcode/ascii.dart';
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
-import 'package:postgres/src/v3/types.dart';
+import 'package:postgres/src/query.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../auth/clear_text_authenticator.dart';
@@ -261,7 +261,7 @@ class PgConnectionImplementation implements PgConnection {
       types: description.parameterTypes,
     ));
 
-    return _PreparedStatement(name, this);
+    return _PreparedStatement(description, name, this);
   }
 
   @override
@@ -290,15 +290,15 @@ class PgConnectionImplementation implements PgConnection {
 }
 
 class _PreparedStatement extends PgStatement {
+  final InternalQueryDescription _description;
   final String _name;
   final PgConnectionImplementation _connection;
 
-  _PreparedStatement(this._name, this._connection);
+  _PreparedStatement(this._description, this._name, this._connection);
 
   @override
-  PgResultStream start(Object? parameters, {Duration? timeout}) {
-    final portalName = 'p/${_connection._portalCounter++}';
-    return _PgResultStream(this, portalName);
+  PgResultStream bind(Object? parameters) {
+    return _BoundStatement(this, _description.bindParameters(parameters));
   }
 
   @override
@@ -308,90 +308,79 @@ class _PreparedStatement extends PgStatement {
   }
 }
 
-class _PgResultStream extends Stream<PgResultRow>
-    implements PgResultStream, _PendingOperation {
-  final _PreparedStatement _statement;
-  final String _portalName;
+class _BoundStatement extends Stream<PgResultRow> implements PgResultStream {
+  final _PreparedStatement statement;
+  final List<PgTypedParameter> parameters;
 
-  final List<PgResultRow> _pendingRows = [];
-  final StreamController<PgResultRow> _listener = StreamController();
+  _BoundStatement(this.statement, this.parameters);
 
-  Completer<void>? _preparationDone;
+  @override
+  PgResultStreamSubscription listen(void Function(PgResultRow event)? onData,
+      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+    final controller = StreamController<PgResultRow>();
 
-  Completer<PgResultSchema> _schema = Completer();
+    // ignore: cancel_subscriptions
+    final subscription = controller.stream.listen(onData,
+        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+    return _PgResultStreamSubscription(this, controller, subscription);
+  }
+}
+
+class _PgResultStreamSubscription
+    implements PgResultStreamSubscription, _PendingOperation {
+  final _BoundStatement _statement;
+  final StreamController<PgResultRow> _controller;
+  final StreamSubscription<PgResultRow> _source;
+
+  final Completer<int> _affectedRows = Completer();
+
+  final Completer<PgResultSchema> _schema = Completer();
   PgResultSchema? _resultSchema;
 
-  _PgResultStream(this._statement, this._portalName) {
-    _listener.onListen = () {
-      if (_pendingRows.isNotEmpty) {
-        _pendingRows.forEach(_listener.add);
-      } else {
-        _submit();
-      }
-    };
+  late final _portalName = 'p/${connection._portalCounter++}';
+
+  _PgResultStreamSubscription(this._statement, this._controller, this._source) {
+    connection._operationLock.withResource(() async {
+      connection._pending = this;
+
+      connection._channel.sink.add(AggregatedClientMessage([
+        BindMessage(
+          [
+            for (final parameter in _statement.parameters)
+              ParameterValue.binary(parameter.value, parameter.type)
+          ],
+          portalName: _portalName,
+          statementName: _statement.statement._name,
+        ),
+        DescribeMessage.portal(portalName: _portalName),
+        ExecuteMessage(_portalName),
+        SyncMessage(),
+      ]));
+    });
   }
 
   @override
-  PgConnectionImplementation get connection => _statement._connection;
+  Future<int> get affectedRows => _affectedRows.future;
 
-  Future<void> _submit() async {
-    final completer = _preparationDone ??= Completer()
-      ..complete(connection._operationLock.withResource(() async {
-        connection._pending = this;
+  @override
+  Future<PgResultSchema> get schema => _schema.future;
 
-        connection._channel.sink.add(AggregatedClientMessage([
-          BindMessage(
-            [],
-            portalName: _portalName,
-            statementName: _statement._name,
-          ),
-          DescribeMessage.portal(portalName: _portalName),
-          ExecuteMessage(_portalName),
-          SyncMessage(),
-        ]));
-      }));
+  @override
+  PgConnectionImplementation get connection => _statement.statement._connection;
 
-    return completer.future;
+  void _error(Object error) {
+    if (!_schema.isCompleted) _schema.completeError(error);
+    if (!_affectedRows.isCompleted) _affectedRows.completeError(error);
+
+    _controller.addError(error);
   }
-
-  @override
-  Future<int> get affectedRows => throw UnimplementedError();
-
-  @override
-  Future<PgResultSchema> get schema async {
-    await _submit();
-    return await _schema.future;
-  }
-
-  @override
-  StreamSubscription<PgResultRow> listen(
-    void Function(PgResultRow event)? onData, {
-    Function? onError,
-    void Function()? onDone,
-    bool? cancelOnError,
-  }) =>
-      _listener.stream.listen(
-        onData,
-        onError: onError,
-        onDone: onDone,
-        cancelOnError: cancelOnError,
-      );
 
   @override
   Future<void> handleMessage(ServerMessage message) async {
     if (message is ErrorResponseMessage) {
       final error = AsyncError(
           PostgreSQLException.fromFields(message.fields), StackTrace.current);
-      final completer = _preparationDone;
-
-      if (_listener.hasListener) {
-        _listener!.addError(error);
-      } else if (completer != null && !completer.isCompleted) {
-        completer.completeError(error);
-      } else {
-        // This should never be the case, but...
-        Zone.current.handleUncaughtError(error, StackTrace.current);
-      }
+      _error(error);
     } else if (message is BindCompleteMessage) {
       // Nothing to do
     } else if (message is RowDescriptionMessage) {
@@ -414,12 +403,49 @@ class _PgResultStream extends Stream<PgResultRow>
           schema.columns[i].type.codec.decode(message.values[i]),
       ]);
 
-      if (_listener.hasListener) {
-        _listener.add(row);
-      } else {
-        _pendingRows.add(row);
-      }
+      _controller.add(row);
+    } else if (message is CommandCompleteMessage) {
+      _affectedRows.complete(message.rowsAffected);
+    } else if (message is ReadyForQueryMessage) {
+      await _controller.close();
     }
+  }
+
+  // Forwarding subscription interface to regular stream subscription from
+  // controller
+
+  @override
+  Future<E> asFuture<E>([E? futureValue]) => _source.asFuture(futureValue);
+
+  @override
+  Future<void> cancel() => _source.cancel();
+
+  @override
+  bool get isPaused => _source.isPaused;
+
+  @override
+  void onData(void Function(PgResultRow data)? handleData) {
+    _source.onData(handleData);
+  }
+
+  @override
+  void onDone(void Function()? handleDone) {
+    _source.onDone(handleDone);
+  }
+
+  @override
+  void onError(Function? handleError) {
+    _source.onError(handleError);
+  }
+
+  @override
+  void pause([Future<void>? resumeSignal]) {
+    _source.pause(resumeSignal);
+  }
+
+  @override
+  void resume() {
+    _source.resume();
   }
 }
 
