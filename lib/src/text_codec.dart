@@ -2,8 +2,6 @@ import 'dart:convert';
 
 import 'package:postgres/postgres.dart';
 
-import 'v3/types.dart';
-
 class PostgresTextEncoder {
   String convert(dynamic value, {bool escapeStrings = true}) {
     if (value == null) {

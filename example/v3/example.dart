@@ -22,4 +22,6 @@ void main() async {
   await subscription.cancel();
   print(await subscription.affectedRows);
   print(await subscription.schema);
+
+  await connection.close();
 }

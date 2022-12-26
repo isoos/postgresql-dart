@@ -18,7 +18,15 @@ import '../connection.dart' show PostgreSQLException;
 import 'protocol.dart';
 import 'query_description.dart';
 
-const _debugLog = true;
+const _debugLog = false;
+
+String identifier(String source) {
+  // To avoid complex ambiguity rules, we always wrap identifier in double
+  // quotes. That means the only character we need to escape are double quotes
+  // in the source.
+  final escaped = source.replaceAll('"', '""');
+  return '"$escaped"';
+}
 
 class _ResolvedSettings {
   final PgEndpoint endpoint;
@@ -71,6 +79,10 @@ class PgConnectionImplementation implements PgConnection {
       ));
     }
 
+    if (endpoint.transformer != null) {
+      channel = channel.transform(endpoint.transformer!);
+    }
+
     final connection = PgConnectionImplementation._(channel, settings);
     await connection._startup();
     return connection;
@@ -93,6 +105,7 @@ class PgConnectionImplementation implements PgConnection {
     }
 
     final sslCompleter = Completer<int>.sync();
+    // ignore: cancel_subscriptions
     final subscription = socket.listen(
       (data) {
         if (data.length != 1) {
@@ -115,7 +128,6 @@ class PgConnectionImplementation implements PgConnection {
     socket.add(byteBuffer.buffer.asUint8List());
 
     final byte = await sslCompleter.future.timeout(settings.connectTimeout);
-    subscription.pause();
 
     Stream<Uint8List> adaptedStream;
 
@@ -140,21 +152,18 @@ class PgConnectionImplementation implements PgConnection {
 
       // We've listened to the stream already and sockets are single-subscription
       // streams. Expose it as a new stream.
-      assert(subscription.isPaused);
-      final controller = StreamController<Uint8List>(sync: true)
-        ..onListen = subscription.resume
-        ..onCancel = subscription.cancel
-        ..onPause = subscription.pause
-        ..onResume = subscription.resume;
-      subscription
-        ..onData(controller.add)
-        ..onDone(controller.close)
-        ..onError(controller.addError);
-
-      adaptedStream = controller.stream;
+      adaptedStream = SubscriptionStream(subscription);
     }
 
-    return StreamChannel<List<int>>(adaptedStream, socket)
+    final outgoingSocket = StreamSinkExtensions(socket).transform<Uint8List>(
+        StreamSinkTransformer.fromHandlers(handleDone: (out) {
+      // As per the stream channel's guarantees, closing the sink should close
+      // the channel in both directions.
+      socket.destroy();
+      return out.close();
+    }));
+
+    return StreamChannel<List<int>>(adaptedStream, outgoingSocket)
         .transform(messageTransformer);
   }
 
@@ -167,11 +176,14 @@ class PgConnectionImplementation implements PgConnection {
   _PendingOperation? _pending;
 
   final Map<String, String> _parameters = {};
-  int? _processId;
-  int? _secretKey;
 
   var _statementCounter = 0;
   var _portalCounter = 0;
+
+  late final _Channels _channels = _Channels(this);
+
+  @override
+  PgChannels get channels => _channels;
 
   PgConnectionImplementation._(this._channel, this._settings) {
     _serverMessages = _channel.stream.listen(_handleMessage);
@@ -200,8 +212,9 @@ class PgConnectionImplementation implements PgConnection {
       if (message is ParameterStatusMessage) {
         _parameters[message.name] = message.value;
       } else if (message is BackendKeyMessage) {
-        _processId = message.processID;
-        _secretKey = message.secretKey;
+        // ignore for now
+      } else if (message is NotificationResponseMessage) {
+        _channels.deliverNotification(message);
       } else if (_pending != null) {
         await _pending!.handleMessage(message);
       }
@@ -214,7 +227,7 @@ class PgConnectionImplementation implements PgConnection {
     final trace = StackTrace.current;
 
     return _operationLock.withResource(() {
-      _channel.sink.add(AggregatedClientMessage([send, SyncMessage()]));
+      _channel.sink.add(AggregatedClientMessage([send, const SyncMessage()]));
 
       final completer = Completer<T>();
       final syncComplete = Completer<void>.sync();
@@ -245,12 +258,6 @@ class PgConnectionImplementation implements PgConnection {
   }
 
   @override
-  PgChannels get channels => throw UnimplementedError();
-
-  @override
-  PgMessages get messages => throw UnimplementedError();
-
-  @override
   Future<PgStatement> prepare(Object query, {Duration? timeout}) async {
     final name = 's/${_statementCounter++}';
     final description = InternalQueryDescription.wrap(query);
@@ -266,9 +273,36 @@ class PgConnectionImplementation implements PgConnection {
 
   @override
   Future<PgResult> execute(Object query,
-      {Object? parameters, Duration? timeout}) {
-    // TODO: implement execute
-    throw UnimplementedError();
+      {Object? parameters, Duration? timeout}) async {
+    final description = InternalQueryDescription.wrap(query);
+    final variables = description.bindParameters(parameters);
+
+    if (variables.isNotEmpty) {
+      // The simple query protocol does not support variables, so we have to
+      // prepare a statement explicitly.
+      final prepared = await prepare(description, timeout: timeout);
+      try {
+        return prepared.run(variables, timeout: timeout);
+      } finally {
+        await prepared.dispose();
+      }
+    } else {
+      // Great, we can just run a simple query.
+      final controller = StreamController<PgResultRow>();
+      final items = <PgResultRow>[];
+
+      final querySubscription = _PgResultStreamSubscription.simpleQuery(
+        description.transformedSql,
+        this,
+        controller,
+        controller.stream.listen(items.add),
+      );
+      await querySubscription.asFuture();
+      await querySubscription.cancel();
+
+      return PgResult(items, await querySubscription.affectedRows,
+          await querySubscription.schema);
+    }
   }
 
   @override
@@ -284,8 +318,13 @@ class PgConnectionImplementation implements PgConnection {
   }
 
   @override
-  Future<void> close() {
-    throw UnimplementedError();
+  Future<void> close() async {
+    await _operationLock.withResource(() {
+      // Use lock to await earlier operations
+      _channel.sink.add(const TerminateMessage());
+    });
+
+    await Future.wait([_channel.sink.close(), _serverMessages.cancel()]);
   }
 }
 
@@ -328,34 +367,49 @@ class _BoundStatement extends Stream<PgResultRow> implements PgResultStream {
 
 class _PgResultStreamSubscription
     implements PgResultStreamSubscription, _PendingOperation {
-  final _BoundStatement _statement;
+  @override
+  final PgConnectionImplementation connection;
   final StreamController<PgResultRow> _controller;
   final StreamSubscription<PgResultRow> _source;
 
   final Completer<int> _affectedRows = Completer();
-
   final Completer<PgResultSchema> _schema = Completer();
+  final Completer<void> _done = Completer();
   PgResultSchema? _resultSchema;
 
   late final _portalName = 'p/${connection._portalCounter++}';
 
-  _PgResultStreamSubscription(this._statement, this._controller, this._source) {
+  _PgResultStreamSubscription(
+      _BoundStatement statement, this._controller, this._source)
+      : connection = statement.statement._connection {
     connection._operationLock.withResource(() async {
       connection._pending = this;
 
       connection._channel.sink.add(AggregatedClientMessage([
         BindMessage(
           [
-            for (final parameter in _statement.parameters)
+            for (final parameter in statement.parameters)
               ParameterValue.binary(parameter.value, parameter.type)
           ],
           portalName: _portalName,
-          statementName: _statement.statement._name,
+          statementName: statement.statement._name,
         ),
         DescribeMessage.portal(portalName: _portalName),
         ExecuteMessage(_portalName),
         SyncMessage(),
       ]));
+
+      await _done.future;
+    });
+  }
+
+  _PgResultStreamSubscription.simpleQuery(
+      String sql, this.connection, this._controller, this._source) {
+    connection._operationLock.withResource(() async {
+      connection._pending = this;
+
+      connection._channel.sink.add(QueryMessage(sql));
+      await _done.future;
     });
   }
 
@@ -364,9 +418,6 @@ class _PgResultStreamSubscription
 
   @override
   Future<PgResultSchema> get schema => _schema.future;
-
-  @override
-  PgConnectionImplementation get connection => _statement.statement._connection;
 
   void _error(Object error) {
     if (!_schema.isCompleted) _schema.completeError(error);
@@ -407,6 +458,7 @@ class _PgResultStreamSubscription
     } else if (message is CommandCompleteMessage) {
       _affectedRows.complete(message.rowsAffected);
     } else if (message is ReadyForQueryMessage) {
+      _done.complete();
       await _controller.close();
     }
   }
@@ -446,6 +498,95 @@ class _PgResultStreamSubscription
   @override
   void resume() {
     _source.resume();
+  }
+}
+
+class _Channels implements PgChannels {
+  final PgConnectionImplementation _connection;
+
+  final Map<String, List<MultiStreamController<String>>> _activeListeners = {};
+
+  // We are using the pg_notify function in a prepared select statement to
+  // efficiently implement [notify].
+  Completer<PgStatement>? _notifyStatement;
+
+  _Channels(this._connection);
+
+  @override
+  Stream<String> operator [](String channel) {
+    return Stream.multi(
+      (newListener) {
+        newListener.onCancel = () => _unsubscribe(channel, newListener);
+
+        final existingListeners =
+            _activeListeners.putIfAbsent(channel, () => []);
+        final needsSubscription = existingListeners.isEmpty;
+        existingListeners.add(newListener);
+
+        if (needsSubscription) {
+          _subscribe(channel, newListener);
+        }
+      },
+      isBroadcast: true,
+    );
+  }
+
+  void _subscribe(String channel, MultiStreamController firstListener) {
+    Future(() async {
+      await _connection
+          .execute(PgQueryDescription.direct('LISTEN ${identifier(channel)}'));
+    }).onError<Object>((error, stackTrace) {
+      _activeListeners[channel]?.remove(firstListener);
+
+      firstListener
+        ..addError(error, stackTrace)
+        ..close();
+    });
+  }
+
+  Future<void> _unsubscribe(
+      String channel, MultiStreamController listener) async {
+    final listeners = _activeListeners[channel]!..remove(listener);
+
+    if (listeners.isEmpty) {
+      _activeListeners.remove(channel);
+
+      // Send unlisten command
+      await _connection.execute(
+          PgQueryDescription.direct('UNLISTEN ${identifier(channel)}'));
+    }
+  }
+
+  void deliverNotification(NotificationResponseMessage msg) {
+    final listeners = _activeListeners[msg.channel] ?? const [];
+
+    for (final listener in listeners) {
+      listener.add(msg.payload);
+    }
+  }
+
+  @override
+  Future<void> cancelAll() async {
+    await _connection.execute(PgQueryDescription.direct('UNLISTEN *'));
+
+    for (final entry in _activeListeners.values) {
+      for (final listener in entry) {
+        await listener.close();
+      }
+    }
+  }
+
+  @override
+  Future<void> notify(String channel, [String? payload]) async {
+    final statementCompleter = _notifyStatement ??= Completer()
+      ..complete(Future(() async {
+        return _connection.prepare(PgQueryDescription.direct(
+            r'SELECT pg_notify($1, $2)',
+            types: [PgDataType.text, PgDataType.text]));
+      }));
+    final statement = await statementCompleter.future;
+
+    await statement.run([channel, payload]);
   }
 }
 

@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:stream_channel/stream_channel.dart';
 
 import 'src/v3/connection.dart';
+import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
 import 'src/v3/types.dart';
 
@@ -63,7 +65,6 @@ abstract class PgConnection implements PgSession, PgSessionExecutor {
   }
 
   PgChannels get channels;
-  PgMessages get messages;
 }
 
 abstract class PgResultStream implements Stream<PgResultRow> {
@@ -91,7 +92,7 @@ abstract class PgStatement {
     await subscription.asFuture();
     await subscription.cancel();
 
-    return _PgResult(
+    return PgResult(
         items, await subscription.affectedRows, await subscription.schema);
   }
 
@@ -108,6 +109,10 @@ class PgTypedParameter {
 abstract class PgResult implements List<PgResultRow> {
   int get affectedRows;
   PgResultSchema get schema;
+
+  factory PgResult(
+          List<PgResultRow> rows, int affectedRows, PgResultSchema schema) =
+      _PgResult;
 }
 
 class _PgResult extends DelegatingList<PgResultRow> implements PgResult {
@@ -181,19 +186,10 @@ class PgResultColumn {
 }
 
 abstract class PgChannels {
-  Stream<String?> operator [](String channel);
+  Stream<String> operator [](String channel);
   Future<void> notify(String channel, [String? payload]);
   Future<void> cancelAll();
 }
-
-abstract class PgMessages {
-  Future<void> send(PgClientMessage message);
-  Stream<PgServerMessage> get messages;
-}
-
-abstract class PgClientMessage {}
-
-abstract class PgServerMessage {}
 
 abstract class PgNotification {}
 
@@ -206,6 +202,18 @@ class PgEndpoint {
   final bool requireSsl;
   final bool isUnixSocket;
 
+  /// An optional [StreamChannelTransformer] sitting behind the postgres client
+  /// as implemented in the `posgres` package and the database server.
+  ///
+  /// The stream channel transformer is able to view, alter, drop, or inject
+  /// messages in either direction. This powerful tool can be used to implement
+  /// additional or custom functionality, but should also be used with caution
+  /// as altering the message flow might break internal invariants of this
+  /// package.
+  ///
+  /// For an example, see `example/v3/transformer.dart`.
+  final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
+
   PgEndpoint({
     required this.host,
     this.port = 5432,
@@ -214,6 +222,7 @@ class PgEndpoint {
     this.password,
     this.requireSsl = false,
     this.isUnixSocket = false,
+    this.transformer,
   });
 
   Future<PgConnection> connect({PgSessionSettings? sessionSettings}) {

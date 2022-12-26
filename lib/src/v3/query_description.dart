@@ -1,7 +1,5 @@
 import 'package:postgres/postgres_v3_experimental.dart';
 
-import 'types.dart';
-
 class InternalQueryDescription implements PgQueryDescription {
   /// The SQL to send to postgres.
   ///

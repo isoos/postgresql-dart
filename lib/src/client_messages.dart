@@ -28,6 +28,8 @@ abstract class ClientMessage extends BaseMessage {
   static const int PasswordIdentifier = 112; //p
   static const int CloseIdentifier = $C;
 
+  const ClientMessage();
+
   void applyToBuffer(ByteDataWriter buffer);
 
   Uint8List asBytes() {
@@ -289,10 +291,23 @@ class CloseMessage extends ClientMessage {
 }
 
 class SyncMessage extends ClientMessage {
+  const SyncMessage();
+
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.SyncIdentifier);
     buffer.writeUint32(4);
+  }
+}
+
+class TerminateMessage extends ClientMessage {
+  const TerminateMessage();
+
+  @override
+  void applyToBuffer(ByteDataWriter buffer) {
+    buffer
+      ..writeUint8($X)
+      ..writeUint32(4);
   }
 }
 
