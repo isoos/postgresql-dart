@@ -533,8 +533,7 @@ class _Channels implements PgChannels {
 
   void _subscribe(String channel, MultiStreamController firstListener) {
     Future(() async {
-      await _connection
-          .execute(PgQueryDescription.direct('LISTEN ${identifier(channel)}'));
+      await _connection.execute(PgSql('LISTEN ${identifier(channel)}'));
     }).onError<Object>((error, stackTrace) {
       _activeListeners[channel]?.remove(firstListener);
 
@@ -552,8 +551,7 @@ class _Channels implements PgChannels {
       _activeListeners.remove(channel);
 
       // Send unlisten command
-      await _connection.execute(
-          PgQueryDescription.direct('UNLISTEN ${identifier(channel)}'));
+      await _connection.execute(PgSql('UNLISTEN ${identifier(channel)}'));
     }
   }
 
@@ -567,7 +565,7 @@ class _Channels implements PgChannels {
 
   @override
   Future<void> cancelAll() async {
-    await _connection.execute(PgQueryDescription.direct('UNLISTEN *'));
+    await _connection.execute(PgSql('UNLISTEN *'));
 
     for (final entry in _activeListeners.values) {
       for (final listener in entry) {
@@ -580,8 +578,7 @@ class _Channels implements PgChannels {
   Future<void> notify(String channel, [String? payload]) async {
     final statementCompleter = _notifyStatement ??= Completer()
       ..complete(Future(() async {
-        return _connection.prepare(PgQueryDescription.direct(
-            r'SELECT pg_notify($1, $2)',
+        return _connection.prepare(PgSql(r'SELECT pg_notify($1, $2)',
             types: [PgDataType.text, PgDataType.text]));
       }));
     final statement = await statementCompleter.future;

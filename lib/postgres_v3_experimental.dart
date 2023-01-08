@@ -26,22 +26,22 @@ abstract class PgPool implements PgSession, PgSessionExecutor {
   });
 }
 
-class PgQueryDescription {
-  factory PgQueryDescription.direct(String sql, {List<PgDataType>? types}) =
+class PgSql {
+  factory PgSql(String sql, {List<PgDataType>? types}) =
       InternalQueryDescription.direct;
-  factory PgQueryDescription.map(String sql, {String substitution}) =
+  factory PgSql.map(String sql, {String substitution}) =
       InternalQueryDescription.map;
 }
 
 abstract class PgSession {
   // uses extended query protocol
   Future<PgStatement> prepare(
-    Object /* String | InternalQueryDescription */ query, {
+    Object /* String | PgSql */ query, {
     Duration? timeout,
   });
 
   Future<PgResult> execute(
-    Object /* String | InternalQueryDescription */ query, {
+    Object /* String | PgSql */ query, {
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */ parameters,
     Duration? timeout,
   });

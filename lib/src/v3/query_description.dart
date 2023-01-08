@@ -1,6 +1,6 @@
 import 'package:postgres/postgres_v3_experimental.dart';
 
-class InternalQueryDescription implements PgQueryDescription {
+class InternalQueryDescription implements PgSql {
   /// The SQL to send to postgres.
   ///
   /// This is the [originalSql] statement after local processing ran to

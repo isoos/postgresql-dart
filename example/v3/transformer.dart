@@ -31,6 +31,6 @@ void main() async {
       host: 'localhost', database: 'postgres', transformer: loggingTransformer);
   final connection = await database.connect();
 
-  await connection.execute(PgQueryDescription.direct('SELECT 1;'));
+  await connection.execute(PgSql('SELECT 1;'));
   await connection.close();
 }
