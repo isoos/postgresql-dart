@@ -39,7 +39,7 @@ class PostgreSQLException implements Exception {
     code = '';
   }
 
-  // todo: Remove from public api
+  @internal
   factory PostgreSQLException.fromFields(List<ErrorField> errorFields) {
     return PostgreSQLException._(errorFields);
   }
