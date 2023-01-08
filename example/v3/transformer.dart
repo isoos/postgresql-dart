@@ -27,9 +27,9 @@ void main() async {
     }),
   );
 
-  final database = PgEndpoint(
-      host: 'localhost', database: 'postgres', transformer: loggingTransformer);
-  final connection = await database.connect();
+  final database = PgEndpoint(host: 'localhost', database: 'postgres');
+  final connection = await database.connect(
+      sessionSettings: PgSessionSettings(transformer: loggingTransformer));
 
   await connection.execute(PgSql('SELECT 1;'));
   await connection.close();

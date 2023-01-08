@@ -202,18 +202,6 @@ class PgEndpoint {
   final bool requireSsl;
   final bool isUnixSocket;
 
-  /// An optional [StreamChannelTransformer] sitting behind the postgres client
-  /// as implemented in the `posgres` package and the database server.
-  ///
-  /// The stream channel transformer is able to view, alter, drop, or inject
-  /// messages in either direction. This powerful tool can be used to implement
-  /// additional or custom functionality, but should also be used with caution
-  /// as altering the message flow might break internal invariants of this
-  /// package.
-  ///
-  /// For an example, see `example/v3/transformer.dart`.
-  final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
-
   PgEndpoint({
     required this.host,
     this.port = 5432,
@@ -222,7 +210,6 @@ class PgEndpoint {
     this.password,
     this.requireSsl = false,
     this.isUnixSocket = false,
-    this.transformer,
   });
 
   Future<PgConnection> connect({PgSessionSettings? sessionSettings}) {
@@ -239,12 +226,25 @@ class PgSessionSettings {
   final Encoding? encoding;
   final bool Function(X509Certificate)? onBadSslCertificate;
 
+  /// An optional [StreamChannelTransformer] sitting behind the postgres client
+  /// as implemented in the `posgres` package and the database server.
+  ///
+  /// The stream channel transformer is able to view, alter, drop, or inject
+  /// messages in either direction. This powerful tool can be used to implement
+  /// additional or custom functionality, but should also be used with caution
+  /// as altering the message flow might break internal invariants of this
+  /// package.
+  ///
+  /// For an example, see `example/v3/transformer.dart`.
+  final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
+
   PgSessionSettings({
     this.connectTimeout,
     this.queryTimeout,
     this.timeZone,
     this.encoding,
     this.onBadSslCertificate,
+    this.transformer,
   });
 }
 

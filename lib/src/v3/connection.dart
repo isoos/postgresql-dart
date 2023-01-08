@@ -40,6 +40,8 @@ class _ResolvedSettings {
   final String timeZone;
   final Encoding encoding;
 
+  final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
+
   _ResolvedSettings(
     this.endpoint,
     this.settings,
@@ -49,7 +51,8 @@ class _ResolvedSettings {
             settings?.connectTimeout ?? const Duration(seconds: 15),
         queryTimeout = settings?.connectTimeout ?? const Duration(minutes: 5),
         timeZone = settings?.timeZone ?? 'UTC',
-        encoding = settings?.encoding ?? utf8;
+        encoding = settings?.encoding ?? utf8,
+        transformer = settings?.transformer;
 
   bool onBadSslCertificate(X509Certificate certificate) {
     return settings?.onBadSslCertificate?.call(certificate) ?? false;
@@ -79,8 +82,8 @@ class PgConnectionImplementation implements PgConnection {
       ));
     }
 
-    if (endpoint.transformer != null) {
-      channel = channel.transform(endpoint.transformer!);
+    if (settings.transformer != null) {
+      channel = channel.transform(settings.transformer!);
     }
 
     final connection = PgConnectionImplementation._(channel, settings);
