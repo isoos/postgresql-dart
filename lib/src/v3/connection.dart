@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
-import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart';
@@ -12,8 +11,7 @@ import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:postgres/src/query.dart';
 import 'package:stream_channel/stream_channel.dart';
 
-import '../auth/clear_text_authenticator.dart';
-import '../auth/md5_authenticator.dart';
+import '../auth/auth.dart';
 import '../connection.dart' show PostgreSQLException;
 import 'protocol.dart';
 import 'query_description.dart';
@@ -446,17 +444,24 @@ class _PgResultStreamSubscription
             columnName: field.columnName,
             columnOid: field.columnID,
             tableOid: field.tableID,
+            binaryEncoding: field.formatCode != 0,
           ),
       ]);
       _schema.complete(schema);
     } else if (message is DataRowMessage) {
       final schema = _resultSchema!;
 
-      final row = _ResultRow(schema, [
-        for (var i = 0; i < message.values.length; i++)
-          schema.columns[i].type.codec.decode(message.values[i]),
-      ]);
+      final columnValues = <Object?>[];
+      for (var i = 0; i < message.values.length; i++) {
+        final field = schema.columns[i];
 
+        final type = field.type;
+        final codec = field.binaryEncoding ? type.binaryCodec : type.textCodec;
+
+        columnValues.add(codec.decode(message.values[i]));
+      }
+
+      final row = _ResultRow(schema, columnValues);
       _controller.add(row);
     } else if (message is CommandCompleteMessage) {
       _affectedRows.complete(message.rowsAffected);
@@ -617,7 +622,21 @@ class _CallbackOperation extends _PendingOperation {
 class _AuthenticationProcedure extends _PendingOperation {
   final Completer<void> _done = Completer();
 
+  late PostgresAuthenticator _authenticator;
+
   _AuthenticationProcedure(super.connection);
+
+  void _initializeAuthenticate(
+      AuthenticationMessage message, AuthenticationScheme scheme) {
+    final authConnection = PostgresAuthConnection(
+      connection._settings.username,
+      connection._settings.password,
+      connection._channel.sink.add,
+    );
+
+    _authenticator = createAuthenticator(authConnection, scheme)
+      ..onMessage(message);
+  }
 
   @override
   Future<void> handleMessage(ServerMessage message) async {
@@ -628,19 +647,27 @@ class _AuthenticationProcedure extends _PendingOperation {
         case AuthenticationMessage.KindOK:
           break;
         case AuthenticationMessage.KindMD5Password:
-          // this means the server is requesting an md5 challenge
-          // so the password must not be null
-          final password = connection._settings.password;
-          final user = connection._settings.username;
-
-          final reader = ByteDataReader()..add(message.bytes);
-          final salt = reader.read(4, copy: true);
-
-          connection._channel.sink.add(AuthMD5Message(user, password, salt));
+          _initializeAuthenticate(message, AuthenticationScheme.md5);
           break;
         case AuthenticationMessage.KindClearTextPassword:
-          connection._channel.sink
-              .add(ClearMessage(connection._settings.password));
+          if (!connection._settings.endpoint.allowCleartextPassword) {
+            _done.completeError(
+              PostgreSQLException(
+                  'Refused to send clear text password to server',
+                  stackTrace: StackTrace.current),
+              StackTrace.current,
+            );
+            return;
+          }
+
+          _initializeAuthenticate(message, AuthenticationScheme.clear);
+          break;
+        case AuthenticationMessage.KindSASL:
+          _initializeAuthenticate(message, AuthenticationScheme.scramSha256);
+          break;
+        case AuthenticationMessage.KindSASLContinue:
+        case AuthenticationMessage.KindSASLFinal:
+          _authenticator.onMessage(message);
           break;
         default:
           _done.completeError(PostgreSQLException('Unhandled auth mechanism'));

@@ -3,7 +3,10 @@ import 'dart:core';
 import 'dart:core' as core;
 import 'dart:typed_data';
 
+import 'package:buffer/buffer.dart';
+
 import '../binary_codec.dart';
+import '../text_codec.dart';
 
 /// Describes PostgreSQL's geometric type: `point`.
 class PgPoint {
@@ -120,8 +123,13 @@ enum PgDataType<Dart extends Object> {
   /// The object ID of this data type.
   final int? oid;
 
-  Codec<Dart?, Uint8List?> get codec {
-    return _codecs.putIfAbsent(this, () => _TypeCodec<Dart>(this))
+  Codec<Dart?, Uint8List?> get binaryCodec {
+    return binaryCodecs.putIfAbsent(this, () => _BinaryTypeCodec<Dart>(this))
+        as Codec<Dart?, Uint8List?>;
+  }
+
+  Codec<Dart?, Uint8List?> get textCodec {
+    return _textCodecs.putIfAbsent(this, () => _TextTypeCodec<Dart>(this))
         as Codec<Dart?, Uint8List?>;
   }
 
@@ -132,18 +140,40 @@ enum PgDataType<Dart extends Object> {
       if (type.oid != null) type.oid!: type,
   });
 
-  static final Map<PgDataType, _TypeCodec> _codecs = {};
+  static final Map<PgDataType, _BinaryTypeCodec> binaryCodecs = {};
+  static final Map<PgDataType, _TextTypeCodec> _textCodecs = {};
 }
 
-class _TypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
+class _BinaryTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
   @override
   final Converter<D?, Uint8List?> encoder;
   @override
   final Converter<Uint8List?, D?> decoder;
 
-  _TypeCodec(PgDataType<D> type)
+  _BinaryTypeCodec(PgDataType<D> type)
       : encoder = PostgresBinaryEncoder(type),
         // Only some integer variants have no dedicated oid, they share it with
         // the normal integer.
         decoder = PostgresBinaryDecoder(type.oid ?? PgDataType.integer.oid!);
+}
+
+class _TextTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
+  @override
+  final Converter<D?, Uint8List?> encoder;
+  @override
+  final Converter<Uint8List?, D?> decoder;
+
+  _TextTypeCodec(PgDataType<D> type)
+      : encoder = const _PostgresTextToUtf8Encoder(),
+        decoder = PostgresTextDecoder<D>(type);
+}
+
+class _PostgresTextToUtf8Encoder<D extends Object>
+    extends Converter<D?, Uint8List?> {
+  const _PostgresTextToUtf8Encoder();
+
+  @override
+  Uint8List convert(Object? input) {
+    return castBytes(utf8.encode(const PostgresTextEncoder().convert(input)));
+  }
 }

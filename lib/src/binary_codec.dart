@@ -44,6 +44,7 @@ class PostgresBinaryEncoder<T extends Object>
       return null;
     }
 
+    // ignore: unnecessary_cast
     switch (_dataType as PgDataType<Object>) {
       case PgDataType.boolean:
         {

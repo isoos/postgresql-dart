@@ -1,48 +1,54 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:postgres/postgres.dart';
 
-class PostgresTextEncoder {
-  String convert(dynamic value, {bool escapeStrings = true}) {
-    if (value == null) {
+import 'v3/types.dart';
+
+class PostgresTextEncoder extends Converter<Object, String> {
+  const PostgresTextEncoder();
+
+  @override
+  String convert(dynamic input, {bool escapeStrings = true}) {
+    if (input == null) {
       return 'null';
     }
 
-    if (value is int) {
-      return _encodeNumber(value);
+    if (input is int) {
+      return _encodeNumber(input);
     }
 
-    if (value is double) {
-      return _encodeDouble(value);
+    if (input is double) {
+      return _encodeDouble(input);
     }
 
-    if (value is String) {
-      return _encodeString(value, escapeStrings);
+    if (input is String) {
+      return _encodeString(input, escapeStrings);
     }
 
-    if (value is DateTime) {
-      return _encodeDateTime(value, isDateOnly: false);
+    if (input is DateTime) {
+      return _encodeDateTime(input, isDateOnly: false);
     }
 
-    if (value is bool) {
-      return _encodeBoolean(value);
+    if (input is bool) {
+      return _encodeBoolean(input);
     }
 
-    if (value is Map) {
-      return _encodeJSON(value, escapeStrings);
+    if (input is Map) {
+      return _encodeJSON(input, escapeStrings);
     }
 
-    if (value is PgPoint) {
-      return _encodePoint(value);
+    if (input is PgPoint) {
+      return _encodePoint(input);
     }
 
-    if (value is List) {
-      return _encodeList(value);
+    if (input is List) {
+      return _encodeList(input);
     }
 
     // TODO: use custom type encoders
 
-    throw PostgreSQLException("Could not infer type of value '$value'.");
+    throw PostgreSQLException("Could not infer type of value '$input'.");
   }
 
   String _encodeString(String text, bool escapeStrings) {
@@ -208,5 +214,37 @@ class PostgresTextEncoder {
     }
 
     throw PostgreSQLException("Could not infer array type of value '$value'.");
+  }
+}
+
+class PostgresTextDecoder<T extends Object> extends Converter<Uint8List?, T?> {
+  final PgDataType<T> _dataType;
+
+  const PostgresTextDecoder(this._dataType);
+
+  @override
+  T? convert(Uint8List? input) {
+    if (input == null) return null;
+
+    final asText = utf8.decode(input);
+
+    // ignore: unnecessary_cast
+    switch (_dataType as PgDataType<Object>) {
+      case PgDataType.text:
+        return asText as T;
+      case PgDataType.integer:
+      case PgDataType.smallInteger:
+      case PgDataType.bigInteger:
+      case PgDataType.serial:
+      case PgDataType.bigSerial:
+        return int.parse(asText) as T;
+      case PgDataType.real:
+      case PgDataType.double:
+        return num.parse(asText) as T;
+      case PgDataType.boolean:
+        return (asText == 'true') as T;
+      default:
+        throw UnimplementedError('Text decoding for $_dataType');
+    }
   }
 }

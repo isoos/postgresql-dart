@@ -1,18 +1,17 @@
 import 'package:buffer/buffer.dart';
 
-import '../../postgres.dart';
 import '../client_messages.dart';
 import '../server_messages.dart';
 import '../utf8_backed_string.dart';
 import 'auth.dart';
 
 class ClearAuthenticator extends PostgresAuthenticator {
-  ClearAuthenticator(PostgreSQLConnection connection) : super(connection);
+  ClearAuthenticator(PostgresAuthConnection connection) : super(connection);
 
   @override
   void onMessage(AuthenticationMessage message) {
     final authMessage = ClearMessage(connection.password!);
-    connection.socket!.add(authMessage.asBytes());
+    connection.sendMessage(authMessage);
   }
 }
 

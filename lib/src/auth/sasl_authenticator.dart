@@ -13,7 +13,8 @@ import 'auth.dart';
 class PostgresSaslAuthenticator extends PostgresAuthenticator {
   final SaslAuthenticator authenticator;
 
-  PostgresSaslAuthenticator(PostgreSQLConnection connection, this.authenticator)
+  PostgresSaslAuthenticator(
+      PostgresAuthConnection connection, this.authenticator)
       : super(connection);
 
   @override
@@ -44,7 +45,7 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
         throw PostgreSQLException(
             'Unsupported authentication type ${message.type}, closing connection.');
     }
-    connection.socket!.add(msg.asBytes());
+    connection.sendMessage(msg);
   }
 }
 

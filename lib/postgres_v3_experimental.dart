@@ -153,6 +153,7 @@ class PgResultColumn {
   final int? tableOid;
   final String? columnName;
   final int? columnOid;
+  final bool binaryEncoding;
 
   PgResultColumn({
     required this.type,
@@ -160,6 +161,7 @@ class PgResultColumn {
     this.tableOid,
     this.columnName,
     this.columnOid,
+    this.binaryEncoding = false,
   });
 
   @override
@@ -202,6 +204,12 @@ class PgEndpoint {
   final bool requireSsl;
   final bool isUnixSocket;
 
+  /// Whether the client should send the password to the server in clear-text
+  /// for authentication.
+  ///
+  /// For security reasons, it is recommended to keep this disabled.
+  final bool allowCleartextPassword;
+
   PgEndpoint({
     required this.host,
     this.port = 5432,
@@ -210,6 +218,7 @@ class PgEndpoint {
     this.password,
     this.requireSsl = false,
     this.isUnixSocket = false,
+    this.allowCleartextPassword = false,
   });
 }
 
