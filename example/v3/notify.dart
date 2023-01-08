@@ -13,7 +13,7 @@ void main(List<String> args) async {
 
   if (command == 'listen') {
     final database = PgEndpoint(host: 'localhost', database: 'postgres');
-    final connection = await database.connect();
+    final connection = await PgConnection.open(database);
 
     // Notifications are exposed as streams, the postgres package will
     // automatically issue the `LISTEN` AND `UNLISTEN` commands as the stream
@@ -30,7 +30,7 @@ void main(List<String> args) async {
     final payload = args.length > 1 ? args[1] : null;
 
     final database = PgEndpoint(host: 'localhost', database: 'postgres');
-    final connection = await database.connect();
+    final connection = await PgConnection.open(database);
 
     await connection.channels.notify(channel, payload);
     await connection.close();

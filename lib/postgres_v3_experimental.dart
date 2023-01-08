@@ -211,10 +211,6 @@ class PgEndpoint {
     this.requireSsl = false,
     this.isUnixSocket = false,
   });
-
-  Future<PgConnection> connect({PgSessionSettings? sessionSettings}) {
-    return PgConnection.open(this, sessionSettings: sessionSettings);
-  }
 }
 
 class PgSessionSettings {
