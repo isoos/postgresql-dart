@@ -319,11 +319,11 @@ class PostgresBinaryEncoder<T extends Object>
     }
   }
 
-  Uint8List writeListBytes<T>(
-      Iterable<T> value,
+  Uint8List writeListBytes<V>(
+      Iterable<V> value,
       int type,
-      int Function(T item) lengthEncoder,
-      void Function(ByteDataWriter writer, T item) valueEncoder) {
+      int Function(V item) lengthEncoder,
+      void Function(ByteDataWriter writer, V item) valueEncoder) {
     final writer = ByteDataWriter();
 
     writer.writeInt32(1); // dimension
@@ -549,8 +549,8 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
     }
   }
 
-  List<T> readListBytes<T>(Uint8List data,
-      T Function(ByteDataReader reader, int length) valueDecoder) {
+  List<V> readListBytes<V>(Uint8List data,
+      V Function(ByteDataReader reader, int length) valueDecoder) {
     if (data.length < 16) {
       return [];
     }
@@ -558,7 +558,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
     final reader = ByteDataReader()..add(data);
     reader.read(12); // header
 
-    final decoded = [].cast<T>();
+    final decoded = [].cast<V>();
     final size = reader.readInt32();
 
     reader.read(4); // index

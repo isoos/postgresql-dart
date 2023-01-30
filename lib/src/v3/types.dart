@@ -124,7 +124,7 @@ enum PgDataType<Dart extends Object> {
   final int? oid;
 
   Codec<Dart?, Uint8List?> get binaryCodec {
-    return binaryCodecs.putIfAbsent(this, () => _BinaryTypeCodec<Dart>(this))
+    return _binaryCodecs.putIfAbsent(this, () => _BinaryTypeCodec<Dart>(this))
         as Codec<Dart?, Uint8List?>;
   }
 
@@ -140,7 +140,7 @@ enum PgDataType<Dart extends Object> {
       if (type.oid != null) type.oid!: type,
   });
 
-  static final Map<PgDataType, _BinaryTypeCodec> binaryCodecs = {};
+  static final Map<PgDataType, _BinaryTypeCodec> _binaryCodecs = {};
   static final Map<PgDataType, _TextTypeCodec> _textCodecs = {};
 }
 
