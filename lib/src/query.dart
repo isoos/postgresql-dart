@@ -229,16 +229,14 @@ class ParameterValue {
 
   factory ParameterValue.binary(
       dynamic value, PostgreSQLDataType postgresType) {
-    final converter = PostgresBinaryEncoder(postgresType);
-    final bytes = converter.convert(value);
-    final length = bytes?.length ?? 0;
-    return ParameterValue._(true, bytes, length);
+    final bytes = postgresType.binaryCodec.encoder.convert(value);
+    return ParameterValue._(true, bytes, bytes?.length ?? 0);
   }
 
   factory ParameterValue.text(dynamic value) {
     Uint8List? bytes;
     if (value != null) {
-      final converter = PostgresTextEncoder();
+      const converter = PostgresTextEncoder();
       bytes = castBytes(
           utf8.encode(converter.convert(value, escapeStrings: false)));
     }

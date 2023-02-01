@@ -251,7 +251,7 @@ void main() {
         '0.0': [0, 0, 0, 0, 0, 0, 0, 1], // .0 or 0.0
       };
 
-      final encoder = PostgresBinaryEncoder(PostgreSQLDataType.numeric);
+      final encoder = PostgresBinaryEncoder<Object>(PostgreSQLDataType.numeric);
       binaries.forEach((key, value) {
         final uint8List = Uint8List.fromList(value);
         final res = encoder.convert(key);
@@ -607,7 +607,7 @@ void main() {
   });
 
   test('Invalid UUID encoding', () {
-    final converter = PostgresBinaryEncoder(PostgreSQLDataType.uuid);
+    final converter = PostgresBinaryEncoder<Object>(PostgreSQLDataType.uuid);
     try {
       converter.convert('z0000000-0000-0000-0000-000000000000');
       fail('unreachable');

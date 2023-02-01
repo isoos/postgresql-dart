@@ -9,7 +9,7 @@ import 'query.dart';
 import 'time_converters.dart';
 import 'types.dart';
 
-abstract class ServerMessage {}
+abstract class ServerMessage extends BaseMessage {}
 
 class ErrorResponseMessage implements ServerMessage {
   final fields = <ErrorField>[];
@@ -85,6 +85,11 @@ class ReadyForQueryMessage extends ServerMessage {
   final String state;
 
   ReadyForQueryMessage(Uint8List bytes) : state = utf8.decode(bytes);
+
+  @override
+  String toString() {
+    return 'ReadyForQueryMessage(state = $state)';
+  }
 }
 
 class BackendKeyMessage extends ServerMessage {
@@ -191,6 +196,11 @@ class CommandCompleteMessage extends ServerMessage {
     }
     return CommandCompleteMessage._(rowsAffected);
   }
+
+  @override
+  String toString() {
+    return 'CommandCompleteMessage($rowsAffected affected rows)';
+  }
 }
 
 class ParseCompleteMessage extends ServerMessage {
@@ -202,6 +212,13 @@ class ParseCompleteMessage extends ServerMessage {
 
 class BindCompleteMessage extends ServerMessage {
   BindCompleteMessage();
+
+  @override
+  String toString() => 'Bind Complete Message';
+}
+
+class CloseCompleteMessage extends ServerMessage {
+  CloseCompleteMessage();
 
   @override
   String toString() => 'Bind Complete Message';
