@@ -39,7 +39,7 @@ class PostgresBinaryEncoder<T extends Object>
   const PostgresBinaryEncoder(this._dataType);
 
   @override
-  Uint8List? convert(T? input) {
+  Uint8List? convert(Object? input) {
     if (input == null) {
       return null;
     }

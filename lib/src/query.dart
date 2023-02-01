@@ -229,9 +229,7 @@ class ParameterValue {
 
   factory ParameterValue.binary(
       dynamic value, PostgreSQLDataType postgresType) {
-    final bytes = postgresType.binaryCodec.encoder
-        .cast<Object?, Uint8List?>()
-        .convert(value);
+    final bytes = postgresType.binaryCodec.encoder.convert(value);
     return ParameterValue._(true, bytes, bytes?.length ?? 0);
   }
 
