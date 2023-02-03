@@ -39,6 +39,13 @@ void main() {
       ]);
     });
 
+    test('queries without a schema message', () async {
+      final response =
+          await connection.execute('CREATE TEMPORARY TABLE foo (bar INTEGER);');
+      expect(response.affectedRows, isZero);
+      expect(response.schema.columns, isEmpty);
+    });
+
     group('binary encoding and decoding', () {
       Future<void> shouldPassthrough<T extends Object>(
           PgDataType<T> type, T? value) async {

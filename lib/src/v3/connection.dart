@@ -467,6 +467,16 @@ class _PgResultStreamSubscription
       _affectedRows.complete(message.rowsAffected);
     } else if (message is ReadyForQueryMessage) {
       _done.complete();
+
+      // Make sure the affectedRows and schema futures complete with something
+      // after the query is done, even if we didn't get a row description
+      // message.
+      if (!_affectedRows.isCompleted) {
+        _affectedRows.complete(0);
+      }
+      if (!_schema.isCompleted) {
+        _schema.complete(PgResultSchema(const []));
+      }
       await _controller.close();
     }
   }
