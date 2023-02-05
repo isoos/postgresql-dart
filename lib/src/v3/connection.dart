@@ -283,7 +283,7 @@ class PgConnectionImplementation implements PgConnection {
       // prepare a statement explicitly.
       final prepared = await prepare(description, timeout: timeout);
       try {
-        return prepared.run(variables, timeout: timeout);
+        return await prepared.run(variables, timeout: timeout);
       } finally {
         await prepared.dispose();
       }
@@ -420,19 +420,11 @@ class _PgResultStreamSubscription
   @override
   Future<PgResultSchema> get schema => _schema.future;
 
-  void _error(Object error) {
-    if (!_schema.isCompleted) _schema.completeError(error);
-    if (!_affectedRows.isCompleted) _affectedRows.completeError(error);
-
-    _controller.addError(error);
-  }
-
   @override
   Future<void> handleMessage(ServerMessage message) async {
     if (message is ErrorResponseMessage) {
-      final error = AsyncError(
+      _controller.addError(
           PostgreSQLException.fromFields(message.fields), StackTrace.current);
-      _error(error);
     } else if (message is BindCompleteMessage) {
       // Nothing to do
     } else if (message is RowDescriptionMessage) {
