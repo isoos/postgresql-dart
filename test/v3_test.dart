@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:async/async.dart';
 import 'package:postgres/messages.dart';
+import 'package:postgres/postgres.dart' show PostgreSQLException;
 import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
@@ -81,6 +82,37 @@ void main() {
       await connection.channels.notify(channel, 'my notification');
       await connection.channels.notify(channel);
     });
+
+    group('throws error', () {
+      setUp(() async {
+        await connection
+            .execute('CREATE TEMPORARY TABLE foo (id INTEGER PRIMARY KEY);');
+        await connection.execute('INSERT INTO foo VALUES (1);');
+      });
+
+      test('for duplicate with simple query', () async {
+        expect(() => connection.execute('INSERT INTO foo VALUES (1);'),
+            _throwsPostgresException);
+      });
+
+      test('for duplicate with extended query', () async {
+        expect(
+          () => connection.execute(
+            r'INSERT INTO foo VALUES (@1);',
+            parameters: [PgTypedParameter(PgDataType.bigInteger, 4)],
+          ),
+          _throwsPostgresException,
+        );
+      });
+
+      test('for duplicate in prepared statement', () async {
+        final stmt = await connection.prepare(
+          PgSql('INSERT INTO foo VALUES (@1);', types: [PgDataType.bigInteger]),
+        );
+        final stream = stmt.bind([1]);
+        expect(stream, emitsError(_isPostgresException));
+      });
+    });
   });
 
   test('can inject transformer into connection', () async {
@@ -114,3 +146,6 @@ void main() {
     expect(outgoing, contains(isA<QueryMessage>()));
   });
 }
+
+final _isPostgresException = isA<PostgreSQLException>();
+final _throwsPostgresException = throwsA(_isPostgresException);
