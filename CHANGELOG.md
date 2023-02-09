@@ -3,7 +3,12 @@
 ## 2.6.0
 
 - Updated to `package:lints`.
-- Adding lowerCase values to `AuthenticationScheme`. 
+- Adding lowerCase values to `AuthenticationScheme`.
+- Add new `package:postgres/postgres_v3_experimental.dart` library as a preview.
+  It exposes the postgres client under a new API that will replace the current
+  one in version `3.0.0` of this package.
+  At the moment, the new library is experimental and not fully implemented. Until the
+  actual `3.0.0` release, the new APIs might change without a breaking version.
 
 ## 2.5.2
 
