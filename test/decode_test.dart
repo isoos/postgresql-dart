@@ -51,7 +51,7 @@ void main() {
 
     await connection.execute(
         'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, n, j, ba, u, v, p, jj, ia, bia, ta, da, ja, va, boola) '
-        'VALUES (null, null, null, null, null, null, null, null, null, null, null, null, null, '
+        'VALUES (null, null, null, null, null, null, null, null, null, null, null, null, null, null, '
         'null, null, null, null, null, null, null, null, null, null)');
   });
   tearDown(() async {

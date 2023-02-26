@@ -197,7 +197,7 @@ void main() {
         ['a', 'b', 'c', 'd', 'e', 'f'],
         [false, true, false]
       ];
-      expect(result.columnDescriptions, hasLength(23));
+      expect(result.columnDescriptions, hasLength(24));
       expect(result.columnDescriptions.first.tableName, 't');
       expect(result.columnDescriptions.first.columnName, 'i');
       expect(result.columnDescriptions.last.tableName, 't');
