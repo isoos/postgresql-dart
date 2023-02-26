@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.1
+
+- Added support for bigInt (int8) arrays. [#41](https://github.com/isoos/postgresql-dart/pull/88) by [schultek](https://github.com/schultek).
+
 ## 2.6.0
 
 - Updated to `package:lints`.
