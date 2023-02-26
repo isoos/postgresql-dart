@@ -404,6 +404,19 @@ void main() {
       }
     });
 
+    test('bigIntegerArray', () async {
+      await expectInverse(<int>[], PostgreSQLDataType.bigIntegerArray);
+      await expectInverse([-1, 0, 200], PostgreSQLDataType.bigIntegerArray);
+      await expectInverse([-123], PostgreSQLDataType.bigIntegerArray);
+      try {
+        await conn.query('INSERT INTO t (v) VALUES (@v:_int8)',
+            substitutionValues: {'v': 'not-list-int'});
+        fail('unreachable');
+      } on FormatException catch (e) {
+        expect(e.toString(), contains('Expected: List<int>'));
+      }
+    });
+
     test('doubleArray', () async {
       await expectInverse(<double>[], PostgreSQLDataType.doubleArray);
       await expectInverse([-123.0, 0.0, 1.0], PostgreSQLDataType.doubleArray);

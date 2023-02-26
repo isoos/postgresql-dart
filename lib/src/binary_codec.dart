@@ -268,6 +268,16 @@ class PostgresBinaryEncoder<T extends Object>
               'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
         }
 
+      case PgDataType.bigIntegerArray:
+        {
+          if (input is List<int>) {
+            return writeListBytes<int>(
+                input, 20, (_) => 8, (writer, item) => writer.writeInt64(item));
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
+        }
+
       case PgDataType.varCharArray:
         {
           if (input is List<String>) {
@@ -516,6 +526,9 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
       case PostgreSQLDataType.integerArray:
         return readListBytes<int>(input, (reader, _) => reader.readInt32())
             as T;
+      case PostgreSQLDataType.bigIntegerArray:
+        return readListBytes<int>(input, (reader, _) => reader.readInt64())
+            as T;
 
       case PostgreSQLDataType.varCharArray:
       case PostgreSQLDataType.textArray:
@@ -586,6 +599,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
     701: PostgreSQLDataType.double,
     1000: PostgreSQLDataType.booleanArray,
     1007: PostgreSQLDataType.integerArray,
+    1016: PostgreSQLDataType.bigIntegerArray,
     1009: PostgreSQLDataType.textArray,
     1015: PostgreSQLDataType.varCharArray,
     1043: PostgreSQLDataType.varChar,
