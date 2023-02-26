@@ -17,7 +17,7 @@ void main() {
           'bs bigserial, bl boolean, si smallint, '
           't text, f real, d double precision, '
           'dt date, ts timestamp, tsz timestamptz, j jsonb, u uuid, '
-          'v varchar, p point, jj json, ia _int4, ta _text, da _float8, ja _jsonb, va _varchar(20), '
+          'v varchar, p point, jj json, ia _int4, bia _int8, ta _text, da _float8, ja _jsonb, va _varchar(20), '
           'ba _bool'
           ')');
       await connection.execute(
@@ -114,7 +114,7 @@ void main() {
 
     test('Query without specifying types', () async {
       var result = await connection.query(
-          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba) values '
+          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
           '(${PostgreSQLFormat.id('i')},'
           '${PostgreSQLFormat.id('bi')},'
           '${PostgreSQLFormat.id('bl')},'
@@ -131,12 +131,13 @@ void main() {
           '${PostgreSQLFormat.id('p')},'
           '${PostgreSQLFormat.id('jj')},'
           '${PostgreSQLFormat.id('ia')},'
+          '${PostgreSQLFormat.id('bia')},'
           '${PostgreSQLFormat.id('ta')},'
           '${PostgreSQLFormat.id('da')},'
           '${PostgreSQLFormat.id('ja')},'
           '${PostgreSQLFormat.id('va')},'
           '${PostgreSQLFormat.id('ba')}'
-          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba',
+          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba',
           substitutionValues: {
             'i': 1,
             'bi': 2,
@@ -154,6 +155,7 @@ void main() {
             'p': PgPoint(1.0, 0.1),
             'jj': {'k': 'v'},
             'ia': [1, 2, 3],
+            'bia': [4, 5, 6],
             'ta': ['a', 'b"\'\\"'],
             'da': [0.1, 2.3, 1],
             'ja': [
@@ -184,6 +186,7 @@ void main() {
         PgPoint(1.0, 0.1),
         {'k': 'v'},
         [1, 2, 3],
+        [4, 5, 6],
         ['a', 'b"\'\\"'],
         [0.1, 2.3, 1],
         [
@@ -194,20 +197,20 @@ void main() {
         ['a', 'b', 'c', 'd', 'e', 'f'],
         [false, true, false]
       ];
-      expect(result.columnDescriptions, hasLength(23));
+      expect(result.columnDescriptions, hasLength(24));
       expect(result.columnDescriptions.first.tableName, 't');
       expect(result.columnDescriptions.first.columnName, 'i');
       expect(result.columnDescriptions.last.tableName, 't');
       expect(result.columnDescriptions.last.columnName, 'ba');
       expect(result, [expectedRow]);
       result = await connection.query(
-          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba from t');
+          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba from t');
       expect(result, [expectedRow]);
     });
 
     test('Query by specifying all types', () async {
       var result = await connection.query(
-          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba) values '
+          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
           '(${PostgreSQLFormat.id('i', type: PostgreSQLDataType.integer)},'
           '${PostgreSQLFormat.id('bi', type: PostgreSQLDataType.bigInteger)},'
           '${PostgreSQLFormat.id('bl', type: PostgreSQLDataType.boolean)},'
@@ -224,12 +227,13 @@ void main() {
           '${PostgreSQLFormat.id('p', type: PostgreSQLDataType.point)},'
           '${PostgreSQLFormat.id('jj', type: PostgreSQLDataType.json)},'
           '${PostgreSQLFormat.id('ia', type: PostgreSQLDataType.integerArray)},'
+          '${PostgreSQLFormat.id('bia', type: PostgreSQLDataType.bigIntegerArray)},'
           '${PostgreSQLFormat.id('ta', type: PostgreSQLDataType.textArray)},'
           '${PostgreSQLFormat.id('da', type: PostgreSQLDataType.doubleArray)},'
           '${PostgreSQLFormat.id('ja', type: PostgreSQLDataType.jsonbArray)},'
           '${PostgreSQLFormat.id('va', type: PostgreSQLDataType.varCharArray)},'
           '${PostgreSQLFormat.id('ba', type: PostgreSQLDataType.booleanArray)}'
-          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba',
+          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba',
           substitutionValues: {
             'i': 1,
             'bi': 2,
@@ -247,6 +251,7 @@ void main() {
             'p': PgPoint(1.0, 0.1),
             'jj': {'k': 'v'},
             'ia': [1, 2, 3],
+            'bia': [4, 5, 6],
             'ta': ['a', 'b'],
             'da': [0.1, 2.3, 1.0],
             'ja': [
@@ -277,6 +282,7 @@ void main() {
         PgPoint(1.0, 0.1),
         {'k': 'v'},
         [1, 2, 3],
+        [4, 5, 6],
         ['a', 'b'],
         [0.1, 2.3, 1],
         [
@@ -290,7 +296,7 @@ void main() {
       expect(result, [expectedRow]);
 
       result = await connection.query(
-          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, ta, da, ja, va, ba from t');
+          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba from t');
       expect(result, [expectedRow]);
     });
 

@@ -59,6 +59,8 @@ class PostgreSQLFormat {
         return '_bool';
       case PostgreSQLDataType.integerArray:
         return '_int4';
+      case PostgreSQLDataType.bigIntegerArray:
+        return '_int8';
       case PostgreSQLDataType.textArray:
         return '_text';
       case PostgreSQLDataType.doubleArray:

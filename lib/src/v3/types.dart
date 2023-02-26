@@ -105,6 +105,9 @@ enum PgDataType<Dart extends Object> {
   /// Must be a [List<int>]
   integerArray<List<int>>(1007),
 
+  /// Must be a [List<int>]
+  bigIntegerArray<List<int>>(1016),
+
   /// Must be a [List<String>]
   textArray<List<String>>(1009),
 

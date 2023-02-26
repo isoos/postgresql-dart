@@ -351,6 +351,7 @@ class PostgreSQLFormatIdentifier {
     'point': PostgreSQLDataType.point,
     '_bool': PostgreSQLDataType.booleanArray,
     '_int4': PostgreSQLDataType.integerArray,
+    '_int8': PostgreSQLDataType.bigIntegerArray,
     '_text': PostgreSQLDataType.textArray,
     '_float8': PostgreSQLDataType.doubleArray,
     'varchar': PostgreSQLDataType.varChar,
