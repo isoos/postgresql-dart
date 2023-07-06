@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:buffer/buffer.dart';
 import 'package:crypto/crypto.dart';
 
@@ -9,7 +11,7 @@ import 'auth.dart';
 class MD5Authenticator extends PostgresAuthenticator {
   static final String name = 'MD5';
 
-  MD5Authenticator(PostgresAuthConnection connection) : super(connection);
+  MD5Authenticator(PostgresAuthConnection connection,Encoding encoding) : super(connection,encoding);
 
   @override
   void onMessage(AuthenticationMessage message) {
@@ -17,7 +19,7 @@ class MD5Authenticator extends PostgresAuthenticator {
     final salt = reader.read(4, copy: true);
 
     final authMessage =
-        AuthMD5Message(connection.username!, connection.password!, salt);
+        AuthMD5Message(connection.username!, connection.password!, salt,encoding);
 
     connection.sendMessage(authMessage);
   }
@@ -26,12 +28,13 @@ class MD5Authenticator extends PostgresAuthenticator {
 class AuthMD5Message extends ClientMessage {
   UTF8BackedString? _hashedAuthString;
 
-  AuthMD5Message(String username, String password, List<int> saltBytes) {
+  AuthMD5Message(String username, String password, List<int> saltBytes,Encoding encoding) {
     final passwordHash = md5.convert('$password$username'.codeUnits).toString();
     final saltString = String.fromCharCodes(saltBytes);
     final md5Hash =
         md5.convert('$passwordHash$saltString'.codeUnits).toString();
-    _hashedAuthString = UTF8BackedString('md5$md5Hash');
+        //TODO verificar se aqui tem que ser ascii em vez do charset padão da conexão
+    _hashedAuthString = UTF8BackedString('md5$md5Hash',encoding);
   }
 
   @override

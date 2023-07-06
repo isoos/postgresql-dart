@@ -126,8 +126,8 @@ enum PgDataType<Dart extends Object> {
   /// The object ID of this data type.
   final int? oid;
 
-  Codec<Dart?, Uint8List?> get binaryCodec {
-    return _binaryCodecs.putIfAbsent(this, () => _BinaryTypeCodec<Dart>(this))
+  Codec<Dart?, Uint8List?>  binaryCodec(Encoding charset) {
+    return _binaryCodecs.putIfAbsent(this, () => _BinaryTypeCodec<Dart>(this,charset))
         as Codec<Dart?, Uint8List?>;
   }
 
@@ -153,11 +153,13 @@ class _BinaryTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
   @override
   final Converter<Uint8List?, D?> decoder;
 
-  _BinaryTypeCodec(PgDataType<D> type)
-      : encoder = PostgresBinaryEncoder(type),
+  final Encoding charset;
+
+  _BinaryTypeCodec(PgDataType<D> type, this.charset)
+      : encoder = PostgresBinaryEncoder(type,charset),
         // Only some integer variants have no dedicated oid, they share it with
         // the normal integer.
-        decoder = PostgresBinaryDecoder(type.oid ?? PgDataType.integer.oid!);
+        decoder = PostgresBinaryDecoder(type.oid ?? PgDataType.integer.oid!,charset);
 }
 
 class _TextTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {

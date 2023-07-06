@@ -35,8 +35,9 @@ final _trailingZerosRegExp = RegExp(r'0+$');
 class PostgresBinaryEncoder<T extends Object>
     extends Converter<T?, Uint8List?> {
   final PgDataType<T> _dataType;
+  final Encoding encoding;
 
-  const PostgresBinaryEncoder(this._dataType);
+  const PostgresBinaryEncoder(this._dataType, this.encoding);
 
   @override
   Uint8List? convert(Object? input) {
@@ -91,7 +92,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.varChar:
         {
           if (input is String) {
-            return castBytes(utf8.encode(input));
+            return castBytes(encoding.encode(input));
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: String Got: ${input.runtimeType}');
@@ -179,7 +180,7 @@ class PostgresBinaryEncoder<T extends Object>
 
       case PgDataType.jsonb:
         {
-          final jsonBytes = utf8.encode(json.encode(input));
+          final jsonBytes = encoding.encode(json.encode(input));
           final writer = ByteDataWriter(bufferLength: jsonBytes.length + 1);
           writer.writeUint8(1);
           writer.write(jsonBytes);
@@ -187,7 +188,7 @@ class PostgresBinaryEncoder<T extends Object>
         }
 
       case PgDataType.json:
-        return castBytes(utf8.encode(json.encode(input)));
+        return castBytes(encoding.encode(json.encode(input)));
 
       case PgDataType.byteArray:
         {
@@ -281,7 +282,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.varCharArray:
         {
           if (input is List<String>) {
-            final bytesArray = input.map((v) => utf8.encode(v));
+            final bytesArray = input.map((v) => encoding.encode(v));
             return writeListBytes<List<int>>(bytesArray, 1043,
                 (item) => item.length, (writer, item) => writer.write(item));
           }
@@ -292,7 +293,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.textArray:
         {
           if (input is List<String>) {
-            final bytesArray = input.map((v) => utf8.encode(v));
+            final bytesArray = input.map((v) => encoding.encode(v));
             return writeListBytes<List<int>>(bytesArray, 25,
                 (item) => item.length, (writer, item) => writer.write(item));
           }
@@ -313,7 +314,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.jsonbArray:
         {
           if (input is List<Object>) {
-            final objectsArray = input.map((v) => utf8.encode(json.encode(v)));
+            final objectsArray = input.map((v) => encoding.encode(json.encode(v)));
             return writeListBytes<List<int>>(
                 objectsArray, 3802, (item) => item.length + 1, (writer, item) {
               writer.writeUint8(1);
@@ -431,9 +432,10 @@ class PostgresBinaryEncoder<T extends Object>
 }
 
 class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
-  const PostgresBinaryDecoder(this.typeCode);
+  const PostgresBinaryDecoder(this.typeCode, this.encoding);
 
   final int typeCode;
+  final Encoding encoding;
 
   @override
   T? convert(Uint8List? input) {
@@ -450,7 +452,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
       case PostgreSQLDataType.name:
       case PostgreSQLDataType.text:
       case PostgreSQLDataType.varChar:
-        return utf8.decode(input) as T;
+        return encoding.decode(input) as T;
       case PostgreSQLDataType.boolean:
         return (buffer.getInt8(0) != 0) as T;
       case PostgreSQLDataType.smallInteger:
@@ -487,11 +489,11 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
           // Removes version which is first character and currently always '1'
           final bytes = input.buffer
               .asUint8List(input.offsetInBytes + 1, input.lengthInBytes - 1);
-          return json.decode(utf8.decode(bytes)) as T;
+          return json.decode(encoding.decode(bytes)) as T;
         }
 
       case PostgreSQLDataType.json:
-        return json.decode(utf8.decode(input)) as T;
+        return json.decode(encoding.decode(input)) as T;
 
       case PostgreSQLDataType.byteArray:
         return input as T;
@@ -533,7 +535,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
       case PostgreSQLDataType.varCharArray:
       case PostgreSQLDataType.textArray:
         return readListBytes<String>(input, (reader, length) {
-          return utf8.decode(length > 0 ? reader.read(length) : []);
+          return encoding.decode(length > 0 ? reader.read(length) : []);
         }) as T;
 
       case PostgreSQLDataType.doubleArray:
@@ -544,7 +546,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
         return readListBytes<dynamic>(input, (reader, length) {
           reader.read(1);
           final bytes = reader.read(length - 1);
-          return json.decode(utf8.decode(bytes));
+          return json.decode(encoding.decode(bytes));
         }) as T;
 
       default:
@@ -554,7 +556,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
           // we just return the bytes and let the caller figure out what to
           // do with it.
           try {
-            return utf8.decode(input) as T;
+            return encoding.decode(input) as T;
           } catch (_) {
             return input as T;
           }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:crypto/crypto.dart';
 import 'package:sasl_scram/sasl_scram.dart';
 
@@ -32,24 +34,24 @@ class PostgresAuthConnection {
 abstract class PostgresAuthenticator {
   static String? name;
   late final PostgresAuthConnection connection;
-
-  PostgresAuthenticator(this.connection);
+  final Encoding encoding;
+  PostgresAuthenticator(this.connection, this.encoding);
 
   void onMessage(AuthenticationMessage message);
 }
 
 PostgresAuthenticator createAuthenticator(PostgresAuthConnection connection,
-    AuthenticationScheme authenticationScheme) {
+    AuthenticationScheme authenticationScheme, Encoding encoding) {
   switch (authenticationScheme) {
     case AuthenticationScheme.md5:
-      return MD5Authenticator(connection);
+      return MD5Authenticator(connection, encoding);
     case AuthenticationScheme.scramSha256:
       final credentials = UsernamePasswordCredential(
           username: connection.username, password: connection.password);
-      return PostgresSaslAuthenticator(
-          connection, ScramAuthenticator('SCRAM-SHA-256', sha256, credentials));
+      return PostgresSaslAuthenticator(connection,
+          ScramAuthenticator('SCRAM-SHA-256', sha256, credentials), encoding);
     case AuthenticationScheme.clear:
-      return ClearAuthenticator(connection);
+      return ClearAuthenticator(connection, encoding);
     default:
       throw PostgreSQLException("Authenticator wasn't specified");
   }

@@ -57,7 +57,7 @@ class Query<T> {
   void sendSimple(Socket socket) {
     final sqlString =
         PostgreSQLFormat.substitute(statement, substitutionValues);
-    final queryMessage = QueryMessage(sqlString);
+    final queryMessage = QueryMessage(sqlString, connection.encoding);
 
     socket.add(queryMessage.asBytes());
   }
@@ -83,14 +83,17 @@ class Query<T> {
         formatIdentifiers.map((i) => i.type).toList();
 
     final parameterList = formatIdentifiers
-        .map((id) => ParameterValue(id, substitutionValues))
+        .map((id) => ParameterValue(id, substitutionValues,connection.encoding))
         .toList();
 
     final messages = [
-      ParseMessage(sqlString, statementName: statementName),
-      DescribeMessage(statementName: statementName),
-      BindMessage(parameterList, statementName: statementName),
-      ExecuteMessage(),
+      ParseMessage(sqlString,
+          statementName: statementName, encoding: connection.encoding),
+      DescribeMessage(
+          statementName: statementName, encoding: connection.encoding),
+      BindMessage(parameterList,
+          statementName: statementName, encoding: connection.encoding),
+      ExecuteMessage(connection.encoding),
       SyncMessage(),
     ];
 
@@ -105,12 +108,13 @@ class Query<T> {
       Map<String, dynamic>? substitutionValues) {
     final statementName = cacheQuery.preparedStatementName;
     final parameterList = cacheQuery.orderedParameters!
-        .map((identifier) => ParameterValue(identifier, substitutionValues))
+        .map((identifier) => ParameterValue(identifier, substitutionValues,connection.encoding))
         .toList();
 
     final bytes = ClientMessage.aggregateBytes([
-      BindMessage(parameterList, statementName: statementName!),
-      ExecuteMessage(),
+      BindMessage(parameterList,
+          statementName: statementName!, encoding: connection.encoding),
+      ExecuteMessage(connection.encoding),
       SyncMessage()
     ]);
 
@@ -218,18 +222,18 @@ class CachedQuery {
 
 class ParameterValue {
   factory ParameterValue(PostgreSQLFormatIdentifier identifier,
-      Map<String, dynamic>? substitutionValues) {
+      Map<String, dynamic>? substitutionValues, Encoding encoding) {
     if (identifier.type == null) {
       return ParameterValue.text(substitutionValues?[identifier.name]);
     }
 
     return ParameterValue.binary(
-        substitutionValues?[identifier.name], identifier.type!);
+        substitutionValues?[identifier.name], identifier.type!,encoding);
   }
 
   factory ParameterValue.binary(
-      dynamic value, PostgreSQLDataType postgresType) {
-    final bytes = postgresType.binaryCodec.encoder.convert(value);
+      dynamic value, PostgreSQLDataType postgresType, Encoding encoding) {
+    final bytes = postgresType.binaryCodec(encoding).encoder.convert(value);
     return ParameterValue._(true, bytes, bytes?.length ?? 0);
   }
 
@@ -252,6 +256,8 @@ class ParameterValue {
 }
 
 class FieldDescription implements ColumnDescription {
+  final Encoding encoding;
+
   final Converter converter;
 
   @override
@@ -277,9 +283,10 @@ class FieldDescription implements ColumnDescription {
     this.typeModifier,
     this.formatCode,
     this.tableName,
+    this.encoding,
   );
 
-  factory FieldDescription.read(ByteDataReader reader) {
+  factory FieldDescription.read(ByteDataReader reader, Encoding encoding) {
     final buf = StringBuffer();
     var byte = 0;
     do {
@@ -298,17 +305,18 @@ class FieldDescription implements ColumnDescription {
     final typeModifier = reader.readInt32();
     final formatCode = reader.readUint16();
 
-    final converter = PostgresBinaryDecoder(typeOid);
+    final converter = PostgresBinaryDecoder(typeOid, encoding);
     return FieldDescription._(
       converter, fieldName, tableID, columnID, typeOid,
       dataTypeSize, typeModifier, formatCode,
       '', // tableName
+      encoding,
     );
   }
 
   FieldDescription change({String? tableName}) {
     return FieldDescription._(converter, columnName, tableID, columnID, typeId,
-        dataTypeSize, typeModifier, formatCode, tableName ?? this.tableName);
+        dataTypeSize, typeModifier, formatCode, tableName ?? this.tableName,encoding);
   }
 
   @override

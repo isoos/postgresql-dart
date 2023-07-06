@@ -109,12 +109,14 @@ class BackendKeyMessage extends ServerMessage {
 class RowDescriptionMessage extends ServerMessage {
   final fieldDescriptions = <FieldDescription>[];
 
-  RowDescriptionMessage(Uint8List bytes) {
+  final Encoding encoding;
+
+  RowDescriptionMessage(Uint8List bytes, this.encoding) {
     final reader = ByteDataReader()..add(bytes);
     final fieldCount = reader.readInt16();
 
     for (var i = 0; i < fieldCount; i++) {
-      final rowDesc = FieldDescription.read(reader);
+      final rowDesc = FieldDescription.read(reader, encoding);
       fieldDescriptions.add(rowDesc);
     }
   }

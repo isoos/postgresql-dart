@@ -609,8 +609,8 @@ void main() {
 
   test('UTF8String caches string regardless of which method is called first',
       () {
-    final u = UTF8BackedString('abcd');
-    final v = UTF8BackedString('abcd');
+    final u = UTF8BackedString('abcd',utf8);
+    final v = UTF8BackedString('abcd',utf8);
 
     u.utf8Length;
     v.utf8Bytes;

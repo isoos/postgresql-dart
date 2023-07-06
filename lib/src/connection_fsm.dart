@@ -50,7 +50,8 @@ class _PostgreSQLConnectionStateSocketConnected
     final startupMessage = StartupMessage(
         connection!.databaseName, connection!.timeZone,
         username: connection!.username,
-        replication: connection!.replicationMode);
+        replication: connection!.replicationMode,
+        encoding: connection!.encoding);
 
     connection!._socket!.add(startupMessage.asBytes());
 
@@ -125,13 +126,13 @@ class _PostgreSQLConnectionStateAuthenticating
             ));
             break;
           }
-          _authenticator =
-              createAuthenticator(_authConnection(), AuthenticationScheme.md5);
+          _authenticator = createAuthenticator(_authConnection(),
+              AuthenticationScheme.md5, connection!.encoding);
           continue authMsg;
         case AuthenticationMessage.KindClearTextPassword:
           if (connection!.allowClearTextPassword) {
-            _authenticator = createAuthenticator(
-                _authConnection(), AuthenticationScheme.clear);
+            _authenticator = createAuthenticator(_authConnection(),
+                AuthenticationScheme.clear, connection!.encoding);
             continue authMsg;
           } else {
             completer.completeError(PostgreSQLException(
@@ -148,7 +149,7 @@ class _PostgreSQLConnectionStateAuthenticating
             break;
           }
           _authenticator = createAuthenticator(
-              _authConnection(), AuthenticationScheme.scramSha256);
+              _authConnection(), AuthenticationScheme.scramSha256, connection!.encoding);
           continue authMsg;
         authMsg:
         case AuthenticationMessage.KindSASLContinue:
