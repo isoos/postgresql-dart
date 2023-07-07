@@ -41,6 +41,7 @@ class PostgresBinaryEncoder<T extends Object>
 
   @override
   Uint8List? convert(Object? input) {
+     print('binary_codec@convert input $input');
     if (input == null) {
       return null;
     }
@@ -92,6 +93,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.varChar:
         {
           if (input is String) {
+            print('binary_codec varChar encoding $encoding');
             return castBytes(encoding.encode(input));
           }
           throw FormatException(
