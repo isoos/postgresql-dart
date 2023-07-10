@@ -251,7 +251,7 @@ void main() {
         '0.0': [0, 0, 0, 0, 0, 0, 0, 1], // .0 or 0.0
       };
 
-      final encoder = PostgresBinaryEncoder<Object>(PostgreSQLDataType.numeric);
+      final encoder = PostgresBinaryEncoder<Object>(PostgreSQLDataType.numeric,utf8);
       binaries.forEach((key, value) {
         final uint8List = Uint8List.fromList(value);
         final res = encoder.convert(key);
@@ -620,7 +620,7 @@ void main() {
   });
 
   test('Invalid UUID encoding', () {
-    final converter = PostgresBinaryEncoder<Object>(PostgreSQLDataType.uuid);
+    final converter = PostgresBinaryEncoder<Object>(PostgreSQLDataType.uuid,utf8);
     try {
       converter.convert('z0000000-0000-0000-0000-000000000000');
       fail('unreachable');
@@ -660,7 +660,7 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
       substitutionValues: {'v': value});
   expect(result.first.first, equals(value));
 
-  final encoder = PostgresBinaryEncoder(dataType);
+  final encoder = PostgresBinaryEncoder(dataType,utf8);
   final encodedValue = encoder.convert(value);
 
   if (dataType == PostgreSQLDataType.serial) {
@@ -675,7 +675,7 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
     }
   });
 
-  final decoder = PostgresBinaryDecoder(code);
+  final decoder = PostgresBinaryDecoder(code,utf8);
   final decodedValue = decoder.convert(encodedValue);
 
   expect(decodedValue, value);

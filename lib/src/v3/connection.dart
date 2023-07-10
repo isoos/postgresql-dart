@@ -1,4 +1,4 @@
-/*import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -49,8 +49,10 @@ class _ResolvedSettings {
             settings?.connectTimeout ?? const Duration(seconds: 15),
         queryTimeout = settings?.connectTimeout ?? const Duration(minutes: 5),
         timeZone = settings?.timeZone ?? 'UTC',
-        encoding = settings?.encoding ?? utf8,
-        transformer = settings?.transformer;
+        encoding = settings?.encoding  ?? endpoint.encoding,
+        transformer = settings?.transformer{
+          //print('_ResolvedSettings settings $settings endpoint $endpoint');
+        }
 
   bool onBadSslCertificate(X509Certificate certificate) {
     return settings?.onBadSslCertificate?.call(certificate) ?? false;
@@ -165,7 +167,7 @@ class PgConnectionImplementation implements PgConnection {
     }));
 
     return StreamChannel<List<int>>(adaptedStream, outgoingSocket)
-        .transform(messageTransformer);
+        .transform(WrapMessageTransformer(settings.encoding).messageTransformer);
   }
 
   final StreamChannel<BaseMessage> _channel;
@@ -197,7 +199,7 @@ class PgConnectionImplementation implements PgConnection {
       _channel.sink.add(StartupMessage(
         _settings.endpoint.database,
         _settings.timeZone,
-        username: _settings.username,
+        username: _settings.username, encoding: _settings.endpoint.encoding,
         // todo: Replication
       ));
 
@@ -266,7 +268,7 @@ class PgConnectionImplementation implements PgConnection {
     await _sendAndWaitForQuery<ParseCompleteMessage>(ParseMessage(
       description.transformedSql,
       statementName: name,
-      types: description.parameterTypes,
+      types: description.parameterTypes,encoding: _settings.endpoint.encoding
     ));
 
     return _PreparedStatement(description, name, this);
@@ -344,7 +346,7 @@ class _PreparedStatement extends PgStatement {
   @override
   Future<void> dispose() async {
     await _connection._sendAndWaitForQuery<CloseCompleteMessage>(
-        CloseMessage.statement(_name));
+        CloseMessage.statement(_connection._settings.encoding, _name));
   }
 }
 
@@ -390,13 +392,13 @@ class _PgResultStreamSubscription
         BindMessage(
           [
             for (final parameter in statement.parameters)
-              ParameterValue.binary(parameter.value, parameter.type)
+              ParameterValue.binary(parameter.value, parameter.type,connection._settings.encoding)
           ],
           portalName: _portalName,
-          statementName: statement.statement._name,
+          statementName: statement.statement._name,encoding: connection._settings.encoding,
         ),
-        DescribeMessage.portal(portalName: _portalName),
-        ExecuteMessage(_portalName),
+        DescribeMessage.portal(portalName: _portalName,encoding: connection._settings.encoding),
+        ExecuteMessage( connection._settings.encoding,_portalName),
         SyncMessage(),
       ]));
 
@@ -409,7 +411,7 @@ class _PgResultStreamSubscription
     connection._operationLock.withResource(() async {
       connection._pending = this;
 
-      connection._channel.sink.add(QueryMessage(sql));
+      connection._channel.sink.add(QueryMessage(sql,connection._settings.encoding));
       await _done.future;
     });
   }
@@ -447,8 +449,10 @@ class _PgResultStreamSubscription
       for (var i = 0; i < message.values.length; i++) {
         final field = schema.columns[i];
 
+        //print('v3 connection@handleMessage  connection._settings.encoding ${connection._settings.encoding}');
+
         final type = field.type;
-        final codec = field.binaryEncoding ? type.binaryCodec : type.textCodec;
+        final codec = field.binaryEncoding ? type.binaryCodec(connection._settings.encoding) : type.textCodec(connection._settings.encoding);
 
         columnValues.add(codec.decode(message.values[i]));
       }
@@ -636,7 +640,7 @@ class _AuthenticationProcedure extends _PendingOperation {
       connection._channel.sink.add,
     );
 
-    _authenticator = createAuthenticator(authConnection, scheme)
+    _authenticator = createAuthenticator(authConnection, scheme,connection._settings.encoding)
       ..onMessage(message);
   }
 
@@ -679,4 +683,3 @@ class _AuthenticationProcedure extends _PendingOperation {
     }
   }
 }
-*/

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.7.1
+
+- Support has been implemented to change the character encoding for the connection, this makes it possible to change the default encoding from utf8 to win1252, iso8859, among others.
+
 ## 2.6.1
 
 - Added support for bigInt (int8) arrays. [#41](https://github.com/isoos/postgresql-dart/pull/88) by [schultek](https://github.com/schultek).
@@ -194,3 +198,4 @@
 ## 0.9.0
 
 - Initial version
+

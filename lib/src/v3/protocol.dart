@@ -1,4 +1,5 @@
-/*import 'dart:async';
+import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
@@ -32,64 +33,71 @@ class AggregatedClientMessage extends ClientMessage {
   }
 }
 
-StreamChannelTransformer<BaseMessage, List<int>> messageTransformer =
-    StreamChannelTransformer(
-  _readMessages,
-  StreamSinkTransformer.fromHandlers(
-    handleData: (message, out) {
-      if (message is! ClientMessage) {
-        out.addError(
-            ArgumentError.value(message, 'message', 'Must be a client message'),
-            StackTrace.current);
-        return;
-      }
+class WrapMessageTransformer {
+  final Encoding encoding;
 
-      out.add(message.asBytes());
-    },
-  ),
-);
+  late StreamChannelTransformer<BaseMessage, List<int>> messageTransformer;
+  late StreamTransformer<Uint8List, ServerMessage> _readMessages;
 
-StreamTransformer<Uint8List, ServerMessage> _readMessages =
-    StreamTransformer.fromBind((rawStream) {
-  return Stream.multi((listener) {
-    final framer = MessageFramer();
+  WrapMessageTransformer(this.encoding) {
+    _readMessages = StreamTransformer.fromBind((rawStream) {
+      return Stream.multi((listener) {
+        final framer = MessageFramer(encoding);
 
-    var paused = false;
+        var paused = false;
 
-    void emitFinishedMessages() {
-      while (framer.hasMessage) {
-        listener.addSync(framer.popMessage());
+        void emitFinishedMessages() {
+          while (framer.hasMessage) {
+            listener.addSync(framer.popMessage());
 
-        if (paused) break;
-      }
-    }
+            if (paused) break;
+          }
+        }
 
-    void handleChunk(Uint8List bytes) {
-      framer.addBytes(bytes);
-      emitFinishedMessages();
-    }
+        void handleChunk(Uint8List bytes) {
+          framer.addBytes(bytes);
+          emitFinishedMessages();
+        }
 
-    final rawSubscription = rawStream.listen(handleChunk)
-      ..onError(listener.addErrorSync);
+        final rawSubscription = rawStream.listen(handleChunk)
+          ..onError(listener.addErrorSync);
 
-    listener.onPause = () {
-      paused = true;
-      rawSubscription.pause();
-    };
+        listener.onPause = () {
+          paused = true;
+          rawSubscription.pause();
+        };
 
-    listener.onResume = () {
-      paused = false;
-      emitFinishedMessages();
+        listener.onResume = () {
+          paused = false;
+          emitFinishedMessages();
 
-      if (!paused) {
-        rawSubscription.resume();
-      }
-    };
+          if (!paused) {
+            rawSubscription.resume();
+          }
+        };
 
-    listener.onCancel = () {
-      paused = true;
-      rawSubscription.cancel();
-    };
-  });
-});
-*/
+        listener.onCancel = () {
+          paused = true;
+          rawSubscription.cancel();
+        };
+      });
+    });
+
+    messageTransformer = StreamChannelTransformer(
+      _readMessages,
+      StreamSinkTransformer.fromHandlers(
+        handleData: (message, out) {
+          if (message is! ClientMessage) {
+            out.addError(
+                ArgumentError.value(
+                    message, 'message', 'Must be a client message'),
+                StackTrace.current);
+            return;
+          }
+
+          out.add(message.asBytes());
+        },
+      ),
+    );
+  }
+}

@@ -48,7 +48,7 @@ class XLogDataLogicalMessage implements XLogDataMessage {
 /// Tries to check if the [bytesList] is a [LogicalReplicationMessage]. If so,
 /// [LogicalReplicationMessage] is returned, otherwise `null` is returned.
 LogicalReplicationMessage? tryParseLogicalReplicationMessage(
-    Uint8List bytesList) {
+    Uint8List bytesList, Encoding encoding) {
   // the first byte is the msg type
   final firstByte = bytesList.first;
   final msgType = LogicalReplicationMessageTypes.fromByte(firstByte);
@@ -62,22 +62,22 @@ LogicalReplicationMessage? tryParseLogicalReplicationMessage(
       return CommitMessage(bytes);
 
     case LogicalReplicationMessageTypes.Origin:
-      return OriginMessage(bytes);
+      return OriginMessage(bytes,encoding);
 
     case LogicalReplicationMessageTypes.Relation:
-      return RelationMessage(bytes);
+      return RelationMessage(bytes,encoding);
 
     case LogicalReplicationMessageTypes.Type:
-      return TypeMessage(bytes);
+      return TypeMessage(bytes,encoding);
 
     case LogicalReplicationMessageTypes.Insert:
-      return InsertMessage(bytes);
+      return InsertMessage(bytes, encoding);
 
     case LogicalReplicationMessageTypes.Update:
-      return UpdateMessage(bytes);
+      return UpdateMessage(bytes,encoding);
 
     case LogicalReplicationMessageTypes.Delete:
-      return DeleteMessage(bytes);
+      return DeleteMessage(bytes, encoding);
 
     case LogicalReplicationMessageTypes.Truncate:
       return TruncateMessage(bytes);
@@ -85,15 +85,15 @@ LogicalReplicationMessage? tryParseLogicalReplicationMessage(
     case LogicalReplicationMessageTypes.Unsupported:
     default:
       // note this needs the full set of bytes unlike other cases
-      return _tryParseJsonMessage(bytesList);
+      return _tryParseJsonMessage(bytesList,encoding);
   }
 }
 
-LogicalReplicationMessage? _tryParseJsonMessage(Uint8List bytes) {
+LogicalReplicationMessage? _tryParseJsonMessage(Uint8List bytes, Encoding encoding) {
   // wal2json messages starts with `{` as the first byte
   if (bytes.first == '{'.codeUnits.first) {
     try {
-      return JsonMessage(utf8.decode(bytes));
+      return JsonMessage(encoding.decode(bytes));
     } catch (e) {
       return null;
     }
@@ -220,11 +220,11 @@ class OriginMessage implements LogicalReplicationMessage {
 
   late final String name;
 
-  OriginMessage(Uint8List bytes) {
+  OriginMessage(Uint8List bytes, Encoding encoding) {
     final reader = ByteDataReader()..add(bytes);
     // reading order matters
     commitLSN = reader.readLSN();
-    name = reader.decodeString();
+    name = reader.decodeString(encoding);
   }
 
   @override
@@ -267,19 +267,19 @@ class RelationMessage implements LogicalReplicationMessage {
   late final int columnNum;
   late final columns = <RelationMessageColumn>[];
 
-  RelationMessage(Uint8List bytes) {
+  RelationMessage(Uint8List bytes,Encoding encoding) {
     final reader = ByteDataReader()..add(bytes);
     // reading order matters
     relationID = reader.readUint32();
-    nameSpace = reader.decodeString();
-    relationName = reader.decodeString();
+    nameSpace = reader.decodeString(encoding);
+    relationName = reader.decodeString(encoding);
     replicaIdentity = reader.readUint8();
     columnNum = reader.readUint16();
 
     for (var i = 0; i < columnNum; i++) {
       // reading order matters
       final flags = reader.readUint8();
-      final name = reader.decodeString();
+      final name = reader.decodeString(encoding);
       final dataType = reader.readUint32();
       final typeModifier = reader.readUint32();
       columns.add(
@@ -311,12 +311,12 @@ class TypeMessage implements LogicalReplicationMessage {
 
   late final String name;
 
-  TypeMessage(Uint8List bytes) {
+  TypeMessage(Uint8List bytes,Encoding encoding) {
     final reader = ByteDataReader()..add(bytes);
     // reading order matters
     dataType = reader.readUint32();
-    nameSpace = reader.decodeString();
-    name = reader.decodeString();
+    nameSpace = reader.decodeString(encoding);
+    name = reader.decodeString(encoding);
   }
 
   @override
@@ -381,7 +381,7 @@ class TupleData {
   /// TupleData does not consume the entire bytes
   ///
   /// It'll read until the types are generated.
-  TupleData(ByteDataReader reader) {
+  TupleData(ByteDataReader reader, Encoding encoding) {
     columnNum = reader.readUint16();
     for (var i = 0; i < columnNum; i++) {
       // reading order matters
@@ -405,7 +405,7 @@ class TupleData {
         TupleDataColumn(
           dataType: dataType,
           length: length,
-          data: utf8.decode(data),
+          data: encoding.decode(data),
         ),
       );
     }
@@ -423,14 +423,14 @@ class InsertMessage implements LogicalReplicationMessage {
   late final int relationID;
   late final TupleData tuple;
 
-  InsertMessage(Uint8List bytes) {
+  InsertMessage(Uint8List bytes, Encoding encoding) {
     final reader = ByteDataReader()..add(bytes);
     relationID = reader.readUint32();
     final tupleType = reader.readUint8();
     if (tupleType != 'N'.codeUnitAt(0)) {
       throw Exception("InsertMessage must have 'N' tuple type");
     }
-    tuple = TupleData(reader);
+    tuple = TupleData(reader,encoding);
   }
 
   @override
@@ -484,7 +484,7 @@ class UpdateMessage implements LogicalReplicationMessage {
   ///   Byte1('N'): Identifies the following TupleData message as a new tuple.
   late final TupleData? newTuple;
 
-  UpdateMessage(Uint8List bytes) {
+  UpdateMessage(Uint8List bytes, Encoding encoding) {
     final reader = ByteDataReader()..add(bytes);
     // reading order matters
     relationID = reader.readUint32();
@@ -493,7 +493,7 @@ class UpdateMessage implements LogicalReplicationMessage {
     if (tupleType == UpdateMessageTuple.oldType ||
         tupleType == UpdateMessageTuple.keyType) {
       oldTupleType = tupleType;
-      oldTuple = TupleData(reader);
+      oldTuple = TupleData(reader,encoding);
       tupleType = UpdateMessageTuple.fromByte(reader.readUint8());
     } else {
       oldTupleType = null;
@@ -501,7 +501,7 @@ class UpdateMessage implements LogicalReplicationMessage {
     }
 
     if (tupleType == UpdateMessageTuple.newType) {
-      newTuple = TupleData(reader);
+      newTuple = TupleData(reader,encoding);
     } else {
       throw Exception('Invalid Tuple Type for UpdateMessage');
     }
@@ -557,7 +557,7 @@ class DeleteMessage implements LogicalReplicationMessage {
   ///   Byte1('N'): Identifies the following TupleData message as a new tuple.
   late final TupleData oldTuple;
 
-  DeleteMessage(Uint8List bytes) {
+  DeleteMessage(Uint8List bytes,Encoding encoding) {
     final reader = ByteDataReader()..add(bytes);
     relationID = reader.readUint32();
     oldTupleType = DeleteMessageTuple.fromByte(reader.readUint8());
@@ -565,7 +565,7 @@ class DeleteMessage implements LogicalReplicationMessage {
     switch (oldTupleType) {
       case DeleteMessageTuple.keyType:
       case DeleteMessageTuple.oldType:
-        oldTuple = TupleData(reader);
+        oldTuple = TupleData(reader,encoding);
         break;
       default:
         throw Exception('Unknown tuple type for DeleteMessage');
@@ -636,7 +636,7 @@ extension on ByteDataReader {
   ///   Eg. String, String("user").
   ///
   /// If there is no null byte, return empty string.
-  String decodeString() {
+  String decodeString(Encoding encoding) {
     var foundNullByte = false;
     final string = <int>[];
     while (remainingLength > 0) {
@@ -652,6 +652,6 @@ extension on ByteDataReader {
       return '';
     }
 
-    return utf8.decode(string);
+    return encoding.decode(string);
   }
 }

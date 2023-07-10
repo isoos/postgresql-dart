@@ -66,14 +66,16 @@ class AuthenticationMessage implements ServerMessage {
 class ParameterStatusMessage extends ServerMessage {
   final String name;
   final String value;
+  final Encoding encoding;
 
-  ParameterStatusMessage._(this.name, this.value);
+  ParameterStatusMessage._(this.name, this.value, this.encoding);
 
-  factory ParameterStatusMessage(Uint8List bytes) {
+  factory ParameterStatusMessage(Uint8List bytes, Encoding encoding) {
     final first0 = bytes.indexOf(0);
-    final name = utf8.decode(bytes.sublist(0, first0));
-    final value = utf8.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
-    return ParameterStatusMessage._(name, value);
+    final name = encoding.decode(bytes.sublist(0, first0));
+    final value =
+        encoding.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
+    return ParameterStatusMessage._(name, value, encoding);
   }
 }
 
@@ -84,7 +86,7 @@ class ReadyForQueryMessage extends ServerMessage {
 
   final String state;
 
-  ReadyForQueryMessage(Uint8List bytes) : state = utf8.decode(bytes);
+  ReadyForQueryMessage(Uint8List bytes, Encoding encoding) : state = encoding.decode(bytes);
 
   @override
   String toString() {
@@ -154,13 +156,13 @@ class NotificationResponseMessage extends ServerMessage {
 
   NotificationResponseMessage._(this.processID, this.channel, this.payload);
 
-  factory NotificationResponseMessage(Uint8List bytes) {
+  factory NotificationResponseMessage(Uint8List bytes, Encoding encoding) {
     final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
     final processID = view.getUint32(0);
     final first0 = bytes.indexOf(0, 4);
-    final channel = utf8.decode(bytes.sublist(4, first0));
+    final channel = encoding.decode(bytes.sublist(4, first0));
     final payload =
-        utf8.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
+        encoding.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
     return NotificationResponseMessage._(processID, channel, payload);
   }
 }
@@ -189,8 +191,8 @@ class CommandCompleteMessage extends ServerMessage {
 
   CommandCompleteMessage._(this.rowsAffected);
 
-  factory CommandCompleteMessage(Uint8List bytes) {
-    final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
+  factory CommandCompleteMessage(Uint8List bytes, Encoding encoding) {
+    final str = encoding.decode(bytes.sublist(0, bytes.length - 1));
     final match = _affectedRowsExp.firstMatch(str);
     var rowsAffected = 0;
     if (match != null) {
@@ -301,6 +303,7 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   final LSN walEnd;
   final DateTime time;
   final Uint8List bytes;
+  //final Encoding encoding;
   // this is used for standby msg
   LSN get walDataLength => LSN(bytes.length);
 
@@ -313,6 +316,7 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
     required this.walEnd,
     required this.time,
     required this.bytes,
+   // required this.encoding,
   });
 
   /// Parses the XLogDataMessage
@@ -320,14 +324,14 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   /// If [XLogDataMessage.data] is a [LogicalReplicationMessage], then the method
   /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll
   /// return [XLogDataMessage] with raw data.
-  static XLogDataMessage parse(Uint8List bytes) {
+  static XLogDataMessage parse(Uint8List bytes,  Encoding encoding) {
     final reader = ByteDataReader()..add(bytes);
     final walStart = LSN(reader.readUint64());
     final walEnd = LSN(reader.readUint64());
     final time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
     final data = reader.read(reader.remainingLength);
 
-    final message = tryParseLogicalReplicationMessage(data);
+    final message = tryParseLogicalReplicationMessage(data,encoding);
     if (message != null) {
       return XLogDataLogicalMessage(
         message: message,

@@ -40,9 +40,9 @@ _ServerMessageFn _messageTypeMap(int? msgType, Encoding encoding) {
     case 50:
       return (d) => BindCompleteMessage();
     case 65:
-      return NotificationResponseMessage.new;
+      return (bytes) => NotificationResponseMessage(bytes, encoding);
     case 67:
-      return CommandCompleteMessage.new;
+      return (bytes) => CommandCompleteMessage(bytes, encoding); 
     case 68:
       return DataRowMessage.new;
     case 69:
@@ -52,13 +52,13 @@ _ServerMessageFn _messageTypeMap(int? msgType, Encoding encoding) {
     case 82:
       return AuthenticationMessage.new;
     case 83:
-      return ParameterStatusMessage.new;
+      return (bytes) => ParameterStatusMessage(bytes, encoding);  
     case 84:
       return (bytes) => RowDescriptionMessage(bytes, encoding);
     case 87:
       return CopyBothResponseMessage.new;
     case 90:
-      return ReadyForQueryMessage.new;
+      return  (bytes) => ReadyForQueryMessage(bytes, encoding);   
     case 100:
       return CopyDataMessage.new;
     case 110:
@@ -143,7 +143,7 @@ class MessageFramer {
     if (code == ReplicationMessage.primaryKeepAliveIdentifier) {
       return PrimaryKeepAliveMessage(data);
     } else if (code == ReplicationMessage.xLogDataIdentifier) {
-      return XLogDataMessage.parse(data);
+      return XLogDataMessage.parse(data,encoding);
     } else {
       return copyData;
     }

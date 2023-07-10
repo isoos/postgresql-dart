@@ -14,12 +14,12 @@ class UTF8BackedString {
   
 
   int get utf8Length {
-    _cachedUTF8Bytes ??= utf8.encode(string);
+    _cachedUTF8Bytes ??= encoding.encode(string);
     return _cachedUTF8Bytes!.length;
   }
 
   List<int> get utf8Bytes {
-    _cachedUTF8Bytes ??= utf8.encode(string);
+    _cachedUTF8Bytes ??= encoding.encode(string);
     return _cachedUTF8Bytes!;
   }
 

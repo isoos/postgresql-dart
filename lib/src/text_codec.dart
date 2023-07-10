@@ -219,19 +219,25 @@ class PostgresTextEncoder extends Converter<Object, String> {
 
 class PostgresTextDecoder<T extends Object> extends Converter<Uint8List?, T?> {
   final PgDataType<T> _dataType;
-
-  const PostgresTextDecoder(this._dataType);
+  final Encoding encoding;
+  const PostgresTextDecoder(this._dataType, this.encoding);
 
   @override
   T? convert(Uint8List? input) {
     if (input == null) return null;
 
-    final asText = utf8.decode(input);
+    final asText = encoding.decode(input);
+
+    //print('PostgresTextDecoder@convert encoding $encoding | _dataType $_dataType | asText $asText');
 
     // ignore: unnecessary_cast
     switch (_dataType as PgDataType<Object>) {
       case PgDataType.text:
         return asText as T;
+      case PgDataType.varChar:
+        return asText as T;
+      case PgDataType.timestampWithoutTimezone:
+        return DateTime.tryParse(asText) as T;
       case PgDataType.integer:
       case PgDataType.smallInteger:
       case PgDataType.bigInteger:
@@ -244,7 +250,8 @@ class PostgresTextDecoder<T extends Object> extends Converter<Uint8List?, T?> {
       case PgDataType.boolean:
         return (asText == 'true') as T;
       default:
-        throw UnimplementedError('Text decoding for $_dataType');
+        throw UnimplementedError(
+            'Text decoding for $_dataType and value $asText');
     }
   }
 }

@@ -160,7 +160,7 @@ class Query<T> {
     // "In simple Query mode, the format of retrieved values is always text"
     //  https://www.postgresql.org/docs/current/protocol-flow.html#id-1.10.5.7.4
     if (useSendSimple) {
-      final data = rawRowData.map((e) => utf8.decode(e!));
+      final data = rawRowData.map((e) => connection.encoding.decode(e!));
       rows.add(data.toList());
       return;
     }
@@ -224,7 +224,7 @@ class ParameterValue {
   factory ParameterValue(PostgreSQLFormatIdentifier identifier,
       Map<String, dynamic>? substitutionValues, Encoding encoding) {
     if (identifier.type == null) {
-      return ParameterValue.text(substitutionValues?[identifier.name]);
+      return ParameterValue.text(substitutionValues?[identifier.name],encoding);
     }
 
     return ParameterValue.binary(
@@ -237,12 +237,12 @@ class ParameterValue {
     return ParameterValue._(true, bytes, bytes?.length ?? 0);
   }
 
-  factory ParameterValue.text(dynamic value) {
+  factory ParameterValue.text(dynamic value,Encoding encoding) {
     Uint8List? bytes;
     if (value != null) {
       const converter = PostgresTextEncoder();
       bytes = castBytes(
-          utf8.encode(converter.convert(value, escapeStrings: false)));
+          encoding.encode(converter.convert(value, escapeStrings: false)));
     }
     final length = bytes?.length ?? 0;
     return ParameterValue._(false, bytes, length);

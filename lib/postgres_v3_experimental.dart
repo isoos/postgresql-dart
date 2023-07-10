@@ -1,4 +1,4 @@
-/*import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -203,6 +203,7 @@ class PgEndpoint {
   final String? password;
   final bool requireSsl;
   final bool isUnixSocket;
+  final Encoding encoding;
 
   /// Whether the client should send the password to the server in clear-text
   /// for authentication.
@@ -219,6 +220,7 @@ class PgEndpoint {
     this.requireSsl = false,
     this.isUnixSocket = false,
     this.allowCleartextPassword = false,
+    this.encoding = utf8,
   });
 }
 
@@ -228,7 +230,7 @@ class PgSessionSettings {
   // Duration(minutes: 5)
   final Duration? queryTimeout;
   final String? timeZone;
-  final Encoding? encoding;
+  final Encoding encoding;
   final bool Function(X509Certificate)? onBadSslCertificate;
 
   /// An optional [StreamChannelTransformer] sitting behind the postgres client
@@ -247,7 +249,7 @@ class PgSessionSettings {
     this.connectTimeout,
     this.queryTimeout,
     this.timeZone,
-    this.encoding,
+    required this.encoding,
     this.onBadSslCertificate,
     this.transformer,
   });
@@ -270,4 +272,3 @@ class PgPoolSettings {
     this.maxQueryCount,
   });
 }
-*/

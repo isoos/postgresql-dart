@@ -126,13 +126,14 @@ enum PgDataType<Dart extends Object> {
   /// The object ID of this data type.
   final int? oid;
 
-  Codec<Dart?, Uint8List?>  binaryCodec(Encoding charset) {
-    return _binaryCodecs.putIfAbsent(this, () => _BinaryTypeCodec<Dart>(this,charset))
+  Codec<Dart?, Uint8List?> binaryCodec(Encoding charset) {
+    return _binaryCodecs.putIfAbsent(
+            this, () => _BinaryTypeCodec<Dart>(this, charset))
         as Codec<Dart?, Uint8List?>;
   }
 
-  Codec<Dart?, Uint8List?> get textCodec {
-    return _textCodecs.putIfAbsent(this, () => _TextTypeCodec<Dart>(this))
+  Codec<Dart?, Uint8List?>  textCodec(Encoding charset)  {
+    return _textCodecs.putIfAbsent(this, () => _TextTypeCodec<Dart>(this,charset))
         as Codec<Dart?, Uint8List?>;
   }
 
@@ -156,10 +157,11 @@ class _BinaryTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
   final Encoding charset;
 
   _BinaryTypeCodec(PgDataType<D> type, this.charset)
-      : encoder = PostgresBinaryEncoder(type,charset),
+      : encoder = PostgresBinaryEncoder(type, charset),
         // Only some integer variants have no dedicated oid, they share it with
         // the normal integer.
-        decoder = PostgresBinaryDecoder(type.oid ?? PgDataType.integer.oid!,charset);
+        decoder =
+            PostgresBinaryDecoder(type.oid ?? PgDataType.integer.oid!, charset);
 }
 
 class _TextTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
@@ -168,17 +170,20 @@ class _TextTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
   @override
   final Converter<Uint8List?, D?> decoder;
 
-  _TextTypeCodec(PgDataType<D> type)
-      : encoder = const _PostgresTextToUtf8Encoder(),
-        decoder = PostgresTextDecoder<D>(type);
+  _TextTypeCodec(PgDataType<D> type, Encoding charset)
+      : encoder = _PostgresTextToUtf8Encoder(charset),
+        decoder = PostgresTextDecoder<D>(type, charset);
 }
 
 class _PostgresTextToUtf8Encoder<D extends Object>
     extends Converter<D?, Uint8List?> {
-  const _PostgresTextToUtf8Encoder();
+  const _PostgresTextToUtf8Encoder(this.charset);
+
+  final Encoding charset;
 
   @override
   Uint8List convert(Object? input) {
-    return castBytes(utf8.encode(const PostgresTextEncoder().convert(input)));
+    return castBytes(
+        charset.encode(const PostgresTextEncoder().convert(input)));
   }
 }
