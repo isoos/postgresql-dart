@@ -9,7 +9,9 @@ import 'binary_codec.dart';
 import 'client_messages.dart';
 import 'connection.dart';
 import 'execution_context.dart';
+import 'placeholder_identifier_enum.dart';
 import 'substituter.dart';
+import 'substituter2.dart';
 import 'text_codec.dart';
 import 'types.dart';
 
@@ -20,9 +22,12 @@ class Query<T> {
     this.connection,
     this.transaction,
     this.queryStackTrace, {
+    required this.placeholderIdentifier,
     this.onlyReturnAffectedRowCount = false,
     this.useSendSimple = false,
   });
+
+  final PlaceholderIdentifier placeholderIdentifier;
 
   final bool onlyReturnAffectedRowCount;
 
@@ -33,7 +38,9 @@ class Query<T> {
   Future<QueryResult<T>?> get future => _onComplete.future;
 
   final String statement;
-  final Map<String, dynamic>? substitutionValues;
+
+  /// Map<String, dynamic> | List<dynamic>
+  dynamic substitutionValues;
   final PostgreSQLExecutionContext transaction;
   final PostgreSQLConnection connection;
 
@@ -55,36 +62,88 @@ class Query<T> {
   }
 
   void sendSimple(Socket socket) {
-    final sqlString =
-        PostgreSQLFormat.substitute(statement, substitutionValues);
+    //final sqlString = PostgreSQLFormat.substitute(statement, substitutionValues as Map<String, dynamic>?);
+    final sqlString = _formatSql([], []);
     final queryMessage = QueryMessage(sqlString, connection.encoding);
-
     socket.add(queryMessage.asBytes());
+  }
+
+  String _formatSql(List<PostgreSQLFormatIdentifier> formatIdentifiers,
+      List<ParameterValue> parameterList) {
+    switch (placeholderIdentifier) {
+      case PlaceholderIdentifier.atSign:
+        final sqlString = PostgreSQLFormat.substitute(
+            statement, substitutionValues as Map<String, dynamic>?,
+            replace: (PostgreSQLFormatIdentifier identifier, int index) {
+          formatIdentifiers.add(identifier);
+          return '\$$index';
+        });
+
+        for (var id in formatIdentifiers) {
+          parameterList.add(ParameterValue(
+              id,
+              substitutionValues as Map<String, dynamic>?,
+              connection.encoding));
+        }
+
+        return sqlString;
+
+      case PlaceholderIdentifier.onlyQuestionMark:
+        if (substitutionValues is List) {
+          final map = <String, dynamic>{};
+
+          for (var i = 0; i < (substitutionValues.length as int); i++) {
+            final key = 'param$i';
+            map[key] = substitutionValues[i];
+            final identifier = PostgreSQLFormatIdentifier('@$key');
+            formatIdentifiers.add(identifier);
+            parameterList
+                .add(ParameterValue(identifier, map, connection.encoding));
+          }
+
+          substitutionValues = map;
+        }
+        return toStatement2(statement);
+
+      // case PlaceholderIdentifier.colon:
+      //   return toStatement(statement, substitutionValues as Map<String, dynamic>);
+
+      default:
+        throw PostgreSQLException(
+            'placeholderIdentifier unknown or not implemented');
+    }
   }
 
   void sendExtended(Socket socket, {CachedQuery? cacheQuery}) {
     if (cacheQuery != null) {
-      fieldDescriptions = cacheQuery.fieldDescriptions!;
-      sendCachedQuery(socket, cacheQuery, substitutionValues);
+      if (placeholderIdentifier == PlaceholderIdentifier.onlyQuestionMark) {
+        final map = <String, dynamic>{};
+        for (var i = 0; i < (substitutionValues.length as int); i++) {
+          final key = 'param$i';
+          map[key] = substitutionValues[i];
+        }
+        substitutionValues = map;
+      }
 
+      fieldDescriptions = cacheQuery.fieldDescriptions!;
+      sendCachedQuery(
+          socket, cacheQuery, substitutionValues as Map<String, dynamic>?);
       return;
     }
 
     final statementName = statementIdentifier ?? '';
-    final formatIdentifiers = <PostgreSQLFormatIdentifier>[];
-    final sqlString = PostgreSQLFormat.substitute(statement, substitutionValues,
-        replace: (PostgreSQLFormatIdentifier identifier, int index) {
-      formatIdentifiers.add(identifier);
 
-      return '\$$index';
-    });
+    final formatIdentifiers = <PostgreSQLFormatIdentifier>[];
+    final parameterList = <ParameterValue>[];
+
+    //print( 'Query@sendExtended  statement: $statement | $placeholderIdentifier | formatIdentifiers $formatIdentifiers');
+
+    final sqlString = _formatSql(formatIdentifiers, parameterList);
 
     _specifiedParameterTypeCodes =
         formatIdentifiers.map((i) => i.type).toList();
 
-    final parameterList = formatIdentifiers
-        .map((id) => ParameterValue(id, substitutionValues,connection.encoding))
-        .toList();
+   // print('Query@sendExtended  sqlString: $sqlString | formatIdentifiers $formatIdentifiers');
 
     final messages = [
       ParseMessage(sqlString,
@@ -108,7 +167,8 @@ class Query<T> {
       Map<String, dynamic>? substitutionValues) {
     final statementName = cacheQuery.preparedStatementName;
     final parameterList = cacheQuery.orderedParameters!
-        .map((identifier) => ParameterValue(identifier, substitutionValues,connection.encoding))
+        .map((identifier) =>
+            ParameterValue(identifier, substitutionValues, connection.encoding))
         .toList();
 
     final bytes = ClientMessage.aggregateBytes([
@@ -221,14 +281,17 @@ class CachedQuery {
 }
 
 class ParameterValue {
+  /// [substitutionValues] = Map<String,dynamic> | List<Object?>
   factory ParameterValue(PostgreSQLFormatIdentifier identifier,
       Map<String, dynamic>? substitutionValues, Encoding encoding) {
+    final value = substitutionValues?[identifier.name];
+   // print( 'ParameterValue value: $value | identifier.name: ${identifier.name} | substitutionValues $substitutionValues ');
+
     if (identifier.type == null) {
-      return ParameterValue.text(substitutionValues?[identifier.name],encoding);
+      return ParameterValue.text(value, encoding);
     }
 
-    return ParameterValue.binary(
-        substitutionValues?[identifier.name], identifier.type!,encoding);
+    return ParameterValue.binary(value, identifier.type!, encoding);
   }
 
   factory ParameterValue.binary(
@@ -237,7 +300,7 @@ class ParameterValue {
     return ParameterValue._(true, bytes, bytes?.length ?? 0);
   }
 
-  factory ParameterValue.text(dynamic value,Encoding encoding) {
+  factory ParameterValue.text(dynamic value, Encoding encoding) {
     Uint8List? bytes;
     if (value != null) {
       const converter = PostgresTextEncoder();
@@ -315,8 +378,17 @@ class FieldDescription implements ColumnDescription {
   }
 
   FieldDescription change({String? tableName}) {
-    return FieldDescription._(converter, columnName, tableID, columnID, typeId,
-        dataTypeSize, typeModifier, formatCode, tableName ?? this.tableName,encoding);
+    return FieldDescription._(
+        converter,
+        columnName,
+        tableID,
+        columnID,
+        typeId,
+        dataTypeSize,
+        typeModifier,
+        formatCode,
+        tableName ?? this.tableName,
+        encoding);
   }
 
   @override

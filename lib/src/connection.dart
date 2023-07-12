@@ -8,11 +8,13 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres/src/substituter2.dart';
 import 'auth/auth.dart';
 
 import 'client_messages.dart';
 import 'execution_context.dart';
 import 'message_window.dart';
+import 'placeholder_identifier_enum.dart';
 import 'query.dart';
 import 'query_cache.dart';
 import 'query_queue.dart';
@@ -151,7 +153,7 @@ class PostgreSQLConnection extends Object
   final _cache = QueryCache();
   final _oidCache = _OidCache();
   Socket? _socket;
-  late MessageFramer _framer ;
+  late MessageFramer _framer;
   late int _processID;
   // ignore: unused_field
   late int _secretKey;
@@ -444,6 +446,7 @@ class _OidCache {
     final unresolvedIDString = oids.join(',');
     final orderedTableNames = await c._query(
       "SELECT relname FROM pg_class WHERE relkind='r' AND oid IN ($unresolvedIDString) ORDER BY oid ASC",
+      placeholderIdentifier: PlaceholderIdentifier.atSign,
       allowReuse: false, // inlined OIDs would make it difficult anyway
       resolveOids: false,
     );
@@ -469,26 +472,28 @@ abstract class _PostgreSQLExecutionContextMixin
   @override
   int get queueSize => _queue.length;
 
+  /// Break change
   @override
   Future<PostgreSQLResult> query(
     String fmtString, {
-    Map<String, dynamic>? substitutionValues,
+    dynamic substitutionValues,
     bool? allowReuse,
     int? timeoutInSeconds,
     bool? useSimpleQueryProtocol,
+    PlaceholderIdentifier placeholderIdentifier = PlaceholderIdentifier.atSign,
   }) =>
-      _query(
-        fmtString,
-        substitutionValues: substitutionValues,
-        allowReuse: allowReuse ?? true,
-        useSimpleQueryProtocol: useSimpleQueryProtocol ?? false,
-        timeoutInSeconds: timeoutInSeconds,
-      );
+      _query(fmtString,
+          substitutionValues: substitutionValues,
+          allowReuse: allowReuse ?? true,
+          useSimpleQueryProtocol: useSimpleQueryProtocol ?? false,
+          timeoutInSeconds: timeoutInSeconds,
+          placeholderIdentifier: placeholderIdentifier);
 
   Future<PostgreSQLResult> _query(
     String fmtString, {
-    Map<String, dynamic>? substitutionValues,
+    dynamic substitutionValues,
     required bool allowReuse,
+    required PlaceholderIdentifier placeholderIdentifier,
     int? timeoutInSeconds,
     bool resolveOids = true,
     bool useSimpleQueryProtocol = false,
@@ -498,12 +503,11 @@ abstract class _PostgreSQLExecutionContextMixin
     if (useSimpleQueryProtocol) {
       // re-route the query to the `_execute` method which will execute the query
       // using the Simple Query Protocol.
-      return _execute(
-        fmtString,
-        timeoutInSeconds: timeoutInSeconds,
-        onlyReturnAffectedRows: false,
-        substitutionValues: substitutionValues,
-      );
+      return _execute(fmtString,
+          timeoutInSeconds: timeoutInSeconds,
+          onlyReturnAffectedRows: false,
+          substitutionValues: substitutionValues,
+          placeholderIdentifier: placeholderIdentifier);
     }
 
     if (_connection.isClosed) {
@@ -511,13 +515,9 @@ abstract class _PostgreSQLExecutionContextMixin
           'Attempting to execute query, but connection is not open.');
     }
 
-    final query = Query<List<List<dynamic>>>(
-      fmtString,
-      substitutionValues,
-      _connection,
-      _transaction,
-      StackTrace.current,
-    );
+    final query = Query<List<List<dynamic>>>(fmtString, substitutionValues,
+        _connection, _transaction, StackTrace.current,
+        placeholderIdentifier: placeholderIdentifier);
     if (allowReuse) {
       query.statementIdentifier = _connection._cache.identifierForQuery(query);
     }
@@ -541,29 +541,34 @@ abstract class _PostgreSQLExecutionContextMixin
 
   @override
   Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
-      String fmtString,
-      {Map<String, dynamic>? substitutionValues = const {},
-      bool? allowReuse,
-      int? timeoutInSeconds}) async {
-    final rs = await query(
-      fmtString,
-      substitutionValues: substitutionValues,
-      allowReuse: allowReuse ?? false,
-      timeoutInSeconds: timeoutInSeconds,
-    );
+    String fmtString, {
+    dynamic substitutionValues = const {},
+    bool? allowReuse,
+    int? timeoutInSeconds,
+    PlaceholderIdentifier placeholderIdentifier = PlaceholderIdentifier.atSign,
+  }) async {
+    final rs = await query(fmtString,
+        substitutionValues: substitutionValues,
+        allowReuse: allowReuse ?? false,
+        timeoutInSeconds: timeoutInSeconds,
+        placeholderIdentifier: placeholderIdentifier);
 
     return rs.map((row) => row.toTableColumnMap()).toList();
   }
 
   @override
-  Future<int> execute(String fmtString,
-      {Map<String, dynamic>? substitutionValues = const {},
-      int? timeoutInSeconds}) async {
+  Future<int> execute(
+    String fmtString, {
+    dynamic substitutionValues = const {},
+    int? timeoutInSeconds,
+    PlaceholderIdentifier placeholderIdentifier = PlaceholderIdentifier.atSign,
+  }) async {
     final result = await _execute(
       fmtString,
       substitutionValues: substitutionValues,
       timeoutInSeconds: _connection.queryTimeoutInSeconds,
       onlyReturnAffectedRows: true,
+      placeholderIdentifier: placeholderIdentifier,
     );
     return result.affectedRowCount;
   }
@@ -572,9 +577,10 @@ abstract class _PostgreSQLExecutionContextMixin
   //       from the [query] method in the future major breaking change.
   Future<PostgreSQLResult> _execute(
     String fmtString, {
-    Map<String, dynamic>? substitutionValues = const {},
+    dynamic substitutionValues = const {},
     required int timeoutInSeconds,
     required bool onlyReturnAffectedRows,
+    required PlaceholderIdentifier placeholderIdentifier,
   }) async {
     if (_connection.isClosed) {
       throw PostgreSQLException(
@@ -582,15 +588,13 @@ abstract class _PostgreSQLExecutionContextMixin
     }
 
     final query = Query<dynamic>(
-      fmtString,
-      substitutionValues,
-      _connection,
-      _transaction,
-      StackTrace.current,
+      fmtString, substitutionValues, _connection,
+      _transaction, StackTrace.current,
       useSendSimple: true,
       // TODO: this could be removed from Query since useSendSimple covers the
       //       functionality.
       onlyReturnAffectedRowCount: onlyReturnAffectedRows,
+      placeholderIdentifier: placeholderIdentifier,
     );
 
     final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);

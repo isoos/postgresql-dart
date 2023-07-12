@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.8.1
+
+- implemented executing a prepared statement with question mark placeholder style similar to PHP PDO
+```dart
+ final results = await connection.query(
+        ' SELECT * FROM public.table_example LIMIT ?',
+        substitutionValues: [2000], placeholderIdentifier: 
+        PlaceholderIdentifier.onlyQuestionMark);
+```
+
 ## 2.7.1
 
 - Support has been implemented to change the character encoding for the connection, this makes it possible to change the default encoding from utf8 to win1252, iso8859, among others.

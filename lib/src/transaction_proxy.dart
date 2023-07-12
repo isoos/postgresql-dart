@@ -9,7 +9,7 @@ class _TransactionProxy extends Object
   _TransactionProxy(
       this._connection, this.executionBlock, this.commitTimeoutInSeconds) {
     _beginQuery = Query<int>('BEGIN', {}, _connection, this, StackTrace.current,
-        onlyReturnAffectedRowCount: true);
+        onlyReturnAffectedRowCount: true,placeholderIdentifier: PlaceholderIdentifier.atSign);
 
     _beginQuery.future
         .then(startTransaction)
@@ -91,7 +91,7 @@ class _TransactionProxy extends Object
 
     final rollback = Query<int>(
         'ROLLBACK', {}, _connection, _transaction, StackTrace.current,
-        onlyReturnAffectedRowCount: true);
+        onlyReturnAffectedRowCount: true,placeholderIdentifier: PlaceholderIdentifier.atSign);
     _queue.addEvenIfCancelled(rollback);
 
     _connection._transitionToState(_connection._connectionState.awake());

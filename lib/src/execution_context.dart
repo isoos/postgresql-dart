@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'connection.dart';
+import 'placeholder_identifier_enum.dart';
 import 'query.dart';
 import 'substituter.dart';
+import 'substituter2.dart';
 import 'types.dart';
 
 abstract class PostgreSQLExecutionContext {
@@ -49,11 +51,14 @@ abstract class PostgreSQLExecutionContext {
   /// Replication Protocol.
   ///
   /// [Simple Query Protocol]: https://www.postgresql.org/docs/current/protocol-flow.html#id-1.10.5.7.4
-  Future<PostgreSQLResult> query(String fmtString,
-      {Map<String, dynamic>? substitutionValues,
-      bool? allowReuse,
-      int? timeoutInSeconds,
-      bool? useSimpleQueryProtocol});
+  Future<PostgreSQLResult> query(
+    String fmtString, {
+    dynamic substitutionValues,
+    bool? allowReuse,
+    int? timeoutInSeconds,
+    bool? useSimpleQueryProtocol,
+    PlaceholderIdentifier placeholderIdentifier = PlaceholderIdentifier.atSign,
+  });
 
   /// Executes a query on this context.
   ///
@@ -62,8 +67,12 @@ abstract class PostgreSQLExecutionContext {
   /// This method returns the number of rows affected and no additional information. This method uses the least efficient and less secure command
   /// for executing queries in the PostgreSQL protocol; [query] is preferred for queries that will be executed more than once, will contain user input,
   /// or return rows.
-  Future<int> execute(String fmtString,
-      {Map<String, dynamic>? substitutionValues, int? timeoutInSeconds});
+  Future<int> execute(
+    String fmtString, {
+    dynamic substitutionValues,
+    int? timeoutInSeconds,
+    PlaceholderIdentifier placeholderIdentifier = PlaceholderIdentifier.atSign,
+  });
 
   /// Cancels a transaction on this context.
   ///
@@ -102,10 +111,12 @@ abstract class PostgreSQLExecutionContext {
   ///         }
   ///       ]
   Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
-      String fmtString,
-      {Map<String, dynamic>? substitutionValues,
-      bool? allowReuse,
-      int? timeoutInSeconds});
+    String fmtString, {
+    dynamic substitutionValues,
+    bool? allowReuse,
+    int? timeoutInSeconds,
+    PlaceholderIdentifier placeholderIdentifier = PlaceholderIdentifier.atSign,
+  });
 }
 
 /// A description of a column.
