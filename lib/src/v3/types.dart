@@ -132,8 +132,9 @@ enum PgDataType<Dart extends Object> {
         as Codec<Dart?, Uint8List?>;
   }
 
-  Codec<Dart?, Uint8List?>  textCodec(Encoding charset)  {
-    return _textCodecs.putIfAbsent(this, () => _TextTypeCodec<Dart>(this,charset))
+  Codec<Dart?, Uint8List?> textCodec(Encoding charset) {
+    return _textCodecs.putIfAbsent(
+            this, () => _TextTypeCodec<Dart>(this, charset))
         as Codec<Dart?, Uint8List?>;
   }
 

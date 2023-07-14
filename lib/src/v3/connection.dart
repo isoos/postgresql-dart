@@ -7,12 +7,12 @@ import 'package:async/async.dart';
 import 'package:charcode/ascii.dart';
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart';
-import 'package:postgres/postgres_v3_experimental.dart';
-import 'package:postgres/src/query.dart';
 import 'package:stream_channel/stream_channel.dart';
 
+import '../../postgres_v3_experimental.dart';
 import '../auth/auth.dart';
 import '../connection.dart' show PostgreSQLException;
+import '../query.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 
@@ -49,10 +49,8 @@ class _ResolvedSettings {
             settings?.connectTimeout ?? const Duration(seconds: 15),
         queryTimeout = settings?.connectTimeout ?? const Duration(minutes: 5),
         timeZone = settings?.timeZone ?? 'UTC',
-        encoding = settings?.encoding  ?? endpoint.encoding,
-        transformer = settings?.transformer{
-          //print('_ResolvedSettings settings $settings endpoint $endpoint');
-        }
+        encoding = settings?.encoding ?? endpoint.encoding,
+        transformer = settings?.transformer;
 
   bool onBadSslCertificate(X509Certificate certificate) {
     return settings?.onBadSslCertificate?.call(certificate) ?? false;
@@ -71,12 +69,10 @@ class PgConnectionImplementation implements PgConnection {
       channel = channel.transform(StreamChannelTransformer(
         StreamTransformer.fromHandlers(
           handleData: (msg, sink) {
-            print('[in] $msg');
             sink.add(msg);
           },
         ),
         StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
-          print('[out] $msg');
           sink.add(msg);
         }),
       ));
@@ -166,8 +162,11 @@ class PgConnectionImplementation implements PgConnection {
       return out.close();
     }));
 
+    // return StreamChannel<List<int>>(adaptedStream, outgoingSocket).transform(
+    //     WrapMessageTransformer(settings.encoding).messageTransformer);
+
     return StreamChannel<List<int>>(adaptedStream, outgoingSocket)
-        .transform(WrapMessageTransformer(settings.encoding).messageTransformer);
+        .transform(messageTransformer(settings.encoding));
   }
 
   final StreamChannel<BaseMessage> _channel;
@@ -266,10 +265,10 @@ class PgConnectionImplementation implements PgConnection {
     final description = InternalQueryDescription.wrap(query);
 
     await _sendAndWaitForQuery<ParseCompleteMessage>(ParseMessage(
-      description.transformedSql,
-      statementName: name,
-      types: description.parameterTypes,encoding: _settings.endpoint.encoding
-    ));
+        description.transformedSql,
+        statementName: name,
+        types: description.parameterTypes,
+        encoding: _settings.endpoint.encoding));
 
     return _PreparedStatement(description, name, this);
   }
@@ -392,13 +391,16 @@ class _PgResultStreamSubscription
         BindMessage(
           [
             for (final parameter in statement.parameters)
-              ParameterValue.binary(parameter.value, parameter.type,connection._settings.encoding)
+              ParameterValue.binary(parameter.value, parameter.type,
+                  connection._settings.encoding)
           ],
           portalName: _portalName,
-          statementName: statement.statement._name,encoding: connection._settings.encoding,
+          statementName: statement.statement._name,
+          encoding: connection._settings.encoding,
         ),
-        DescribeMessage.portal(portalName: _portalName,encoding: connection._settings.encoding),
-        ExecuteMessage( connection._settings.encoding,_portalName),
+        DescribeMessage.portal(
+            portalName: _portalName, encoding: connection._settings.encoding),
+        ExecuteMessage(connection._settings.encoding, _portalName),
         SyncMessage(),
       ]));
 
@@ -411,7 +413,8 @@ class _PgResultStreamSubscription
     connection._operationLock.withResource(() async {
       connection._pending = this;
 
-      connection._channel.sink.add(QueryMessage(sql,connection._settings.encoding));
+      connection._channel.sink
+          .add(QueryMessage(sql, connection._settings.encoding));
       await _done.future;
     });
   }
@@ -449,10 +452,10 @@ class _PgResultStreamSubscription
       for (var i = 0; i < message.values.length; i++) {
         final field = schema.columns[i];
 
-        //print('v3 connection@handleMessage  connection._settings.encoding ${connection._settings.encoding}');
-
         final type = field.type;
-        final codec = field.binaryEncoding ? type.binaryCodec(connection._settings.encoding) : type.textCodec(connection._settings.encoding);
+        final codec = field.binaryEncoding
+            ? type.binaryCodec(connection._settings.encoding)
+            : type.textCodec(connection._settings.encoding);
 
         columnValues.add(codec.decode(message.values[i]));
       }
@@ -640,7 +643,8 @@ class _AuthenticationProcedure extends _PendingOperation {
       connection._channel.sink.add,
     );
 
-    _authenticator = createAuthenticator(authConnection, scheme,connection._settings.encoding)
+    _authenticator = createAuthenticator(
+        authConnection, scheme, connection._settings.encoding)
       ..onMessage(message);
   }
 

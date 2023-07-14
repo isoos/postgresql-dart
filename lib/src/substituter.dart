@@ -137,7 +137,7 @@ class PostgreSQLFormat {
       } else if (t.buffer.length == 1 && t.buffer.toString() == '@') {
         return t.buffer;
       } else {
-        print('PostgreSQLFormat@substitute ${t.buffer.toString()} ');
+        
         final identifier = PostgreSQLFormatIdentifier(t.buffer.toString());
 
         if (values != null && !values.containsKey(identifier.name)) {

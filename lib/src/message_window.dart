@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
-import 'package:postgres/postgres.dart';
 
+import '../postgres.dart';
 import 'server_messages.dart';
 import 'shared_messages.dart';
 
@@ -33,50 +33,51 @@ typedef _ServerMessageFn = ServerMessage Function(Uint8List data);
 //   $3: (d) => CloseCompleteMessage(),
 // };
 
-_ServerMessageFn _messageTypeMap(int? msgType, Encoding encoding) {
-  switch (msgType) {
-    case 49:
-      return (d) => ParseCompleteMessage();
-    case 50:
-      return (d) => BindCompleteMessage();
-    case 65:
-      return (bytes) => NotificationResponseMessage(bytes, encoding);
-    case 67:
-      return (bytes) => CommandCompleteMessage(bytes, encoding); 
-    case 68:
-      return DataRowMessage.new;
-    case 69:
-      return ErrorResponseMessage.new;
-    case 75:
-      return BackendKeyMessage.new;
-    case 82:
-      return AuthenticationMessage.new;
-    case 83:
-      return (bytes) => ParameterStatusMessage(bytes, encoding);  
-    case 84:
-      return (bytes) => RowDescriptionMessage(bytes, encoding);
-    case 87:
-      return CopyBothResponseMessage.new;
-    case 90:
-      return  (bytes) => ReadyForQueryMessage(bytes, encoding);   
-    case 100:
-      return CopyDataMessage.new;
-    case 110:
-      return (d) => NoDataMessage();
-    case 116:
-      return ParameterDescriptionMessage.new;
-    //0x33
-    case $3:
-      return (d) => CloseCompleteMessage();
-    default:
-      throw PostgreSQLException('ServerMessage type unknown');
-  }
-}
-
 class MessageFramer {
   final _reader = ByteDataReader();
   final messageQueue = Queue<ServerMessage>();
   final Encoding encoding;
+
+  _ServerMessageFn? _messageTypeMap(int? msgType) {
+    switch (msgType) {
+      case 49:
+        return (d) => ParseCompleteMessage();
+      case 50:
+        return (d) => BindCompleteMessage();
+      case 65:
+        return (bytes) => NotificationResponseMessage(bytes, encoding);
+      case 67:
+        return (bytes) => CommandCompleteMessage(bytes, encoding);
+      case 68:
+        return DataRowMessage.new;
+      case 69:
+        return ErrorResponseMessage.new;
+      case 75:
+        return BackendKeyMessage.new;
+      case 82:
+        return AuthenticationMessage.new;
+      case 83:
+        return (bytes) => ParameterStatusMessage(bytes, encoding);
+      case 84:
+        return (bytes) => RowDescriptionMessage(bytes, encoding);
+      case 87:
+        return CopyBothResponseMessage.new;
+      case 90:
+        return (bytes) => ReadyForQueryMessage(bytes, encoding);
+      case 100:
+        return CopyDataMessage.new;
+      case 110:
+        return (d) => NoDataMessage();
+      case 116:
+        return ParameterDescriptionMessage.new;
+      //0x33
+      case $3:
+        return (d) => CloseCompleteMessage();
+      default:
+        return null;
+      //throw PostgreSQLException('ServerMessage type unknown');
+    }
+  }
 
   int? _type;
   int _expectedLength = 0;
@@ -111,7 +112,7 @@ class MessageFramer {
       } else if (_hasReadHeader && _isComplete) {
         final data =
             _expectedLength == 0 ? _emptyData : _reader.read(_expectedLength);
-        final msgMaker =_messageTypeMap(_type,encoding); //_messageTypeMap[_type];
+        final msgMaker = _messageTypeMap(_type); //_messageTypeMap[_type];
         var msg =
             msgMaker == null ? UnknownMessage(_type, data) : msgMaker(data);
 
@@ -143,7 +144,7 @@ class MessageFramer {
     if (code == ReplicationMessage.primaryKeepAliveIdentifier) {
       return PrimaryKeepAliveMessage(data);
     } else if (code == ReplicationMessage.xLogDataIdentifier) {
-      return XLogDataMessage.parse(data,encoding);
+      return XLogDataMessage.parse(data, encoding);
     } else {
       return copyData;
     }

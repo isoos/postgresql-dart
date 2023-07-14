@@ -136,14 +136,10 @@ class Query<T> {
     final formatIdentifiers = <PostgreSQLFormatIdentifier>[];
     final parameterList = <ParameterValue>[];
 
-    //print( 'Query@sendExtended  statement: $statement | $placeholderIdentifier | formatIdentifiers $formatIdentifiers');
-
     final sqlString = _formatSql(formatIdentifiers, parameterList);
 
     _specifiedParameterTypeCodes =
         formatIdentifiers.map((i) => i.type).toList();
-
-   // print('Query@sendExtended  sqlString: $sqlString | formatIdentifiers $formatIdentifiers');
 
     final messages = [
       ParseMessage(sqlString,
@@ -285,7 +281,6 @@ class ParameterValue {
   factory ParameterValue(PostgreSQLFormatIdentifier identifier,
       Map<String, dynamic>? substitutionValues, Encoding encoding) {
     final value = substitutionValues?[identifier.name];
-   // print( 'ParameterValue value: $value | identifier.name: ${identifier.name} | substitutionValues $substitutionValues ');
 
     if (identifier.type == null) {
       return ParameterValue.text(value, encoding);

@@ -8,9 +8,8 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:meta/meta.dart';
-import 'package:postgres/src/substituter2.dart';
-import 'auth/auth.dart';
 
+import 'auth/auth.dart';
 import 'client_messages.dart';
 import 'execution_context.dart';
 import 'message_window.dart';
@@ -22,10 +21,8 @@ import 'replication.dart';
 import 'server_messages.dart';
 
 part 'connection_fsm.dart';
-
-part 'transaction_proxy.dart';
-
 part 'exceptions.dart';
+part 'transaction_proxy.dart';
 
 /// Instances of this class connect to and communicate with a PostgreSQL database.
 ///
@@ -542,7 +539,7 @@ abstract class _PostgreSQLExecutionContextMixin
   @override
   Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
     String fmtString, {
-    dynamic substitutionValues = const {},
+    dynamic substitutionValues = const <String, dynamic>{},
     bool? allowReuse,
     int? timeoutInSeconds,
     PlaceholderIdentifier placeholderIdentifier = PlaceholderIdentifier.atSign,
@@ -559,7 +556,7 @@ abstract class _PostgreSQLExecutionContextMixin
   @override
   Future<int> execute(
     String fmtString, {
-    dynamic substitutionValues = const {},
+    dynamic substitutionValues = const <String, dynamic> {},
     int? timeoutInSeconds,
     PlaceholderIdentifier placeholderIdentifier = PlaceholderIdentifier.atSign,
   }) async {
@@ -577,7 +574,7 @@ abstract class _PostgreSQLExecutionContextMixin
   //       from the [query] method in the future major breaking change.
   Future<PostgreSQLResult> _execute(
     String fmtString, {
-    dynamic substitutionValues = const {},
+    dynamic substitutionValues = const <String, dynamic>{},
     required int timeoutInSeconds,
     required bool onlyReturnAffectedRows,
     required PlaceholderIdentifier placeholderIdentifier,

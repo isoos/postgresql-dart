@@ -144,9 +144,9 @@ List toStatement(String query, Map params,
       if (nextC == null || (!isalnum(nextC) && nextC != '_')) {
         state = OUTSIDE;
         try {
-          //print('to_statement last: ${placeholders.last}');
+          
           final pidx = placeholders.indexWithEnd(placeholders.last, 0, -1);
-          //print('to_statement pidx: $pidx');
+        
           outputQuery.add('\$${pidx + 1}');
           //del placeholders[-1]
           placeholders.removeLast();
@@ -216,7 +216,7 @@ String toStatement2(String query) {
   for (var i = 0; i < splitString.length; i++) {
     final c = splitString[i];
 
-    //print('for state: $state');
+  
 
     if (i + 1 < splitString.length) {
       nextC = splitString[i + 1];
@@ -244,7 +244,7 @@ String toStatement2(String query) {
       } else if (c == placeholderIdentifier && prevC != placeholderIdentifier) {
         state = INSIDE_PN;
 
-        //print('c == placeholder: $c');
+        
         // placeholders.add("");
         outputQuery.add('\$$paramCount');
         paramCount++;
@@ -285,7 +285,7 @@ String toStatement2(String query) {
       if (nextC == null || (!isalnum(nextC) && nextC != '_')) {
         state = OUTSIDE;
       }
-      //print('state == INSIDE_PN: $c');
+     
       outputQuery.add(c);
     }
     //

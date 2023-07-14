@@ -3,16 +3,15 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
-import 'package:postgres/src/time_converters.dart';
-import 'package:postgres/src/v3/types.dart';
 
 import 'constants.dart';
+import 'encoded_string.dart';
 import 'query.dart';
 import 'replication.dart';
-
 import 'shared_messages.dart';
+import 'time_converters.dart';
 import 'types.dart';
-import 'utf8_backed_string.dart';
+import 'v3/types.dart';
 
 abstract class ClientMessage extends BaseMessage {
   static const int FormatText = 0;
@@ -49,10 +48,10 @@ abstract class ClientMessage extends BaseMessage {
 }
 
 class StartupMessage extends ClientMessage {
-  final UTF8BackedString? _username;
-  final UTF8BackedString _databaseName;
-  final UTF8BackedString _timeZone;
-  final UTF8BackedString _replication;
+  final EncodedString? _username;
+  final EncodedString _databaseName;
+  final EncodedString _timeZone;
+  final EncodedString _replication;
 
   StartupMessage(
     String databaseName,
@@ -60,25 +59,25 @@ class StartupMessage extends ClientMessage {
     String? username,
     ReplicationMode replication = ReplicationMode.none,
     required Encoding encoding,
-  })  : _databaseName = UTF8BackedString(databaseName, encoding),
-        _timeZone = UTF8BackedString(timeZone, encoding),
+  })  : _databaseName = EncodedString(databaseName, encoding),
+        _timeZone = EncodedString(timeZone, encoding),
         _username =
-            username == null ? null : UTF8BackedString(username, encoding),
-        _replication = UTF8BackedString(replication.value, encoding);
+            username == null ? null : EncodedString(username, encoding),
+        _replication = EncodedString(replication.value, encoding);
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     var fixedLength = 48;
-    var variableLength = _databaseName.utf8Length + _timeZone.utf8Length + 2;
+    var variableLength = _databaseName.byteLength + _timeZone.byteLength + 2;
 
     if (_username != null) {
       fixedLength += 5;
-      variableLength += _username!.utf8Length + 1;
+      variableLength += _username!.byteLength + 1;
     }
 
     if (_replication.string != ReplicationMode.none.value) {
       fixedLength += UTF8ByteConstants.replication.length;
-      variableLength += _replication.utf8Length + 1;
+      variableLength += _replication.byteLength + 1;
     }
 
     buffer.writeInt32(fixedLength + variableLength);
@@ -108,23 +107,23 @@ class StartupMessage extends ClientMessage {
 }
 
 class QueryMessage extends ClientMessage {
-  final UTF8BackedString _queryString;
+  final EncodedString _queryString;
 
   QueryMessage(String queryString, Encoding encoding)
-      : _queryString = UTF8BackedString(queryString, encoding);
+      : _queryString = EncodedString(queryString, encoding);
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.QueryIdentifier);
-    final length = 5 + _queryString.utf8Length;
+    final length = 5 + _queryString.byteLength;
     buffer.writeUint32(length);
     _queryString.applyToBuffer(buffer);
   }
 }
 
 class ParseMessage extends ClientMessage {
-  final UTF8BackedString _statementName;
-  final UTF8BackedString _statement;
+  final EncodedString _statementName;
+  final EncodedString _statement;
   final List<PgDataType?> _types;
 
   ParseMessage(
@@ -132,16 +131,16 @@ class ParseMessage extends ClientMessage {
     String statementName = '',
     List<PgDataType?>? types,
     required Encoding encoding,
-  })  : _statement = UTF8BackedString(statement, encoding),
-        _statementName = UTF8BackedString(statementName, encoding),
+  })  : _statement = EncodedString(statement, encoding),
+        _statementName = EncodedString(statementName, encoding),
         _types = types ?? const [];
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ParseIdentifier);
     final length = 8 +
-        _statement.utf8Length +
-        _statementName.utf8Length +
+        _statement.byteLength +
+        _statementName.byteLength +
         _types.length * 4;
     buffer.writeUint32(length);
     // Name of prepared statement
@@ -157,21 +156,21 @@ class ParseMessage extends ClientMessage {
 }
 
 class DescribeMessage extends ClientMessage {
-  final UTF8BackedString _name;
+  final EncodedString _name;
   final bool _isPortal;
 
   DescribeMessage({String statementName = '', required Encoding encoding})
-      : _name = UTF8BackedString(statementName, encoding),
+      : _name = EncodedString(statementName, encoding),
         _isPortal = false;
 
   DescribeMessage.portal({String portalName = '', required Encoding encoding})
-      : _name = UTF8BackedString(portalName, encoding),
+      : _name = EncodedString(portalName, encoding),
         _isPortal = true;
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.DescribeIdentifier);
-    final length = 6 + _name.utf8Length;
+    final length = 6 + _name.byteLength;
     buffer.writeUint32(length);
     buffer.writeUint8(_isPortal ? $P : $S);
     _name.applyToBuffer(buffer); // Name of prepared statement
@@ -180,8 +179,8 @@ class DescribeMessage extends ClientMessage {
 
 class BindMessage extends ClientMessage {
   final List<ParameterValue> _parameters;
-  final UTF8BackedString _portalName;
-  final UTF8BackedString _statementName;
+  final EncodedString _portalName;
+  final EncodedString _statementName;
   final int _typeSpecCount;
   int _cachedLength = -1;
 
@@ -190,8 +189,8 @@ class BindMessage extends ClientMessage {
       String statementName = '',
       required Encoding encoding})
       : _typeSpecCount = _parameters.where((p) => p.isBinary).length,
-        _portalName = UTF8BackedString(portalName, encoding),
-        _statementName = UTF8BackedString(statementName, encoding);
+        _portalName = EncodedString(portalName, encoding),
+        _statementName = EncodedString(statementName, encoding);
 
   int get length {
     if (_cachedLength == -1) {
@@ -201,8 +200,8 @@ class BindMessage extends ClientMessage {
       }
 
       _cachedLength = 15;
-      _cachedLength += _statementName.utf8Length;
-      _cachedLength += _portalName.utf8Length;
+      _cachedLength += _statementName.byteLength;
+      _cachedLength += _portalName.byteLength;
       _cachedLength += inputParameterElementCount * 2;
       _cachedLength +=
           _parameters.fold<int>(0, (len, ParameterValue paramValue) {
@@ -263,15 +262,15 @@ class BindMessage extends ClientMessage {
 }
 
 class ExecuteMessage extends ClientMessage {
-  final UTF8BackedString _portalName;
+  final EncodedString _portalName;
 
   ExecuteMessage(Encoding encoding, [String portalName = ''])
-      : _portalName = UTF8BackedString(portalName, encoding);
+      : _portalName = EncodedString(portalName, encoding);
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ExecuteIdentifier);
-    buffer.writeUint32(9 + _portalName.utf8Length);
+    buffer.writeUint32(9 + _portalName.byteLength);
     _portalName.applyToBuffer(buffer);
     buffer.writeUint32(0);
   }
@@ -279,19 +278,19 @@ class ExecuteMessage extends ClientMessage {
 
 class CloseMessage extends ClientMessage {
   final bool isForPortal;
-  final UTF8BackedString name;
+  final EncodedString name;
 
   CloseMessage.statement(Encoding encoding, [String name = ''])
-      : name = UTF8BackedString(name, encoding),
+      : name = EncodedString(name, encoding),
         isForPortal = false;
 
   CloseMessage.portal(Encoding encoding, [String name = ''])
-      : name = UTF8BackedString(name, encoding),
+      : name = EncodedString(name, encoding),
         isForPortal = true;
 
   @override
   void applyToBuffer(ByteDataWriter buffer) {
-    final length = 6 + name.utf8Length;
+    final length = 6 + name.byteLength;
 
     buffer
       ..writeUint8(ClientMessage.CloseIdentifier)

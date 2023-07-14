@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:postgres/postgres.dart';
 
+
+import '../postgres.dart';
 import 'v3/types.dart';
 
 class PostgresTextEncoder extends Converter<Object, String> {
@@ -227,8 +228,6 @@ class PostgresTextDecoder<T extends Object> extends Converter<Uint8List?, T?> {
     if (input == null) return null;
 
     final asText = encoding.decode(input);
-
-    //print('PostgresTextDecoder@convert encoding $encoding | _dataType $_dataType | asText $asText');
 
     // ignore: unnecessary_cast
     switch (_dataType as PgDataType<Object>) {

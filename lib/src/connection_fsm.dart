@@ -303,7 +303,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     // We ignore NoData, as it doesn't tell us anything we don't already know
     // or care about.
 
-    // print("(${query.statement}) -> $message");
+   
 
     if (message is ReadyForQueryMessage) {
       if (message.state == ReadyForQueryMessage.StateTransactionError) {

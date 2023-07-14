@@ -6,8 +6,8 @@ import 'package:sasl_scram/sasl_scram.dart';
 
 import '../../postgres.dart';
 import '../client_messages.dart';
+import '../encoded_string.dart';
 import '../server_messages.dart';
-import '../utf8_backed_string.dart';
 import 'auth.dart';
 
 /// Structure for SASL Authenticator
@@ -61,11 +61,11 @@ class SaslClientFirstMessage extends ClientMessage {
   void applyToBuffer(ByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
        //TODO verificar se aqui tem que ser ascii em vez do charset padão da conexão
-    final utf8CachedMechanismName = UTF8BackedString(mechanismName,_encoding);
+    final utf8CachedMechanismName = EncodedString(mechanismName,_encoding);
 
     final msgLength = bytesToSendToServer.length;
     // No Identifier bit + 4 byte counts (for whole length) + mechanism bytes + zero byte + 4 byte counts (for msg length) + msg bytes
-    final length = 4 + utf8CachedMechanismName.utf8Length + 1 + 4 + msgLength;
+    final length = 4 + utf8CachedMechanismName.byteLength + 1 + 4 + msgLength;
 
     buffer.writeUint32(length);
     utf8CachedMechanismName.applyToBuffer(buffer);

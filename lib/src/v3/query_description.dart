@@ -1,4 +1,4 @@
-import 'package:postgres/postgres_v3_experimental.dart';
+import '../../postgres_v3_experimental.dart';
 
 
 class InternalQueryDescription implements PgSql {

@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/binary_codec.dart';
+import 'package:postgres/src/encoded_string.dart';
 import 'package:postgres/src/text_codec.dart';
-import 'package:postgres/src/utf8_backed_string.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -609,11 +609,11 @@ void main() {
 
   test('UTF8String caches string regardless of which method is called first',
       () {
-    final u = UTF8BackedString('abcd',utf8);
-    final v = UTF8BackedString('abcd',utf8);
+    final u = EncodedString('abcd',utf8);
+    final v = EncodedString('abcd',utf8);
 
-    u.utf8Length;
-    v.utf8Bytes;
+    u.byteLength;
+    v.encodedBytes;
 
     expect(u.hasCachedBytes, true);
     expect(v.hasCachedBytes, true);

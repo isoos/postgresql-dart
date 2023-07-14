@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/messages.dart';
 
+
+import '../messages.dart';
 import 'connection.dart';
 import 'query.dart';
 import 'time_converters.dart';

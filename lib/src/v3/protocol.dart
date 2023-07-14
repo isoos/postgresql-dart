@@ -33,7 +33,72 @@ class AggregatedClientMessage extends ClientMessage {
   }
 }
 
-class WrapMessageTransformer {
+StreamChannelTransformer<BaseMessage, List<int>> messageTransformer(Encoding encoding) {
+  return StreamChannelTransformer(
+      _readMessages(encoding),
+      StreamSinkTransformer.fromHandlers(
+        handleData: (message, out) {
+          if (message is! ClientMessage) {
+            out.addError(
+                ArgumentError.value(
+                    message, 'message', 'Must be a client message'),
+                StackTrace.current);
+            return;
+          }
+
+          out.add(message.asBytes());
+        },
+      ),
+    );
+}
+
+StreamTransformer<Uint8List, ServerMessage> _readMessages(Encoding encoding) {
+  return  StreamTransformer.fromBind((rawStream) {
+      return Stream.multi((listener) {
+        final framer = MessageFramer(encoding);
+
+        var paused = false;
+
+        void emitFinishedMessages() {
+          while (framer.hasMessage) {
+            listener.addSync(framer.popMessage());
+
+            if (paused) break;
+          }
+        }
+
+        void handleChunk(Uint8List bytes) {
+          framer.addBytes(bytes);
+          emitFinishedMessages();
+        }
+
+        final rawSubscription = rawStream.listen(handleChunk)
+          ..onError(listener.addErrorSync);
+
+        listener.onPause = () {
+          paused = true;
+          rawSubscription.pause();
+        };
+
+        listener.onResume = () {
+          paused = false;
+          emitFinishedMessages();
+
+          if (!paused) {
+            rawSubscription.resume();
+          }
+        };
+
+        listener.onCancel = () {
+          paused = true;
+          rawSubscription.cancel();
+        };
+      });
+    });
+}
+
+
+/*class WrapMessageTransformer {
   final Encoding encoding;
 
   late StreamChannelTransformer<BaseMessage, List<int>> messageTransformer;
@@ -101,3 +166,4 @@ class WrapMessageTransformer {
     );
   }
 }
+*/

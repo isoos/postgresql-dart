@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/v3/types.dart';
 
 import '../postgres.dart' show PostgreSQLException;
 import 'types.dart';
+import 'v3/types.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;
 final _bool1 = Uint8List(1)..[0] = 1;
@@ -41,7 +41,7 @@ class PostgresBinaryEncoder<T extends Object>
 
   @override
   Uint8List? convert(Object? input) {
-     print('binary_codec@convert input $input');
+  
     if (input == null) {
       return null;
     }
@@ -93,7 +93,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.varChar:
         {
           if (input is String) {
-            print('binary_codec varChar encoding $encoding');
+           
             return castBytes(encoding.encode(input));
           }
           throw FormatException(
@@ -136,6 +136,7 @@ class PostgresBinaryEncoder<T extends Object>
             final bd = ByteData(8);
             final diff = input.toUtc().difference(DateTime.utc(2000));
             bd.setInt64(0, diff.inMicroseconds);
+          
             return bd.buffer.asUint8List();
           }
           throw FormatException(
@@ -148,6 +149,7 @@ class PostgresBinaryEncoder<T extends Object>
             final bd = ByteData(8);
             bd.setInt64(
                 0, input.toUtc().difference(DateTime.utc(2000)).inMicroseconds);
+          
             return bd.buffer.asUint8List();
           }
           throw FormatException(
@@ -284,6 +286,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.varCharArray:
         {
           if (input is List<String>) {
+            // ignore: unnecessary_lambdas
             final bytesArray = input.map((v) => encoding.encode(v));
             return writeListBytes<List<int>>(bytesArray, 1043,
                 (item) => item.length, (writer, item) => writer.write(item));
@@ -295,6 +298,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.textArray:
         {
           if (input is List<String>) {
+            // ignore: unnecessary_lambdas
             final bytesArray = input.map((v) => encoding.encode(v));
             return writeListBytes<List<int>>(bytesArray, 25,
                 (item) => item.length, (writer, item) => writer.write(item));
@@ -316,7 +320,8 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.jsonbArray:
         {
           if (input is List<Object>) {
-            final objectsArray = input.map((v) => encoding.encode(json.encode(v)));
+            final objectsArray =
+                input.map((v) => encoding.encode(json.encode(v)));
             return writeListBytes<List<int>>(
                 objectsArray, 3802, (item) => item.length + 1, (writer, item) {
               writer.writeUint8(1);
@@ -471,8 +476,22 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
         return buffer.getFloat64(0) as T;
       case PostgreSQLDataType.timestampWithoutTimezone:
       case PostgreSQLDataType.timestampWithTimezone:
-        return DateTime.utc(2000)
-            .add(Duration(microseconds: buffer.getInt64(0))) as T;
+        try {
+          final value = buffer.getInt64(0);
+          // SELECT * FROM pg_authid where rolname ='sw.mqueiroz'
+          // value = 9223372036854775807 PostgreSQL 14 if value is infinity
+      
+          // value = 4739373075810553430 PostgreSQL 8.2.21 bug
+          // value =  725968771477000 PostgreSQL PostgreSQL 15.3
+          // value = 725968771477000 PostgreSQL 14.6
+          // value = 725968771477000 PostgreSQL 8.1.11
+          // value = 725968771477000 PostgreSQL 8.2.23
+          final date = DateTime.utc(2000).add(Duration(microseconds: value));
+          // final date = DateTime.fromMicrosecondsSinceEpoch(value, isUtc: false);
+          return date as T;
+        } catch (e) {
+          return null;
+        }
 
       case PostgreSQLDataType.interval:
         {
@@ -484,8 +503,13 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
         return _decodeNumeric(input) as T;
 
       case PostgreSQLDataType.date:
-        return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0))) as T;
-
+        try {
+          final value = buffer.getInt32(0);        
+          final date = DateTime.utc(2000).add(Duration(days: value));
+          return date as T;
+        } catch (e) {
+          return null;
+        }
       case PostgreSQLDataType.jsonb:
         {
           // Removes version which is first character and currently always '1'
