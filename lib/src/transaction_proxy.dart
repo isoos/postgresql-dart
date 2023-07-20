@@ -120,11 +120,6 @@ class _TransactionProxy extends Object
 
     await _cancelAndRollback(error, trace);
   }
-
-  @override
-  Future _onQueryError(Query query, dynamic error, [StackTrace? trace]) {
-    return _transactionFailed(error, trace);
-  }
 }
 
 /// Represents a rollback from a transaction.

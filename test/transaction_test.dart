@@ -652,5 +652,40 @@ void main() {
 
       await expectLater(conn.query('SELECT * FROM t'), completion(isEmpty));
     });
+
+    test('exception thrown in transaction is propagated out', () async {
+      final expectedException = Exception('my custom exception');
+      dynamic actualException;
+      dynamic thrownException;
+      await conn.transaction((c) async {
+        await c.query('INSERT INTO t (id) VALUES (1)');
+        try {
+          await c.query('INSERT INTO t (id) VALUES (1)');
+        } on PostgreSQLException catch (e) {
+          thrownException = e;
+          throw expectedException;
+        }
+      }).catchError((error) => actualException = error);
+      expect(actualException, expectedException);
+
+      // testing the same exception without the try-catch block inside the transaction:
+      dynamic uncaughtException;
+      await conn.transaction((c) async {
+        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.query('INSERT INTO t (id) VALUES (1)');
+      }).catchError((error) => uncaughtException = error);
+      expect(uncaughtException.toString(), thrownException.toString());
+    });
+
+    test('exception caught in transaction is not propagated out', () async {
+      await conn.transaction((c) async {
+        await c.query('INSERT INTO t (id) VALUES (1)');
+        try {
+          await c.query('INSERT INTO t (id) VALUES (1)');
+        } catch (_) {
+          // ignore
+        }
+      });
+    });
   });
 }

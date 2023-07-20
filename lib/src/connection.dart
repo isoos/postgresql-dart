@@ -623,12 +623,9 @@ abstract class _PostgreSQLExecutionContextMixin
         final result =
             await query.future.timeout(Duration(seconds: timeoutInSeconds));
         _connection._cache.add(query);
-        _queue.remove(query);
         return result!;
-      } catch (e, st) {
+      } finally {
         _queue.remove(query);
-        await _onQueryError(query, e, st);
-        rethrow;
       }
     } else {
       // wrap the synchronous future in an async future to ensure that
@@ -638,8 +635,6 @@ abstract class _PostgreSQLExecutionContextMixin
       return Future(() async => (await query.future)!);
     }
   }
-
-  Future _onQueryError(Query query, dynamic error, [StackTrace? trace]) async {}
 }
 
 class _PostgreSQLResultMetaData {

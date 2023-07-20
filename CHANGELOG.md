@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.7.0
+
+**Breaking behaviour**
+
+- Query exceptions inside transactions will not propage out when caught with try-catch block.
+
 ## 2.6.1
 
 - Added support for bigInt (int8) arrays. [#41](https://github.com/isoos/postgresql-dart/pull/88) by [schultek](https://github.com/schultek).
