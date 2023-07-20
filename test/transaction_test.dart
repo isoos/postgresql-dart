@@ -210,11 +210,10 @@ void main() {
         "A transaction doesn't have to await on queries, when the last query fails, it still emits an error from the transaction",
         () async {
       dynamic transactionError;
-      final rs = await conn.query('SELECT 1');
       await conn.transaction((ctx) async {
         ctx.query('INSERT INTO t (id) VALUES (1)');
         ctx.query('INSERT INTO t (id) VALUES (2)');
-        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((e) => rs);
+        ctx.query("INSERT INTO t (id) VALUES ('foo')");
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);
@@ -298,7 +297,7 @@ void main() {
       final rs = conn.query('SELECT 1');
       await conn.transaction((ctx) async {
         await ctx.query('INSERT INTO t (id) VALUES (1)');
-        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((_) => rs);
+        unawaited(ctx.query("INSERT INTO t (id) VALUES ('foo')"));
         await ctx.query('INSERT INTO t (id) VALUES (2)').catchError((_) => rs);
       }).catchError((e) => transactionError = e);
 
@@ -500,12 +499,11 @@ void main() {
         'If exception thrown while preparing query, transaction gets rolled back',
         () async {
       try {
-        final rs = conn.query('SELECT 1');
         await conn.transaction((c) async {
           await c.query('INSERT INTO t (id) VALUES (1)');
 
           c.query('INSERT INTO t (id) VALUES (@id:int4)',
-              substitutionValues: {'id': 'foobar'}).catchError((_) => rs);
+              substitutionValues: {'id': 'foobar'});
           await c.query('INSERT INTO t (id) VALUES (2)');
         });
         expect(true, false);
@@ -542,12 +540,9 @@ void main() {
         'When exception thrown in unawaited on future, transaction is rolled back',
         () async {
       try {
-        final rs = conn.query('SELECT 1');
         await conn.transaction((c) async {
           await c.query('INSERT INTO t (id) VALUES (1)');
-          c
-              .query("INSERT INTO t (id) VALUE ('foo') RETURNING id")
-              .catchError((_) => rs);
+          unawaited(c.query("INSERT INTO t (id) VALUE ('foo') RETURNING id"));
           await c.query('INSERT INTO t (id) VALUES (2)');
         });
         fail('unreachable');
