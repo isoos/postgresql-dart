@@ -63,6 +63,7 @@ class _TransactionProxy extends Object
     // before finishing !!!!
     if (_queue.isNotEmpty) {
       // ignore the error from this query if there is one, it'll pop up elsewhere
+      // ignore: body_might_complete_normally_catch_error
       await _queue.last.future.catchError((_) {});
     }
 
@@ -81,6 +82,7 @@ class _TransactionProxy extends Object
     // We'll wrap each query in an error handler here to make sure the query cancellation error
     // is only emitted from the transaction itself.
     for (final q in _queue) {
+      // ignore: body_might_complete_normally_catch_error
       unawaited(q.future.catchError((_) {}));
     }
 

@@ -12,8 +12,6 @@ analyzer:
     unused_local_variable: error
     dead_code: error
     constant_identifier_names: ignore
-  strong-mode:
-    implicit-casts: false
 
 linter:
   rules:

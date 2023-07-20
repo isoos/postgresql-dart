@@ -263,6 +263,7 @@ void main() {
         ctx.query('INSERT INTO t (id) VALUES (1)').catchError(errsAdd);
         ctx.query('INSERT INTO t (id) VALUES (2)').catchError(errsAdd);
         ctx.cancelTransaction();
+        // ignore: body_might_complete_normally_catch_error
         ctx.query('INSERT INTO t (id) VALUES (3)').catchError((e) {});
       });
 
@@ -277,9 +278,12 @@ void main() {
         () async {
       dynamic transactionError;
       await conn.transaction((ctx) async {
-        ctx.query('INSERT INTO t (id) VALUES (1)');
+        unawaited(ctx.query('INSERT INTO t (id) VALUES (1)'));
+        // ignore: body_might_complete_normally_catch_error
         await ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((_) {});
-        ctx.query('INSERT INTO t (id) VALUES (2)').catchError((_) {});
+        unawaited(
+            // ignore: body_might_complete_normally_catch_error
+            ctx.query('INSERT INTO t (id) VALUES (2)').catchError((_) {}));
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);

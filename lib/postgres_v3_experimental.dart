@@ -42,7 +42,8 @@ abstract class PgSession {
 
   Future<PgResult> execute(
     Object /* String | PgSql */ query, {
-    Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */ parameters,
+    Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
+        parameters,
     Duration? timeout,
   });
 
@@ -81,10 +82,12 @@ abstract class PgResultStreamSubscription
 
 abstract class PgStatement {
   PgResultStream bind(
-      Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */ parameters);
+      Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
+          parameters);
 
   Future<PgResult> run(
-    Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */ parameters, {
+    Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
+        parameters, {
     Duration? timeout,
   }) async {
     final items = <PgResultRow>[];
