@@ -19,6 +19,20 @@ final _endpoint = PgEndpoint(
 final _sessionSettings = PgSessionSettings(
   // To test SSL, we're running postgres with a self-signed certificate.
   onBadSslCertificate: (cert) => true,
+  transformer: StreamChannelTransformer(
+    StreamTransformer.fromHandlers(
+      handleData: (data, sink) {
+        print('[IN]: $data');
+        sink.add(data);
+      },
+    ),
+    StreamSinkTransformer.fromHandlers(
+      handleData: (data, sink) {
+        print('[OUT]: $data');
+        sink.add(data);
+      },
+    ),
+  ),
 );
 
 void main() {
@@ -28,8 +42,10 @@ void main() {
     late PgConnection connection;
 
     setUp(() async {
-      connection =
-          await PgConnection.open(_endpoint, sessionSettings: _sessionSettings);
+      connection = await PgConnection.open(
+        _endpoint,
+        sessionSettings: _sessionSettings,
+      );
     });
 
     tearDown(() => connection.close());
@@ -91,15 +107,16 @@ void main() {
       });
 
       test('for duplicate with simple query', () async {
-        expect(() => connection.execute('INSERT INTO foo VALUES (1);'),
+        await expectLater(
+            () => connection.execute('INSERT INTO foo VALUES (1);'),
             _throwsPostgresException);
       });
 
       test('for duplicate with extended query', () async {
-        expect(
+        await expectLater(
           () => connection.execute(
-            r'INSERT INTO foo VALUES (@1);',
-            parameters: [PgTypedParameter(PgDataType.bigInteger, 4)],
+            r'INSERT INTO foo VALUES ($1);',
+            parameters: [PgTypedParameter(PgDataType.integer, 1)],
           ),
           _throwsPostgresException,
         );
@@ -107,10 +124,151 @@ void main() {
 
       test('for duplicate in prepared statement', () async {
         final stmt = await connection.prepare(
-          PgSql('INSERT INTO foo VALUES (@1);', types: [PgDataType.bigInteger]),
+          PgSql(r'INSERT INTO foo VALUES ($1);', types: [PgDataType.integer]),
         );
         final stream = stmt.bind([1]);
-        expect(stream, emitsError(_isPostgresException));
+        await expectLater(stream, emitsError(_isPostgresException));
+      });
+    });
+
+    group('runTx', () {
+      setUp(() async {
+        await connection.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
+      });
+
+      test('Rows are Lists of column values', () async {
+        await connection.execute('INSERT INTO t (id) VALUES (1)');
+
+        final outValue = await connection.runTx((ctx) async {
+          return await ctx.execute(
+            r'SELECT * FROM t WHERE id = $1 LIMIT 1',
+            parameters: [PgTypedParameter(PgDataType.integer, 1)],
+          );
+        });
+
+        expect(outValue, [
+          [1]
+        ]);
+      });
+
+      test('Send successful transaction succeeds, returns returned value',
+          () async {
+        final outResult = await connection.runTx((c) async {
+          await c.execute('INSERT INTO t (id) VALUES (1)');
+
+          return await c.execute('SELECT id FROM t');
+        });
+        expect(outResult, [
+          [1]
+        ]);
+
+        final result = await connection.execute('SELECT id FROM t');
+        expect(result, [
+          [1]
+        ]);
+      });
+
+      test('Query during transaction must wait until transaction is finished',
+          () async {
+        final orderEnsurer = [];
+        final nextCompleter = Completer.sync();
+        final outResult = connection.runTx((c) async {
+          orderEnsurer.add(1);
+          await c.execute('INSERT INTO t (id) VALUES (1)');
+          orderEnsurer.add(2);
+          nextCompleter.complete();
+          final result = await c.execute('SELECT id FROM t');
+          orderEnsurer.add(3);
+
+          return result;
+        });
+
+        await nextCompleter.future;
+        orderEnsurer.add(11);
+        await connection.execute('INSERT INTO t (id) VALUES (2)');
+        orderEnsurer.add(12);
+        final laterResults = await connection.execute('SELECT id FROM t');
+        orderEnsurer.add(13);
+
+        final firstResult = await outResult;
+
+        expect(orderEnsurer, [1, 2, 11, 3, 12, 13]);
+        expect(firstResult, [
+          [1]
+        ]);
+        expect(laterResults, [
+          [1],
+          [2]
+        ]);
+      });
+
+      test('Make sure two simultaneous transactions cannot be interwoven',
+          () async {
+        final orderEnsurer = [];
+
+        final firstTransactionFuture = connection.runTx((c) async {
+          orderEnsurer.add(11);
+          await c.execute('INSERT INTO t (id) VALUES (1)');
+          orderEnsurer.add(12);
+          final result = await c.execute('SELECT id FROM t');
+          orderEnsurer.add(13);
+
+          return result;
+        });
+
+        final secondTransactionFuture = connection.runTx((c) async {
+          orderEnsurer.add(21);
+          await c.execute('INSERT INTO t (id) VALUES (2)');
+          orderEnsurer.add(22);
+          final result = await c.execute('SELECT id FROM t');
+          orderEnsurer.add(23);
+
+          return result;
+        });
+
+        final firstResults = await firstTransactionFuture;
+        final secondResults = await secondTransactionFuture;
+
+        expect(orderEnsurer, [11, 12, 13, 21, 22, 23]);
+
+        expect(firstResults, [
+          [1]
+        ]);
+        expect(secondResults, [
+          [1],
+          [2]
+        ]);
+      });
+
+      test('A transaction does not preempt pending queries', () async {
+        // Add a few insert queries but don't await, then do a transaction that does a fetch,
+        // make sure that transaction sees all of the elements.
+        unawaited(connection.execute('INSERT INTO t (id) VALUES (1)'));
+        unawaited(connection.execute('INSERT INTO t (id) VALUES (2)'));
+        unawaited(connection.execute('INSERT INTO t (id) VALUES (3)'));
+
+        final results = await connection.runTx((ctx) async {
+          return await ctx.execute('SELECT id FROM t');
+        });
+        expect(results, [
+          [1],
+          [2],
+          [3]
+        ]);
+      });
+
+      test('can be rolled back by throwing', () async {
+        final expected = Exception('for test');
+
+        await expectLater(
+          () => connection.runTx((ctx) async {
+            await ctx.execute('INSERT INTO t (id) VALUES (1);');
+            throw expected;
+          }),
+          throwsA(expected),
+        );
+
+        expect(await connection.execute('SELECT id FROM t'), isEmpty);
       });
     });
   });

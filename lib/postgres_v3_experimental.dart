@@ -51,8 +51,20 @@ abstract class PgSession {
 }
 
 abstract class PgSessionExecutor {
-  // TODO: also add retry options similarly to postgres_pool
+  /// Obtains a [PgSession] capable of running statements and calls [fn] with
+  /// it.
+  ///
+  /// Returns the result (either the value or an error) of invoking [fn]. No
+  /// updates will be reverted in the event of an error.
   Future<R> run<R>(Future<R> Function(PgSession session) fn);
+
+  /// Obtains a [PgSession] running in a transaction and calls [fn] with it.
+  ///
+  /// Returns the result of invoking [fn] (either the value or an error). In
+  /// case of [fn] throwing, the transaction will be reverted.
+  ///
+  /// Note that other invocations on a [PgConnection] are blocked while a
+  /// transaction is active.
   Future<R> runTx<R>(Future<R> Function(PgSession session) fn);
 }
 
