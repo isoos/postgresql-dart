@@ -43,10 +43,10 @@ void main() {
     );
 
     // this table is for insert, update, and delete tests.
-    final changesTable = 'temp_changes_table';
+    final changesTable = 'test.temp_changes_table';
     // this will be used for testing truncation
     // must be created before hand to add in publication
-    final truncateTable = 'temp_truncate_table';
+    final truncateTable = 'test.temp_truncate_table';
 
     setUpAll(() async {
       await replicationConn.open();
@@ -56,6 +56,7 @@ void main() {
       // note: primary keys are necessary for replication to work and they are
       //       used as an identity replica (to allow update & delete) on tables
       //       that are part of a publication.
+      await changesConn.execute('create schema test');
       await changesConn.execute('create table $changesTable '
           '(id int GENERATED ALWAYS AS IDENTITY, value text, '
           'PRIMARY KEY (id));');
