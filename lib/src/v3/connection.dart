@@ -329,12 +329,20 @@ class PgConnectionImplementation extends _PgSessionBase
 
   @override
   Future<R> run<R>(Future<R> Function(PgSession session) fn) {
+    // Unlike runTx, this doesn't need any locks. An active transaction changes
+    // the state of the connection, this method does not. If methods requiring
+    // locks are called by [fn], these methods will aquire locks as needed.
     return Future.sync(() => fn(this));
   }
 
   @override
   Future<R> runTx<R>(Future<R> Function(PgSession session) fn) {
-    // Keep this database is locked while the transaction is active.
+    // Keep this database is locked while the transaction is active. We do that
+    // because on a protocol level, the entire connection is in a transaction.
+    // From a Dart point of view, methods called outside of the transaction
+    // should not be able to view data in the transaction though. So we avoid
+    // those outer calls while the transaction is active and resume them by
+    // returning the operation lock in the end.
     return _operationLock.withResource(() async {
       // The transaction has its own _operationLock, which means that it (and
       // only it) can be used to run statements while it's active.
