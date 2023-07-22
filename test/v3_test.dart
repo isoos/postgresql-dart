@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:async/async.dart';
+import 'package:logging/logging.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart' show PostgreSQLException;
 import 'package:postgres/postgres_v3_experimental.dart';
@@ -16,23 +17,35 @@ final _endpoint = PgEndpoint(
   password: 'dart',
 );
 
-final _sessionSettings = PgSessionSettings(
-  // To test SSL, we're running postgres with a self-signed certificate.
-  onBadSslCertificate: (cert) => true,
-  transformer: StreamChannelTransformer(
+// We log all packets sent to and received from the postgres server. This can be
+// used to debug failing tests. To view logs, something like this can be put
+// at the beginning of `main()`:
+// Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
+StreamChannelTransformer<BaseMessage, BaseMessage> get _loggingTransformer {
+  final inLogger = Logger('postgres.connection.in');
+  final outLogger = Logger('postgres.connection.out');
+
+  return StreamChannelTransformer(
     StreamTransformer.fromHandlers(
       handleData: (data, sink) {
-        print('[IN]: $data');
+        inLogger.fine(data);
         sink.add(data);
       },
     ),
     StreamSinkTransformer.fromHandlers(
       handleData: (data, sink) {
-        print('[OUT]: $data');
+        outLogger.fine(data);
         sink.add(data);
       },
     ),
-  ),
+  );
+}
+
+final _sessionSettings = PgSessionSettings(
+  // To test SSL, we're running postgres with a self-signed certificate.
+  onBadSslCertificate: (cert) => true,
+
+  transformer: _loggingTransformer,
 );
 
 void main() {
@@ -129,6 +142,28 @@ void main() {
         final stream = stmt.bind([1]);
         await expectLater(stream, emitsError(_isPostgresException));
       });
+    });
+
+    test('run', () async {
+      const returnValue = 'returned from run()';
+
+      await expectLater(
+        connection.run(expectAsync1((session) async {
+          expect(identical(connection, session), isTrue);
+
+          await session
+              .execute('CREATE TEMPORARY TABLE foo (id INTEGER PRIMARY KEY);');
+          await session.execute('INSERT INTO foo VALUES (3);');
+
+          return returnValue;
+        })),
+        completion(returnValue),
+      );
+
+      final rows = await connection.execute('SELECT * FROM foo');
+      expect(rows, [
+        [3]
+      ]);
     });
 
     group('runTx', () {
