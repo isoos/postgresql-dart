@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.2
+
+- Improved (experimental) v3 implementation.
+  [#98](https://github.com/isoos/postgresql-dart/pull/98) and
+  [#102](https://github.com/isoos/postgresql-dart/pull/102) by [simolus3](https://github.com/simolus3).
+
 ## 2.6.1
 
 - Added support for bigInt (int8) arrays. [#41](https://github.com/isoos/postgresql-dart/pull/88) by [schultek](https://github.com/schultek).
