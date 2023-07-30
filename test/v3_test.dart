@@ -133,6 +133,16 @@ void main() {
       await connection.channels.notify(channel);
     });
 
+    test('can use same variable multiple times', () async {
+      final stmt = await connection.prepare(
+          PgSql(r'SELECT $1 AS a, $1 + 2 AS b', types: [PgDataType.integer]));
+      final rows = await stmt.run([10]);
+
+      expect(rows, [
+        [10, 12]
+      ]);
+    });
+
     group('throws error', () {
       setUp(() async {
         await connection

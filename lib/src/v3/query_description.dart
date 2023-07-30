@@ -10,13 +10,30 @@ class InternalQueryDescription implements PgSql {
   /// The SQL query as supplied by the user.
   final String originalSql;
 
-  final List<PgDataType>? parameterTypes;
+  final List<PgDataType?>? parameterTypes;
+  final Map<String, int>? namedVariables;
 
   InternalQueryDescription._(
-      this.transformedSql, this.originalSql, this.parameterTypes);
+    this.transformedSql,
+    this.originalSql,
+    this.parameterTypes,
+    this.namedVariables,
+  );
 
   InternalQueryDescription.direct(String sql, {List<PgDataType>? types})
-      : this._(sql, sql, types);
+      : this._(sql, sql, types, null);
+
+  InternalQueryDescription.transformed(
+    String original,
+    String transformed,
+    List<PgDataType?> parameterTypes,
+    Map<String, int> namedVariables,
+  ) : this._(
+          transformed,
+          original,
+          parameterTypes,
+          namedVariables,
+        );
 
   factory InternalQueryDescription.map(String sql,
       {String substitution = '@'}) {
