@@ -112,12 +112,12 @@ abstract class _PgSessionBase implements PgSession {
     Object query, {
     Object? parameters,
     Duration? timeout,
-    bool schemaOnly = false,
+    bool ignoreRows = false,
   }) async {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(parameters);
 
-    if (!schemaOnly || variables.isNotEmpty) {
+    if (!ignoreRows || variables.isNotEmpty) {
       // The simple query protocol does not support variables and returns rows
       // as text. So when we need rows or parameters, we need an explicit prepare.
       final prepared = await prepare(description, timeout: timeout);
@@ -601,7 +601,7 @@ class _Channels implements PgChannels {
   void _subscribe(String channel, MultiStreamController firstListener) {
     Future(() async {
       await _connection.execute(PgSql('LISTEN ${identifier(channel)}'),
-          schemaOnly: true);
+          ignoreRows: true);
     }).onError<Object>((error, stackTrace) {
       _activeListeners[channel]?.remove(firstListener);
 
@@ -620,7 +620,7 @@ class _Channels implements PgChannels {
 
       // Send unlisten command
       await _connection.execute(PgSql('UNLISTEN ${identifier(channel)}'),
-          schemaOnly: true);
+          ignoreRows: true);
     }
   }
 

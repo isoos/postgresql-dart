@@ -74,7 +74,7 @@ void main() {
     test('statement without rows', () async {
       final result = await connection.execute(
         PgSql('''SELECT pg_notify('VIRTUAL','Payload 2');'''),
-        schemaOnly: true,
+        ignoreRows: true,
       );
 
       expect(result, isEmpty);
@@ -300,11 +300,11 @@ void main() {
         // Add a few insert queries but don't await, then do a transaction that does a fetch,
         // make sure that transaction sees all of the elements.
         unawaited(connection.execute('INSERT INTO t (id) VALUES (1)',
-            schemaOnly: true));
+            ignoreRows: true));
         unawaited(connection.execute('INSERT INTO t (id) VALUES (2)',
-            schemaOnly: true));
+            ignoreRows: true));
         unawaited(connection.execute('INSERT INTO t (id) VALUES (3)',
-            schemaOnly: true));
+            ignoreRows: true));
 
         final results = await connection.runTx((ctx) async {
           return await ctx.execute('SELECT id FROM t');
@@ -358,7 +358,7 @@ void main() {
     );
     addTearDown(connection.close);
 
-    await connection.execute("SELECT 'foo'", schemaOnly: true);
+    await connection.execute("SELECT 'foo'", ignoreRows: true);
     expect(incoming, contains(isA<DataRowMessage>()));
     expect(outgoing, contains(isA<QueryMessage>()));
   });
