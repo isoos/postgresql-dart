@@ -118,8 +118,8 @@ abstract class _PgSessionBase implements PgSession {
     final variables = description.bindParameters(parameters);
 
     if (!schemaOnly || variables.isNotEmpty) {
-      // The simple query protocol does not support variables, so we have to
-      // prepare a statement explicitly.
+      // The simple query protocol does not support variables and returns rows
+      // as text. So when we need rows or parameters, we need an explicit prepare.
       final prepared = await prepare(description, timeout: timeout);
       try {
         return await prepared.run(variables, timeout: timeout);
