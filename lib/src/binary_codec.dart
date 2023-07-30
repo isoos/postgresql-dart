@@ -46,6 +46,9 @@ class PostgresBinaryEncoder<T extends Object>
 
     // ignore: unnecessary_cast
     switch (_dataType as PgDataType<Object>) {
+      case PgDataType.unknownType:
+      case PgDataType.voidType:
+        throw ArgumentError('Cannot encode into an unknown type or into void');
       case PgDataType.boolean:
         {
           if (input is bool) {
@@ -247,7 +250,16 @@ class PostgresBinaryEncoder<T extends Object>
           throw FormatException(
               'Invalid type for parameter value. Expected: PgPoint Got: ${input.runtimeType}');
         }
+      case PgDataType.regtype:
+        final oid = input is PgDataType ? input.oid : null;
+        if (oid == null) {
+          throw FormatException(
+              'Invalid type for parameter value, expected a data type an oid, got $input');
+        }
 
+        final outBuffer = Uint8List(4);
+        outBuffer.buffer.asByteData().setInt32(0, oid);
+        return outBuffer;
       case PgDataType.booleanArray:
         {
           if (input is List<bool>) {
@@ -515,6 +527,12 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
 
           return buf.toString() as T;
         }
+      case PgDataType.regtype:
+        final data = input.buffer.asByteData(input.offsetInBytes, input.length);
+        final oid = data.getInt32(0);
+        return (PgDataType.byTypeOid[oid] ?? PgDataType.unknownType) as T;
+      case PgDataType.voidType:
+        return null;
 
       case PostgreSQLDataType.point:
         return PgPoint(buffer.getFloat64(0), buffer.getFloat64(8)) as T;
@@ -585,34 +603,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
   }
 
   /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
-  static final Map<int, PostgreSQLDataType> typeMap = {
-    16: PostgreSQLDataType.boolean,
-    17: PostgreSQLDataType.byteArray,
-    19: PostgreSQLDataType.name,
-    20: PostgreSQLDataType.bigInteger,
-    21: PostgreSQLDataType.smallInteger,
-    23: PostgreSQLDataType.integer,
-    25: PostgreSQLDataType.text,
-    114: PostgreSQLDataType.json,
-    600: PostgreSQLDataType.point,
-    700: PostgreSQLDataType.real,
-    701: PostgreSQLDataType.double,
-    1000: PostgreSQLDataType.booleanArray,
-    1007: PostgreSQLDataType.integerArray,
-    1016: PostgreSQLDataType.bigIntegerArray,
-    1009: PostgreSQLDataType.textArray,
-    1015: PostgreSQLDataType.varCharArray,
-    1043: PostgreSQLDataType.varChar,
-    1022: PostgreSQLDataType.doubleArray,
-    1082: PostgreSQLDataType.date,
-    1114: PostgreSQLDataType.timestampWithoutTimezone,
-    1184: PostgreSQLDataType.timestampWithTimezone,
-    1186: PostgreSQLDataType.interval,
-    1700: PostgreSQLDataType.numeric,
-    2950: PostgreSQLDataType.uuid,
-    3802: PostgreSQLDataType.jsonb,
-    3807: PostgreSQLDataType.jsonbArray,
-  };
+  static final Map<int, PostgreSQLDataType> typeMap = PgDataType.byTypeOid;
 
   /// Decode numeric / decimal to String without loosing precision.
   /// See encoding: https://github.com/postgres/postgres/blob/0e39a608ed5545cc6b9d538ac937c3c1ee8cdc36/src/backend/utils/adt/numeric.c#L305

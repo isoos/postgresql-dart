@@ -6,15 +6,24 @@ import 'package:test/test.dart';
 
 void main() {
   test('Ensure all types/format type mappings are available and accurate', () {
-    PostgreSQLDataType.values
-        .where((t) =>
-            t != PostgreSQLDataType.bigSerial && t != PostgreSQLDataType.serial)
-        .forEach((t) {
-      expect(PostgreSQLFormatIdentifier.typeStringToCodeMap.values.contains(t),
-          true);
-      final code = PostgreSQLFormat.dataTypeStringForDataType(t);
-      expect(PostgreSQLFormatIdentifier.typeStringToCodeMap[code], t);
-    });
+    const withoutMapping = {
+      PostgreSQLDataType.unknownType, // Can't bind into unknown type
+      PostgreSQLDataType.voidType, // Can't assign to void
+      PostgreSQLDataType.bigSerial, // Can only be created from a table sequence
+      PostgreSQLDataType.serial,
+    };
+
+    for (final type in PostgreSQLDataType.values) {
+      if (withoutMapping.contains(type)) continue;
+
+      expect(
+        PostgreSQLFormatIdentifier.typeStringToCodeMap.values.contains(type),
+        true,
+        reason: 'There should be a type mapping for $type',
+      );
+      final code = PostgreSQLFormat.dataTypeStringForDataType(type);
+      expect(PostgreSQLFormatIdentifier.typeStringToCodeMap[code], type);
+    }
   });
 
   test('Ensure bigserial gets translated to int8', () {

@@ -40,11 +40,25 @@ abstract class PgSession {
     Duration? timeout,
   });
 
+  /// Executes the [query] with the given [parameters].
+  ///
+  /// [query] must either be a [String] or a [PgSql] query with types for
+  /// parameters. When a [PgSql] query object is used, [parameters] can be a
+  /// list of direct values. Otherwise, it must be a list of
+  /// [PgTypedParameter]s. With [PgSql.map], values can also be provided as a
+  /// map from the substituted parameter keys to objects or [PgTypedParameter]s.
+  ///
+  /// When [ignoreRows] is set to true, the implementation may internally
+  /// optimize the execution to ignore rows returned by the query. Whether this
+  /// optimization can be applied also depends on the parameters chosen, so
+  /// there is no guarantee that the [PgResult] from a [ignoreRows] excution has
+  /// no rows.
   Future<PgResult> execute(
     Object /* String | PgSql */ query, {
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
         parameters,
     Duration? timeout,
+    bool ignoreRows = false,
   });
 
   Future<void> close();

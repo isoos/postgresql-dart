@@ -490,6 +490,30 @@ void main() {
         fail('unreachable');
       } on JsonUnsupportedObjectError catch (_) {}
     });
+
+    test('void', () async {
+      final result = await conn.query('SELECT NULL::void AS r');
+      expect(result.columnDescriptions, [
+        isA<ColumnDescription>()
+            .having((e) => e.typeId, 'typeId', PostgreSQLDataType.voidType.oid)
+      ]);
+
+      expect(result, [
+        [null]
+      ]);
+
+      expect(
+        () => PostgresBinaryEncoder(PostgreSQLDataType.voidType).convert(1),
+        throwsArgumentError,
+      );
+    });
+
+    test('regtype', () async {
+      await expectInverse(
+          PostgreSQLDataType.bigInteger, PostgreSQLDataType.regtype);
+      await expectInverse(
+          PostgreSQLDataType.voidType, PostgreSQLDataType.regtype);
+    });
   });
 
   group('Text encoders', () {

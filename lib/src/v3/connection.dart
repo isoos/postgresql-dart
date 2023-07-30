@@ -108,14 +108,18 @@ abstract class _PgSessionBase implements PgSession {
   }
 
   @override
-  Future<PgResult> execute(Object query,
-      {Object? parameters, Duration? timeout}) async {
+  Future<PgResult> execute(
+    Object query, {
+    Object? parameters,
+    Duration? timeout,
+    bool ignoreRows = false,
+  }) async {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(parameters);
 
-    if (variables.isNotEmpty) {
-      // The simple query protocol does not support variables, so we have to
-      // prepare a statement explicitly.
+    if (!ignoreRows || variables.isNotEmpty) {
+      // The simple query protocol does not support variables and returns rows
+      // as text. So when we need rows or parameters, we need an explicit prepare.
       final prepared = await prepare(description, timeout: timeout);
       try {
         return await prepared.run(variables, timeout: timeout);
@@ -127,7 +131,8 @@ abstract class _PgSessionBase implements PgSession {
       final controller = StreamController<PgResultRow>();
       final items = <PgResultRow>[];
 
-      final querySubscription = _PgResultStreamSubscription.simpleQuery(
+      final querySubscription =
+          _PgResultStreamSubscription.simpleQueryAndIgnoreRows(
         description.transformedSql,
         this,
         controller,
@@ -415,6 +420,7 @@ class _PgResultStreamSubscription
   final _PgSessionBase session;
   final StreamController<PgResultRow> _controller;
   final StreamSubscription<PgResultRow> _source;
+  final bool ignoreRows;
 
   final Completer<int> _affectedRows = Completer();
   final Completer<PgResultSchema> _schema = Completer();
@@ -428,7 +434,8 @@ class _PgResultStreamSubscription
 
   _PgResultStreamSubscription(
       _BoundStatement statement, this._controller, this._source)
-      : session = statement.statement._session {
+      : session = statement.statement._session,
+        ignoreRows = false {
     session._operationLock.withResource(() async {
       connection._pending = this;
 
@@ -450,8 +457,9 @@ class _PgResultStreamSubscription
     });
   }
 
-  _PgResultStreamSubscription.simpleQuery(
-      String sql, this.session, this._controller, this._source) {
+  _PgResultStreamSubscription.simpleQueryAndIgnoreRows(
+      String sql, this.session, this._controller, this._source)
+      : ignoreRows = true {
     session._operationLock.withResource(() async {
       connection._pending = this;
 
@@ -487,20 +495,23 @@ class _PgResultStreamSubscription
       ]);
       _schema.complete(schema);
     } else if (message is DataRowMessage) {
-      final schema = _resultSchema!;
+      if (!ignoreRows) {
+        final schema = _resultSchema!;
 
-      final columnValues = <Object?>[];
-      for (var i = 0; i < message.values.length; i++) {
-        final field = schema.columns[i];
+        final columnValues = <Object?>[];
+        for (var i = 0; i < message.values.length; i++) {
+          final field = schema.columns[i];
 
-        final type = field.type;
-        final codec = field.binaryEncoding ? type.binaryCodec : type.textCodec;
+          final type = field.type;
+          final codec =
+              field.binaryEncoding ? type.binaryCodec : type.textCodec;
 
-        columnValues.add(codec.decode(message.values[i]));
+          columnValues.add(codec.decode(message.values[i]));
+        }
+
+        final row = _ResultRow(schema, columnValues);
+        _controller.add(row);
       }
-
-      final row = _ResultRow(schema, columnValues);
-      _controller.add(row);
     } else if (message is CommandCompleteMessage) {
       _affectedRows.complete(message.rowsAffected);
     } else if (message is ReadyForQueryMessage) {
@@ -589,7 +600,8 @@ class _Channels implements PgChannels {
 
   void _subscribe(String channel, MultiStreamController firstListener) {
     Future(() async {
-      await _connection.execute(PgSql('LISTEN ${identifier(channel)}'));
+      await _connection.execute(PgSql('LISTEN ${identifier(channel)}'),
+          ignoreRows: true);
     }).onError<Object>((error, stackTrace) {
       _activeListeners[channel]?.remove(firstListener);
 
@@ -607,7 +619,8 @@ class _Channels implements PgChannels {
       _activeListeners.remove(channel);
 
       // Send unlisten command
-      await _connection.execute(PgSql('UNLISTEN ${identifier(channel)}'));
+      await _connection.execute(PgSql('UNLISTEN ${identifier(channel)}'),
+          ignoreRows: true);
     }
   }
 

@@ -355,6 +355,7 @@ class PostgreSQLFormatIdentifier {
     '_text': PostgreSQLDataType.textArray,
     '_float8': PostgreSQLDataType.doubleArray,
     'varchar': PostgreSQLDataType.varChar,
+    'regtype': PostgreSQLDataType.regtype,
     '_varchar': PostgreSQLDataType.varCharArray,
     '_jsonb': PostgreSQLDataType.jsonbArray,
   };
