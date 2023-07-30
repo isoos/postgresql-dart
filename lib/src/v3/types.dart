@@ -28,6 +28,9 @@ class PgPoint {
 
 /// Supported data types.
 enum PgDataType<Dart extends Object> {
+  /// Used to represent a type not yet understood by this package.
+  unknownType<Object>(null),
+
   /// Must be a [String].
   text<String>(25),
 
@@ -121,7 +124,14 @@ enum PgDataType<Dart extends Object> {
   varCharArray<List<String>>(1015),
 
   /// Must be a [List] of encodable objects
-  jsonbArray<List>(3807);
+  jsonbArray<List>(3807),
+
+  /// Must be a [PgDataType].
+  regtype<PgDataType>(2206),
+
+  /// Impossible to bind to, always null when read.
+  voidType<Object>(2278),
+  ;
 
   /// The object ID of this data type.
   final int? oid;

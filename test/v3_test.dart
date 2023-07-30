@@ -20,7 +20,9 @@ final _endpoint = PgEndpoint(
 // We log all packets sent to and received from the postgres server. This can be
 // used to debug failing tests. To view logs, something like this can be put
 // at the beginning of `main()`:
-// Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
+//
+//  Logger.root.level = Level.ALL;
+//  Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
 StreamChannelTransformer<BaseMessage, BaseMessage> get _loggingTransformer {
   final inLogger = Logger('postgres.connection.in');
   final outLogger = Logger('postgres.connection.out');
@@ -69,6 +71,20 @@ void main() {
       ]);
     });
 
+    test('statement without rows', () async {
+      final result = await connection.execute(
+        PgSql('''SELECT pg_notify('VIRTUAL','Payload 2');'''),
+        schemaOnly: true,
+      );
+
+      expect(result, isEmpty);
+      expect(result.schema.columns, [
+        isA<PgResultColumn>()
+            .having((e) => e.columnName, 'columnName', 'pg_notify')
+            .having((e) => e.type, 'type', PgDataType.voidType)
+      ]);
+    });
+
     test('queries without a schema message', () async {
       final response =
           await connection.execute('CREATE TEMPORARY TABLE foo (bar INTEGER);');
@@ -99,6 +115,11 @@ void main() {
         await shouldPassthrough<int>(PgDataType.smallInteger, 42);
         await shouldPassthrough<int>(PgDataType.integer, 1024);
         await shouldPassthrough<int>(PgDataType.bigInteger, 999999999999);
+      });
+
+      test('regtype', () async {
+        await shouldPassthrough<PgDataType>(
+            PgDataType.regtype, PgDataType.bigInteger);
       });
     });
 
