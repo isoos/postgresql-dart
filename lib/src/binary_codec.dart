@@ -47,7 +47,8 @@ class PostgresBinaryEncoder<T extends Object>
     // ignore: unnecessary_cast
     switch (_dataType as PgDataType<Object>) {
       case PgDataType.unknownType:
-        throw ArgumentError('Cannot encode into an unknown type');
+      case PgDataType.voidType:
+        throw ArgumentError('Cannot encode into an unknown type or into void');
       case PgDataType.boolean:
         {
           if (input is bool) {

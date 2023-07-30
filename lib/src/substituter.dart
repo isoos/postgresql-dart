@@ -71,6 +71,8 @@ class PostgreSQLFormat {
         return '_varchar';
       case PostgreSQLDataType.jsonbArray:
         return '_jsonb';
+      case PostgreSQLDataType.regtype:
+        return 'regtype';
       default:
         return null;
     }

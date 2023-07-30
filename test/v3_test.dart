@@ -299,9 +299,12 @@ void main() {
       test('A transaction does not preempt pending queries', () async {
         // Add a few insert queries but don't await, then do a transaction that does a fetch,
         // make sure that transaction sees all of the elements.
-        unawaited(connection.execute('INSERT INTO t (id) VALUES (1)'));
-        unawaited(connection.execute('INSERT INTO t (id) VALUES (2)'));
-        unawaited(connection.execute('INSERT INTO t (id) VALUES (3)'));
+        unawaited(connection.execute('INSERT INTO t (id) VALUES (1)',
+            schemaOnly: true));
+        unawaited(connection.execute('INSERT INTO t (id) VALUES (2)',
+            schemaOnly: true));
+        unawaited(connection.execute('INSERT INTO t (id) VALUES (3)',
+            schemaOnly: true));
 
         final results = await connection.runTx((ctx) async {
           return await ctx.execute('SELECT id FROM t');
@@ -355,7 +358,7 @@ void main() {
     );
     addTearDown(connection.close);
 
-    await connection.execute("SELECT 'foo'");
+    await connection.execute("SELECT 'foo'", schemaOnly: true);
     expect(incoming, contains(isA<DataRowMessage>()));
     expect(outgoing, contains(isA<QueryMessage>()));
   });

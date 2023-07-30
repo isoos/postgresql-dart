@@ -600,7 +600,8 @@ class _Channels implements PgChannels {
 
   void _subscribe(String channel, MultiStreamController firstListener) {
     Future(() async {
-      await _connection.execute(PgSql('LISTEN ${identifier(channel)}'));
+      await _connection.execute(PgSql('LISTEN ${identifier(channel)}'),
+          schemaOnly: true);
     }).onError<Object>((error, stackTrace) {
       _activeListeners[channel]?.remove(firstListener);
 
@@ -618,7 +619,8 @@ class _Channels implements PgChannels {
       _activeListeners.remove(channel);
 
       // Send unlisten command
-      await _connection.execute(PgSql('UNLISTEN ${identifier(channel)}'));
+      await _connection.execute(PgSql('UNLISTEN ${identifier(channel)}'),
+          schemaOnly: true);
     }
   }
 
