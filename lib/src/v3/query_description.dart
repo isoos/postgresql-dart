@@ -1,5 +1,7 @@
 import 'package:postgres/postgres_v3_experimental.dart';
 
+import 'variable_tokenizer.dart';
+
 class InternalQueryDescription implements PgSql {
   /// The SQL to send to postgres.
   ///
@@ -37,8 +39,16 @@ class InternalQueryDescription implements PgSql {
 
   factory InternalQueryDescription.map(String sql,
       {String substitution = '@'}) {
-    // todo: Scan sql query, apply transformation
-    throw UnimplementedError();
+    final charCodes = substitution.codeUnits;
+    if (charCodes.length != 1) {
+      throw ArgumentError.value(substitution, 'substitution',
+          'Must be a string with a single code unit');
+    }
+
+    final tokenizer =
+        VariableTokenizer(variableCodeUnit: charCodes[0], sql: sql)..tokenize();
+
+    return tokenizer.result;
   }
 
   factory InternalQueryDescription.wrap(Object query) {
@@ -54,8 +64,24 @@ class InternalQueryDescription implements PgSql {
     }
   }
 
+  PgTypedParameter _toParameter(Object? value, PgDataType? knownType) {
+    if (value is PgTypedParameter) {
+      return value;
+    } else if (knownType != null) {
+      return PgTypedParameter(knownType, value);
+    } else {
+      throw ArgumentError.value(
+        value,
+        'parameter',
+        'Is not a `PgTypedParameter` and appears in a location for which no '
+            'type could be inferred.',
+      );
+    }
+  }
+
   List<PgTypedParameter> bindParameters(Object? params) {
     final knownTypes = parameterTypes;
+    final parameters = <PgTypedParameter>[];
 
     if (params == null) {
       if (knownTypes != null && knownTypes.isNotEmpty) {
@@ -70,29 +96,38 @@ class InternalQueryDescription implements PgSql {
             'Expected ${knownTypes.length} parameters, got ${params.length}');
       }
 
-      final parameters = <PgTypedParameter>[];
       for (var i = 0; i < params.length; i++) {
         final param = params[i];
-        if (param is PgTypedParameter) {
-          parameters.add(param);
-        } else if (knownTypes != null) {
-          parameters.add(PgTypedParameter(knownTypes[i], param));
-        } else {
-          throw ArgumentError.value(
-            params,
-            'parameters',
-            'As no types have been set on this prepared statement, all '
-                'parameters must be a `PgTypedParameter`.',
-          );
-        }
+        final knownType = knownTypes != null ? knownTypes[i] : null;
+
+        parameters.add(_toParameter(param, knownType));
+      }
+    } else if (params is Map) {
+      final byName = namedVariables;
+      final unmatchedVariables = params.keys.toSet();
+      if (byName == null) {
+        throw ArgumentError.value(
+            params, 'parameters', 'Maps are only supported by `PgSql.map`');
       }
 
-      return parameters;
-    } else if (params is Map) {
-      throw UnimplementedError('todo: Support binding maps');
+      var variableIndex = 1;
+      for (final entry in byName.entries) {
+        assert(entry.value == variableIndex);
+        final type =
+            knownTypes![variableIndex - 1]; // Known types are 0-indexed
+
+        final name = entry.key;
+        final value = params[name];
+        unmatchedVariables.remove(name);
+        parameters.add(_toParameter(value, type));
+
+        variableIndex++;
+      }
     } else {
       throw ArgumentError.value(
           params, 'parameters', 'Must either be a list or a map');
     }
+
+    return parameters;
   }
 }

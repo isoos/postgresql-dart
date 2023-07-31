@@ -60,33 +60,33 @@ class VariableTokenizer {
 
       if (charCode == _variableCodeUnit) {
         _startVariable(startIndex);
-        break nextToken;
+        continue nextToken;
       } else {
         switch (charCode) {
           case $slash:
             // `/*`, block comment
             if (_consumeIfMatches($asterisk)) {
               _blockComment();
-              break nextToken;
+              continue nextToken;
             }
             break;
           case $minus:
             // `--`, line comment
             if (_consumeIfMatches($minus)) {
               _lineComment();
-              break nextToken;
+              continue nextToken;
             }
             break;
           case $doubleQuote:
             // Double quote has already been consumed, but is part of the identifier
             _rewrittenSql.writeCharCode($doubleQuote);
             _continueEscapedIdentifier();
-            break nextToken;
+            continue nextToken;
           case $singleQuote:
             // Write start of string that has already been consumed
             _rewrittenSql.writeCharCode($singleQuote);
             _continueStringLiteral(enableEscapes: false);
-            break nextToken;
+            continue nextToken;
           case $e:
           case $E:
             if (_consumeIfMatches($singleQuote)) {
@@ -96,7 +96,7 @@ class VariableTokenizer {
                 ..writeCharCode($singleQuote);
 
               _continueStringLiteral(enableEscapes: true);
-              break nextToken;
+              continue nextToken;
             }
         }
       }
@@ -135,6 +135,7 @@ class VariableTokenizer {
           _rewrittenSql
             ..writeCharCode($singleQuote)
             ..writeCharCode($singleQuote);
+          continue;
         } else {
           // End of string
           _rewrittenSql.writeCharCode(char);
@@ -180,9 +181,9 @@ class VariableTokenizer {
     var consumedColonForType = false;
     int? charAfterVariable;
 
-    while (_isAtEnd) {
+    while (!_isAtEnd) {
       final nextChar = _consume();
-      if (_isAlphanumeric(nextChar)) {
+      if (_canAppearInVariable(nextChar)) {
         if (isReadingName) {
           nameBuffer.writeCharCode(nextChar);
         } else {
@@ -205,11 +206,14 @@ class VariableTokenizer {
     }
 
     final actualVariableIndex = _namedVariables.putIfAbsent(
-        nameBuffer.toString(), () => _namedVariables.length);
+        nameBuffer.toString(), () => _namedVariables.length + 1);
 
     if (consumedColonForType) {
       final typeName = typeBuffer.toString();
-      final type = PgDataType.date; // todo: Construct type based on name or err
+      final type = PgDataType.bySubstitutionName[typeName];
+      if (type == null) {
+        error('Unknown type: $typeName');
+      }
 
       _variableTypes[actualVariableIndex] = type;
     }
@@ -220,9 +224,10 @@ class VariableTokenizer {
     }
   }
 
-  static bool _isAlphanumeric(int charcode) {
+  static bool _canAppearInVariable(int charcode) {
     return (charcode >= $0 && charcode <= $9) ||
         (charcode >= $a && charcode <= $z) ||
-        (charcode >= $A && charcode <= $Z);
+        (charcode >= $A && charcode <= $Z) ||
+        charcode == $underscore;
   }
 }

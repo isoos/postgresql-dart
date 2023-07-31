@@ -128,11 +128,26 @@ abstract class PgStatement {
   Future<void> dispose();
 }
 
-class PgTypedParameter {
+/*final*/ class PgTypedParameter {
   final PgDataType type;
   final Object? value;
 
   PgTypedParameter(this.type, this.value);
+
+  @override
+  String toString() {
+    return 'PgTypedParameter($type, $value)';
+  }
+
+  @override
+  int get hashCode => Object.hash(type, value);
+
+  @override
+  bool operator ==(Object other) {
+    return other is PgTypedParameter &&
+        other.type == type &&
+        other.value == value;
+  }
 }
 
 abstract class PgResult implements List<PgResultRow> {

@@ -95,14 +95,23 @@ void main() {
     group('binary encoding and decoding', () {
       Future<void> shouldPassthrough<T extends Object>(
           PgDataType<T> type, T? value) async {
-        final stmt =
-            await connection.prepare(PgSql(r'SELECT $1', types: [type]));
-        final result = await stmt.run([value]);
-        await stmt.dispose();
-
-        expect(result, [
+        final rowFromExplicitType = await connection.execute(
+          PgSql(r'SELECT $1', types: [type]),
+          parameters: [value],
+        );
+        expect(rowFromExplicitType, [
           [value]
         ]);
+
+        if (type.nameForSubstitution != null) {
+          final rowFromInferredType = await connection.execute(
+            PgSql.map('SELECT @var:${type.nameForSubstitution}'),
+            parameters: [value],
+          );
+          expect(rowFromInferredType, [
+            [value]
+          ]);
+        }
       }
 
       test('string', () async {
