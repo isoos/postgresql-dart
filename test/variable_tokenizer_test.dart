@@ -56,6 +56,15 @@ void main() {
     expect(desc.namedVariables?.keys, ['x', 'y']);
   });
 
+  test('can use custom variable symbol', () {
+    final desc = InternalQueryDescription.map(
+        'SELECT * FROM foo WHERE a = :x:int8',
+        substitution: ':');
+    expect(desc.transformedSql, r'SELECT * FROM foo WHERE a = $1');
+    expect(desc.namedVariables?.keys, ['x']);
+    expect(desc.parameterTypes, [PgDataType.bigInteger]);
+  });
+
   group('ignores', () {
     test('line comments', () {
       final desc = InternalQueryDescription.map('SELECT @1, -- @2 \n @3');
@@ -99,6 +108,12 @@ void main() {
 
     test('for variable with empty type name', () {
       expect(() => InternalQueryDescription.map('SELECT @var: FROM foo'),
+          throwsFormatException);
+    });
+
+    test('for invalid type name', () {
+      expect(
+          () => InternalQueryDescription.map('SELECT @var:nosuchtype FROM foo'),
           throwsFormatException);
     });
   });
