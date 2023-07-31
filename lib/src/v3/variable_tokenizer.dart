@@ -5,16 +5,40 @@ import 'types.dart';
 
 /// In addition to indexed variables supported by the postgres protocol, most
 /// postgres clients (including this package) support a variable mode in which
-/// variables are identified by `@` followed by a name and an optional type.a
+/// variables are identified by `@` followed by a name and an optional type.
+///
+/// Since this format is not natively understood by postgres, a translation
+/// layer needs to happen in Dart.
+/// A flexible [_variableCodeUnit] can be set to start a variable (we'll
+/// assume `@`, the default, here). Then, a variable can be used with `@varname`.
+/// Variable names can consist of alphanumeric characters and underscores.
+/// As part of a variable, the type can also be declared (e.g. `@x:int8`). Valid
+/// type names are given by [PgDataType.nameForSubstitution].
+///
+/// Just like postgres, we ignore variables inside string literals, identifiers
+/// or comments.
 class VariableTokenizer {
+  /// A map from variable names (without the [_variableCodeUnit]) to their
+  /// resolved index of the underlying SQL parameter.
   final Map<String, int> _namedVariables = {};
+
+  /// The type of variables (by their index), resolved by looking at type
+  /// annotations following a variable name.
   final Map<int, PgDataType> _variableTypes = {};
+
+  /// The transformed SQL, replacing named variables with positional variables.
   final StringBuffer _rewrittenSql = StringBuffer();
 
+  /// The code unit that starts a variable token.
   final int _variableCodeUnit;
+
+  /// The original SQL string as written by the user.
   final String _source;
+
+  /// THe list returned by [String.codeUnits] of [_source].
   final List<int> _codeUnits;
 
+  /// Index of the next character to consider in [_codeUnits]
   int _index = 0;
 
   bool get _isAtEnd => _index == _codeUnits.length;
@@ -26,6 +50,8 @@ class VariableTokenizer {
         _source = sql,
         _codeUnits = sql.codeUnits;
 
+  /// Builds an [InternalQueryDescription] after lexing (see [tokenize]) the
+  /// source input.
   InternalQueryDescription get result {
     return InternalQueryDescription.transformed(
       _source,
@@ -38,8 +64,11 @@ class VariableTokenizer {
     );
   }
 
+  /// Reads the upcoming character and advances the read index.
   int _consume() => _codeUnits[_index++];
 
+  /// Returns true and advances the read index if the next character is
+  /// [charCode]. Otherwise, returns false and leaves the current index unchanged.
   bool _consumeIfMatches(int charCode) {
     if (_isAtEnd) return false;
 
@@ -52,9 +81,16 @@ class VariableTokenizer {
     }
   }
 
+  /// Reads the [_source] and transforms it.
+  ///
+  /// Comments are removed, and variable declarations are read and transformed
+  /// into proper Postgres variables.
   void tokenize() {
     nextToken:
     while (!_isAtEnd) {
+      // Invariant: At this point, we're not in a special token sequence (like
+      // a string literal). The methods always consume the special token and
+      // handle adding the lexeme to the transformed output.
       final startIndex = _index;
       final charCode = _consume();
 
@@ -106,6 +142,8 @@ class VariableTokenizer {
     }
   }
 
+  /// After reading the start of a block comment, this methods skips the until
+  /// we find its end.
   void _blockComment() {
     // Look for `*/` sequence to end the comment
     while (!_isAtEnd) {
@@ -116,6 +154,8 @@ class VariableTokenizer {
     }
   }
 
+  /// After reading the start of a line comment, this method skips the current
+  /// source line.
   void _lineComment() {
     // Consume the rest of the line without adding it.
     while (!_isAtEnd) {
@@ -124,6 +164,11 @@ class VariableTokenizer {
     }
   }
 
+  /// After reading the start of a string literal, this method reads the
+  /// remainder of that literal and adds it to the transformed output.
+  ///
+  /// Handles "double single-quotes" as an escape sequence. If C-style escapes
+  /// are enabled, `\'` is also not considered to end the string.
   void _continueStringLiteral({required bool enableEscapes}) {
     while (!_isAtEnd) {
       final char = _consume();
@@ -155,6 +200,8 @@ class VariableTokenizer {
     }
   }
 
+  /// After reading a double-quote, streams source characters into the output
+  /// without changing them until we find the end of the identifier.
   void _continueEscapedIdentifier() {
     while (!_isAtEnd) {
       final char = _consume();
@@ -164,6 +211,10 @@ class VariableTokenizer {
     }
   }
 
+  /// Parses a variable after the initial character (most likely an `@`) has
+  /// already been consumed.
+  ///
+  /// Replaces the declaration with a postgres variable (`$n`).
   void _startVariable(int startPosition) {
     // The syntax for a variable is `@<variableName>(:<typeName>)?`. When this
     // method gets called, the at character has already been consumed.

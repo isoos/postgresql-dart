@@ -44,10 +44,10 @@ enum PgDataType<Dart extends Object> {
   bigInteger<int>(20, nameForSubstitution: 'int8'),
 
   /// Must be an [int] (autoincrementing 4-byte integer)
-  serial(null),
+  serial(null, nameForSubstitution: 'int4'),
 
   /// Must be an [int] (autoincrementing 8-byte integer)
-  bigSerial(null),
+  bigSerial(null, nameForSubstitution: 'int8'),
 
   /// Must be a [double] (32-bit floating point value)
   real<core.double>(700, nameForSubstitution: 'float4'),
@@ -62,7 +62,7 @@ enum PgDataType<Dart extends Object> {
   timestampWithoutTimezone<DateTime>(1114, nameForSubstitution: 'timestamp'),
 
   /// Must be a [DateTime] (microsecond date and time precision)
-  timestampWithTimezone<DateTime>(1184, nameForSubstitution: 'timestampz'),
+  timestampWithTimezone<DateTime>(1184, nameForSubstitution: 'timestamptz'),
 
   /// Must be a [Duration]
   interval<Duration>(1186, nameForSubstitution: 'interval'),
@@ -161,7 +161,14 @@ enum PgDataType<Dart extends Object> {
 
   static final Map<String, PgDataType> bySubstitutionName = Map.unmodifiable({
     for (final type in values)
-      if (type.nameForSubstitution != null) type.nameForSubstitution!: type,
+      // We don't index serial and bigSerial types here because they're using
+      // the same names as int4 and int8, respectively.
+      // However, when a user is referring to these types in a query, they
+      // should always resolve to integer and bigInteger.
+      if (type != serial &&
+          type != bigSerial &&
+          type.nameForSubstitution != null)
+        type.nameForSubstitution!: type,
   });
 
   static final Map<PgDataType, _BinaryTypeCodec> _binaryCodecs = {};
