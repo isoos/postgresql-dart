@@ -14,23 +14,7 @@ class PostgreSQLFormat {
   }
 
   static String? dataTypeStringForDataType(PostgreSQLDataType? dt) {
-    switch (dt) {
-      case PostgreSQLDataType.text:
-        return 'text';
-      case PostgreSQLDataType.integer:
-        return 'int4';
-      case PostgreSQLDataType.smallInteger:
-        return 'int2';
-      case PostgreSQLDataType.bigInteger:
-        return 'int8';
-      case PostgreSQLDataType.serial:
-        return 'int4';
-      case PostgreSQLDataType.bigSerial:
-        return 'int8';
-
-      default:
-        return null;
-    }
+    return dt?.nameForSubstitution;
   }
 
   static String substitute(String fmtString, Map<String, dynamic>? values,
