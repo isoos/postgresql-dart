@@ -116,5 +116,31 @@ void main() {
           () => InternalQueryDescription.map('SELECT @var:nosuchtype FROM foo'),
           throwsFormatException);
     });
+
+    test('for missing variable', () {
+      expect(
+        () => InternalQueryDescription.map('SELECT @foo').bindParameters({}),
+        throwsA(isA<ArgumentError>().having(
+          (e) => e.message,
+          'message',
+          'Missing variable for `foo`',
+        )),
+      );
+    });
+
+    test('for superfluous variables', () {
+      expect(
+        () => InternalQueryDescription.map('SELECT @foo:int4').bindParameters({
+          'foo': 3,
+          'X': 'Y',
+          'Y': 'Z',
+        }),
+        throwsA(isA<ArgumentError>().having(
+          (e) => e.message,
+          'message',
+          'Contains superfluous variables: X, Y',
+        )),
+      );
+    });
   });
 }

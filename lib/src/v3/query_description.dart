@@ -117,11 +117,21 @@ class InternalQueryDescription implements PgSql {
             knownTypes![variableIndex - 1]; // Known types are 0-indexed
 
         final name = entry.key;
+        if (!params.containsKey(name)) {
+          throw ArgumentError.value(
+              params, 'parameters', 'Missing variable for `$name`');
+        }
+
         final value = params[name];
         unmatchedVariables.remove(name);
         parameters.add(_toParameter(value, type));
 
         variableIndex++;
+      }
+
+      if (unmatchedVariables.isNotEmpty) {
+        throw ArgumentError.value(params, 'parameters',
+            'Contains superfluous variables: ${unmatchedVariables.join(', ')}');
       }
     } else {
       throw ArgumentError.value(
