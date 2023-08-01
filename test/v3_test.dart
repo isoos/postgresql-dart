@@ -152,6 +152,34 @@ void main() {
       ]);
     });
 
+    test('can use mapped queries with json-contains operator', () async {
+      final rows = await connection.execute(
+        PgSql.map('SELECT @a:jsonb @> @b:jsonb'),
+        parameters: {
+          'a': {'foo': 'bar', 'another': 'as well'},
+          'b': {'foo': 'bar'},
+        },
+      );
+
+      expect(rows, [
+        [true]
+      ]);
+    });
+
+    test('can use json path predicate check operator', () async {
+      final rows = await connection.execute(
+        PgSql.map('SELECT @a:jsonb @@ @b:text::jsonpath'),
+        parameters: {
+          'a': [1, 2, 3, 4, 5],
+          'b': r'$.a[*] > 2',
+        },
+      );
+
+      expect(rows, [
+        [false]
+      ]);
+    });
+
     group('throws error', () {
       setUp(() async {
         await connection
