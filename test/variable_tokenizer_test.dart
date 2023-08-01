@@ -98,14 +98,19 @@ void main() {
       expect(desc.transformedSql, r'SELECT $1 AS "@2", $2');
       expect(desc.namedVariables?.keys, ['1', '3']);
     });
+
+    // https://www.postgresql.org/docs/current/functions-json.html
+    final operators = ['@>', '<@', '@?', '@@'];
+    for (final operator in operators) {
+      test('can use $operator', () {
+        final desc = InternalQueryDescription.map('SELECT @foo $operator @bar');
+        expect(desc.transformedSql, 'SELECT \$1 $operator \$2');
+        expect(desc.namedVariables?.keys, ['foo', 'bar']);
+      });
+    }
   });
 
   group('throws', () {
-    test('for variable with empty name', () {
-      expect(() => InternalQueryDescription.map('SELECT @ FROM foo'),
-          throwsFormatException);
-    });
-
     test('for variable with empty type name', () {
       expect(() => InternalQueryDescription.map('SELECT @var: FROM foo'),
           throwsFormatException);

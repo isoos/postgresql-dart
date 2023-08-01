@@ -250,8 +250,16 @@ class VariableTokenizer {
     }
 
     if (nameBuffer.isEmpty) {
-      error('Empty variable name');
+      // No variable then. The variable declaration syntax conflicts with some
+      // postgres operators (e.g `@>`). So in that case, we just write the
+      // original syntax.
+      _rewrittenSql.writeCharCode(_variableCodeUnit);
+      if (charAfterVariable != null) {
+        _rewrittenSql.writeCharCode(charAfterVariable);
+      }
+      return;
     }
+
     if (consumedColonForType && typeBuffer.isEmpty) {
       error('Expected type name after colon');
     }
