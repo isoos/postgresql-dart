@@ -128,7 +128,7 @@ abstract class PgStatement {
   Future<void> dispose();
 }
 
-/*final*/ class PgTypedParameter {
+final class PgTypedParameter {
   final PgDataType type;
   final Object? value;
 
@@ -180,7 +180,7 @@ abstract class PgResultRow implements List<Object?> {
   PgResultSchema get schema;
 }
 
-class PgResultSchema {
+final class PgResultSchema {
   final List<PgResultColumn> columns;
 
   PgResultSchema(this.columns);
@@ -191,7 +191,7 @@ class PgResultSchema {
   }
 }
 
-class PgResultColumn {
+final class PgResultColumn {
   final PgDataType type;
   final String? tableName;
   final int? tableOid;
@@ -237,9 +237,7 @@ abstract class PgChannels {
   Future<void> cancelAll();
 }
 
-abstract class PgNotification {}
-
-class PgEndpoint {
+final class PgEndpoint {
   final String host;
   final int port;
   final String database;
@@ -266,7 +264,7 @@ class PgEndpoint {
   });
 }
 
-class PgSessionSettings {
+final class PgSessionSettings {
   // Duration(seconds: 15)
   final Duration? connectTimeout;
   // Duration(minutes: 5)
@@ -297,7 +295,7 @@ class PgSessionSettings {
   });
 }
 
-class PgPoolSettings {
+final class PgPoolSettings {
   final int? maxConnectionCount;
   final Duration? idleTestThreshold;
   final Duration? maxConnectionAge;
