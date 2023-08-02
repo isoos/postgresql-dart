@@ -26,15 +26,87 @@ abstract class PgPool implements PgSession, PgSessionExecutor {
   });
 }
 
+/// A description of a SQL query as interpreted by this package.
+///
+/// This includes the SQL string to send to the database and known data types
+/// for parameters, if any.
+///
+/// Queries can be sent to postgres as-is. To do that, pass a string to
+/// [PgSession.prepare] or [PgSession.execute] or use the default [PgSql]
+/// constructor. These queries are not intepreted or altered by this package in
+/// any way. If you're using parameter in those queries, you either have to
+/// specify their types in the [PgSql] constructor, or exclusively use
+/// [PgTypedParameter] instances in [PgSession.execute], [PgStatement.bind] and
+/// [PgStatement.run].
+///
+/// Alternatively, you can use named variables that will be desugared by this
+/// package with the [PgSql.map] factory.
 class PgSql {
+  /// The default constructor, sending [sql] to the Postgres database without
+  /// any modification.
+  ///
+  /// The [types] parameter can optionally be used to pass the types of
+  /// parameters in the query. If they're not set, only [PgTypedParameter]
+  /// instances can be used when binding values later.
   factory PgSql(String sql, {List<PgDataType>? types}) =
       InternalQueryDescription.direct;
+
+  /// Looks for named parameters in [sql] and desugars them.
+  ///
+  /// You can specify a character that starts parameters (by default, `@` is
+  /// used).
+  /// In those queries, `@variableName` can be used to declare a variable.
+  ///
+  /// ```dart
+  /// final sql = PgSql.map('SELECT * FROM users WHERE id = @id');
+  /// final stmt = await connection.prepare(sql);
+  /// final vars = {'id': PgTypedParameter(PgDataType.integer, 3)};
+  /// await for (final row in stmt.bind(vars)) {
+  ///   // Got user with id 3
+  /// }
+  /// ```
+  ///
+  /// To make this more consise, you can also supply the type of the variable
+  /// in the query:
+  ///
+  /// ```dart
+  /// final sql = PgSql.map('SELECT * FROM users WHERE id = @id:int4');
+  /// final stmt = await connection.prepare(sql);
+  /// final vars = {'id': 3};
+  /// await for (final row in stmt.bind(vars)) {
+  ///   // Got user with id 3
+  /// }
+  /// ```
+  ///
+  /// String literals, identifiers and comments are correctly ignored. So for
+  /// instance, the following query only uses one variable (`id`):
+  ///
+  /// ```sql
+  /// SELECT name AS "@handle" FROM users WHERE id = @id; -- select @users
+  /// ```
+  ///
+  /// Note that this syntax is a feature of this package and not directly
+  /// understood by postgres. This requires the package to scan the [sql] for
+  /// variables, which adds a small overhead over when compared to a direct
+  /// [PgSql] query.
+  /// Also, the scanner might interpret queries incorrectly in the case of
+  /// malformed [sql] (like an unterminated string literal or comment). In that
+  /// case, the transformation might not recognize all variables.
   factory PgSql.map(String sql, {String substitution}) =
       InternalQueryDescription.map;
 }
 
 abstract class PgSession {
-  // uses extended query protocol
+  /// Prepares a reusable statement from a [query].
+  ///
+  /// Query can either be a string or a [PgSql] instance. The [query] value used
+  /// alters the behavior of [PgStatement.bind]: When a string is used, the
+  /// query is sent to Postgres without modification and you may only used
+  /// indexed parameters (e.g. `SELECT * FROM users WHERE id = $1`). When using
+  /// [PgSql.map], you can use named parameters as well (e.g. `WHERE id = @id`).
+  ///
+  /// When the returned future completes, the statement must eventually be freed
+  /// using [PgStatement.close] to avoid resource leaks.
   Future<PgStatement> prepare(
     Object /* String | PgSql */ query, {
     Duration? timeout,
@@ -43,9 +115,9 @@ abstract class PgSession {
   /// Executes the [query] with the given [parameters].
   ///
   /// [query] must either be a [String] or a [PgSql] query with types for
-  /// parameters. When a [PgSql] query object is used, [parameters] can be a
-  /// list of direct values. Otherwise, it must be a list of
-  /// [PgTypedParameter]s. With [PgSql.map], values can also be provided as a
+  /// parameters. When a [PgSql] query object with known types is used,
+  /// [parameters] can be a list of direct values. Otherwise, it must be a list
+  /// of [PgTypedParameter]s. With [PgSql.map], values can also be provided as a
   /// map from the substituted parameter keys to objects or [PgTypedParameter]s.
   ///
   /// When [ignoreRows] is set to true, the implementation may internally
@@ -61,6 +133,8 @@ abstract class PgSession {
     bool ignoreRows = false,
   });
 
+  /// Closes this session, cleaning up resources and forbiding further calls to
+  /// [prepare] and [execute].
   Future<void> close();
 }
 
