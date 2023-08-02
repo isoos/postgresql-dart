@@ -115,6 +115,10 @@ class VariableTokenizer {
             break;
           case $doubleQuote:
             // Double quote has already been consumed, but is part of the identifier
+            // Note that this also handles identifiers with unicode escape
+            // sequences like `u&"\u1234"` because the `u` and the ampersand are
+            // not interpreted in any other way and we skip to the next double
+            // quote either way.
             _rewrittenSql.writeCharCode($doubleQuote);
             _continueEscapedIdentifier();
             continue nextToken;
@@ -122,6 +126,10 @@ class VariableTokenizer {
             // Write start of string that has already been consumed
             _rewrittenSql.writeCharCode($singleQuote);
             _continueStringLiteral(enableEscapes: false);
+            continue nextToken;
+          case $dollar:
+            _rewrittenSql.writeCharCode($dollar);
+            _potentialDollarQuotedString();
             continue nextToken;
           case $e:
           case $E:
@@ -164,16 +172,75 @@ class VariableTokenizer {
     }
   }
 
+  /// Handles a potential "dollar-quoted string" literal after consuming a
+  /// dollar symbol character.
+  ///
+  /// For more details, see section 4.1.2.4. on https://www.postgresql.org/docs/current/sql-syntax-lexical.html
+  void _potentialDollarQuotedString() {
+    final escapeSequenceBuilder = StringBuffer(r'$');
+
+    // See if this really is a dollar-quoted string: We assume it is if there
+    // are alphanumeric characters until the next dollar sign. This has the
+    // benefit of not accidentally consuming anything that could be part of
+    // another token.
+    while (!_isAtEnd) {
+      final char = _consume();
+      _rewrittenSql.writeCharCode(char);
+
+      if (char == $dollar) {
+        escapeSequenceBuilder.writeCharCode(char);
+        break;
+      } else if (_canAppearInVariable(char)) {
+        escapeSequenceBuilder.writeCharCode(char);
+      } else {
+        // Not a dollar-quoted string literal.
+        return;
+      }
+    }
+
+    // Now, we interpret everything as a string literal until we see the escape
+    // sequence again.
+    final endSequence = escapeSequenceBuilder.toString();
+    var matchedCharactersOfEndSequence = 0;
+
+    while (!_isAtEnd) {
+      final char = _consume();
+      _rewrittenSql.writeCharCode(char);
+
+      final nextCharInEndSequence =
+          endSequence.codeUnitAt(matchedCharactersOfEndSequence);
+
+      if (char == nextCharInEndSequence) {
+        matchedCharactersOfEndSequence++;
+
+        if (matchedCharactersOfEndSequence == endSequence.length) {
+          // The entire end sequence has been matched, so the literal is over.
+          return;
+        }
+      } else {
+        // Okay, this didn't write the full escape sequence.
+        matchedCharactersOfEndSequence = 0;
+      }
+    }
+  }
+
   /// After reading the start of a string literal, this method reads the
   /// remainder of that literal and adds it to the transformed output.
   ///
   /// Handles "double single-quotes" as an escape sequence. If C-style escapes
   /// are enabled, `\'` is also not considered to end the string.
   void _continueStringLiteral({required bool enableEscapes}) {
+    // Whether the next character is escaped by a preceding backslash.
+    var characterIsEscaped = false;
+
     while (!_isAtEnd) {
       final char = _consume();
 
-      if (char == $singleQuote) {
+      if (characterIsEscaped) {
+        _rewrittenSql.writeCharCode(char);
+        characterIsEscaped = false;
+        continue;
+      } else if (char == $singleQuote) {
         // Two adjacent single quotes are a escape sequence and don't end the
         // string
         if (_consumeIfMatches($singleQuote)) {
@@ -191,11 +258,7 @@ class VariableTokenizer {
       _rewrittenSql.writeCharCode(char);
 
       if (enableEscapes && char == $backslash) {
-        // If this is followed by a single quote, it is escaped and doesn't end
-        // the string.
-        if (_consumeIfMatches($singleQuote)) {
-          _rewrittenSql.writeCharCode($singleQuote);
-        }
+        characterIsEscaped = true;
       }
     }
   }

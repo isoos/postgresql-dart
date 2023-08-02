@@ -65,6 +65,12 @@ void main() {
     expect(desc.parameterTypes, [PgDataType.bigInteger]);
   });
 
+  test('finds correct end for string literal', () {
+    final desc = InternalQueryDescription.map(r"SELECT e'@a\\' @b");
+    expect(desc.transformedSql, r"SELECT e'@a\\' $1");
+    expect(desc.namedVariables?.keys, ['b']);
+  });
+
   group('ignores', () {
     test('line comments', () {
       final desc = InternalQueryDescription.map('SELECT @1, -- @2 \n @3');
@@ -93,10 +99,41 @@ void main() {
       expect(desc.namedVariables?.keys, ['1', '3']);
     });
 
+    test('strings with unicode escapes', () {
+      final desc = InternalQueryDescription.map(r"U&'d\0061t@1\+000061', @2");
+      expect(desc.transformedSql, r"U&'d\0061t@1\+000061', $1");
+      expect(desc.namedVariables?.keys, ['2']);
+    });
+
     test('identifiers', () {
       final desc = InternalQueryDescription.map('SELECT @1 AS "@2", @3');
       expect(desc.transformedSql, r'SELECT $1 AS "@2", $2');
       expect(desc.namedVariables?.keys, ['1', '3']);
+    });
+
+    test('identifiers with unicode escapes', () {
+      final desc =
+          InternalQueryDescription.map(r'SELECT U&"d\0061t@1\+000061", @2');
+      expect(desc.transformedSql, r'SELECT U&"d\0061t@1\+000061", $1');
+      expect(desc.namedVariables?.keys, ['2']);
+    });
+
+    test('dollar quoted string', () {
+      final desc = InternalQueryDescription.map(
+        r"SELECT $foo$ This is a string literal $foo that still hasn't ended here $foo$, @1",
+      );
+
+      expect(
+        desc.transformedSql,
+        r"SELECT $foo$ This is a string literal $foo that still hasn't ended here $foo$, $1",
+      );
+      expect(desc.namedVariables?.keys, ['1']);
+    });
+
+    test('invalid dollar quoted string', () {
+      final desc = InternalQueryDescription.map(r'SELECT $foo @1');
+      expect(desc.transformedSql, r'SELECT $foo $1');
+      expect(desc.namedVariables?.keys, ['1']);
     });
 
     // https://www.postgresql.org/docs/current/functions-json.html
