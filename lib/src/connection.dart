@@ -453,7 +453,7 @@ class _OidCache {
   }
 }
 
-abstract class _PostgreSQLExecutionContextMixin
+abstract mixin class _PostgreSQLExecutionContextMixin
     implements PostgreSQLExecutionContext {
   final _queue = QueryQueue();
 

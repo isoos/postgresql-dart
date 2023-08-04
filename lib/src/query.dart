@@ -330,35 +330,8 @@ class PostgreSQLFormatToken {
 }
 
 class PostgreSQLFormatIdentifier {
-  static Map<String, PostgreSQLDataType> typeStringToCodeMap = {
-    'text': PostgreSQLDataType.text,
-    'int2': PostgreSQLDataType.smallInteger,
-    'int4': PostgreSQLDataType.integer,
-    'int8': PostgreSQLDataType.bigInteger,
-    'float4': PostgreSQLDataType.real,
-    'float8': PostgreSQLDataType.double,
-    'boolean': PostgreSQLDataType.boolean,
-    'date': PostgreSQLDataType.date,
-    'timestamp': PostgreSQLDataType.timestampWithoutTimezone,
-    'timestamptz': PostgreSQLDataType.timestampWithTimezone,
-    'interval': PostgreSQLDataType.interval,
-    'numeric': PostgreSQLDataType.numeric,
-    'jsonb': PostgreSQLDataType.jsonb,
-    'bytea': PostgreSQLDataType.byteArray,
-    'name': PostgreSQLDataType.name,
-    'uuid': PostgreSQLDataType.uuid,
-    'json': PostgreSQLDataType.json,
-    'point': PostgreSQLDataType.point,
-    '_bool': PostgreSQLDataType.booleanArray,
-    '_int4': PostgreSQLDataType.integerArray,
-    '_int8': PostgreSQLDataType.bigIntegerArray,
-    '_text': PostgreSQLDataType.textArray,
-    '_float8': PostgreSQLDataType.doubleArray,
-    'varchar': PostgreSQLDataType.varChar,
-    'regtype': PostgreSQLDataType.regtype,
-    '_varchar': PostgreSQLDataType.varCharArray,
-    '_jsonb': PostgreSQLDataType.jsonbArray,
-  };
+  static Map<String, PostgreSQLDataType> typeStringToCodeMap =
+      PostgreSQLDataType.bySubstitutionName;
 
   factory PostgreSQLFormatIdentifier(String t) {
     String name;

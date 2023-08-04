@@ -95,14 +95,23 @@ void main() {
     group('binary encoding and decoding', () {
       Future<void> shouldPassthrough<T extends Object>(
           PgDataType<T> type, T? value) async {
-        final stmt =
-            await connection.prepare(PgSql(r'SELECT $1', types: [type]));
-        final result = await stmt.run([value]);
-        await stmt.dispose();
-
-        expect(result, [
+        final rowFromExplicitType = await connection.execute(
+          PgSql(r'SELECT $1', types: [type]),
+          parameters: [value],
+        );
+        expect(rowFromExplicitType, [
           [value]
         ]);
+
+        if (type.nameForSubstitution != null) {
+          final rowFromInferredType = await connection.execute(
+            PgSql.map('SELECT @var:${type.nameForSubstitution}'),
+            parameters: [value],
+          );
+          expect(rowFromInferredType, [
+            [value]
+          ]);
+        }
       }
 
       test('string', () async {
@@ -131,6 +140,44 @@ void main() {
 
       await connection.channels.notify(channel, 'my notification');
       await connection.channels.notify(channel);
+    });
+
+    test('can use same variable multiple times', () async {
+      final stmt = await connection.prepare(
+          PgSql(r'SELECT $1 AS a, $1 + 2 AS b', types: [PgDataType.integer]));
+      final rows = await stmt.run([10]);
+
+      expect(rows, [
+        [10, 12]
+      ]);
+    });
+
+    test('can use mapped queries with json-contains operator', () async {
+      final rows = await connection.execute(
+        PgSql.map('SELECT @a:jsonb @> @b:jsonb'),
+        parameters: {
+          'a': {'foo': 'bar', 'another': 'as well'},
+          'b': {'foo': 'bar'},
+        },
+      );
+
+      expect(rows, [
+        [true]
+      ]);
+    });
+
+    test('can use json path predicate check operator', () async {
+      final rows = await connection.execute(
+        PgSql.map('SELECT @a:jsonb @@ @b:text::jsonpath'),
+        parameters: {
+          'a': [1, 2, 3, 4, 5],
+          'b': r'$.a[*] > 2',
+        },
+      );
+
+      expect(rows, [
+        [false]
+      ]);
     });
 
     group('throws error', () {

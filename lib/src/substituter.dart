@@ -14,68 +14,7 @@ class PostgreSQLFormat {
   }
 
   static String? dataTypeStringForDataType(PostgreSQLDataType? dt) {
-    switch (dt) {
-      case PostgreSQLDataType.text:
-        return 'text';
-      case PostgreSQLDataType.integer:
-        return 'int4';
-      case PostgreSQLDataType.smallInteger:
-        return 'int2';
-      case PostgreSQLDataType.bigInteger:
-        return 'int8';
-      case PostgreSQLDataType.serial:
-        return 'int4';
-      case PostgreSQLDataType.bigSerial:
-        return 'int8';
-      case PostgreSQLDataType.real:
-        return 'float4';
-      case PostgreSQLDataType.double:
-        return 'float8';
-      case PostgreSQLDataType.boolean:
-        return 'boolean';
-      case PostgreSQLDataType.timestampWithoutTimezone:
-        return 'timestamp';
-      case PostgreSQLDataType.timestampWithTimezone:
-        return 'timestamptz';
-      case PostgreSQLDataType.interval:
-        return 'interval';
-      case PostgreSQLDataType.numeric:
-        return 'numeric';
-      case PostgreSQLDataType.date:
-        return 'date';
-      case PostgreSQLDataType.jsonb:
-        return 'jsonb';
-      case PostgreSQLDataType.byteArray:
-        return 'bytea';
-      case PostgreSQLDataType.name:
-        return 'name';
-      case PostgreSQLDataType.uuid:
-        return 'uuid';
-      case PostgreSQLDataType.point:
-        return 'point';
-      case PostgreSQLDataType.json:
-        return 'json';
-      case PostgreSQLDataType.booleanArray:
-        return '_bool';
-      case PostgreSQLDataType.integerArray:
-        return '_int4';
-      case PostgreSQLDataType.bigIntegerArray:
-        return '_int8';
-      case PostgreSQLDataType.textArray:
-        return '_text';
-      case PostgreSQLDataType.doubleArray:
-        return '_float8';
-      case PostgreSQLDataType.varChar:
-        return 'varchar';
-      case PostgreSQLDataType.varCharArray:
-        return '_varchar';
-      case PostgreSQLDataType.jsonbArray:
-        return '_jsonb';
-      case PostgreSQLDataType.regtype:
-        return 'regtype';
-      default:
-        return null;
-    }
+    return dt?.nameForSubstitution;
   }
 
   static String substitute(String fmtString, Map<String, dynamic>? values,
