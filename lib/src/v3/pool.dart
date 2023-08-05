@@ -43,7 +43,7 @@ class PoolImplementation implements PgPool {
 
   @override
   Future<PgResult> execute(Object query,
-      {Object? parameters, Duration? timeout, bool ignoreRows = false}) {
+      {Object? parameters, bool ignoreRows = false}) {
     return withConnection((connection) => connection.execute(
           query,
           parameters: parameters,
@@ -52,7 +52,7 @@ class PoolImplementation implements PgPool {
   }
 
   @override
-  Future<PgStatement> prepare(Object query, {Duration? timeout}) async {
+  Future<PgStatement> prepare(Object query) async {
     final statementCompleter = Completer<PgStatement>.sync();
 
     unawaited(withConnection((connection) async {
@@ -108,10 +108,11 @@ class PoolImplementation implements PgPool {
       if (connection == null) {
         connection ??= _OpenedConnection(
           await PgConnectionImplementation.connect(_nextEndpoint),
-        )..isInUse = true;
+        );
         _openConnections.add(connection);
       }
 
+      connection.isInUse = true;
       final poolConnection = _PoolConnection(connection.connection);
       return await fn(poolConnection);
     } finally {
@@ -156,7 +157,7 @@ class _PoolConnection implements PgConnection {
 
   @override
   Future<PgResult> execute(Object query,
-      {Object? parameters, Duration? timeout, bool ignoreRows = false}) {
+      {Object? parameters, bool ignoreRows = false}) {
     return _connection.execute(
       query,
       parameters: parameters,
@@ -165,7 +166,7 @@ class _PoolConnection implements PgConnection {
   }
 
   @override
-  Future<PgStatement> prepare(Object query, {Duration? timeout}) {
+  Future<PgStatement> prepare(Object query) {
     return _connection.prepare(query);
   }
 
@@ -196,7 +197,7 @@ class _PoolStatement implements PgStatement {
   }
 
   @override
-  Future<PgResult> run(Object? parameters, {Duration? timeout}) {
+  Future<PgResult> run(Object? parameters) {
     return _underlying.run(parameters);
   }
 }
