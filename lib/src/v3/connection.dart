@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -34,9 +33,9 @@ class _ResolvedSettings {
   final String password;
 
   final Duration connectTimeout;
-  final Duration queryTimeout;
+  //final Duration queryTimeout;
   final String timeZone;
-  final Encoding encoding;
+  //final Encoding encoding;
 
   final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
 
@@ -47,9 +46,9 @@ class _ResolvedSettings {
         password = endpoint.password ?? 'postgres',
         connectTimeout =
             settings?.connectTimeout ?? const Duration(seconds: 15),
-        queryTimeout = settings?.connectTimeout ?? const Duration(minutes: 5),
+        //queryTimeout = settings?.connectTimeout ?? const Duration(minutes: 5),
         timeZone = settings?.timeZone ?? 'UTC',
-        encoding = settings?.encoding ?? utf8,
+        // encoding = settings?.encoding ?? utf8,
         transformer = settings?.transformer;
 
   bool onBadSslCertificate(X509Certificate certificate) {
@@ -111,7 +110,6 @@ abstract class _PgSessionBase implements PgSession {
   Future<PgResult> execute(
     Object query, {
     Object? parameters,
-    Duration? timeout,
     bool ignoreRows = false,
   }) async {
     final description = InternalQueryDescription.wrap(query);
@@ -120,9 +118,9 @@ abstract class _PgSessionBase implements PgSession {
     if (!ignoreRows || variables.isNotEmpty) {
       // The simple query protocol does not support variables and returns rows
       // as text. So when we need rows or parameters, we need an explicit prepare.
-      final prepared = await prepare(description, timeout: timeout);
+      final prepared = await prepare(description);
       try {
-        return await prepared.run(variables, timeout: timeout);
+        return await prepared.run(variables);
       } finally {
         await prepared.dispose();
       }
@@ -147,7 +145,7 @@ abstract class _PgSessionBase implements PgSession {
   }
 
   @override
-  Future<PgStatement> prepare(Object query, {Duration? timeout}) async {
+  Future<PgStatement> prepare(Object query) async {
     final conn = _connection;
     final name = 's/${conn._statementCounter++}';
     final description = InternalQueryDescription.wrap(query);

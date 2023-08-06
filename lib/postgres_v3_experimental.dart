@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/v3/connection.dart';
+import 'src/v3/pool.dart';
 import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
 import 'src/v3/types.dart';
@@ -13,13 +13,18 @@ import 'src/v3/types.dart';
 export 'src/v3/types.dart';
 
 abstract class PgPool implements PgSession, PgSessionExecutor {
-  static Future<PgPool> open(
+  factory PgPool(
     List<PgEndpoint> endpoints, {
     PgSessionSettings? sessionSettings,
     PgPoolSettings? poolSettings,
   }) =>
-      throw UnimplementedError();
+      PoolImplementation(endpoints, sessionSettings, poolSettings);
 
+  /// Acquires a connection from this pool, opening a new one if necessary, and
+  /// calls [fn] with it.
+  ///
+  /// The connection must not be used after [fn] returns as it could be used by
+  /// another [withConnection] call later.
   Future<R> withConnection<R>(
     Future<R> Function(PgConnection connection) fn, {
     PgSessionSettings? sessionSettings,
@@ -107,10 +112,7 @@ abstract class PgSession {
   ///
   /// When the returned future completes, the statement must eventually be freed
   /// using [PgStatement.close] to avoid resource leaks.
-  Future<PgStatement> prepare(
-    Object /* String | PgSql */ query, {
-    Duration? timeout,
-  });
+  Future<PgStatement> prepare(Object /* String | PgSql */ query);
 
   /// Executes the [query] with the given [parameters].
   ///
@@ -129,7 +131,6 @@ abstract class PgSession {
     Object /* String | PgSql */ query, {
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
         parameters,
-    Duration? timeout,
     bool ignoreRows = false,
   });
 
@@ -187,9 +188,8 @@ abstract class PgStatement {
 
   Future<PgResult> run(
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
-        parameters, {
-    Duration? timeout,
-  }) async {
+        parameters,
+  ) async {
     final items = <PgResultRow>[];
     final subscription = bind(parameters).listen(items.add);
     await subscription.asFuture();
@@ -342,9 +342,8 @@ final class PgSessionSettings {
   // Duration(seconds: 15)
   final Duration? connectTimeout;
   // Duration(minutes: 5)
-  final Duration? queryTimeout;
   final String? timeZone;
-  final Encoding? encoding;
+
   final bool Function(X509Certificate)? onBadSslCertificate;
 
   /// An optional [StreamChannelTransformer] sitting behind the postgres client
@@ -361,9 +360,7 @@ final class PgSessionSettings {
 
   PgSessionSettings({
     this.connectTimeout,
-    this.queryTimeout,
     this.timeZone,
-    this.encoding,
     this.onBadSslCertificate,
     this.transformer,
   });
@@ -371,18 +368,8 @@ final class PgSessionSettings {
 
 final class PgPoolSettings {
   final int? maxConnectionCount;
-  final Duration? idleTestThreshold;
-  final Duration? maxConnectionAge;
-  final Duration? maxSessionUse;
-  final int? maxErrorCount;
-  final int? maxQueryCount;
 
-  PgPoolSettings({
+  const PgPoolSettings({
     this.maxConnectionCount,
-    this.idleTestThreshold,
-    this.maxConnectionAge,
-    this.maxSessionUse,
-    this.maxErrorCount,
-    this.maxQueryCount,
   });
 }
