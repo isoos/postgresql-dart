@@ -119,13 +119,15 @@ class PoolImplementation implements PgPool {
       final poolConnection = _PoolConnection(connection.connection);
       return await fn(poolConnection);
     } finally {
-      connection?.isInUse = false;
       resource.release();
 
       // If the pool has been closed, this connection needs to be closed as
       // well.
       if (_pool.isClosed) {
         await connection?.connection.close();
+      } else {
+        // Allow the connection to be re-used later.
+        connection?.isInUse = false;
       }
     }
   }
