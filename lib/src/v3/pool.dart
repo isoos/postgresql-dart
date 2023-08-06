@@ -107,7 +107,10 @@ class PoolImplementation implements PgPool {
     try {
       if (connection == null) {
         connection ??= _OpenedConnection(
-          await PgConnectionImplementation.connect(_nextEndpoint),
+          await PgConnectionImplementation.connect(
+            _nextEndpoint,
+            sessionSettings: sessionSettings ?? this.sessionSettings,
+          ),
         );
         _openConnections.add(connection);
       }

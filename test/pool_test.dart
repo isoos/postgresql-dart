@@ -12,13 +12,27 @@ final _endpoint = PgEndpoint(
   password: 'dart',
 );
 
+final _sessionSettings = PgSessionSettings(
+  // To test SSL, we're running postgres with a self-signed certificate.
+  onBadSslCertificate: (cert) => true,
+);
+
 void main() {
   usePostgresDocker();
 
   group('generic', () {
     late PgPool pool;
 
-    setUp(() => pool = PgPool.open([_endpoint]));
+    setUp(() async {
+      pool = PgPool(
+        [_endpoint],
+        sessionSettings: _sessionSettings,
+      );
+
+      // We can't write to the public schema by default in postgres 15, so
+      // create one for this test.
+      await pool.execute('CREATE SCHEMA IF NOT EXISTS test');
+    });
     tearDown(() => pool.close());
 
     test('does not support channels', () {
@@ -41,35 +55,35 @@ void main() {
       // The table can't be temporary because it needs to be visible across
       // connections.
       await pool.execute(
-          'CREATE TABLE IF NOT EXISTS transaction_test (bar INTEGER);');
-      addTearDown(() => pool.execute('DROP TABLE transaction_test;'));
+          'CREATE TABLE IF NOT EXISTS test.transactions (bar INTEGER);');
+      addTearDown(() => pool.execute('DROP TABLE test.transactions;'));
 
       final completeTransaction = Completer();
       final transaction = pool.runTx((session) async {
         await pool
-            .execute('INSERT INTO transaction_test VALUES (1), (2), (3);');
+            .execute('INSERT INTO test.transactions VALUES (1), (2), (3);');
         await completeTransaction.future;
       });
 
-      var rows = await pool.execute('SELECT * FROM transaction_test');
+      var rows = await pool.execute('SELECT * FROM test.transactions');
       expect(rows, isEmpty);
 
       completeTransaction.complete();
       await transaction;
 
-      rows = await pool.execute('SELECT * FROM transaction_test');
+      rows = await pool.execute('SELECT * FROM test.transactions');
       expect(rows, hasLength(3));
     });
 
     test('can use prepared statements', () async {
       await pool
-          .execute('CREATE TABLE IF NOT EXISTS statements_test (bar INTEGER);');
-      addTearDown(() => pool.execute('DROP TABLE statements_test;'));
+          .execute('CREATE TABLE IF NOT EXISTS test.statements (bar INTEGER);');
+      addTearDown(() => pool.execute('DROP TABLE test.statements;'));
 
-      final stmt = await pool.prepare('SELECT * FROM statements_test');
+      final stmt = await pool.prepare('SELECT * FROM test.statements');
       expect(await stmt.run([]), isEmpty);
 
-      await pool.execute('INSERT INTO statements_test VALUES (1), (2), (3);');
+      await pool.execute('INSERT INTO test.statements VALUES (1), (2), (3);');
 
       expect(await stmt.run([]), hasLength(3));
       await stmt.dispose();
@@ -77,29 +91,30 @@ void main() {
   });
 
   test('can limit concurrent connections', () async {
-    final pool = PgPool.open(
+    final pool = PgPool(
       [_endpoint],
+      sessionSettings: _sessionSettings,
       poolSettings: const PgPoolSettings(maxConnectionCount: 2),
     );
     addTearDown(pool.close);
 
-    final wait = Completer();
+    final completeFirstTwo = Completer();
+    final didInvokeThird = Completer();
 
     // Take two connections
-    unawaited(pool.withConnection((connection) => wait.future));
-    unawaited(pool.withConnection((connection) => wait.future));
+    unawaited(pool.withConnection((connection) => completeFirstTwo.future));
+    unawaited(pool.withConnection((connection) => completeFirstTwo.future));
 
     // Creating a third one should block.
-    var didInvokeCallback = false;
+
     unawaited(pool.withConnection((connection) async {
-      didInvokeCallback = true;
+      didInvokeThird.complete();
     }));
 
     await pumpEventQueue();
-    expect(didInvokeCallback, isFalse);
+    expect(didInvokeThird.isCompleted, isFalse);
 
-    wait.complete();
-    await pumpEventQueue();
-    expect(didInvokeCallback, isTrue);
+    completeFirstTwo.complete();
+    await didInvokeThird.future;
   });
 }

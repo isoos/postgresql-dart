@@ -13,7 +13,7 @@ import 'src/v3/types.dart';
 export 'src/v3/types.dart';
 
 abstract class PgPool implements PgSession, PgSessionExecutor {
-  static PgPool open(
+  factory PgPool(
     List<PgEndpoint> endpoints, {
     PgSessionSettings? sessionSettings,
     PgPoolSettings? poolSettings,
