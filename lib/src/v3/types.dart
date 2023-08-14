@@ -127,15 +127,23 @@ enum PgDataType<Dart extends Object> {
   final int? oid;
 
   Codec<Dart?, Uint8List?> binaryCodec(Encoding charset) {
-    return _binaryCodecs.putIfAbsent(
-            this, () => _BinaryTypeCodec<Dart>(this, charset))
-        as Codec<Dart?, Uint8List?>;
+    if (charset is Utf8Codec) {
+      return _binaryCodecs.putIfAbsent(
+              this, () => _BinaryTypeCodec<Dart>(this, charset))
+          as Codec<Dart?, Uint8List?>;
+    } else {
+      return _BinaryTypeCodec<Dart>(this, charset);
+    }
   }
 
   Codec<Dart?, Uint8List?> textCodec(Encoding charset) {
-    return _textCodecs.putIfAbsent(
-            this, () => _TextTypeCodec<Dart>(this, charset))
-        as Codec<Dart?, Uint8List?>;
+    if (charset is Utf8Codec) {
+      return _textCodecs.putIfAbsent(
+              this, () => _TextTypeCodec<Dart>(this, charset))
+          as Codec<Dart?, Uint8List?>;
+    } else {
+      return _TextTypeCodec<Dart>(this, charset);
+    }
   }
 
   const PgDataType(this.oid);

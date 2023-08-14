@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
 
-import '../postgres.dart';
+
 import 'server_messages.dart';
 import 'shared_messages.dart';
 

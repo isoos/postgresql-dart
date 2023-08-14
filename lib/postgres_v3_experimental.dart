@@ -230,7 +230,7 @@ class PgSessionSettings {
   // Duration(minutes: 5)
   final Duration? queryTimeout;
   final String? timeZone;
-  final Encoding encoding;
+  final Encoding? encoding;
   final bool Function(X509Certificate)? onBadSslCertificate;
 
   /// An optional [StreamChannelTransformer] sitting behind the postgres client
@@ -249,7 +249,7 @@ class PgSessionSettings {
     this.connectTimeout,
     this.queryTimeout,
     this.timeZone,
-    required this.encoding,
+    this.encoding,
     this.onBadSslCertificate,
     this.transformer,
   });

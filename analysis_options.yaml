@@ -8,7 +8,7 @@ include: package:lints/recommended.yaml
 analyzer:
   errors:
     unused_element: error
-    unused_import: ignore
+    unused_import: error
     unused_local_variable: error
     dead_code: error
     constant_identifier_names: ignore

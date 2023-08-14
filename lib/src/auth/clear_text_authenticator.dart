@@ -22,8 +22,7 @@ class ClearAuthenticator extends PostgresAuthenticator {
 class ClearMessage extends ClientMessage {
   EncodedString? _authString;
 
-  ClearMessage(String password, Encoding encoding) {
-      //TODO verificar se aqui tem que ser ascii em vez do charset padão da conexão
+  ClearMessage(String password, Encoding encoding) {     
     _authString = EncodedString(password, encoding);
   }
 

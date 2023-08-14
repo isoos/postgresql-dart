@@ -478,16 +478,14 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
       case PostgreSQLDataType.timestampWithTimezone:
         try {
           final value = buffer.getInt64(0);
-          // SELECT * FROM pg_authid where rolname ='sw.mqueiroz'
-          // value = 9223372036854775807 PostgreSQL 14 if value is infinity
-      
+          // SELECT * FROM pg_authid where rolname ='postgres'
+          // value = 9223372036854775807 PostgreSQL 14 if value is infinity      
           // value = 4739373075810553430 PostgreSQL 8.2.21 bug
           // value =  725968771477000 PostgreSQL PostgreSQL 15.3
           // value = 725968771477000 PostgreSQL 14.6
           // value = 725968771477000 PostgreSQL 8.1.11
           // value = 725968771477000 PostgreSQL 8.2.23
-          final date = DateTime.utc(2000).add(Duration(microseconds: value));
-          // final date = DateTime.fromMicrosecondsSinceEpoch(value, isUtc: false);
+          final date = DateTime.utc(2000).add(Duration(microseconds: value));        
           return date as T;
         } catch (e) {
           return null;

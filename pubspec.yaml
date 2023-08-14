@@ -17,7 +17,7 @@ dependencies:
   meta: ^1.8.0
   pool: ^1.5.1
   stack_trace: ^1.11.0
- 
+  
 
 dev_dependencies:
   lints: ^2.0.0
