@@ -1,4 +1,4 @@
-/*import 'dart:async';
+import 'dart:async';
 
 import 'package:async/async.dart';
 import 'package:postgres/messages.dart';
@@ -149,4 +149,3 @@ void main() {
 
 final _isPostgresException = isA<PostgreSQLException>();
 final _throwsPostgresException = throwsA(_isPostgresException);
-*/

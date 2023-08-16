@@ -62,22 +62,45 @@ class Query<T> {
   }
 
   void sendSimple(Socket socket) {
-    //final sqlString = PostgreSQLFormat.substitute(statement, substitutionValues as Map<String, dynamic>?);
-    final sqlString = _formatSql([], []);
+    // final sqlString = PostgreSQLFormat.substitute(
+    //     statement, substitutionValues as Map<String, dynamic>?);
+    final sqlString = _formatSql([], [], isSimple: true);
     final queryMessage = QueryMessage(sqlString, connection.encoding);
     socket.add(queryMessage.asBytes());
   }
 
+  /// prepare replacement values for placeholders only when identifier is question mark
+  /// [cb] callback for each prepared parameter
+  void _prepareSubstitutionValues(
+      {void Function(Map<String, dynamic> params, String key)? cb}) {
+    final params = <String, dynamic>{};
+    if (substitutionValues is List) {
+      for (var i = 0; i < (substitutionValues.length as int); i++) {
+        final key = 'param$i';
+        params[key] = substitutionValues[i];
+
+        if (cb != null) {
+          cb(params, key);
+        }
+      }
+      substitutionValues = params;
+    }
+  }
+
+  /// format SQL to run
   String _formatSql(List<PostgreSQLFormatIdentifier> formatIdentifiers,
-      List<ParameterValue> parameterList) {
+      List<ParameterValue> parameterList,
+      {bool isSimple = false}) {
     switch (placeholderIdentifier) {
       case PlaceholderIdentifier.atSign:
         final sqlString = PostgreSQLFormat.substitute(
             statement, substitutionValues as Map<String, dynamic>?,
-            replace: (PostgreSQLFormatIdentifier identifier, int index) {
-          formatIdentifiers.add(identifier);
-          return '\$$index';
-        });
+            replace: isSimple
+                ? null
+                : (PostgreSQLFormatIdentifier identifier, int index) {
+                    formatIdentifiers.add(identifier);
+                    return '\$$index';
+                  });
 
         for (var id in formatIdentifiers) {
           parameterList.add(ParameterValue(
@@ -89,20 +112,12 @@ class Query<T> {
         return sqlString;
 
       case PlaceholderIdentifier.onlyQuestionMark:
-        if (substitutionValues is List) {
-          final map = <String, dynamic>{};
-
-          for (var i = 0; i < (substitutionValues.length as int); i++) {
-            final key = 'param$i';
-            map[key] = substitutionValues[i];
-            final identifier = PostgreSQLFormatIdentifier('@$key');
-            formatIdentifiers.add(identifier);
-            parameterList
-                .add(ParameterValue(identifier, map, connection.encoding));
-          }
-
-          substitutionValues = map;
-        }
+        _prepareSubstitutionValues(cb: (map, key) {
+          final identifier = PostgreSQLFormatIdentifier('@$key');
+          formatIdentifiers.add(identifier);
+          parameterList
+              .add(ParameterValue(identifier, map, connection.encoding));
+        });
         return toStatement2(statement);
 
       // case PlaceholderIdentifier.colon:
@@ -117,12 +132,7 @@ class Query<T> {
   void sendExtended(Socket socket, {CachedQuery? cacheQuery}) {
     if (cacheQuery != null) {
       if (placeholderIdentifier == PlaceholderIdentifier.onlyQuestionMark) {
-        final map = <String, dynamic>{};
-        for (var i = 0; i < (substitutionValues.length as int); i++) {
-          final key = 'param$i';
-          map[key] = substitutionValues[i];
-        }
-        substitutionValues = map;
+        _prepareSubstitutionValues();
       }
 
       fieldDescriptions = cacheQuery.fieldDescriptions!;
