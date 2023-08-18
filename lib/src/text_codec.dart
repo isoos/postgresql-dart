@@ -57,7 +57,7 @@ class PostgresTextEncoder extends Converter<Object, String> {
     }
 
     final backslashCodeUnit = r'\'.codeUnitAt(0);
-    final quoteCodeUnit = r"'".codeUnitAt(0);
+    final quoteCodeUnit = "'".codeUnitAt(0);
 
     var quoteCount = 0;
     var backslashCount = 0;

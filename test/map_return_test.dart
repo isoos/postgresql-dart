@@ -142,7 +142,7 @@ void clearOidQueryCount(PostgreSQLConnection connection) {
           dm.simpleName.toString().contains('_oidCache'));
   // TODO(eseidel): Fix this by using @visibleForTesting instead of mirrors?
   // ignore: avoid_dynamic_calls
-  (reflect(connection).getField(oidCacheMirror.simpleName).reflectee).clear();
+  reflect(connection).getField(oidCacheMirror.simpleName).reflectee.clear();
 }
 
 int getOidQueryCount(PostgreSQLConnection connection) {
@@ -154,6 +154,8 @@ int getOidQueryCount(PostgreSQLConnection connection) {
           dm.simpleName.toString().contains('_oidCache'));
   // TODO(eseidel): Fix this by using @visibleForTesting instead of mirrors?
   // ignore: avoid_dynamic_calls
-  return (reflect(connection).getField(oidCacheMirror.simpleName).reflectee)
+  return reflect(connection)
+      .getField(oidCacheMirror.simpleName)
+      .reflectee
       .queryCount as int;
 }

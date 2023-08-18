@@ -45,9 +45,9 @@ class PostgreSQLException implements Exception {
   }
 
   PostgreSQLException._(List<ErrorField> errorFields) {
-    ErrorField finder(int identifer) => (errorFields.firstWhere(
-        (ErrorField e) => e.identificationToken == identifer,
-        orElse: () => ErrorField(null, null)));
+    ErrorField finder(int identifier) => errorFields.firstWhere(
+        (ErrorField e) => e.identificationToken == identifier,
+        orElse: () => ErrorField(null, null));
 
     severity = ErrorField.severityFromString(
         finder(ErrorField.SeverityIdentifier).text);
