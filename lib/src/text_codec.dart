@@ -243,6 +243,9 @@ class PostgresTextDecoder<T extends Object> extends Converter<Uint8List?, T?> {
         return num.parse(asText) as T;
       case PgDataType.boolean:
         return (asText == 'true') as T;
+
+      // We could list out all cases, but it's about 20 lines of code.
+      // ignore: no_default_cases
       default:
         throw UnimplementedError('Text decoding for $_dataType');
     }
