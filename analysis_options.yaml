@@ -36,6 +36,7 @@ linter:
   - prefer_conditional_assignment
   - prefer_contains
   - prefer_final_fields
+  - prefer_final_in_for_each
   - prefer_final_locals
   - prefer_initializing_formals
   - prefer_interpolation_to_compose_strings
