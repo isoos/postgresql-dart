@@ -40,7 +40,7 @@ class LSN {
     final upperhalf = int.parse(halves[0], radix: 16) << 32;
     final lowerhalf = int.parse(halves[1], radix: 16);
 
-    return (upperhalf + lowerhalf).toInt();
+    return upperhalf + lowerhalf;
   }
 
   LSN operator +(LSN other) {
