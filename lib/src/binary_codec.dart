@@ -354,7 +354,7 @@ class PostgresBinaryEncoder<T extends Object>
     writer.writeInt32(value.length); // size
     writer.writeInt32(1); // index
 
-    for (var i in value) {
+    for (final i in value) {
       final len = lengthEncoder(i);
       writer.writeInt32(len);
       valueEncoder(writer, i);
