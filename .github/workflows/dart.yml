@@ -44,6 +44,17 @@ jobs:
       #   This is mainly to prevent `tearDownAll` in `usePostgresDocker` from stoping
       #   the container while another test is using the container. In other words, each
       #   test file will call `usePostgresDocker` for container setup and teardown and  
-      #   run its test in between. Using concurrency of "1" will ensure this behavior.   
+      #   run its test in between. Using concurrency of "1" will ensure this behavior.
+      # Save coverage information in the "coverage" folder.
       - name: Run tests
-        run: dart test -j 1
+        run: dart test -j 1 --coverage=coverage
+
+      # https://www.bradcypert.com/how-to-upload-coverage-to-codecov-for-dart/
+      - name: Install coverage tools
+        run: dart pub global activate coverage
+
+      - name: format coverage
+        run: $HOME/.pub-cache/bin/format_coverage --lcov --in=coverage --out=coverage.lcov --report-on=lib
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
