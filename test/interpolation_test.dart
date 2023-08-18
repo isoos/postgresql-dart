@@ -102,16 +102,16 @@ void main() {
   });
 
   test('UTF16 symbols with backslash', () {
-    final value = "'©\\™®'";
+    final value = r"'©\™®'";
     final results = PostgreSQLFormat.substitute(
         'INSERT INTO t (t) VALUES (@t)', {'t': value});
 
-    expect(results, "INSERT INTO t (t) VALUES ( E'''©\\\\™®''')");
+    expect(results, r"INSERT INTO t (t) VALUES ( E'''©\\™®''')");
   });
 
   test('String identifiers get escaped', () {
     final result = PostgreSQLFormat.substitute(
-        '@id:text @foo', {'id': "1';select", 'foo': '3\\4'});
+        '@id:text @foo', {'id': "1';select", 'foo': r'3\4'});
 
     //                         '  1  '  '  ;  s   e   l   e   c  t   '  sp  sp  E  '  3  \  \  4  '
     expect(utf8.encode(result), [

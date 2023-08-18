@@ -9,7 +9,7 @@ import 'auth.dart';
 class MD5Authenticator extends PostgresAuthenticator {
   static final String name = 'MD5';
 
-  MD5Authenticator(PostgresAuthConnection connection) : super(connection);
+  MD5Authenticator(super.connection);
 
   @override
   void onMessage(AuthenticationMessage message) {

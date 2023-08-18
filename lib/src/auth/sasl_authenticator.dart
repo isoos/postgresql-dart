@@ -13,9 +13,7 @@ import 'auth.dart';
 class PostgresSaslAuthenticator extends PostgresAuthenticator {
   final SaslAuthenticator authenticator;
 
-  PostgresSaslAuthenticator(
-      PostgresAuthConnection connection, this.authenticator)
-      : super(connection);
+  PostgresSaslAuthenticator(super.connection, this.authenticator);
 
   @override
   void onMessage(AuthenticationMessage message) {
