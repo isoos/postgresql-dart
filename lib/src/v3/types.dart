@@ -4,11 +4,13 @@ import 'dart:core' as core;
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:meta/meta.dart';
 
 import '../binary_codec.dart';
 import '../text_codec.dart';
 
 /// Describes PostgreSQL's geometric type: `point`.
+@immutable
 class PgPoint {
   final double latitude;
   final double longitude;
@@ -23,7 +25,7 @@ class PgPoint {
           longitude == other.longitude;
 
   @override
-  int get hashCode => latitude.hashCode ^ longitude.hashCode;
+  int get hashCode => Object.hash(latitude, longitude);
 }
 
 /// Supported data types.

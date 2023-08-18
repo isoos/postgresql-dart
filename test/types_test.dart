@@ -16,4 +16,12 @@ void main() {
       expect(lsn.toString(), '16/B374D848');
     });
   });
+
+  group('PgPoint type', () {
+    test('- PgPoint hashcode', () {
+      final point = PgPoint(1.0, 2.0);
+      final point2 = PgPoint(2.0, 1.0);
+      expect(point.hashCode, isNot(point2.hashCode));
+    });
+  });
 }
