@@ -105,14 +105,12 @@ class VariableTokenizer {
               _blockComment();
               continue nextToken;
             }
-            break;
           case $minus:
             // `--`, line comment
             if (_consumeIfMatches($minus)) {
               _lineComment();
               continue nextToken;
             }
-            break;
           case $doubleQuote:
             // Double quote has already been consumed, but is part of the identifier
             // Note that this also handles identifiers with unicode escape

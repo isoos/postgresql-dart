@@ -394,12 +394,10 @@ class TupleData {
         case TupleDataType.binaryType:
           length = reader.readUint32();
           data = reader.read(length);
-          break;
         case TupleDataType.nullType:
         case TupleDataType.toastType:
           length = 0;
           data = Uint8List(0);
-          break;
       }
       columns.add(
         TupleDataColumn(
@@ -566,7 +564,6 @@ class DeleteMessage implements LogicalReplicationMessage {
       case DeleteMessageTuple.keyType:
       case DeleteMessageTuple.oldType:
         oldTuple = TupleData(reader);
-        break;
       default:
         throw Exception('Unknown tuple type for DeleteMessage');
     }

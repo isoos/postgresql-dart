@@ -28,7 +28,6 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
           throw PostgreSQLException('KindSASL: No bytes to send');
         }
         msg = SaslClientFirstMessage(bytesToSend, authenticator.mechanism.name);
-        break;
       case AuthenticationMessage.KindSASLContinue:
         final bytesToSend = authenticator.handleMessage(
             SaslMessageType.AuthenticationSASLContinue, message.bytes);
@@ -36,7 +35,6 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
           throw PostgreSQLException('KindSASLContinue: No bytes to send');
         }
         msg = SaslClientLastMessage(bytesToSend);
-        break;
       case AuthenticationMessage.KindSASLFinal:
         authenticator.handleMessage(
             SaslMessageType.AuthenticationSASLFinal, message.bytes);

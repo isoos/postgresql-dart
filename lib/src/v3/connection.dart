@@ -725,7 +725,6 @@ class _AuthenticationProcedure extends _PendingOperation {
           break;
         case AuthenticationMessage.KindMD5Password:
           _initializeAuthenticate(message, AuthenticationScheme.md5);
-          break;
         case AuthenticationMessage.KindClearTextPassword:
           if (!connection._settings.endpoint.allowCleartextPassword) {
             _done.completeError(
@@ -738,14 +737,11 @@ class _AuthenticationProcedure extends _PendingOperation {
           }
 
           _initializeAuthenticate(message, AuthenticationScheme.clear);
-          break;
         case AuthenticationMessage.KindSASL:
           _initializeAuthenticate(message, AuthenticationScheme.scramSha256);
-          break;
         case AuthenticationMessage.KindSASLContinue:
         case AuthenticationMessage.KindSASLFinal:
           _authenticator.onMessage(message);
-          break;
         default:
           _done.completeError(PostgreSQLException('Unhandled auth mechanism'));
       }
