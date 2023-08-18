@@ -17,6 +17,7 @@ linter:
   rules:
     # see catalogue here: http://dart-lang.github.io/linter/lints/
   - annotate_overrides
+  - avoid_dynamic_calls
   - avoid_unused_constructor_parameters
   - await_only_futures
   - camel_case_types

@@ -179,7 +179,8 @@ class PostgresTextEncoder extends Converter<Object, String> {
       return '{}';
     }
 
-    final type = value.fold(value.first.runtimeType, (type, item) {
+    final first = value.first as Object?;
+    final type = value.fold(first.runtimeType, (type, item) {
       if (type == item.runtimeType) {
         return type;
       } else if ((type == int || type == double) && item is num) {

@@ -362,12 +362,15 @@ class UnknownMessage extends ServerMessage {
 
   @override
   bool operator ==(dynamic other) {
+    if (other is! UnknownMessage) {
+      return false;
+    }
     if (bytes != null) {
-      if (bytes!.length != other.bytes.length) {
+      if (bytes!.length != other.bytes?.length) {
         return false;
       }
       for (var i = 0; i < bytes!.length; i++) {
-        if (bytes![i] != other.bytes[i]) {
+        if (bytes![i] != other.bytes?[i]) {
           return false;
         }
       }

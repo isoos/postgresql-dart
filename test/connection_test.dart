@@ -247,7 +247,7 @@ void main() {
       await conn.open();
 
       final rs = await conn.query('select 1');
-      final errors = [];
+      final errors = <PostgreSQLException>[];
       PostgreSQLResult catcher(e) {
         errors.add(e);
         return rs;
@@ -276,7 +276,7 @@ void main() {
       await conn.open();
       final rs = await conn.query('select 1');
 
-      final errors = [];
+      final errors = <PostgreSQLException>[];
       PostgreSQLResult catcher(e) {
         errors.add(e);
         return rs;
