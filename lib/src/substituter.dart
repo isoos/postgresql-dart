@@ -27,24 +27,28 @@ class PostgreSQLFormat {
     PostgreSQLFormatToken? currentPtr;
     final iterator = RuneIterator(fmtString);
 
+    PostgreSQLFormatToken startToken(
+        PostgreSQLFormatTokenType type, int charCode) {
+      final token = PostgreSQLFormatToken(type);
+      token.buffer.writeCharCode(charCode);
+      items.add(token);
+      return token;
+    }
+
+    PostgreSQLFormatToken startVariable(int charCode) =>
+        startToken(PostgreSQLFormatTokenType.variable, charCode);
+    PostgreSQLFormatToken startText(int charCode) =>
+        startToken(PostgreSQLFormatTokenType.text, charCode);
+
     while (iterator.moveNext()) {
       if (currentPtr == null) {
-        if (iterator.current == _atSignCodeUnit) {
-          currentPtr =
-              PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
-          currentPtr.buffer.writeCharCode(iterator.current);
-          items.add(currentPtr);
-        } else {
-          currentPtr = PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
-          currentPtr.buffer.writeCharCode(iterator.current);
-          items.add(currentPtr);
-        }
+        final type = iterator.current == _atSignCodeUnit
+            ? PostgreSQLFormatTokenType.variable
+            : PostgreSQLFormatTokenType.text;
+        currentPtr = startToken(type, iterator.current);
       } else if (currentPtr.type == PostgreSQLFormatTokenType.text) {
         if (iterator.current == _atSignCodeUnit) {
-          currentPtr =
-              PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
-          currentPtr.buffer.writeCharCode(iterator.current);
-          items.add(currentPtr);
+          currentPtr = startVariable(iterator.current);
         } else {
           currentPtr.buffer.writeCharCode(iterator.current);
         }
@@ -55,18 +59,13 @@ class PostgreSQLFormat {
             currentPtr.buffer.writeCharCode(iterator.current);
             currentPtr.type = PostgreSQLFormatTokenType.text;
           } else {
-            currentPtr =
-                PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
-            currentPtr.buffer.writeCharCode(iterator.current);
-            items.add(currentPtr);
+            currentPtr = startVariable(iterator.current);
           }
           iterator.moveNext();
         } else if (_isIdentifier(iterator.current)) {
           currentPtr.buffer.writeCharCode(iterator.current);
         } else {
-          currentPtr = PostgreSQLFormatToken(PostgreSQLFormatTokenType.text);
-          currentPtr.buffer.writeCharCode(iterator.current);
-          items.add(currentPtr);
+          currentPtr = startText(iterator.current);
         }
       }
     }
