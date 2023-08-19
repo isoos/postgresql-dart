@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:postgres/src/replication.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/v3/connection.dart';
@@ -359,11 +360,26 @@ final class PgSessionSettings {
   /// For an example, see `example/v3/transformer.dart`.
   final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
 
+  /// The replication mode for connecting in streaming replication mode.
+  ///
+  /// The default value is [ReplicationMode.none]. But when the value is set to 
+  /// [ReplicationMode.physical] or [ReplicationMode.logical], the connection 
+  /// will be established in replication mode.
+  ///
+  /// Please note, while in replication mode, only the Simple Query Protcol can
+  /// be used to execute queries. 
+  ///
+  /// For more info, see [Streaming Replication Protocol]
+  ///
+  /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
+  final ReplicationMode replicationMode;
+
   PgSessionSettings({
     this.connectTimeout,
     this.timeZone,
     this.onBadSslCertificate,
     this.transformer,
+    this.replicationMode = ReplicationMode.none
   });
 }
 

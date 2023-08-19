@@ -8,6 +8,7 @@ import 'package:collection/collection.dart';
 import 'package:pool/pool.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:postgres/src/query.dart';
+import 'package:postgres/src/replication.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../auth/auth.dart';
@@ -37,6 +38,8 @@ class _ResolvedSettings {
   final String timeZone;
   //final Encoding encoding;
 
+  final ReplicationMode replicationMode;
+
   final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
 
   _ResolvedSettings(
@@ -49,7 +52,8 @@ class _ResolvedSettings {
         //queryTimeout = settings?.connectTimeout ?? const Duration(minutes: 5),
         timeZone = settings?.timeZone ?? 'UTC',
         // encoding = settings?.encoding ?? utf8,
-        transformer = settings?.transformer;
+        transformer = settings?.transformer,
+        replicationMode = settings?.replicationMode ?? ReplicationMode.none;
 
   bool onBadSslCertificate(X509Certificate certificate) {
     return settings?.onBadSslCertificate?.call(certificate) ?? false;
@@ -304,7 +308,7 @@ class PgConnectionImplementation extends _PgSessionBase
         _settings.endpoint.database,
         _settings.timeZone,
         username: _settings.username,
-        // todo: Replication
+        replication: _settings.replicationMode,
       ));
 
       return result._done.future;
