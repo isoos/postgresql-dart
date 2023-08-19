@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
 import 'package:postgres/src/v3/types.dart';
 
-import '../postgres.dart' show PostgreSQLException;
 import 'types.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;
@@ -335,9 +334,6 @@ class PostgresBinaryEncoder<T extends Object>
           throw FormatException(
               'Invalid type for parameter value. Expected: List<Object> Got: ${input.runtimeType}');
         }
-
-      default:
-        throw PostgreSQLException('Unsupported datatype');
     }
   }
 
@@ -565,7 +561,9 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
           return json.decode(utf8.decode(bytes));
         }) as T;
 
-      default:
+      case PostgreSQLDataType.unknownType:
+      // TODO(eseidel): This looks wrong for null?
+      case null:
         {
           // We'll try and decode this as a utf8 string and return that
           // for many internal types, this is valid. If it fails,

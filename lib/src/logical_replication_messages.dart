@@ -83,7 +83,6 @@ LogicalReplicationMessage? tryParseLogicalReplicationMessage(
       return TruncateMessage(bytes);
 
     case LogicalReplicationMessageTypes.Unsupported:
-    default:
       // note this needs the full set of bytes unlike other cases
       return _tryParseJsonMessage(bytesList);
   }
@@ -567,7 +566,7 @@ class DeleteMessage implements LogicalReplicationMessage {
       case DeleteMessageTuple.oldType:
         oldTuple = TupleData(reader);
         break;
-      default:
+      case DeleteMessageTuple.unknown:
         throw Exception('Unknown tuple type for DeleteMessage');
     }
   }

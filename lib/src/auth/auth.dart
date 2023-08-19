@@ -2,7 +2,6 @@ import 'package:crypto/crypto.dart';
 import 'package:sasl_scram/sasl_scram.dart';
 
 import '../../messages.dart';
-import '../../postgres.dart';
 import 'clear_text_authenticator.dart';
 import 'md5_authenticator.dart';
 import 'sasl_authenticator.dart';
@@ -50,7 +49,5 @@ PostgresAuthenticator createAuthenticator(PostgresAuthConnection connection,
           connection, ScramAuthenticator('SCRAM-SHA-256', sha256, credentials));
     case AuthenticationScheme.clear:
       return ClearAuthenticator(connection);
-    default:
-      throw PostgreSQLException("Authenticator wasn't specified");
   }
 }
