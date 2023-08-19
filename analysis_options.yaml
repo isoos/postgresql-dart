@@ -57,5 +57,7 @@ linter:
   - unnecessary_statements
   - unnecessary_this
   - unrelated_type_equality_checks
+  - use_raw_strings
   - use_rethrow_when_possible
+  - use_super_parameters
   - valid_regexps

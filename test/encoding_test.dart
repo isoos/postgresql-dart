@@ -548,11 +548,11 @@ void main() {
           utf8.encode(encoder.convert("''")), equals([39, 39, 39, 39, 39, 39]));
 
       //                                                       sp   E   '   \   \   '   '   '   '   '
-      expect(utf8.encode(encoder.convert("\\''")),
+      expect(utf8.encode(encoder.convert(r"\''")),
           equals([32, 69, 39, 92, 92, 39, 39, 39, 39, 39]));
 
       //                                                      sp   E   '   \   \   '   '   '
-      expect(utf8.encode(encoder.convert("\\'")),
+      expect(utf8.encode(encoder.convert(r"\'")),
           equals([32, 69, 39, 92, 92, 39, 39, 39]));
     });
 

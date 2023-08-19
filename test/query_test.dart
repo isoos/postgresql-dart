@@ -79,10 +79,10 @@ void main() {
           'INSERT INTO t (t) values '
           '(${PostgreSQLFormat.id('t', type: PostgreSQLDataType.text)})',
           substitutionValues: {
-            't': "°\\'©™®'",
+            't': r"°\'©™®'",
           });
 
-      final expectedRow = ["°\\'©™®'"];
+      final expectedRow = [r"°\'©™®'"];
 
       final result = await connection.query('select t from t');
       expect(result, [expectedRow]);
