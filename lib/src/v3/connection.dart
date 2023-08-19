@@ -125,18 +125,18 @@ abstract class _PgSessionBase implements PgSession {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(parameters);
 
-    if (useSimpleQueryProtocol || (ignoreRows && !variables.isNotEmpty)) {
+    if (useSimpleQueryProtocol || (ignoreRows && variables.isEmpty)) {
       // Great, we can just run a simple query.
       final controller = StreamController<PgResultRow>();
       final items = <PgResultRow>[];
 
-      final querySubscription =
-          _PgResultStreamSubscription.simpleQueryProtocol(
-              description.transformedSql,
-              this,
-              controller,
-              controller.stream.listen(items.add),
-              ignoreRows);
+      final querySubscription = _PgResultStreamSubscription.simpleQueryProtocol(
+        description.transformedSql,
+        this,
+        controller,
+        controller.stream.listen(items.add),
+        ignoreRows,
+      );
       await querySubscription.asFuture();
       await querySubscription.cancel();
 

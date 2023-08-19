@@ -133,7 +133,6 @@ abstract class PgSession {
   /// When [useSimpleQueryProtocol] is set to true, the implementation will use
   /// the Simple Query Protocol. Please note, a query with [parameters] cannot
   /// be used with this protocol. 
-  /// 
   Future<PgResult> execute(
     Object /* String | PgSql */ query, {
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
