@@ -129,11 +129,17 @@ abstract class PgSession {
   /// optimization can be applied also depends on the parameters chosen, so
   /// there is no guarantee that the [PgResult] from a [ignoreRows] excution has
   /// no rows.
+  /// 
+  /// When [useSimpleQueryProtocol] is set to true, the implementation will use
+  /// the Simple Query Protocol. Please note, a query with [parameters] cannot
+  /// be used with this protocol. 
+  /// 
   Future<PgResult> execute(
     Object /* String | PgSql */ query, {
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
         parameters,
     bool ignoreRows = false,
+    bool useSimpleQueryProtocol = false,
   });
 
   /// Closes this session, cleaning up resources and forbiding further calls to

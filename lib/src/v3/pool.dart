@@ -42,12 +42,17 @@ class PoolImplementation implements PgPool {
   }
 
   @override
-  Future<PgResult> execute(Object query,
-      {Object? parameters, bool ignoreRows = false}) {
+  Future<PgResult> execute(
+    Object query, {
+    Object? parameters,
+    bool ignoreRows = false,
+    bool useSimpleQueryProtocol = false,
+  }) {
     return withConnection((connection) => connection.execute(
           query,
           parameters: parameters,
           ignoreRows: ignoreRows,
+          useSimpleQueryProtocol: useSimpleQueryProtocol,
         ));
   }
 
@@ -161,12 +166,17 @@ class _PoolConnection implements PgConnection {
   }
 
   @override
-  Future<PgResult> execute(Object query,
-      {Object? parameters, bool ignoreRows = false}) {
+  Future<PgResult> execute(
+    Object query, {
+    Object? parameters,
+    bool ignoreRows = false,
+    bool useSimpleQueryProtocol = false,
+  }) {
     return _connection.execute(
       query,
       parameters: parameters,
       ignoreRows: ignoreRows,
+      useSimpleQueryProtocol: useSimpleQueryProtocol,
     );
   }
 

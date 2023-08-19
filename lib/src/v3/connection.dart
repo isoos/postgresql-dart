@@ -120,36 +120,37 @@ abstract class _PgSessionBase implements PgSession {
     Object query, {
     Object? parameters,
     bool ignoreRows = false,
+    bool useSimpleQueryProtocol = false,
   }) async {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(parameters);
 
-    if (!ignoreRows || variables.isNotEmpty) {
-      // The simple query protocol does not support variables and returns rows
-      // as text. So when we need rows or parameters, we need an explicit prepare.
+    if (useSimpleQueryProtocol || (ignoreRows && !variables.isNotEmpty)) {
+      // Great, we can just run a simple query.
+      final controller = StreamController<PgResultRow>();
+      final items = <PgResultRow>[];
+
+      final querySubscription =
+          _PgResultStreamSubscription.simpleQueryProtocol(
+              description.transformedSql,
+              this,
+              controller,
+              controller.stream.listen(items.add),
+              ignoreRows);
+      await querySubscription.asFuture();
+      await querySubscription.cancel();
+
+      return PgResult(items, await querySubscription.affectedRows,
+          await querySubscription.schema);
+    } else {
+      // The simple query protocol does not support variables. So when we have
+      // parameters, we need an explicit prepare.
       final prepared = await prepare(description);
       try {
         return await prepared.run(variables);
       } finally {
         await prepared.dispose();
       }
-    } else {
-      // Great, we can just run a simple query.
-      final controller = StreamController<PgResultRow>();
-      final items = <PgResultRow>[];
-
-      final querySubscription =
-          _PgResultStreamSubscription.simpleQueryAndIgnoreRows(
-        description.transformedSql,
-        this,
-        controller,
-        controller.stream.listen(items.add),
-      );
-      await querySubscription.asFuture();
-      await querySubscription.cancel();
-
-      return PgResult(items, await querySubscription.affectedRows,
-          await querySubscription.schema);
     }
   }
 
@@ -496,9 +497,8 @@ class _PgResultStreamSubscription
     });
   }
 
-  _PgResultStreamSubscription.simpleQueryAndIgnoreRows(
-      String sql, this.session, this._controller, this._source)
-      : ignoreRows = true {
+  _PgResultStreamSubscription.simpleQueryProtocol(String sql, this.session,
+      this._controller, this._source, this.ignoreRows) {
     session._withResource(() async {
       connection._pending = this;
 
