@@ -202,7 +202,7 @@ class _PoolStatement implements PgStatement {
   }
 
   @override
-  Future<PgResult> run(Object? parameters) {
+  Future<PgResult> run([Object? parameters]) {
     return _underlying.run(parameters);
   }
 }

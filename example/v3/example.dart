@@ -7,7 +7,7 @@ void main() async {
 
   final statement = await connection.prepare(PgSql(r"SELECT 'foo';"));
   print('has statement');
-  final result = await statement.run(null);
+  final result = await statement.run();
   print(result);
   await statement.dispose();
 

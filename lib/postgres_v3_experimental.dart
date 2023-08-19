@@ -186,9 +186,10 @@ abstract class PgStatement {
       Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
           parameters);
 
-  Future<PgResult> run(
+  Future<PgResult> run([
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
         parameters,
+  ]
   ) async {
     final items = <PgResultRow>[];
     final subscription = bind(parameters).listen(items.add);
