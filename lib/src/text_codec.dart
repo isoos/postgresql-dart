@@ -242,7 +242,12 @@ class PostgresTextDecoder<T extends Object> {
       case PgDataType.double:
         return num.parse(asText) as T;
       case PgDataType.boolean:
-        return (asText == 'true') as T;
+        // In text data format when using simple query protocol, "true" & "false"
+        // are represented as `t` and `f`,  respectively. 
+        // we will check for both just in case
+        // TODO: should we check for other representations (e.g. `1`, `on`, `y`,
+        // and `yes`)?
+        return (asText == 't' || asText == 'true') as T;
 
       // We could list out all cases, but it's about 20 lines of code.
       // ignore: no_default_cases
