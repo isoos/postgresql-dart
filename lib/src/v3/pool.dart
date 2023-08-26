@@ -46,13 +46,13 @@ class PoolImplementation implements PgPool {
     Object query, {
     Object? parameters,
     bool ignoreRows = false,
-    bool useSimpleQueryProtocol = false,
+    QueryMode? queryMode,
   }) {
     return withConnection((connection) => connection.execute(
           query,
           parameters: parameters,
           ignoreRows: ignoreRows,
-          useSimpleQueryProtocol: useSimpleQueryProtocol,
+          queryMode: queryMode,
         ));
   }
 
@@ -170,13 +170,13 @@ class _PoolConnection implements PgConnection {
     Object query, {
     Object? parameters,
     bool ignoreRows = false,
-    bool useSimpleQueryProtocol = false,
+    QueryMode? queryMode,
   }) {
     return _connection.execute(
       query,
       parameters: parameters,
       ignoreRows: ignoreRows,
-      useSimpleQueryProtocol: useSimpleQueryProtocol,
+      queryMode: queryMode,
     );
   }
 

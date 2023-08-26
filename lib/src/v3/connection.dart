@@ -42,6 +42,7 @@ class _ResolvedSettings {
   final Encoding encoding;
 
   final ReplicationMode replicationMode;
+  final QueryMode queryMode;
 
   final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
 
@@ -56,7 +57,8 @@ class _ResolvedSettings {
         timeZone = settings?.timeZone ?? 'UTC',
         encoding = settings?.encoding ?? utf8,
         transformer = settings?.transformer,
-        replicationMode = settings?.replicationMode ?? ReplicationMode.none;
+        replicationMode = settings?.replicationMode ?? ReplicationMode.none,
+        queryMode = settings?.queryMode ?? QueryMode.extended;
 
   bool onBadSslCertificate(X509Certificate certificate) {
     return settings?.onBadSslCertificate?.call(certificate) ?? false;
@@ -120,12 +122,24 @@ abstract class _PgSessionBase implements PgSession {
     Object query, {
     Object? parameters,
     bool ignoreRows = false,
-    bool useSimpleQueryProtocol = false,
+    QueryMode? queryMode,
   }) async {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(parameters);
 
-    if (useSimpleQueryProtocol || (ignoreRows && variables.isEmpty)) {
+    late final bool isSimple;
+    if (queryMode != null) {
+      isSimple = queryMode == QueryMode.simple;
+    } else {
+      isSimple = _connection._settings.queryMode == QueryMode.simple;
+    }
+
+    if (isSimple && variables.isNotEmpty) {
+      throw PostgreSQLException('Parameterized queries are not supported when '
+      'using the Simple Query Protocol');
+    }
+
+    if (isSimple || (ignoreRows && variables.isEmpty)) {
       // Great, we can just run a simple query.
       final controller = StreamController<PgResultRow>();
       final items = <PgResultRow>[];
