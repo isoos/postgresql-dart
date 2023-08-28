@@ -409,6 +409,63 @@ void main() {
     expect(incoming, contains(isA<DataRowMessage>()));
     expect(outgoing, contains(isA<QueryMessage>()));
   });
+
+  group('can close connection after error conditions', () {
+    late PgConnection conn1;
+    late PgConnection conn2;
+
+    setUp(() async {
+      conn1 = await PgConnection.open(
+        PgEndpoint(
+          host: 'localhost',
+          database: 'dart_test',
+          username: 'dart',
+          password: 'dart',
+        ),
+        sessionSettings: PgSessionSettings(
+          onBadSslCertificate: (cert) => true,
+        ),
+      );
+
+      conn2 = await PgConnection.open(
+        PgEndpoint(
+          host: 'localhost',
+          database: 'dart_test',
+          username: 'postgres',
+          password: 'postgres',
+        ),
+        sessionSettings: PgSessionSettings(
+          onBadSslCertificate: (cert) => true,
+        ),
+      );
+    });
+
+    tearDown(() async {
+      await conn1.close();
+      await conn2.close();
+    });
+
+    for (final concurrentQuery in [false, true]) {
+      test(
+        'with concurrent query: $concurrentQuery',
+        () async {
+          final res = await conn2.execute(
+              "SELECT pid FROM pg_stat_activity where usename = 'dart';");
+          final conn1PID = res.first.first as int;
+
+          // Simulate issue by terminating a connection during a query
+          if (concurrentQuery) {
+            // We expect that terminating the connection will throw.
+            expect(conn1.execute('select * from pg_stat_activity;'),
+                _throwsPostgresException);
+          }
+
+          // Terminate the conn1 while the query is running
+          await conn2.execute('select pg_terminate_backend($conn1PID);');
+        },
+      );
+    }
+  });
 }
 
 final _isPostgresException = isA<PostgreSQLException>();

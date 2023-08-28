@@ -12,7 +12,7 @@ import 'package:postgres/src/replication.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../auth/auth.dart';
-import '../connection.dart' show PostgreSQLException;
+import '../connection.dart' show PostgreSQLException, PostgreSQLSeverity;
 import 'protocol.dart';
 import 'query_description.dart';
 
@@ -73,40 +73,61 @@ abstract class _PgSessionBase implements PgSession {
 
   PgConnectionImplementation get _connection;
 
+  /// Runs [callback], guarded by [_operationLock] and cleans up the pending
+  /// resource afterwards.
+  Future<T> _withResource<T>(FutureOr<T> Function() callback) {
+    return _operationLock.withResource(() async {
+      assert(_connection._pending == null);
+
+      try {
+        return await callback();
+      } finally {
+        _connection._pending = null;
+      }
+    });
+  }
+
   /// Sends a message to the server and waits for a response [T], gracefully
   /// handling error messages that might come in instead.
   Future<T> _sendAndWaitForQuery<T extends ServerMessage>(ClientMessage send) {
     final trace = StackTrace.current;
 
-    return _operationLock.withResource(() {
+    return _withResource(() {
       _connection._channel.sink
           .add(AggregatedClientMessage([send, const SyncMessage()]));
 
-      final completer = Completer<T>();
-      final syncComplete = Completer<void>.sync();
+      final doneWithOperation = Completer<void>.sync();
+      Result<T>? result;
 
       _connection._pending = _CallbackOperation(_connection, (message) async {
         if (message is T) {
-          completer.complete(message);
+          result = Result.value(message);
         } else if (message is ErrorResponseMessage) {
-          completer.completeError(
-              PostgreSQLException.fromFields(message.fields), trace);
-        } else if (message is ReadyForQueryMessage) {
-          if (!completer.isCompleted) {
-            completer.completeError(
-                StateError('Operation did not complete'), trace);
-          }
+          final exception = PostgreSQLException.fromFields(message.fields);
 
-          syncComplete.complete();
+          result = Result.error(exception, trace);
+
+          // If the error is severe enough for the operation or the whole
+          // connection to abort, we should also release the lock.
+          if (exception.willAbortCommand) {
+            doneWithOperation.complete();
+          }
+        } else if (message is ReadyForQueryMessage) {
+          // This is the message we've been waiting for, the server is signalling
+          // that it's ready for another message - so we can release the lock.
+          doneWithOperation.complete();
         } else {
-          completer.completeError(
-              StateError('Unexpected message $message'), trace);
+          result =
+              Result.error(StateError('Unexpected message $message'), trace);
         }
       });
 
-      return syncComplete.future
-          .whenComplete(() => _connection._pending = null)
-          .then((value) => completer.future);
+      return doneWithOperation.future.then((value) {
+        final effectiveResult = result ??
+            Result.error(StateError('Operation did not complete'), trace);
+
+        return effectiveResult.asFuture;
+      });
     });
   }
 
@@ -301,7 +322,7 @@ class PgConnectionImplementation extends _PgSessionBase
   }
 
   Future<void> _startup() {
-    return _operationLock.withResource(() {
+    return _withResource(() {
       final result = _pending = _AuthenticationProcedure(this);
 
       _channel.sink.add(StartupMessage(
@@ -438,7 +459,7 @@ class _PgResultStreamSubscription
       _BoundStatement statement, this._controller, this._source)
       : session = statement.statement._session,
         ignoreRows = false {
-    session._operationLock.withResource(() async {
+    session._withResource(() async {
       connection._pending = this;
 
       connection._channel.sink.add(AggregatedClientMessage([
@@ -462,7 +483,7 @@ class _PgResultStreamSubscription
   _PgResultStreamSubscription.simpleQueryAndIgnoreRows(
       String sql, this.session, this._controller, this._source)
       : ignoreRows = true {
-    session._operationLock.withResource(() async {
+    session._withResource(() async {
       connection._pending = this;
 
       connection._channel.sink.add(QueryMessage(sql));
@@ -479,8 +500,12 @@ class _PgResultStreamSubscription
   @override
   Future<void> handleMessage(ServerMessage message) async {
     if (message is ErrorResponseMessage) {
-      _controller.addError(
-          PostgreSQLException.fromFields(message.fields), StackTrace.current);
+      final exception = PostgreSQLException.fromFields(message.fields);
+
+      _controller.addError(exception, StackTrace.current);
+      if (exception.willAbortCommand) {
+        _done.complete();
+      }
     } else if (message is BindCompleteMessage) {
       // Nothing to do
     } else if (message is RowDescriptionMessage) {
@@ -756,5 +781,13 @@ class _AuthenticationProcedure extends _PendingOperation {
     } else if (message is ReadyForQueryMessage) {
       _done.complete();
     }
+  }
+}
+
+extension on PostgreSQLException {
+  bool get willAbortCommand {
+    return severity == PostgreSQLSeverity.error ||
+        severity == PostgreSQLSeverity.fatal ||
+        severity == PostgreSQLSeverity.panic;
   }
 }
