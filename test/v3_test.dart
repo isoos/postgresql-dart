@@ -465,6 +465,20 @@ void main() {
         },
       );
     }
+
+    test('with simple query protocol', () async {
+      // Get the PID for conn1
+      final res = await conn2
+          .execute("SELECT pid FROM pg_stat_activity where usename = 'dart';");
+      final conn1PID = res.first.first as int;
+
+      // ignore: unawaited_futures
+      expect(conn1.execute('select * from pg_stat_activity;', ignoreRows: true),
+          _throwsPostgresException);
+
+      await conn2.execute(
+          'select pg_terminate_backend($conn1PID) from pg_stat_activity;');
+    });
   });
 }
 
