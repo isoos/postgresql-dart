@@ -158,7 +158,7 @@ enum PgDataType<Dart extends Object> {
 
   static final Map<int, PgDataType> byTypeOid = Map.unmodifiable({
     for (final type in values)
-      if (type.oid != null) type.oid!: type,
+      if (type.oid != null) type.oid: type,
   });
 
   static final Map<String, PgDataType> bySubstitutionName = Map.unmodifiable({
@@ -170,7 +170,7 @@ enum PgDataType<Dart extends Object> {
       if (type != serial &&
           type != bigSerial &&
           type.nameForSubstitution != null)
-        type.nameForSubstitution!: type,
+        type.nameForSubstitution: type,
   });
 
   static final Map<PgDataType, _BinaryTypeCodec> _binaryCodecs = {};

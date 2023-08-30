@@ -64,7 +64,7 @@ class Query<T> {
 
   void sendExtended(Socket socket, {CachedQuery? cacheQuery}) {
     if (cacheQuery != null) {
-      fieldDescriptions = cacheQuery.fieldDescriptions!;
+      fieldDescriptions = cacheQuery.fieldDescriptions;
       sendCachedQuery(socket, cacheQuery, substitutionValues);
 
       return;
@@ -95,7 +95,7 @@ class Query<T> {
     ];
 
     if (statementIdentifier != null) {
-      cache = CachedQuery(statementIdentifier!, formatIdentifiers);
+      cache = CachedQuery(statementIdentifier, formatIdentifiers);
     }
 
     socket.add(ClientMessage.aggregateBytes(messages));
@@ -350,9 +350,8 @@ class PostgreSQLFormatIdentifier {
       name = variableComponents.first;
 
       final dataTypeString = variableComponents.last;
-      try {
-        type = typeStringToCodeMap[dataTypeString]!;
-      } catch (e) {
+      type = typeStringToCodeMap[dataTypeString];
+      if (type == null) {
         throw FormatException(
             "Invalid type code in substitution variable '$t'");
       }

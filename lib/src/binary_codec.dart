@@ -28,7 +28,7 @@ final _hex = <String>[
   'f',
 ];
 final _numericRegExp = RegExp(r'^(\d*)(\.\d*)?$');
-final _leadingZerosRegExp = RegExp(r'^0+');
+final _leadingZerosRegExp = RegExp('^0+');
 final _trailingZerosRegExp = RegExp(r'0+$');
 
 class PostgresBinaryEncoder<T extends Object>
