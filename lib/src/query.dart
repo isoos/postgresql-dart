@@ -350,13 +350,8 @@ class PostgreSQLFormatIdentifier {
       name = variableComponents.first;
 
       final dataTypeString = variableComponents.last;
-      try {
-        type = typeStringToCodeMap[dataTypeString];
-        if (type == null) {
-          throw FormatException(
-              "Invalid type code in substitution variable '$t'");
-        }
-      } catch (e) {
+      type = typeStringToCodeMap[dataTypeString];
+      if (type == null) {
         throw FormatException(
             "Invalid type code in substitution variable '$t'");
       }
