@@ -462,8 +462,9 @@ void main() {
 
           // Simulate issue by terminating a connection during a query
           if (concurrentQuery) {
-            // We expect that terminating the connection will throw.
-            expect(conn1.execute('select * from pg_stat_activity;'),
+            // We expect that terminating the connection will throw. Use
+            // pg_sleep to avoid flaky race conditions between the conditions.
+            expect(conn1.execute('select pg_sleep(1) from pg_stat_activity;'),
                 _throwsPostgresException);
           }
 
@@ -480,7 +481,9 @@ void main() {
       final conn1PID = res.first.first as int;
 
       // ignore: unawaited_futures
-      expect(conn1.execute('select * from pg_stat_activity;', ignoreRows: true),
+      expect(
+          conn1.execute('select pg_sleep(1) from pg_stat_activity;',
+              ignoreRows: true),
           _throwsPostgresException);
 
       await conn2.execute(
