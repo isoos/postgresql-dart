@@ -76,6 +76,10 @@ abstract class _PgSessionBase implements PgSession {
   /// Runs [callback], guarded by [_operationLock] and cleans up the pending
   /// resource afterwards.
   Future<T> _withResource<T>(FutureOr<T> Function() callback) {
+    if (_connection._isClosing) {
+      throw PostgreSQLException('Connection is closing down');
+    }
+
     return _operationLock.withResource(() async {
       assert(_connection._pending == null);
 
@@ -320,7 +324,7 @@ class PgConnectionImplementation extends _PgSessionBase
 
       if (message is ParameterStatusMessage) {
         _parameters[message.name] = message.value;
-      } else if (message is BackendKeyMessage) {
+      } else if (message is BackendKeyMessage || message is NoticeMessage) {
         // ignore for now
       } else if (message is NotificationResponseMessage) {
         _channels.deliverNotification(message);
@@ -505,12 +509,27 @@ class _PgResultStreamSubscription
   @override
   Future<PgResultSchema> get schema => _schema.future;
 
+  Future<void> _completeQuery() async {
+    _done.complete();
+
+    // Make sure the affectedRows and schema futures complete with something
+    // after the query is done, even if we didn't get a row description
+    // message.
+    if (!_affectedRows.isCompleted) {
+      _affectedRows.complete(0);
+    }
+    if (!_schema.isCompleted) {
+      _schema.complete(PgResultSchema(const []));
+    }
+    await _controller.close();
+  }
+
   @override
   void handleConnectionClosed(PostgreSQLException? dueToException) {
     if (dueToException != null) {
       _controller.addError(dueToException);
     }
-    _done.complete();
+    _completeQuery();
   }
 
   @override
@@ -559,18 +578,7 @@ class _PgResultStreamSubscription
       case CommandCompleteMessage():
         _affectedRows.complete(message.rowsAffected);
       case ReadyForQueryMessage():
-        _done.complete();
-
-        // Make sure the affectedRows and schema futures complete with something
-        // after the query is done, even if we didn't get a row description
-        // message.
-        if (!_affectedRows.isCompleted) {
-          _affectedRows.complete(0);
-        }
-        if (!_schema.isCompleted) {
-          _schema.complete(PgResultSchema(const []));
-        }
-        await _controller.close();
+        await _completeQuery();
       default:
         // Unexpected message - either a severe bug in this package or in the
         // connection. We better close it.

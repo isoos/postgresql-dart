@@ -29,6 +29,7 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
   110: (d) => NoDataMessage(),
   116: ParameterDescriptionMessage.new,
   $3: (d) => CloseCompleteMessage(),
+  $N: NoticeMessage.new,
 };
 
 class MessageFramer {
