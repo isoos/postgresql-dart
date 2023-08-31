@@ -109,8 +109,9 @@ abstract class _PgSessionBase implements PgSession {
 
           // If the error is severe enough for the operation or the whole
           // connection to abort, we should also release the lock.
-          if (exception.willAbortCommand) {
+          if (exception.willAbortConnection) {
             doneWithOperation.complete();
+            await _connection.close();
           }
         } else if (message is ReadyForQueryMessage) {
           // This is the message we've been waiting for, the server is signalling
@@ -119,6 +120,12 @@ abstract class _PgSessionBase implements PgSession {
         } else {
           result =
               Result.error(StateError('Unexpected message $message'), trace);
+
+          // If we get here, we clearly have a misunderstanding about the
+          // protocol or something is very seriously broken. Treat this as a
+          // critical flaw and close the connection as well.
+          doneWithOperation.complete();
+          await _connection.close();
         }
       });
 
@@ -299,6 +306,7 @@ class PgConnectionImplementation extends _PgSessionBase
 
   final StreamChannel<BaseMessage> _channel;
   late final StreamSubscription<BaseMessage> _serverMessages;
+  bool _isClosing = false;
 
   final _ResolvedSettings _settings;
 
@@ -391,12 +399,16 @@ class PgConnectionImplementation extends _PgSessionBase
 
   @override
   Future<void> close() async {
-    await _operationLock.withResource(() {
-      // Use lock to await earlier operations
-      _channel.sink.add(const TerminateMessage());
-    });
+    if (!_isClosing) {
+      _isClosing = true;
 
-    await Future.wait([_channel.sink.close(), _serverMessages.cancel()]);
+      await _operationLock.withResource(() {
+        // Use lock to await earlier operations
+        _channel.sink.add(const TerminateMessage());
+      });
+
+      await Future.wait([_channel.sink.close(), _serverMessages.cancel()]);
+    }
   }
 }
 
@@ -503,8 +515,9 @@ class _PgResultStreamSubscription
       final exception = PostgreSQLException.fromFields(message.fields);
 
       _controller.addError(exception, StackTrace.current);
-      if (exception.willAbortCommand) {
+      if (exception.willAbortConnection) {
         _done.complete();
+        await session._connection.close();
       }
     } else if (message is BindCompleteMessage) {
       // Nothing to do
@@ -785,9 +798,8 @@ class _AuthenticationProcedure extends _PendingOperation {
 }
 
 extension on PostgreSQLException {
-  bool get willAbortCommand {
-    return severity == PostgreSQLSeverity.error ||
-        severity == PostgreSQLSeverity.fatal ||
+  bool get willAbortConnection {
+    return severity == PostgreSQLSeverity.fatal ||
         severity == PostgreSQLSeverity.panic;
   }
 }

@@ -12,9 +12,7 @@ final _endpoint = PgEndpoint(
 );
 
 void main() {
-  // We're killing postgres processes in the test to ensure closing them works
-  // as expected, so we need a fresh container for each test.
-  usePostgresDocker(oneContainerForEachTest: true);
+  usePostgresDocker();
 
   late PgConnection conn1;
   late PgConnection conn2;
@@ -24,6 +22,7 @@ void main() {
       _endpoint,
       sessionSettings: PgSessionSettings(
         onBadSslCertificate: (cert) => true,
+        //transformer: _loggingTransformer('c1'),
       ),
     );
 
@@ -51,7 +50,7 @@ void main() {
         // Simulate issue by terminating a connection during a query
         if (concurrentQuery) {
           // We expect that terminating the connection will throw.
-          expect(conn1.execute('select * from pg_stat_activity;'),
+          expect(conn1.execute('select pg_sleep(1) from pg_stat_activity;'),
               _throwsPostgresException);
         }
 
@@ -68,7 +67,9 @@ void main() {
     final conn1PID = res.first.first as int;
 
     // ignore: unawaited_futures
-    expect(conn1.execute('select * from pg_stat_activity;', ignoreRows: true),
+    expect(
+        conn1.execute('select pg_sleep(1) from pg_stat_activity;',
+            ignoreRows: true),
         _throwsPostgresException);
 
     await conn2.execute(

@@ -6,13 +6,8 @@ import 'package:test/test.dart';
 
 const _kContainerName = 'postgres-dart-test';
 
-void usePostgresDocker({
-  bool oneContainerForEachTest = false,
-}) {
-  final before = oneContainerForEachTest ? setUp : setUpAll;
-  final after = oneContainerForEachTest ? tearDown : tearDownAll;
-
-  before(() async {
+void usePostgresDocker() {
+  setUpAll(() async {
     final isRunning = await _isPostgresContainerRunning();
     if (isRunning) {
       return;
@@ -64,7 +59,7 @@ void usePostgresDocker({
     }
   });
 
-  after(() async {
+  tearDownAll(() async {
     await Process.run('docker', ['stop', _kContainerName]);
   });
 }

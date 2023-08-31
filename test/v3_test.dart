@@ -189,8 +189,12 @@ void main() {
 
       test('for duplicate with simple query', () async {
         await expectLater(
-            () => connection.execute('INSERT INTO foo VALUES (1);'),
-            _throwsPostgresException);
+          () => connection.execute('INSERT INTO foo VALUES (1);'),
+          _throwsPostgresException,
+        );
+
+        // Make sure the connection is still usable.
+        await connection.execute('SELECT 1');
       });
 
       test('for duplicate with extended query', () async {
@@ -201,6 +205,9 @@ void main() {
           ),
           _throwsPostgresException,
         );
+
+        // Make sure the connection is still in a usable state.
+        await connection.execute('SELECT 1');
       });
 
       test('for duplicate in prepared statement', () async {
