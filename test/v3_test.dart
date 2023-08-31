@@ -23,9 +23,10 @@ final _endpoint = PgEndpoint(
 //
 //  Logger.root.level = Level.ALL;
 //  Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
-StreamChannelTransformer<BaseMessage, BaseMessage> get _loggingTransformer {
-  final inLogger = Logger('postgres.connection.in');
-  final outLogger = Logger('postgres.connection.out');
+StreamChannelTransformer<BaseMessage, BaseMessage> _loggingTransformer(
+    String prefix) {
+  final inLogger = Logger('postgres.connection.$prefix.in');
+  final outLogger = Logger('postgres.connection.$prefix.out');
 
   return StreamChannelTransformer(
     StreamTransformer.fromHandlers(
@@ -47,7 +48,7 @@ final _sessionSettings = PgSessionSettings(
   // To test SSL, we're running postgres with a self-signed certificate.
   onBadSslCertificate: (cert) => true,
 
-  transformer: _loggingTransformer,
+  transformer: _loggingTransformer('conn'),
 );
 
 void main() {
@@ -430,6 +431,7 @@ void main() {
           password: 'dart',
         ),
         sessionSettings: PgSessionSettings(
+          transformer: _loggingTransformer('c1'),
           onBadSslCertificate: (cert) => true,
         ),
       );
@@ -442,6 +444,7 @@ void main() {
           password: 'postgres',
         ),
         sessionSettings: PgSessionSettings(
+          transformer: _loggingTransformer('c2'),
           onBadSslCertificate: (cert) => true,
         ),
       );
@@ -480,11 +483,11 @@ void main() {
           .execute("SELECT pid FROM pg_stat_activity where usename = 'dart';");
       final conn1PID = res.first.first as int;
 
-      // ignore: unawaited_futures
       expect(
-          conn1.execute('select pg_sleep(1) from pg_stat_activity;',
-              ignoreRows: true),
-          _throwsPostgresException);
+        conn1.execute('select pg_sleep(1) from pg_stat_activity;',
+            ignoreRows: true),
+        _throwsPostgresException,
+      );
 
       await conn2.execute(
           'select pg_terminate_backend($conn1PID) from pg_stat_activity;');

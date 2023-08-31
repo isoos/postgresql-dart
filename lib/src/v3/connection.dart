@@ -507,12 +507,15 @@ class _PgResultStreamSubscription
 
   @override
   void handleConnectionClosed(PostgreSQLException? dueToException) {
+    if (dueToException != null) {
+      _controller.addError(dueToException);
+    }
     _done.complete();
   }
 
   @override
   void handleError(PostgreSQLException exception) {
-    _controller.addError(exception, StackTrace.current);
+    _controller.addError(exception);
   }
 
   @override
