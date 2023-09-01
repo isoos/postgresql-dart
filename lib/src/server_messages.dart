@@ -11,10 +11,10 @@ import 'types.dart';
 
 abstract class ServerMessage extends BaseMessage {}
 
-class ErrorResponseMessage implements ServerMessage {
+sealed class ErrorOrNoticeMessage implements ServerMessage {
   final fields = <ErrorField>[];
 
-  ErrorResponseMessage(Uint8List bytes) {
+  ErrorOrNoticeMessage(Uint8List bytes) {
     final reader = ByteDataReader()..add(bytes);
 
     int? identificationToken;
@@ -37,6 +37,10 @@ class ErrorResponseMessage implements ServerMessage {
       fields.add(ErrorField(identificationToken, sb.toString()));
     }
   }
+}
+
+class ErrorResponseMessage extends ErrorOrNoticeMessage {
+  ErrorResponseMessage(super.bytes);
 }
 
 class AuthenticationMessage implements ServerMessage {
@@ -242,6 +246,10 @@ class NoDataMessage extends ServerMessage {
 
   @override
   String toString() => 'No Data Message';
+}
+
+class NoticeMessage extends ErrorOrNoticeMessage {
+  NoticeMessage(super.bytes);
 }
 
 /// Identifies the message as a Start Copy Both response.

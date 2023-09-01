@@ -23,9 +23,10 @@ final _endpoint = PgEndpoint(
 //
 //  Logger.root.level = Level.ALL;
 //  Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
-StreamChannelTransformer<BaseMessage, BaseMessage> get _loggingTransformer {
-  final inLogger = Logger('postgres.connection.in');
-  final outLogger = Logger('postgres.connection.out');
+StreamChannelTransformer<BaseMessage, BaseMessage> _loggingTransformer(
+    String prefix) {
+  final inLogger = Logger('postgres.connection.$prefix.in');
+  final outLogger = Logger('postgres.connection.$prefix.out');
 
   return StreamChannelTransformer(
     StreamTransformer.fromHandlers(
@@ -47,7 +48,7 @@ final _sessionSettings = PgSessionSettings(
   // To test SSL, we're running postgres with a self-signed certificate.
   onBadSslCertificate: (cert) => true,
 
-  transformer: _loggingTransformer,
+  transformer: _loggingTransformer('conn'),
 );
 
 void main() {
@@ -189,8 +190,12 @@ void main() {
 
       test('for duplicate with simple query', () async {
         await expectLater(
-            () => connection.execute('INSERT INTO foo VALUES (1);'),
-            _throwsPostgresException);
+          () => connection.execute('INSERT INTO foo VALUES (1);'),
+          _throwsPostgresException,
+        );
+
+        // Make sure the connection is still usable.
+        await connection.execute('SELECT 1');
       });
 
       test('for duplicate with extended query', () async {
@@ -201,6 +206,9 @@ void main() {
           ),
           _throwsPostgresException,
         );
+
+        // Make sure the connection is still in a usable state.
+        await connection.execute('SELECT 1');
       });
 
       test('for duplicate in prepared statement', () async {
@@ -408,6 +416,82 @@ void main() {
     await connection.execute("SELECT 'foo'", ignoreRows: true);
     expect(incoming, contains(isA<DataRowMessage>()));
     expect(outgoing, contains(isA<QueryMessage>()));
+  });
+
+  group('can close connection after error conditions', () {
+    late PgConnection conn1;
+    late PgConnection conn2;
+
+    setUp(() async {
+      conn1 = await PgConnection.open(
+        PgEndpoint(
+          host: 'localhost',
+          database: 'dart_test',
+          username: 'dart',
+          password: 'dart',
+        ),
+        sessionSettings: PgSessionSettings(
+          transformer: _loggingTransformer('c1'),
+          onBadSslCertificate: (cert) => true,
+        ),
+      );
+
+      conn2 = await PgConnection.open(
+        PgEndpoint(
+          host: 'localhost',
+          database: 'dart_test',
+          username: 'postgres',
+          password: 'postgres',
+        ),
+        sessionSettings: PgSessionSettings(
+          transformer: _loggingTransformer('c2'),
+          onBadSslCertificate: (cert) => true,
+        ),
+      );
+    });
+
+    tearDown(() async {
+      await conn1.close();
+      await conn2.close();
+    });
+
+    for (final concurrentQuery in [false, true]) {
+      test(
+        'with concurrent query: $concurrentQuery',
+        () async {
+          final res = await conn2.execute(
+              "SELECT pid FROM pg_stat_activity where usename = 'dart';");
+          final conn1PID = res.first.first as int;
+
+          // Simulate issue by terminating a connection during a query
+          if (concurrentQuery) {
+            // We expect that terminating the connection will throw. Use
+            // pg_sleep to avoid flaky race conditions between the conditions.
+            expect(conn1.execute('select pg_sleep(1) from pg_stat_activity;'),
+                _throwsPostgresException);
+          }
+
+          // Terminate the conn1 while the query is running
+          await conn2.execute('select pg_terminate_backend($conn1PID);');
+        },
+      );
+    }
+
+    test('with simple query protocol', () async {
+      // Get the PID for conn1
+      final res = await conn2
+          .execute("SELECT pid FROM pg_stat_activity where usename = 'dart';");
+      final conn1PID = res.first.first as int;
+
+      expect(
+        conn1.execute('select pg_sleep(1) from pg_stat_activity;',
+            ignoreRows: true),
+        _throwsPostgresException,
+      );
+
+      await conn2.execute(
+          'select pg_terminate_backend($conn1PID) from pg_stat_activity;');
+    });
   });
 }
 
