@@ -185,11 +185,17 @@ class PostgresBinaryEncoder<T extends Object>
 
       case PgDataType.jsonb:
         {
-          final jsonBytes = _jsonUtf8.encode(input);
-          final writer = ByteDataWriter(bufferLength: jsonBytes.length + 1)
-            ..writeUint8(1)
-            ..write(jsonBytes);
-          return writer.toBytes();
+          late Uint8List bytes;
+          final sink = ByteConversionSink.withCallback((accumulated) {
+            bytes = castBytes(accumulated);
+          });
+          sink.add([1]);
+
+          _jsonUtf8.encoder.startChunkedConversion(sink)
+            ..add(input)
+            ..close();
+
+          return bytes;
         }
 
       case PgDataType.json:
