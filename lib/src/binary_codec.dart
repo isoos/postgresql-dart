@@ -439,8 +439,12 @@ class PostgresBinaryEncoder<T extends Object>
 }
 
 class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
-  const PostgresBinaryDecoder(this.typeCode);
+  const PostgresBinaryDecoder(this.typeCode) : type = null;
 
+  PostgresBinaryDecoder.byType(PgDataType this.type)
+      : typeCode = type.oid ?? -1;
+
+  final PgDataType? type;
   final int typeCode;
 
   @override
@@ -449,7 +453,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
       return null;
     }
 
-    final dataType = typeMap[typeCode];
+    final dataType = type ?? typeMap[typeCode];
 
     final buffer =
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);

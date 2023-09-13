@@ -95,13 +95,14 @@ void main() {
 
     group('binary encoding and decoding', () {
       Future<void> shouldPassthrough<T extends Object>(
-          PgDataType<T> type, T? value) async {
+          PgDataType<T> type, T? value,
+          {dynamic matcher}) async {
         final rowFromExplicitType = await connection.execute(
           PgSql(r'SELECT $1', types: [type]),
           parameters: [value],
         );
         expect(rowFromExplicitType, [
-          [value]
+          [matcher ?? value]
         ]);
 
         if (type.nameForSubstitution != null) {
@@ -110,7 +111,7 @@ void main() {
             parameters: [value],
           );
           expect(rowFromInferredType, [
-            [value]
+            [matcher ?? value]
           ]);
         }
       }
@@ -125,6 +126,22 @@ void main() {
         await shouldPassthrough<int>(PgDataType.smallInteger, 42);
         await shouldPassthrough<int>(PgDataType.integer, 1024);
         await shouldPassthrough<int>(PgDataType.bigInteger, 999999999999);
+      });
+
+      test('real', () async {
+        await shouldPassthrough<double>(PgDataType.double, 1.25);
+        await shouldPassthrough<double>(PgDataType.double, double.nan,
+            matcher: isNaN);
+        await shouldPassthrough<double>(
+            PgDataType.double, double.negativeInfinity);
+      });
+
+      test('numeric', () async {
+        await shouldPassthrough<Object>(PgDataType.numeric, 1.25,
+            matcher: '1.25');
+        await shouldPassthrough<Object>(PgDataType.numeric, 17, matcher: '17');
+        await shouldPassthrough<Object>(PgDataType.numeric, double.nan,
+            matcher: 'NaN');
       });
 
       test('regtype', () async {
