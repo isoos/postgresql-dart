@@ -189,7 +189,7 @@ class _BinaryTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
 
   _BinaryTypeCodec(PgDataType<D> type)
       : encoder = PostgresBinaryEncoder(type),
-        decoder = PostgresBinaryDecoder.byType(type);
+        decoder = PostgresBinaryDecoder(type);
 }
 
 class _TextTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {

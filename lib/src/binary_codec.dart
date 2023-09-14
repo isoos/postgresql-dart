@@ -439,13 +439,9 @@ class PostgresBinaryEncoder<T extends Object>
 }
 
 class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
-  const PostgresBinaryDecoder(this.typeCode) : type = null;
+  PostgresBinaryDecoder(this.type);
 
-  PostgresBinaryDecoder.byType(PgDataType this.type)
-      : typeCode = type.oid ?? -1;
-
-  final PgDataType? type;
-  final int typeCode;
+  final PgDataType type;
 
   @override
   T? convert(Uint8List? input) {
@@ -453,12 +449,10 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
       return null;
     }
 
-    final dataType = type ?? typeMap[typeCode];
-
     final buffer =
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
 
-    switch (dataType) {
+    switch (type) {
       case PostgreSQLDataType.name:
       case PostgreSQLDataType.text:
       case PostgreSQLDataType.varChar:
@@ -566,8 +560,6 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
         }) as T;
 
       case PostgreSQLDataType.unknownType:
-      // TODO(eseidel): This looks wrong for null?
-      case null:
         {
           // We'll try and decode this as a utf8 string and return that
           // for many internal types, this is valid. If it fails,

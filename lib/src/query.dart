@@ -298,7 +298,9 @@ class FieldDescription implements ColumnDescription {
     final typeModifier = reader.readInt32();
     final formatCode = reader.readUint16();
 
-    final converter = PostgresBinaryDecoder(typeOid);
+    final converter = PostgresBinaryDecoder(
+        PostgreSQLDataType.byTypeOid[typeOid] ??
+            PostgreSQLDataType.unknownType);
     return FieldDescription._(
       converter, fieldName, tableID, columnID, typeOid,
       dataTypeSize, typeModifier, formatCode,
