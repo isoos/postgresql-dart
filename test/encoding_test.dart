@@ -692,14 +692,8 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
   } else if (dataType == PostgreSQLDataType.bigSerial) {
     dataType = PostgreSQLDataType.bigInteger;
   }
-  late int code;
-  PostgresBinaryDecoder.typeMap.forEach((key, type) {
-    if (type == dataType) {
-      code = key;
-    }
-  });
 
-  final decoder = PostgresBinaryDecoder(code);
+  final decoder = PostgresBinaryDecoder(dataType);
   final decodedValue = decoder.convert(encodedValue);
 
   expect(decodedValue, value);

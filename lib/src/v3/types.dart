@@ -69,8 +69,12 @@ enum PgDataType<Dart extends Object> {
   /// Must be a [Duration]
   interval<Duration>(1186, nameForSubstitution: 'interval'),
 
-  /// Must be a [List<int>]
-  numeric<List<int>>(1700, nameForSubstitution: 'numeric'),
+  /// An arbitrary-precision number.
+  ///
+  /// This library supports encoding numbers in a textual format, or when
+  /// passed as [int] or [double]. When decoding values, numeric types are
+  /// always returned as string.
+  numeric<Object>(1700, nameForSubstitution: 'numeric'),
 
   /// Must be a [DateTime] (contains year, month and day only)
   date<DateTime>(1082, nameForSubstitution: 'date'),
@@ -185,9 +189,7 @@ class _BinaryTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
 
   _BinaryTypeCodec(PgDataType<D> type)
       : encoder = PostgresBinaryEncoder(type),
-        // Only some integer variants have no dedicated oid, they share it with
-        // the normal integer.
-        decoder = PostgresBinaryDecoder(type.oid ?? PgDataType.integer.oid!);
+        decoder = PostgresBinaryDecoder(type);
 }
 
 class _TextTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
