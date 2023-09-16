@@ -19,9 +19,7 @@ import 'replication.dart';
 import 'server_messages.dart';
 
 part 'connection_fsm.dart';
-
 part 'transaction_proxy.dart';
-
 part 'exceptions.dart';
 
 /// Instances of this class connect to and communicate with a PostgreSQL database.
