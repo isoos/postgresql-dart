@@ -331,14 +331,14 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   /// If [XLogDataMessage.data] is a [LogicalReplicationMessage], then the method
   /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll
   /// return [XLogDataMessage] with raw data.
-  static XLogDataMessage parse(Uint8List bytes) {
+  static XLogDataMessage parse(Uint8List bytes, ClientEncoding clientEncoding) {
     final reader = ByteDataReader()..add(bytes);
     final walStart = LSN(reader.readUint64());
     final walEnd = LSN(reader.readUint64());
     final time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
     final data = reader.read(reader.remainingLength);
 
-    final message = tryParseLogicalReplicationMessage(data);
+    final message = tryParseLogicalReplicationMessage(data, clientEncoding);
     if (message != null) {
       return XLogDataLogicalMessage(
         message: message,

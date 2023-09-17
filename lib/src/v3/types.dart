@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres/src/client_encoding.dart';
 
 import '../binary_codec.dart';
 import '../text_codec.dart';
@@ -153,8 +154,9 @@ enum PgDataType<Dart extends Object> {
         as Codec<Dart?, Uint8List?>;
   }
 
-  Codec<Dart?, Uint8List?> get textCodec {
-    return _textCodecs.putIfAbsent(this, () => _TextTypeCodec<Dart>(this))
+  Codec<Dart?, Uint8List?> textCodec(ClientEncoding clientEncoding) {
+    return _textCodecs.putIfAbsent(
+            this, () => _TextTypeCodec<Dart>(this, clientEncoding))
         as Codec<Dart?, Uint8List?>;
   }
 
@@ -198,17 +200,19 @@ class _TextTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
   @override
   final Converter<Uint8List?, D?> decoder;
 
-  _TextTypeCodec(PgDataType<D> type)
-      : encoder = const _PostgresTextToUtf8Encoder(),
-        decoder = PostgresTextDecoder<D>(type);
+  _TextTypeCodec(PgDataType<D> type, ClientEncoding clientEncoding)
+      : encoder = _PostgresTextToBytesEncoder(clientEncoding),
+        decoder = PostgresTextDecoder<D>(type, clientEncoding);
 }
 
-class _PostgresTextToUtf8Encoder<D extends Object>
+class _PostgresTextToBytesEncoder<D extends Object>
     extends Converter<D?, Uint8List?> {
-  const _PostgresTextToUtf8Encoder();
+  final ClientEncoding _clientEncoding;
+  _PostgresTextToBytesEncoder(this._clientEncoding);
 
   @override
   Uint8List convert(Object? input) {
-    return castBytes(utf8.encode(const PostgresTextEncoder().convert(input)));
+    return castBytes(
+        _clientEncoding.encodeString(PostgresTextEncoder().convert(input)));
   }
 }

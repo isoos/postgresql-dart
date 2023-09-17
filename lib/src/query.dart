@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:convert' hide utf8;
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
 import 'binary_codec.dart';
+import 'client_encoding.dart';
 import 'client_messages.dart';
 import 'connection.dart';
 import 'execution_context.dart';
@@ -83,7 +84,8 @@ class Query<T> {
         formatIdentifiers.map((i) => i.type).toList();
 
     final parameterList = formatIdentifiers
-        .map((id) => ParameterValue(id, substitutionValues))
+        .map((id) =>
+            ParameterValue(id, substitutionValues, connection.clientEncoding))
         .toList();
 
     final messages = [
@@ -105,7 +107,8 @@ class Query<T> {
       Map<String, dynamic>? substitutionValues) {
     final statementName = cacheQuery.preparedStatementName;
     final parameterList = cacheQuery.orderedParameters!
-        .map((identifier) => ParameterValue(identifier, substitutionValues))
+        .map((identifier) => ParameterValue(
+            identifier, substitutionValues, connection.clientEncoding))
         .toList();
 
     final bytes = ClientMessage.aggregateBytes([
@@ -156,7 +159,8 @@ class Query<T> {
     // "In simple Query mode, the format of retrieved values is always text"
     //  https://www.postgresql.org/docs/current/protocol-flow.html#id-1.10.5.7.4
     if (useSendSimple) {
-      final data = rawRowData.map((e) => utf8.decode(e!));
+      final data =
+          rawRowData.map((e) => connection.clientEncoding.decodeString(e!));
       rows.add(data.toList());
       return;
     }
@@ -217,10 +221,14 @@ class CachedQuery {
 }
 
 class ParameterValue {
-  factory ParameterValue(PostgreSQLFormatIdentifier identifier,
-      Map<String, dynamic>? substitutionValues) {
+  factory ParameterValue(
+    PostgreSQLFormatIdentifier identifier,
+    Map<String, dynamic>? substitutionValues,
+    ClientEncoding clientEncoding,
+  ) {
     if (identifier.type == null) {
-      return ParameterValue.text(substitutionValues?[identifier.name]);
+      return ParameterValue.text(
+          substitutionValues?[identifier.name], clientEncoding);
     }
 
     return ParameterValue.binary(
@@ -233,12 +241,12 @@ class ParameterValue {
     return ParameterValue._(true, bytes, bytes?.length ?? 0);
   }
 
-  factory ParameterValue.text(dynamic value) {
+  factory ParameterValue.text(dynamic value, ClientEncoding clientEncoding) {
     Uint8List? bytes;
     if (value != null) {
       const converter = PostgresTextEncoder();
-      bytes = castBytes(
-          utf8.encode(converter.convert(value, escapeStrings: false)));
+      bytes = castBytes(clientEncoding
+          .encodeString(converter.convert(value, escapeStrings: false)));
     }
     final length = bytes?.length ?? 0;
     return ParameterValue._(false, bytes, length);

@@ -116,7 +116,8 @@ class PostgreSQLConnection extends Object
   /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
   final ReplicationMode replicationMode;
 
-  final _clientEncoding = ClientEncoding.utf8;
+  @internal
+  final clientEncoding = ClientEncoding.utf8;
 
   /// Stream of notification from the database.
   ///
@@ -318,7 +319,7 @@ class PostgreSQLConnection extends Object
     // and the state node managing delivering data to the query no longer exists. Therefore,
     // as soon as a close occurs, we detach the data stream from anything that actually does
     // anything with that data.
-    _framer.addBytes(castBytes(bytes), _clientEncoding);
+    _framer.addBytes(castBytes(bytes), clientEncoding);
     while (_framer.hasMessage) {
       final msg = _framer.popMessage();
       try {

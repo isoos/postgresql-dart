@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:convert' hide utf8;
 import 'dart:typed_data';
 
 import 'package:postgres/postgres.dart';
@@ -220,14 +220,15 @@ class PostgresTextEncoder extends Converter<Object, String> {
 
 class PostgresTextDecoder<T extends Object> extends Converter<Uint8List?, T?> {
   final PgDataType<T> _dataType;
+  final ClientEncoding _clientEncoding;
 
-  const PostgresTextDecoder(this._dataType);
+  PostgresTextDecoder(this._dataType, this._clientEncoding);
 
   @override
   T? convert(Uint8List? input) {
     if (input == null) return null;
 
-    final asText = utf8.decode(input);
+    final asText = _clientEncoding.decodeString(input);
 
     // ignore: unnecessary_cast
     switch (_dataType as PgDataType<Object>) {

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:async/async.dart';
 import 'package:charcode/ascii.dart';
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:pool/pool.dart';
 import 'package:stream_channel/stream_channel.dart';
 
@@ -300,6 +301,9 @@ class PgConnectionImplementation extends _PgSessionBase
   @override
   PgConnectionImplementation get _connection => this;
 
+  @internal
+  late final clientEncoding = ClientEncoding.utf8;
+
   PgConnectionImplementation._(this._channel, this._settings) {
     _serverMessages = _channel.stream.listen(_handleMessage);
   }
@@ -568,8 +572,9 @@ class _PgResultStreamSubscription
             final field = schema.columns[i];
 
             final type = field.type;
-            final codec =
-                field.binaryEncoding ? type.binaryCodec : type.textCodec;
+            final codec = field.binaryEncoding
+                ? type.binaryCodec
+                : type.textCodec(connection.clientEncoding);
 
             columnValues.add(codec.decode(message.values[i]));
           }

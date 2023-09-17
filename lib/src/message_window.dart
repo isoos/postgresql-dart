@@ -79,7 +79,7 @@ class MessageFramer {
         // such as replication messages.
         if (msg is CopyDataMessage) {
           // checks if it's a replication message, otherwise returns given msg
-          msg = _extractReplicationMessageIfAny(msg);
+          msg = _extractReplicationMessageIfAny(msg, clientEncoding);
         }
 
         _addMsg(msg);
@@ -96,14 +96,15 @@ class MessageFramer {
 
   /// Returns a [ReplicationMessage] if the [CopyDataMessage] contains such message.
   /// Otherwise, it'll just return the provided [copyData].
-  ServerMessage _extractReplicationMessageIfAny(CopyDataMessage copyData) {
+  ServerMessage _extractReplicationMessageIfAny(
+      CopyDataMessage copyData, ClientEncoding clientEncoding) {
     final bytes = copyData.bytes;
     final code = bytes.first;
     final data = bytes.sublist(1);
     if (code == ReplicationMessage.primaryKeepAliveIdentifier) {
       return PrimaryKeepAliveMessage(data);
     } else if (code == ReplicationMessage.xLogDataIdentifier) {
-      return XLogDataMessage.parse(data);
+      return XLogDataMessage.parse(data, clientEncoding);
     } else {
       return copyData;
     }
