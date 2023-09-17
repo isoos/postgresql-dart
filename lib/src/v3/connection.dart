@@ -6,13 +6,14 @@ import 'package:async/async.dart';
 import 'package:charcode/ascii.dart';
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart';
-import 'package:postgres/postgres_v3_experimental.dart';
-import 'package:postgres/src/query.dart';
-import 'package:postgres/src/replication.dart';
 import 'package:stream_channel/stream_channel.dart';
 
+import '../../postgres_v3_experimental.dart';
 import '../auth/auth.dart';
+import '../client_encoding.dart';
 import '../connection.dart' show PostgreSQLException, PostgreSQLSeverity;
+import '../query.dart';
+import '../replication.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 
@@ -273,8 +274,9 @@ class PgConnectionImplementation extends _PgSessionBase
       return out.close();
     }));
 
+    // TODO: proper ClientEncoding
     return StreamChannel<List<int>>(adaptedStream, outgoingSocket)
-        .transform(messageTransformer);
+        .transform(messageTransformer(ClientEncoding.utf8));
   }
 
   final StreamChannel<BaseMessage> _channel;

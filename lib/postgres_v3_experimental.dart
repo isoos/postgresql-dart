@@ -190,8 +190,7 @@ abstract class PgStatement {
   Future<PgResult> run([
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
         parameters,
-  ]
-  ) async {
+  ]) async {
     final items = <PgResultRow>[];
     final subscription = bind(parameters).listen(items.add);
     await subscription.asFuture();
@@ -362,25 +361,24 @@ final class PgSessionSettings {
 
   /// The replication mode for connecting in streaming replication mode.
   ///
-  /// The default value is [ReplicationMode.none]. But when the value is set to 
-  /// [ReplicationMode.physical] or [ReplicationMode.logical], the connection 
+  /// The default value is [ReplicationMode.none]. But when the value is set to
+  /// [ReplicationMode.physical] or [ReplicationMode.logical], the connection
   /// will be established in replication mode.
   ///
   /// Please note, while in replication mode, only the Simple Query Protcol can
-  /// be used to execute queries. 
+  /// be used to execute queries.
   ///
   /// For more info, see [Streaming Replication Protocol]
   ///
   /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
   final ReplicationMode replicationMode;
 
-  PgSessionSettings({
-    this.connectTimeout,
-    this.timeZone,
-    this.onBadSslCertificate,
-    this.transformer,
-    this.replicationMode = ReplicationMode.none
-  });
+  PgSessionSettings(
+      {this.connectTimeout,
+      this.timeZone,
+      this.onBadSslCertificate,
+      this.transformer,
+      this.replicationMode = ReplicationMode.none});
 }
 
 final class PgPoolSettings {

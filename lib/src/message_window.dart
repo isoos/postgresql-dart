@@ -4,32 +4,34 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
 
+import 'client_encoding.dart';
 import 'server_messages.dart';
 import 'shared_messages.dart';
 
 const int _headerByteSize = 5;
 final _emptyData = Uint8List(0);
 
-typedef _ServerMessageFn = ServerMessage Function(Uint8List data);
+typedef _ServerMessageFn = ServerMessage Function(
+    Uint8List data, ClientEncoding clientEncoding);
 
 Map<int, _ServerMessageFn> _messageTypeMap = {
-  49: (d) => ParseCompleteMessage(),
-  50: (d) => BindCompleteMessage(),
+  49: (d, e) => ParseCompleteMessage(),
+  50: (d, e) => BindCompleteMessage(),
   65: NotificationResponseMessage.new,
   67: CommandCompleteMessage.new,
   68: DataRowMessage.new,
-  69: ErrorResponseMessage.new,
-  75: BackendKeyMessage.new,
-  82: AuthenticationMessage.new,
+  69: (d, e) => ErrorResponseMessage(d),
+  75: (d, e) => BackendKeyMessage(d),
+  82: (d, e) => AuthenticationMessage(d),
   83: ParameterStatusMessage.new,
-  84: RowDescriptionMessage.new,
-  87: CopyBothResponseMessage.new,
+  84: (d, e) => RowDescriptionMessage(d),
+  87: (d, e) => CopyBothResponseMessage(d),
   90: ReadyForQueryMessage.new,
-  100: CopyDataMessage.new,
-  110: (d) => NoDataMessage(),
-  116: ParameterDescriptionMessage.new,
-  $3: (d) => CloseCompleteMessage(),
-  $N: NoticeMessage.new,
+  100: (d, e) => CopyDataMessage(d),
+  110: (d, e) => NoDataMessage(),
+  116: (d, e) => ParameterDescriptionMessage(d),
+  $3: (d, e) => CloseCompleteMessage(),
+  $N: (d, e) => NoticeMessage(d),
 };
 
 class MessageFramer {
@@ -45,7 +47,8 @@ class MessageFramer {
   bool get _isComplete =>
       _expectedLength == 0 || _expectedLength <= _reader.remainingLength;
 
-  void addBytes(Uint8List bytes) {
+  void addBytes(Uint8List bytes, [ClientEncoding? clientEncoding]) {
+    clientEncoding ??= ClientEncoding.utf8;
     _reader.add(bytes);
 
     var evaluateNextMessage = true;
@@ -68,8 +71,9 @@ class MessageFramer {
         final data =
             _expectedLength == 0 ? _emptyData : _reader.read(_expectedLength);
         final msgMaker = _messageTypeMap[_type];
-        var msg =
-            msgMaker == null ? UnknownMessage(_type, data) : msgMaker(data);
+        var msg = msgMaker == null
+            ? UnknownMessage(_type, data)
+            : msgMaker(data, clientEncoding);
 
         // Copy Data message is a wrapper around data stream messages
         // such as replication messages.

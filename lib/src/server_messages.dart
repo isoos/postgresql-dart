@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:postgres/messages.dart';
 
+import 'client_encoding.dart';
 import 'connection.dart';
 import 'query.dart';
 import 'time_converters.dart';
@@ -73,10 +73,12 @@ class ParameterStatusMessage extends ServerMessage {
 
   ParameterStatusMessage._(this.name, this.value);
 
-  factory ParameterStatusMessage(Uint8List bytes) {
+  factory ParameterStatusMessage(
+      Uint8List bytes, ClientEncoding clientEncoding) {
     final first0 = bytes.indexOf(0);
-    final name = utf8.decode(bytes.sublist(0, first0));
-    final value = utf8.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
+    final name = clientEncoding.decodeString(bytes.sublist(0, first0));
+    final value = clientEncoding
+        .decodeString(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
     return ParameterStatusMessage._(name, value);
   }
 }
@@ -88,7 +90,8 @@ class ReadyForQueryMessage extends ServerMessage {
 
   final String state;
 
-  ReadyForQueryMessage(Uint8List bytes) : state = utf8.decode(bytes);
+  ReadyForQueryMessage(Uint8List bytes, ClientEncoding clientEncoding)
+      : state = clientEncoding.decodeString(bytes);
 
   @override
   String toString() {
@@ -127,7 +130,7 @@ class RowDescriptionMessage extends ServerMessage {
 class DataRowMessage extends ServerMessage {
   final values = <Uint8List?>[];
 
-  DataRowMessage(Uint8List bytes) {
+  DataRowMessage(Uint8List bytes, ClientEncoding _) {
     final reader = ByteDataReader()..add(bytes);
     final fieldCount = reader.readInt16();
 
@@ -156,13 +159,14 @@ class NotificationResponseMessage extends ServerMessage {
 
   NotificationResponseMessage._(this.processID, this.channel, this.payload);
 
-  factory NotificationResponseMessage(Uint8List bytes) {
+  factory NotificationResponseMessage(
+      Uint8List bytes, ClientEncoding clientEncoding) {
     final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
     final processID = view.getUint32(0);
     final first0 = bytes.indexOf(0, 4);
-    final channel = utf8.decode(bytes.sublist(4, first0));
-    final payload =
-        utf8.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
+    final channel = clientEncoding.decodeString(bytes.sublist(4, first0));
+    final payload = clientEncoding
+        .decodeString(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
     return NotificationResponseMessage._(processID, channel, payload);
   }
 }
@@ -191,8 +195,9 @@ class CommandCompleteMessage extends ServerMessage {
 
   CommandCompleteMessage._(this.rowsAffected);
 
-  factory CommandCompleteMessage(Uint8List bytes) {
-    final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
+  factory CommandCompleteMessage(
+      Uint8List bytes, ClientEncoding clientEncoding) {
+    final str = clientEncoding.decodeString(bytes.sublist(0, bytes.length - 1));
     final match = _affectedRowsExp.firstMatch(str);
     var rowsAffected = 0;
     if (match != null) {
