@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:buffer/buffer.dart';
-
+import 'buffer.dart';
 import 'client_messages.dart';
 import 'server_messages.dart';
 
@@ -45,7 +44,7 @@ class CopyDataMessage extends SharedMessages {
   CopyDataMessage(this.bytes);
 
   @override
-  void applyToBuffer(ByteDataWriter buffer) {
+  void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(SharedMessages.copyDataIdentifier);
     buffer.writeInt32(length);
     buffer.write(bytes);
@@ -60,7 +59,7 @@ class CopyDoneMessage extends SharedMessages {
   CopyDoneMessage(this.length);
 
   @override
-  void applyToBuffer(ByteDataWriter buffer) {
+  void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(SharedMessages.copyDoneIdentifier);
     buffer.writeInt32(length);
   }

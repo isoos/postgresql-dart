@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/binary_codec.dart';
 import 'package:postgres/src/text_codec.dart';
-import 'package:postgres/src/utf8_backed_string.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -629,18 +628,6 @@ void main() {
         expect(e.toString(), contains('Could not infer type'));
       }
     });
-  });
-
-  test('UTF8String caches string regardless of which method is called first',
-      () {
-    final u = UTF8BackedString('abcd');
-    final v = UTF8BackedString('abcd');
-
-    u.utf8Length;
-    v.utf8Bytes;
-
-    expect(u.hasCachedBytes, true);
-    expect(v.hasCachedBytes, true);
   });
 
   test('Invalid UUID encoding', () {

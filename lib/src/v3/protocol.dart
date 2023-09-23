@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
-import 'package:buffer/buffer.dart';
 import 'package:stream_channel/stream_channel.dart';
 
+import '../buffer.dart';
 import '../client_messages.dart';
 import '../message_window.dart';
 import '../server_messages.dart';
@@ -20,7 +20,7 @@ class AggregatedClientMessage extends ClientMessage {
   AggregatedClientMessage(this.messages);
 
   @override
-  void applyToBuffer(ByteDataWriter buffer) {
+  void applyToBuffer(PgByteDataWriter buffer) {
     for (final cm in messages) {
       cm.applyToBuffer(buffer);
     }

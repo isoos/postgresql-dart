@@ -1,8 +1,6 @@
-import 'package:buffer/buffer.dart';
-
+import '../buffer.dart';
 import '../client_messages.dart';
 import '../server_messages.dart';
-import '../utf8_backed_string.dart';
 import 'auth.dart';
 
 class ClearAuthenticator extends PostgresAuthenticator {
@@ -16,17 +14,13 @@ class ClearAuthenticator extends PostgresAuthenticator {
 }
 
 class ClearMessage extends ClientMessage {
-  UTF8BackedString? _authString;
+  final String _password;
 
-  ClearMessage(String password) {
-    _authString = UTF8BackedString(password);
-  }
+  ClearMessage(this._password);
 
   @override
-  void applyToBuffer(ByteDataWriter buffer) {
+  void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
-    final length = 5 + _authString!.utf8Length;
-    buffer.writeUint32(length);
-    _authString!.applyToBuffer(buffer);
+    buffer.writeLengthEncodedString(_password);
   }
 }

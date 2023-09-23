@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
 import 'package:postgres/src/v3/types.dart';
 
+import 'buffer.dart';
 import 'types.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;
@@ -186,7 +187,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.jsonb:
         {
           final jsonBytes = _jsonUtf8.encode(input);
-          final writer = ByteDataWriter(bufferLength: jsonBytes.length + 1);
+          final writer = PgByteDataWriter(bufferLength: jsonBytes.length + 1);
           writer.writeUint8(1);
           writer.write(jsonBytes);
           return writer.toBytes();
@@ -345,8 +346,8 @@ class PostgresBinaryEncoder<T extends Object>
       Iterable<V> value,
       int type,
       int Function(V item) lengthEncoder,
-      void Function(ByteDataWriter writer, V item) valueEncoder) {
-    final writer = ByteDataWriter();
+      void Function(PgByteDataWriter writer, V item) valueEncoder) {
+    final writer = PgByteDataWriter();
 
     writer.writeInt32(1); // dimension
     writer.writeInt32(0); // ign
@@ -427,7 +428,7 @@ class PostgresBinaryEncoder<T extends Object>
 
     final nDigits = intWeight + fractWeight + 2;
 
-    final writer = ByteDataWriter();
+    final writer = PgByteDataWriter();
     writer.writeInt16(nDigits);
     writer.writeInt16(weight);
     writer.writeUint16(signByte);
