@@ -1,12 +1,11 @@
 import 'dart:typed_data';
 
-import 'package:buffer/buffer.dart';
 import 'package:sasl_scram/sasl_scram.dart';
 
 import '../../postgres.dart';
+import '../buffer.dart';
 import '../client_messages.dart';
 import '../server_messages.dart';
-import '../utf8_backed_string.dart';
 import 'auth.dart';
 
 /// Structure for SASL Authenticator
@@ -48,23 +47,22 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
 }
 
 class SaslClientFirstMessage extends ClientMessage {
-  Uint8List bytesToSendToServer;
-  String mechanismName;
+  final Uint8List bytesToSendToServer;
+  final String mechanismName;
 
   SaslClientFirstMessage(this.bytesToSendToServer, this.mechanismName);
 
   @override
-  void applyToBuffer(ByteDataWriter buffer) {
+  void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
 
-    final utf8CachedMechanismName = UTF8BackedString(mechanismName);
-
+    final encodedMechanismName = buffer.prepareString(mechanismName);
     final msgLength = bytesToSendToServer.length;
     // No Identifier bit + 4 byte counts (for whole length) + mechanism bytes + zero byte + 4 byte counts (for msg length) + msg bytes
-    final length = 4 + utf8CachedMechanismName.utf8Length + 1 + 4 + msgLength;
+    final length = 4 + encodedMechanismName.bytesLength + 1 + 4 + msgLength;
 
     buffer.writeUint32(length);
-    utf8CachedMechanismName.applyToBuffer(buffer);
+    buffer.writeEncodedString(encodedMechanismName);
 
     // do not add the msg byte count for whatever reason
     buffer.writeUint32(msgLength);
@@ -78,7 +76,7 @@ class SaslClientLastMessage extends ClientMessage {
   SaslClientLastMessage(this.bytesToSendToServer);
 
   @override
-  void applyToBuffer(ByteDataWriter buffer) {
+  void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.PasswordIdentifier);
 
     // No Identifier bit + 4 byte counts (for msg length) + msg bytes

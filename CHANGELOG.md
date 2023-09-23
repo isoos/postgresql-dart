@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.6.3
+
+- Refactor: replaced `UTF8BackedString` with generic encoding (not complete).
+
 ## 2.6.2
 
 - Improved (experimental) v3 implementation.
