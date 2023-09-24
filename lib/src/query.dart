@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/src/v3/types.dart';
 
 import 'binary_codec.dart';
 import 'client_messages.dart';
@@ -83,7 +84,7 @@ class Query<T> {
         formatIdentifiers.map((i) => i.type).toList();
 
     final parameterList = formatIdentifiers
-        .map((id) => ParameterValue(id, substitutionValues))
+        .map((id) => ParameterValue.resolve(id, substitutionValues))
         .toList();
 
     final messages = [
@@ -105,7 +106,8 @@ class Query<T> {
       Map<String, dynamic>? substitutionValues) {
     final statementName = cacheQuery.preparedStatementName;
     final parameterList = cacheQuery.orderedParameters!
-        .map((identifier) => ParameterValue(identifier, substitutionValues))
+        .map((identifier) =>
+            ParameterValue.resolve(identifier, substitutionValues))
         .toList();
 
     final bytes = ClientMessage.aggregateBytes([
@@ -217,38 +219,30 @@ class CachedQuery {
 }
 
 class ParameterValue {
-  factory ParameterValue(PostgreSQLFormatIdentifier identifier,
+  final PgDataType<Object>? _type;
+  final Object? _value;
+  ParameterValue(this._type, this._value);
+
+  factory ParameterValue.resolve(PostgreSQLFormatIdentifier identifier,
       Map<String, dynamic>? substitutionValues) {
-    if (identifier.type == null) {
-      return ParameterValue.text(substitutionValues?[identifier.name]);
+    final value = substitutionValues?[identifier.name];
+    final type = identifier.type;
+    return ParameterValue(type, value);
+  }
+
+  bool get hasKnownType => _type != null;
+
+  Uint8List? encodeAsBytes() {
+    if (_type != null) {
+      return _type!.binaryCodec.encoder.convert(_value);
     }
-
-    return ParameterValue.binary(
-        substitutionValues?[identifier.name], identifier.type!);
-  }
-
-  factory ParameterValue.binary(
-      dynamic value, PostgreSQLDataType postgresType) {
-    final bytes = postgresType.binaryCodec.encoder.convert(value);
-    return ParameterValue._(true, bytes, bytes?.length ?? 0);
-  }
-
-  factory ParameterValue.text(dynamic value) {
-    Uint8List? bytes;
-    if (value != null) {
+    if (_value != null) {
       const converter = PostgresTextEncoder();
-      bytes = castBytes(
-          utf8.encode(converter.convert(value, escapeStrings: false)));
+      return castBytes(
+          utf8.encode(converter.convert(_value, escapeStrings: false)));
     }
-    final length = bytes?.length ?? 0;
-    return ParameterValue._(false, bytes, length);
+    return null;
   }
-
-  ParameterValue._(this.isBinary, this.bytes, this.length);
-
-  final bool isBinary;
-  final Uint8List? bytes;
-  final int length;
 }
 
 class FieldDescription implements ColumnDescription {

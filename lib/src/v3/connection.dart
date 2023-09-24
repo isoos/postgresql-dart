@@ -478,7 +478,7 @@ class _PgResultStreamSubscription
         BindMessage(
           [
             for (final parameter in statement.parameters)
-              ParameterValue.binary(parameter.value, parameter.type)
+              ParameterValue(parameter.type, parameter.value)
           ],
           portalName: _portalName,
           statementName: statement.statement._name,
