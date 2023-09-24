@@ -19,7 +19,6 @@ class UTF8ByteConstants {
     103,
     0
   ];
-  static const utf8 = <int>[85, 84, 70, 56, 0];
   static const timeZone = <int>[84, 105, 109, 101, 90, 111, 110, 101, 0];
   static const replication = <int>[
     114,

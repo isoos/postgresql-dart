@@ -1,14 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-
-class EncodedString {
-  final List<int> _bytes;
-  EncodedString.fromValue(String value, {Encoding encoding = utf8})
-      : _bytes = encoding.encode(value);
-
-  int get bytesLength => _bytes.length;
-}
 
 class PgByteDataWriter extends ByteDataWriter {
   final Encoding _encoding;
@@ -18,21 +11,21 @@ class PgByteDataWriter extends ByteDataWriter {
     Encoding encoding = utf8,
   }) : _encoding = encoding;
 
-  late final encodingName = prepareString(_encoding.name);
+  late final encodingName = encodeString(_encoding.name);
 
-  EncodedString prepareString(String value) {
-    return EncodedString.fromValue(value, encoding: _encoding);
+  Uint8List encodeString(String value) {
+    return castBytes(_encoding.encode(value));
   }
 
-  void writeEncodedString(EncodedString value) {
-    write(value._bytes);
+  void writeEncodedString(Uint8List value) {
+    write(value);
     writeInt8(0);
   }
 
   void writeLengthEncodedString(String value) {
-    final encoded = EncodedString.fromValue(value, encoding: _encoding);
-    writeUint32(5 + encoded.bytesLength);
-    write(encoded._bytes);
+    final encoded = encodeString(value);
+    writeUint32(5 + value.length);
+    write(encoded);
     writeInt8(0);
   }
 }

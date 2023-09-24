@@ -64,22 +64,21 @@ class StartupMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    final databaseName = buffer.prepareString(_databaseName);
-    final timeZone = buffer.prepareString(_timeZone);
-    final username =
-        _username == null ? null : buffer.prepareString(_username!);
-    final replication = buffer.prepareString(_replication);
-    var fixedLength = 44 + buffer.encodingName.bytesLength;
-    var variableLength = databaseName.bytesLength + timeZone.bytesLength + 2;
+    final databaseName = buffer.encodeString(_databaseName);
+    final timeZone = buffer.encodeString(_timeZone);
+    final username = _username == null ? null : buffer.encodeString(_username!);
+    final replication = buffer.encodeString(_replication);
+    var fixedLength = 44 + buffer.encodingName.length;
+    var variableLength = databaseName.length + timeZone.length + 2;
 
     if (username != null) {
       fixedLength += 5;
-      variableLength += username.bytesLength + 1;
+      variableLength += username.length + 1;
     }
 
     if (_replication != ReplicationMode.none.value) {
       fixedLength += UTF8ByteConstants.replication.length;
-      variableLength += replication.bytesLength + 1;
+      variableLength += replication.length + 1;
     }
 
     buffer.writeInt32(fixedLength + variableLength);
@@ -134,12 +133,10 @@ class ParseMessage extends ClientMessage {
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ParseIdentifier);
-    final statement = buffer.prepareString(_statement);
-    final statementName = buffer.prepareString(_statementName);
-    final length = 8 +
-        statement.bytesLength +
-        statementName.bytesLength +
-        _types.length * 4;
+    final statement = buffer.encodeString(_statement);
+    final statementName = buffer.encodeString(_statementName);
+    final length =
+        8 + statement.length + statementName.length + _types.length * 4;
     buffer.writeUint32(length);
     // Name of prepared statement
     buffer.writeEncodedString(statementName);
@@ -168,8 +165,8 @@ class DescribeMessage extends ClientMessage {
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.DescribeIdentifier);
-    final name = buffer.prepareString(_name);
-    final length = 6 + name.bytesLength;
+    final name = buffer.encodeString(_name);
+    final length = 6 + name.length;
     buffer.writeUint32(length);
     buffer.writeUint8(_isPortal ? $P : $S);
     buffer.writeEncodedString(name); // Name of prepared statement
@@ -189,8 +186,8 @@ class BindMessage extends ClientMessage {
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.BindIdentifier);
-    final portalName = buffer.prepareString(_portalName);
-    final statementName = buffer.prepareString(_statementName);
+    final portalName = buffer.encodeString(_portalName);
+    final statementName = buffer.encodeString(_statementName);
 
     final parameterBytes = _parameters.map((p) => p.encodeAsBytes()).toList();
     final typeSpecCount = _parameters.where((p) => p.hasKnownType).length;
@@ -200,8 +197,8 @@ class BindMessage extends ClientMessage {
     }
 
     var length = 14;
-    length += statementName.bytesLength;
-    length += portalName.bytesLength;
+    length += statementName.length;
+    length += portalName.length;
     length += inputParameterElementCount * 2;
     length += parameterBytes.fold<int>(
         0, (len, bytes) => len + 4 + (bytes?.length ?? 0));
@@ -258,8 +255,8 @@ class ExecuteMessage extends ClientMessage {
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ExecuteIdentifier);
-    final portalName = buffer.prepareString(_portalName);
-    buffer.writeUint32(9 + portalName.bytesLength);
+    final portalName = buffer.encodeString(_portalName);
+    buffer.writeUint32(9 + portalName.length);
     buffer.writeEncodedString(portalName);
     buffer.writeUint32(0);
   }
@@ -279,8 +276,8 @@ class CloseMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    final name = buffer.prepareString(_name);
-    final length = 6 + name.bytesLength;
+    final name = buffer.encodeString(_name);
+    final length = 6 + name.length;
 
     buffer
       ..writeUint8(ClientMessage.CloseIdentifier)
