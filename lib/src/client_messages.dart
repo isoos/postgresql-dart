@@ -64,11 +64,10 @@ class StartupMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    final databaseName = buffer.prepareString(_databaseName);
-    final timeZone = buffer.prepareString(_timeZone);
-    final username =
-        _username == null ? null : buffer.prepareString(_username!);
-    final replication = buffer.prepareString(_replication);
+    final databaseName = buffer.encodeString(_databaseName);
+    final timeZone = buffer.encodeString(_timeZone);
+    final username = _username == null ? null : buffer.encodeString(_username!);
+    final replication = buffer.encodeString(_replication);
     var fixedLength = 44 + buffer.encodingName.bytesLength;
     var variableLength = databaseName.bytesLength + timeZone.bytesLength + 2;
 
@@ -134,8 +133,8 @@ class ParseMessage extends ClientMessage {
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ParseIdentifier);
-    final statement = buffer.prepareString(_statement);
-    final statementName = buffer.prepareString(_statementName);
+    final statement = buffer.encodeString(_statement);
+    final statementName = buffer.encodeString(_statementName);
     final length = 8 +
         statement.bytesLength +
         statementName.bytesLength +
@@ -168,7 +167,7 @@ class DescribeMessage extends ClientMessage {
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.DescribeIdentifier);
-    final name = buffer.prepareString(_name);
+    final name = buffer.encodeString(_name);
     final length = 6 + name.bytesLength;
     buffer.writeUint32(length);
     buffer.writeUint8(_isPortal ? $P : $S);
@@ -189,8 +188,8 @@ class BindMessage extends ClientMessage {
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.BindIdentifier);
-    final portalName = buffer.prepareString(_portalName);
-    final statementName = buffer.prepareString(_statementName);
+    final portalName = buffer.encodeString(_portalName);
+    final statementName = buffer.encodeString(_statementName);
 
     final parameterBytes = _parameters.map((p) => p.encodeAsBytes()).toList();
     final typeSpecCount = _parameters.where((p) => p.hasKnownType).length;
@@ -258,7 +257,7 @@ class ExecuteMessage extends ClientMessage {
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessage.ExecuteIdentifier);
-    final portalName = buffer.prepareString(_portalName);
+    final portalName = buffer.encodeString(_portalName);
     buffer.writeUint32(9 + portalName.bytesLength);
     buffer.writeEncodedString(portalName);
     buffer.writeUint32(0);
@@ -279,7 +278,7 @@ class CloseMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    final name = buffer.prepareString(_name);
+    final name = buffer.encodeString(_name);
     final length = 6 + name.bytesLength;
 
     buffer

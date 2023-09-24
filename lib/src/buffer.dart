@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:buffer/buffer.dart';
 
+/// This class doesn't add much over using `List<int>` instead, however,
+/// it creates a nice explicit type difference from both `String` and `List<int>`,
+/// and it allows better use for the string encoding that delimits the value with `0`.
 class EncodedString {
   final List<int> _bytes;
-  EncodedString.fromValue(String value, {Encoding encoding = utf8})
-      : _bytes = encoding.encode(value);
+  EncodedString._(this._bytes);
 
   int get bytesLength => _bytes.length;
 }
@@ -18,10 +20,10 @@ class PgByteDataWriter extends ByteDataWriter {
     Encoding encoding = utf8,
   }) : _encoding = encoding;
 
-  late final encodingName = prepareString(_encoding.name);
+  late final encodingName = encodeString(_encoding.name);
 
-  EncodedString prepareString(String value) {
-    return EncodedString.fromValue(value, encoding: _encoding);
+  EncodedString encodeString(String value) {
+    return EncodedString._(_encoding.encode(value));
   }
 
   void writeEncodedString(EncodedString value) {
@@ -30,7 +32,7 @@ class PgByteDataWriter extends ByteDataWriter {
   }
 
   void writeLengthEncodedString(String value) {
-    final encoded = EncodedString.fromValue(value, encoding: _encoding);
+    final encoded = encodeString(value);
     writeUint32(5 + encoded.bytesLength);
     write(encoded._bytes);
     writeInt8(0);
