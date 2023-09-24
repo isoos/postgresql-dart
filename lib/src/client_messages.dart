@@ -180,34 +180,11 @@ class BindMessage extends ClientMessage {
   final List<ParameterValue> _parameters;
   final String _portalName;
   final String _statementName;
-  final int _typeSpecCount;
 
   BindMessage(this._parameters,
       {String portalName = '', String statementName = ''})
-      : _typeSpecCount = _parameters.where((p) => p.isBinary).length,
-        _portalName = portalName,
+      : _portalName = portalName,
         _statementName = statementName;
-
-  int _length(EncodedString statementName, EncodedString portalName) {
-    var length = 0;
-    var inputParameterElementCount = _parameters.length;
-    if (_typeSpecCount == _parameters.length || _typeSpecCount == 0) {
-      inputParameterElementCount = 1;
-    }
-
-    length = 15;
-    length += statementName.bytesLength;
-    length += portalName.bytesLength;
-    length += inputParameterElementCount * 2;
-    length += _parameters.fold<int>(0, (len, ParameterValue paramValue) {
-      if (paramValue.bytes == null) {
-        return len + 4;
-      } else {
-        return len + 4 + paramValue.length;
-      }
-    });
-    return length;
-  }
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
@@ -215,7 +192,21 @@ class BindMessage extends ClientMessage {
     final portalName = buffer.prepareString(_portalName);
     final statementName = buffer.prepareString(_statementName);
 
-    buffer.writeUint32(_length(statementName, portalName) - 1);
+    final parameterBytes = _parameters.map((p) => p.encodeAsBytes()).toList();
+    final typeSpecCount = _parameters.where((p) => p.hasKnownType).length;
+    var inputParameterElementCount = _parameters.length;
+    if (typeSpecCount == _parameters.length || typeSpecCount == 0) {
+      inputParameterElementCount = 1;
+    }
+
+    var length = 14;
+    length += statementName.bytesLength;
+    length += portalName.bytesLength;
+    length += inputParameterElementCount * 2;
+    length += parameterBytes.fold<int>(
+        0, (len, bytes) => len + 4 + (bytes?.length ?? 0));
+
+    buffer.writeUint32(length);
 
     // Name of portal.
     buffer.writeEncodedString(portalName);
@@ -224,11 +215,11 @@ class BindMessage extends ClientMessage {
 
     // OK, if we have no specified types at all, we can use 0. If we have all specified types, we can use 1. If we have a mix, we have to individually
     // call out each type.
-    if (_typeSpecCount == _parameters.length) {
+    if (typeSpecCount == _parameters.length) {
       buffer.writeUint16(1);
       // Apply following format code for all parameters by indicating 1
       buffer.writeUint16(ClientMessage.FormatBinary);
-    } else if (_typeSpecCount == 0) {
+    } else if (typeSpecCount == 0) {
       buffer.writeUint16(1);
       // Apply following format code for all parameters by indicating 1
       buffer.writeUint16(ClientMessage.FormatText);
@@ -236,19 +227,20 @@ class BindMessage extends ClientMessage {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.writeUint16(_parameters.length);
       for (final p in _parameters) {
-        buffer.writeUint16(
-            p.isBinary ? ClientMessage.FormatBinary : ClientMessage.FormatText);
+        buffer.writeUint16(p.hasKnownType
+            ? ClientMessage.FormatBinary
+            : ClientMessage.FormatText);
       }
     }
 
     // This must be the number of $n's in the query.
     buffer.writeUint16(_parameters.length);
-    for (final p in _parameters) {
-      if (p.bytes == null) {
+    for (final bytes in parameterBytes) {
+      if (bytes == null) {
         buffer.writeInt32(-1);
       } else {
-        buffer.writeInt32(p.length);
-        buffer.write(p.bytes!);
+        buffer.writeInt32(bytes.length);
+        buffer.write(bytes);
       }
     }
 
