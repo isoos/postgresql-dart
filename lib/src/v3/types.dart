@@ -1,13 +1,7 @@
-import 'dart:convert';
 import 'dart:core';
 import 'dart:core' as core;
-import 'dart:typed_data';
 
-import 'package:buffer/buffer.dart';
 import 'package:meta/meta.dart';
-
-import '../binary_codec.dart';
-import '../text_codec.dart';
 
 /// Describes PostgreSQL's geometric type: `point`.
 @immutable
@@ -148,16 +142,6 @@ enum PgDataType<Dart extends Object> {
   /// name can be used.
   final String? nameForSubstitution;
 
-  Codec<Dart?, Uint8List?> get binaryCodec {
-    return _binaryCodecs.putIfAbsent(this, () => _BinaryTypeCodec<Dart>(this))
-        as Codec<Dart?, Uint8List?>;
-  }
-
-  Codec<Dart?, Uint8List?> get textCodec {
-    return _textCodecs.putIfAbsent(this, () => _TextTypeCodec<Dart>(this))
-        as Codec<Dart?, Uint8List?>;
-  }
-
   const PgDataType(this.oid, {this.nameForSubstitution});
 
   static final Map<int, PgDataType> byTypeOid = Map.unmodifiable({
@@ -176,39 +160,4 @@ enum PgDataType<Dart extends Object> {
           type.nameForSubstitution != null)
         type.nameForSubstitution: type,
   });
-
-  static final Map<PgDataType, _BinaryTypeCodec> _binaryCodecs = {};
-  static final Map<PgDataType, _TextTypeCodec> _textCodecs = {};
-}
-
-class _BinaryTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
-  @override
-  final Converter<D?, Uint8List?> encoder;
-  @override
-  final Converter<Uint8List?, D?> decoder;
-
-  _BinaryTypeCodec(PgDataType<D> type)
-      : encoder = PostgresBinaryEncoder(type),
-        decoder = PostgresBinaryDecoder(type);
-}
-
-class _TextTypeCodec<D extends Object> extends Codec<D?, Uint8List?> {
-  @override
-  final Converter<D?, Uint8List?> encoder;
-  @override
-  final Converter<Uint8List?, D?> decoder;
-
-  _TextTypeCodec(PgDataType<D> type)
-      : encoder = const _PostgresTextToUtf8Encoder(),
-        decoder = PostgresTextDecoder<D>(type);
-}
-
-class _PostgresTextToUtf8Encoder<D extends Object>
-    extends Converter<D?, Uint8List?> {
-  const _PostgresTextToUtf8Encoder();
-
-  @override
-  Uint8List convert(Object? input) {
-    return castBytes(utf8.encode(const PostgresTextEncoder().convert(input)));
-  }
 }

@@ -166,7 +166,7 @@ class Query<T> {
     final iterator = fieldDescriptions!.iterator;
     final lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
-      return iterator.current.converter.convert(bd);
+      return iterator.current.converter.convert(bd, utf8);
     });
 
     rows.add(lazyDecodedData.toList());
@@ -232,21 +232,22 @@ class ParameterValue {
 
   bool get hasKnownType => _type != null;
 
-  Uint8List? encodeAsBytes() {
+  Uint8List? encodeAsBytes(Encoding encoding) {
     if (_type != null) {
-      return _type!.binaryCodec.encoder.convert(_value);
+      final encoder = PostgresBinaryEncoder(_type!);
+      return encoder.convert(_value, encoding);
     }
     if (_value != null) {
       const converter = PostgresTextEncoder();
       return castBytes(
-          utf8.encode(converter.convert(_value, escapeStrings: false)));
+          encoding.encode(converter.convert(_value, escapeStrings: false)));
     }
     return null;
   }
 }
 
 class FieldDescription implements ColumnDescription {
-  final Converter converter;
+  final PostgresBinaryDecoder converter;
 
   @override
   final String columnName;

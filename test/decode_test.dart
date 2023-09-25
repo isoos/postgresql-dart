@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:postgres/postgres.dart';
@@ -235,7 +236,7 @@ void main() {
     final decoder = PostgresBinaryDecoder(PostgreSQLDataType.numeric);
     binaries.forEach((key, value) {
       final uint8List = Uint8List.fromList(value);
-      final res = decoder.convert(uint8List);
+      final res = decoder.convert(uint8List, utf8);
       expect(res, key);
     });
   });

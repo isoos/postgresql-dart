@@ -218,16 +218,15 @@ class PostgresTextEncoder extends Converter<Object, String> {
   }
 }
 
-class PostgresTextDecoder<T extends Object> extends Converter<Uint8List?, T?> {
+class PostgresTextDecoder<T extends Object> {
   final PgDataType<T> _dataType;
 
   const PostgresTextDecoder(this._dataType);
 
-  @override
-  T? convert(Uint8List? input) {
+  T? convert(Uint8List? input, Encoding encoding) {
     if (input == null) return null;
 
-    final asText = utf8.decode(input);
+    final asText = encoding.decode(input);
 
     // ignore: unnecessary_cast
     switch (_dataType as PgDataType<Object>) {
