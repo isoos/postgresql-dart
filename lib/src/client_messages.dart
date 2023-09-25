@@ -191,7 +191,8 @@ class BindMessage extends ClientMessage {
     final portalName = buffer.encodeString(_portalName);
     final statementName = buffer.encodeString(_statementName);
 
-    final parameterBytes = _parameters.map((p) => p.encodeAsBytes()).toList();
+    final parameterBytes =
+        _parameters.map((p) => p.encodeAsBytes(buffer.encoding)).toList();
     final typeSpecCount = _parameters.where((p) => p.hasKnownType).length;
     var inputParameterElementCount = _parameters.length;
     if (typeSpecCount == _parameters.length || typeSpecCount == 0) {

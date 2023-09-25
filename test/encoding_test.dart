@@ -253,7 +253,7 @@ void main() {
       final encoder = PostgresBinaryEncoder<Object>(PostgreSQLDataType.numeric);
       binaries.forEach((key, value) {
         final uint8List = Uint8List.fromList(value);
-        final res = encoder.convert(key);
+        final res = encoder.convert(key, utf8);
         expect(res, uint8List);
       });
 
@@ -502,7 +502,8 @@ void main() {
       ]);
 
       expect(
-        () => PostgresBinaryEncoder(PostgreSQLDataType.voidType).convert(1),
+        () =>
+            PostgresBinaryEncoder(PostgreSQLDataType.voidType).convert(1, utf8),
         throwsArgumentError,
       );
     });
@@ -633,28 +634,28 @@ void main() {
   test('Invalid UUID encoding', () {
     final converter = PostgresBinaryEncoder<Object>(PostgreSQLDataType.uuid);
     try {
-      converter.convert('z0000000-0000-0000-0000-000000000000');
+      converter.convert('z0000000-0000-0000-0000-000000000000', utf8);
       fail('unreachable');
     } on FormatException catch (e) {
       expect(e.toString(), contains('Invalid UUID string'));
     }
 
     try {
-      converter.convert(123123);
+      converter.convert(123123, utf8);
       fail('unreachable');
     } on FormatException catch (e) {
       expect(e.toString(), contains('Invalid type for parameter'));
     }
 
     try {
-      converter.convert('0000000-0000-0000-0000-000000000000');
+      converter.convert('0000000-0000-0000-0000-000000000000', utf8);
       fail('unreachable');
     } on FormatException catch (e) {
       expect(e.toString(), contains('Invalid UUID string'));
     }
 
     try {
-      converter.convert('00000000-0000-0000-0000-000000000000f');
+      converter.convert('00000000-0000-0000-0000-000000000000f', utf8);
       fail('unreachable');
     } on FormatException catch (e) {
       expect(e.toString(), contains('Invalid UUID string'));
@@ -672,7 +673,7 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
   expect(result.first.first, equals(value));
 
   final encoder = PostgresBinaryEncoder(dataType);
-  final encodedValue = encoder.convert(value);
+  final encodedValue = encoder.convert(value, utf8);
 
   if (dataType == PostgreSQLDataType.serial) {
     dataType = PostgreSQLDataType.integer;
@@ -681,7 +682,7 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
   }
 
   final decoder = PostgresBinaryDecoder(dataType);
-  final decodedValue = decoder.convert(encodedValue);
+  final decodedValue = decoder.convert(encodedValue, utf8);
 
   expect(decodedValue, value);
 }

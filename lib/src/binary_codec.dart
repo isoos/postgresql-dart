@@ -36,14 +36,12 @@ final _trailingZerosRegExp = RegExp(r'0+$');
 // that doesn't allocate intermediate strings.
 final _jsonUtf8 = json.fuse(utf8);
 
-class PostgresBinaryEncoder<T extends Object>
-    extends Converter<T?, Uint8List?> {
+class PostgresBinaryEncoder<T extends Object> {
   final PgDataType<T> _dataType;
 
   const PostgresBinaryEncoder(this._dataType);
 
-  @override
-  Uint8List? convert(Object? input) {
+  Uint8List? convert(Object? input, Encoding encoding) {
     if (input == null) {
       return null;
     }
@@ -98,7 +96,7 @@ class PostgresBinaryEncoder<T extends Object>
       case PgDataType.varChar:
         {
           if (input is String) {
-            return castBytes(utf8.encode(input));
+            return castBytes(encoding.encode(input));
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: String Got: ${input.runtimeType}');
@@ -443,13 +441,12 @@ class PostgresBinaryEncoder<T extends Object>
   }
 }
 
-class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
+class PostgresBinaryDecoder<T> {
   PostgresBinaryDecoder(this.type);
 
   final PgDataType type;
 
-  @override
-  T? convert(Uint8List? input) {
+  T? convert(Uint8List? input, Encoding encoding) {
     if (input == null) {
       return null;
     }
@@ -461,7 +458,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
       case PostgreSQLDataType.name:
       case PostgreSQLDataType.text:
       case PostgreSQLDataType.varChar:
-        return utf8.decode(input) as T;
+        return encoding.decode(input) as T;
       case PostgreSQLDataType.boolean:
         return (buffer.getInt8(0) != 0) as T;
       case PostgreSQLDataType.smallInteger:
@@ -550,7 +547,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
       case PostgreSQLDataType.varCharArray:
       case PostgreSQLDataType.textArray:
         return readListBytes<String>(input, (reader, length) {
-          return utf8.decode(length > 0 ? reader.read(length) : []);
+          return encoding.decode(length > 0 ? reader.read(length) : []);
         }) as T;
 
       case PostgreSQLDataType.doubleArray:
@@ -571,7 +568,7 @@ class PostgresBinaryDecoder<T> extends Converter<Uint8List?, T?> {
           // we just return the bytes and let the caller figure out what to
           // do with it.
           try {
-            return utf8.decode(input) as T;
+            return encoding.decode(input) as T;
           } catch (_) {
             return input as T;
           }

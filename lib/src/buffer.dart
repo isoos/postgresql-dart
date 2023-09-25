@@ -13,17 +13,17 @@ class EncodedString {
 }
 
 class PgByteDataWriter extends ByteDataWriter {
-  final Encoding _encoding;
+  final Encoding encoding;
 
   PgByteDataWriter({
     super.bufferLength,
-    Encoding encoding = utf8,
-  }) : _encoding = encoding;
+    this.encoding = utf8,
+  });
 
-  late final encodingName = encodeString(_encoding.name);
+  late final encodingName = encodeString(encoding.name);
 
   EncodedString encodeString(String value) {
-    return EncodedString._(_encoding.encode(value));
+    return EncodedString._(encoding.encode(value));
   }
 
   void writeEncodedString(EncodedString value) {

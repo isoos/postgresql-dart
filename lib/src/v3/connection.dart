@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -7,12 +8,14 @@ import 'package:charcode/ascii.dart';
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
-import 'package:postgres/src/query.dart';
-import 'package:postgres/src/replication.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../auth/auth.dart';
+import '../binary_codec.dart';
 import '../connection.dart' show PostgreSQLException, PostgreSQLSeverity;
+import '../query.dart';
+import '../replication.dart';
+import '../text_codec.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 
@@ -566,10 +569,16 @@ class _PgResultStreamSubscription
             final field = schema.columns[i];
 
             final type = field.type;
-            final codec =
-                field.binaryEncoding ? type.binaryCodec : type.textCodec;
+            late final dynamic value;
+            if (field.binaryEncoding) {
+              value =
+                  PostgresBinaryDecoder(type).convert(message.values[i], utf8);
+            } else {
+              value =
+                  PostgresTextDecoder(type).convert(message.values[i], utf8);
+            }
 
-            columnValues.add(codec.decode(message.values[i]));
+            columnValues.add(value);
           }
 
           final row = _ResultRow(schema, columnValues);
