@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:buffer/buffer.dart';
+import 'package:meta/meta.dart';
 import 'package:postgres/messages.dart';
+import 'package:postgres/src/buffer.dart';
 
 import 'connection.dart';
 import 'query.dart';
@@ -14,33 +14,22 @@ abstract class ServerMessage extends BaseMessage {}
 sealed class ErrorOrNoticeMessage implements ServerMessage {
   final fields = <ErrorField>[];
 
-  ErrorOrNoticeMessage(Uint8List bytes) {
-    final reader = ByteDataReader()..add(bytes);
-
-    int? identificationToken;
-    StringBuffer? sb;
-
-    while (reader.remainingLength > 0) {
-      final byte = reader.readUint8();
-      if (identificationToken == null) {
-        identificationToken = byte;
-        sb = StringBuffer();
-      } else if (byte == 0) {
-        fields.add(ErrorField(identificationToken, sb.toString()));
-        identificationToken = null;
-        sb = null;
-      } else {
-        sb!.writeCharCode(byte);
+  ErrorOrNoticeMessage._parse(PgByteDataReader reader, int length) {
+    final targetRemainingLength = reader.remainingLength - length;
+    while (reader.remainingLength > targetRemainingLength) {
+      final identificationToken = reader.readUint8();
+      if (identificationToken == 0) {
+        break;
       }
-    }
-    if (identificationToken != null && sb != null) {
-      fields.add(ErrorField(identificationToken, sb.toString()));
+      final message = reader.readNullTerminatedString();
+      fields.add(ErrorField(identificationToken, message));
     }
   }
 }
 
 class ErrorResponseMessage extends ErrorOrNoticeMessage {
-  ErrorResponseMessage(super.bytes);
+  @internal
+  ErrorResponseMessage.parse(super.reader, super.length) : super._parse();
 }
 
 class AuthenticationMessage implements ServerMessage {
@@ -61,9 +50,10 @@ class AuthenticationMessage implements ServerMessage {
 
   AuthenticationMessage._(this.type, this.bytes);
 
-  factory AuthenticationMessage(Uint8List bytes) {
-    final type = ByteData.view(bytes.buffer, bytes.offsetInBytes).getUint32(0);
-    return AuthenticationMessage._(type, bytes.sublist(4));
+  @internal
+  factory AuthenticationMessage.parse(PgByteDataReader reader, int length) {
+    final type = reader.readUint32();
+    return AuthenticationMessage._(type, reader.read(length - 4));
   }
 }
 
@@ -73,10 +63,10 @@ class ParameterStatusMessage extends ServerMessage {
 
   ParameterStatusMessage._(this.name, this.value);
 
-  factory ParameterStatusMessage(Uint8List bytes) {
-    final first0 = bytes.indexOf(0);
-    final name = utf8.decode(bytes.sublist(0, first0));
-    final value = utf8.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
+  @internal
+  factory ParameterStatusMessage.parse(PgByteDataReader reader) {
+    final name = reader.readNullTerminatedString();
+    final value = reader.readNullTerminatedString();
     return ParameterStatusMessage._(name, value);
   }
 }
@@ -88,7 +78,9 @@ class ReadyForQueryMessage extends ServerMessage {
 
   final String state;
 
-  ReadyForQueryMessage(Uint8List bytes) : state = utf8.decode(bytes);
+  @internal
+  ReadyForQueryMessage.parse(PgByteDataReader reader, int length)
+      : state = reader.encoding.decode(reader.read(length));
 
   @override
   String toString() {
@@ -102,10 +94,10 @@ class BackendKeyMessage extends ServerMessage {
 
   BackendKeyMessage._(this.processID, this.secretKey);
 
-  factory BackendKeyMessage(Uint8List bytes) {
-    final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
-    final processID = view.getUint32(0);
-    final secretKey = view.getUint32(4);
+  @internal
+  factory BackendKeyMessage.parse(PgByteDataReader reader) {
+    final processID = reader.readUint32();
+    final secretKey = reader.readUint32();
     return BackendKeyMessage._(processID, secretKey);
   }
 }
@@ -113,8 +105,8 @@ class BackendKeyMessage extends ServerMessage {
 class RowDescriptionMessage extends ServerMessage {
   final fieldDescriptions = <FieldDescription>[];
 
-  RowDescriptionMessage(Uint8List bytes) {
-    final reader = ByteDataReader()..add(bytes);
+  @internal
+  RowDescriptionMessage.parse(PgByteDataReader reader) {
     final fieldCount = reader.readInt16();
 
     for (var i = 0; i < fieldCount; i++) {
@@ -127,8 +119,8 @@ class RowDescriptionMessage extends ServerMessage {
 class DataRowMessage extends ServerMessage {
   final values = <Uint8List?>[];
 
-  DataRowMessage(Uint8List bytes) {
-    final reader = ByteDataReader()..add(bytes);
+  @internal
+  DataRowMessage.parse(PgByteDataReader reader) {
     final fieldCount = reader.readInt16();
 
     for (var i = 0; i < fieldCount; i++) {
@@ -156,13 +148,11 @@ class NotificationResponseMessage extends ServerMessage {
 
   NotificationResponseMessage._(this.processID, this.channel, this.payload);
 
-  factory NotificationResponseMessage(Uint8List bytes) {
-    final view = ByteData.view(bytes.buffer, bytes.offsetInBytes);
-    final processID = view.getUint32(0);
-    final first0 = bytes.indexOf(0, 4);
-    final channel = utf8.decode(bytes.sublist(4, first0));
-    final payload =
-        utf8.decode(bytes.sublist(first0 + 1, bytes.lastIndexOf(0)));
+  @internal
+  factory NotificationResponseMessage.parse(PgByteDataReader reader) {
+    final processID = reader.readUint32();
+    final channel = reader.readNullTerminatedString();
+    final payload = reader.readNullTerminatedString();
     return NotificationResponseMessage._(processID, channel, payload);
   }
 }
@@ -191,8 +181,9 @@ class CommandCompleteMessage extends ServerMessage {
 
   CommandCompleteMessage._(this.rowsAffected);
 
-  factory CommandCompleteMessage(Uint8List bytes) {
-    final str = utf8.decode(bytes.sublist(0, bytes.length - 1));
+  @internal
+  factory CommandCompleteMessage.parse(PgByteDataReader reader) {
+    final str = reader.readNullTerminatedString();
     final match = _affectedRowsExp.firstMatch(str);
     var rowsAffected = 0;
     if (match != null) {
@@ -231,10 +222,9 @@ class CloseCompleteMessage extends ServerMessage {
 class ParameterDescriptionMessage extends ServerMessage {
   final parameterTypeIDs = <int>[];
 
-  ParameterDescriptionMessage(Uint8List bytes) {
-    final reader = ByteDataReader()..add(bytes);
+  @internal
+  ParameterDescriptionMessage.parse(PgByteDataReader reader) {
     final count = reader.readUint16();
-
     for (var i = 0; i < count; i++) {
       parameterTypeIDs.add(reader.readUint32());
     }
@@ -249,7 +239,8 @@ class NoDataMessage extends ServerMessage {
 }
 
 class NoticeMessage extends ErrorOrNoticeMessage {
-  NoticeMessage(super.bytes);
+  @internal
+  NoticeMessage.parse(super.reader, super.length) : super._parse();
 }
 
 /// Identifies the message as a Start Copy Both response.
@@ -264,12 +255,10 @@ class CopyBothResponseMessage implements ServerMessage {
   /// or one (binary). All must be zero if the overall copy format is textual
   final columnsFormatCode = <int>[];
 
-  CopyBothResponseMessage(Uint8List bytes) {
-    final reader = ByteDataReader()..add(bytes);
+  @internal
+  CopyBothResponseMessage.parse(PgByteDataReader reader) {
     copyFormat = reader.readInt8();
-
     final numberOfColumns = reader.readInt16();
-
     for (var i = 0; i < numberOfColumns; i++) {
       columnsFormatCode.add(reader.readInt16());
     }
@@ -290,8 +279,8 @@ class PrimaryKeepAliveMessage implements ReplicationMessage, ServerMessage {
   // to avoid a timeout disconnect.
   late final bool mustReply;
 
-  PrimaryKeepAliveMessage(Uint8List bytes) {
-    final reader = ByteDataReader()..add(bytes);
+  @internal
+  PrimaryKeepAliveMessage.parse(PgByteDataReader reader) {
     walEnd = LSN(reader.readUint64());
     time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
     mustReply = reader.readUint8() != 0;
@@ -327,13 +316,13 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll
   /// return [XLogDataMessage] with raw data.
   static XLogDataMessage parse(Uint8List bytes) {
-    final reader = ByteDataReader()..add(bytes);
+    final reader = PgByteDataReader()..add(bytes);
     final walStart = LSN(reader.readUint64());
     final walEnd = LSN(reader.readUint64());
     final time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
-    final data = reader.read(reader.remainingLength);
 
-    final message = tryParseLogicalReplicationMessage(data);
+    final message =
+        tryParseLogicalReplicationMessage(reader, reader.remainingLength);
     if (message != null) {
       return XLogDataLogicalMessage(
         message: message,

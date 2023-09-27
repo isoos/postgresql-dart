@@ -20,7 +20,7 @@ void main() {
       expect(e.toString(), contains('column "hello" does not exist'));
       expect(
         st.toString(),
-        contains('postgresql-dart/test/error_handling_test.dart'),
+        contains('test/error_handling_test.dart'),
       );
     }
 
@@ -33,7 +33,7 @@ void main() {
       expect(e.toString(), contains('relation "hello" does not exist'));
       expect(
         st.toString(),
-        contains('postgresql-dart/test/error_handling_test.dart'),
+        contains('test/error_handling_test.dart'),
       );
     }
 
@@ -47,7 +47,7 @@ void main() {
       expect(e.toString(), contains('column "hello" does not exist'));
       expect(
         st.toString(),
-        contains('postgresql-dart/test/error_handling_test.dart'),
+        contains('test/error_handling_test.dart'),
       );
     }
   });
