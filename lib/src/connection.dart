@@ -2,6 +2,7 @@ library postgres.connection;
 
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -149,7 +150,7 @@ class PostgreSQLConnection extends Object
   final _cache = QueryCache();
   final _oidCache = _OidCache();
   Socket? _socket;
-  MessageFramer _framer = MessageFramer();
+  late MessageFramer _framer = MessageFramer(encoding);
   late int _processID;
   // ignore: unused_field
   late int _secretKey;
@@ -164,6 +165,9 @@ class PostgreSQLConnection extends Object
   PostgreSQLConnection get _connection => this;
 
   Socket? get socket => _socket;
+
+  @internal
+  Encoding get encoding => utf8;
 
   /// Establishes a connection with a PostgreSQL database.
   ///
@@ -190,7 +194,7 @@ class PostgreSQLConnection extends Object
             .timeout(Duration(seconds: timeoutInSeconds));
       }
 
-      _framer = MessageFramer();
+      _framer = MessageFramer(encoding);
       if (useSSL) {
         _socket =
             await _upgradeSocketToSSL(_socket!, timeout: timeoutInSeconds);
@@ -231,7 +235,7 @@ class PostgreSQLConnection extends Object
       throw PostgreSQLException(
           'Attempting to add a message, but connection is not open.');
     }
-    _socket!.add(message.asBytes());
+    _socket!.add(message.asBytes(encoding: encoding));
   }
 
   /// Executes a series of queries inside a transaction on this connection.

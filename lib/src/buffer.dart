@@ -17,7 +17,7 @@ class PgByteDataWriter extends ByteDataWriter {
 
   PgByteDataWriter({
     super.bufferLength,
-    this.encoding = utf8,
+    required this.encoding,
   });
 
   late final encodingName = encodeString(encoding.name);
@@ -45,7 +45,7 @@ class PgByteDataReader extends ByteDataReader {
   final Encoding encoding;
 
   PgByteDataReader({
-    this.encoding = utf8,
+    required this.encoding,
   });
 
   String readNullTerminatedString() {

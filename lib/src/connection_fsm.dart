@@ -52,7 +52,8 @@ class _PostgreSQLConnectionStateSocketConnected
         username: connection!.username,
         replication: connection!.replicationMode);
 
-    connection!._socket!.add(startupMessage.asBytes());
+    connection!._socket!
+        .add(startupMessage.asBytes(encoding: connection!.encoding));
 
     return _PostgreSQLConnectionStateAuthenticating(completer);
   }
@@ -105,7 +106,8 @@ class _PostgreSQLConnectionStateAuthenticating
     return PostgresAuthConnection(
       connection.username,
       connection.password,
-      (msg) => connection.socket!.add(msg.asBytes()),
+      (msg) =>
+          connection.socket!.add(msg.asBytes(encoding: connection.encoding)),
     );
   }
 

@@ -34,7 +34,15 @@ final _trailingZerosRegExp = RegExp(r'0+$');
 
 // The Dart SDK provides an optimized implementation for JSON from and to UTF-8
 // that doesn't allocate intermediate strings.
-final _jsonUtf8 = json.fuse(utf8);
+final _jsonUtf8Codec = json.fuse(utf8);
+
+Codec<Object?, List<int>> _jsonFusedEncoding(Encoding encoding) {
+  if (encoding == utf8) {
+    return _jsonUtf8Codec;
+  } else {
+    return json.fuse(encoding);
+  }
+}
 
 class PostgresBinaryEncoder<T extends Object> {
   final PgDataType<T> _dataType;
@@ -176,7 +184,7 @@ class PostgresBinaryEncoder<T extends Object> {
             source = input.toString();
           }
           if (source is String) {
-            return _encodeNumeric(source);
+            return _encodeNumeric(source, encoding);
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: String|double|int Got: ${input.runtimeType}');
@@ -184,15 +192,16 @@ class PostgresBinaryEncoder<T extends Object> {
 
       case PgDataType.jsonb:
         {
-          final jsonBytes = _jsonUtf8.encode(input);
-          final writer = PgByteDataWriter(bufferLength: jsonBytes.length + 1);
+          final jsonBytes = _jsonFusedEncoding(encoding).encode(input);
+          final writer = PgByteDataWriter(
+              bufferLength: jsonBytes.length + 1, encoding: encoding);
           writer.writeUint8(1);
           writer.write(jsonBytes);
           return writer.toBytes();
         }
 
       case PgDataType.json:
-        return castBytes(_jsonUtf8.encode(input));
+        return castBytes(_jsonFusedEncoding(encoding).encode(input));
 
       case PgDataType.byteArray:
         {
@@ -265,8 +274,13 @@ class PostgresBinaryEncoder<T extends Object> {
       case PgDataType.booleanArray:
         {
           if (input is List<bool>) {
-            return writeListBytes<bool>(input, 16, (_) => 1,
-                (writer, item) => writer.writeUint8(item ? 1 : 0));
+            return writeListBytes<bool>(
+              input,
+              16,
+              (_) => 1,
+              (writer, item) => writer.writeUint8(item ? 1 : 0),
+              encoding,
+            );
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<bool> Got: ${input.runtimeType}');
@@ -276,7 +290,12 @@ class PostgresBinaryEncoder<T extends Object> {
         {
           if (input is List<int>) {
             return writeListBytes<int>(
-                input, 23, (_) => 4, (writer, item) => writer.writeInt32(item));
+              input,
+              23,
+              (_) => 4,
+              (writer, item) => writer.writeInt32(item),
+              encoding,
+            );
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
@@ -286,7 +305,12 @@ class PostgresBinaryEncoder<T extends Object> {
         {
           if (input is List<int>) {
             return writeListBytes<int>(
-                input, 20, (_) => 8, (writer, item) => writer.writeInt64(item));
+              input,
+              20,
+              (_) => 8,
+              (writer, item) => writer.writeInt64(item),
+              encoding,
+            );
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
@@ -295,9 +319,14 @@ class PostgresBinaryEncoder<T extends Object> {
       case PgDataType.varCharArray:
         {
           if (input is List<String>) {
-            final bytesArray = input.map((v) => utf8.encode(v));
-            return writeListBytes<List<int>>(bytesArray, 1043,
-                (item) => item.length, (writer, item) => writer.write(item));
+            final bytesArray = input.map((v) => encoding.encode(v));
+            return writeListBytes<List<int>>(
+              bytesArray,
+              1043,
+              (item) => item.length,
+              (writer, item) => writer.write(item),
+              encoding,
+            );
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
@@ -306,9 +335,14 @@ class PostgresBinaryEncoder<T extends Object> {
       case PgDataType.textArray:
         {
           if (input is List<String>) {
-            final bytesArray = input.map((v) => utf8.encode(v));
-            return writeListBytes<List<int>>(bytesArray, 25,
-                (item) => item.length, (writer, item) => writer.write(item));
+            final bytesArray = input.map((v) => encoding.encode(v));
+            return writeListBytes<List<int>>(
+              bytesArray,
+              25,
+              (item) => item.length,
+              (writer, item) => writer.write(item),
+              encoding,
+            );
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
@@ -317,8 +351,13 @@ class PostgresBinaryEncoder<T extends Object> {
       case PgDataType.doubleArray:
         {
           if (input is List<double>) {
-            return writeListBytes<double>(input, 701, (_) => 8,
-                (writer, item) => writer.writeFloat64(item));
+            return writeListBytes<double>(
+              input,
+              701,
+              (_) => 8,
+              (writer, item) => writer.writeFloat64(item),
+              encoding,
+            );
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<double> Got: ${input.runtimeType}');
@@ -327,12 +366,17 @@ class PostgresBinaryEncoder<T extends Object> {
       case PgDataType.jsonbArray:
         {
           if (input is List<Object>) {
-            final objectsArray = input.map(_jsonUtf8.encode);
+            final objectsArray = input.map(_jsonFusedEncoding(encoding).encode);
             return writeListBytes<List<int>>(
-                objectsArray, 3802, (item) => item.length + 1, (writer, item) {
-              writer.writeUint8(1);
-              writer.write(item);
-            });
+              objectsArray,
+              3802,
+              (item) => item.length + 1,
+              (writer, item) {
+                writer.writeUint8(1);
+                writer.write(item);
+              },
+              encoding,
+            );
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<Object> Got: ${input.runtimeType}');
@@ -341,11 +385,13 @@ class PostgresBinaryEncoder<T extends Object> {
   }
 
   Uint8List writeListBytes<V>(
-      Iterable<V> value,
-      int type,
-      int Function(V item) lengthEncoder,
-      void Function(PgByteDataWriter writer, V item) valueEncoder) {
-    final writer = PgByteDataWriter();
+    Iterable<V> value,
+    int type,
+    int Function(V item) lengthEncoder,
+    void Function(PgByteDataWriter writer, V item) valueEncoder,
+    Encoding encoding,
+  ) {
+    final writer = PgByteDataWriter(encoding: encoding);
 
     writer.writeInt32(1); // dimension
     writer.writeInt32(0); // ign
@@ -364,7 +410,7 @@ class PostgresBinaryEncoder<T extends Object> {
 
   /// Encode String / double / int to numeric / decimal  without loosing precision.
   /// Compare implementation: https://github.com/frohoff/jdk8u-dev-jdk/blob/da0da73ab82ed714dc5be94acd2f0d00fbdfe2e9/src/share/classes/java/math/BigDecimal.java#L409
-  Uint8List _encodeNumeric(String value) {
+  Uint8List _encodeNumeric(String value, Encoding encoding) {
     value = value.trim();
     var signByte = 0x0000;
     if (value.toLowerCase() == 'nan') {
@@ -426,7 +472,7 @@ class PostgresBinaryEncoder<T extends Object> {
 
     final nDigits = intWeight + fractWeight + 2;
 
-    final writer = PgByteDataWriter();
+    final writer = PgByteDataWriter(encoding: encoding);
     writer.writeInt16(nDigits);
     writer.writeInt16(weight);
     writer.writeUint16(signByte);
@@ -495,11 +541,11 @@ class PostgresBinaryDecoder<T> {
           // Removes version which is first character and currently always '1'
           final bytes = input.buffer
               .asUint8List(input.offsetInBytes + 1, input.lengthInBytes - 1);
-          return _jsonUtf8.decode(bytes) as T;
+          return _jsonFusedEncoding(encoding).decode(bytes) as T;
         }
 
       case PostgreSQLDataType.json:
-        return _jsonUtf8.decode(input) as T;
+        return _jsonFusedEncoding(encoding).decode(input) as T;
 
       case PostgreSQLDataType.byteArray:
         return input as T;
@@ -558,7 +604,7 @@ class PostgresBinaryDecoder<T> {
         return readListBytes<dynamic>(input, (reader, length) {
           reader.read(1);
           final bytes = reader.read(length - 1);
-          return _jsonUtf8.decode(bytes);
+          return _jsonFusedEncoding(encoding).decode(bytes);
         }) as T;
 
       case PostgreSQLDataType.unknownType:

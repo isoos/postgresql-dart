@@ -60,7 +60,7 @@ class Query<T> {
         PostgreSQLFormat.substitute(statement, substitutionValues);
     final queryMessage = QueryMessage(sqlString);
 
-    socket.add(queryMessage.asBytes());
+    socket.add(queryMessage.asBytes(encoding: connection.encoding));
   }
 
   void sendExtended(Socket socket, {CachedQuery? cacheQuery}) {
@@ -99,7 +99,8 @@ class Query<T> {
       cache = CachedQuery(statementIdentifier, formatIdentifiers);
     }
 
-    socket.add(ClientMessage.aggregateBytes(messages));
+    socket.add(
+        ClientMessage.aggregateBytes(messages, encoding: connection.encoding));
   }
 
   void sendCachedQuery(Socket socket, CachedQuery cacheQuery,
@@ -110,11 +111,14 @@ class Query<T> {
             ParameterValue.resolve(identifier, substitutionValues))
         .toList();
 
-    final bytes = ClientMessage.aggregateBytes([
-      BindMessage(parameterList, statementName: statementName!),
-      ExecuteMessage(),
-      SyncMessage()
-    ]);
+    final bytes = ClientMessage.aggregateBytes(
+      [
+        BindMessage(parameterList, statementName: statementName!),
+        ExecuteMessage(),
+        SyncMessage()
+      ],
+      encoding: connection.encoding,
+    );
 
     socket.add(bytes);
   }
@@ -158,7 +162,7 @@ class Query<T> {
     // "In simple Query mode, the format of retrieved values is always text"
     //  https://www.postgresql.org/docs/current/protocol-flow.html#id-1.10.5.7.4
     if (useSendSimple) {
-      final data = rawRowData.map((e) => utf8.decode(e!));
+      final data = rawRowData.map((e) => connection.encoding.decode(e!));
       rows.add(data.toList());
       return;
     }
@@ -166,7 +170,7 @@ class Query<T> {
     final iterator = fieldDescriptions!.iterator;
     final lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
-      return iterator.current.converter.convert(bd, utf8);
+      return iterator.current.converter.convert(bd, connection.encoding);
     });
 
     rows.add(lazyDecodedData.toList());

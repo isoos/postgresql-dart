@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
@@ -32,63 +33,67 @@ class AggregatedClientMessage extends ClientMessage {
   }
 }
 
-StreamChannelTransformer<BaseMessage, List<int>> messageTransformer =
-    StreamChannelTransformer(
-  _readMessages,
-  StreamSinkTransformer.fromHandlers(
-    handleData: (message, out) {
-      if (message is! ClientMessage) {
-        out.addError(
-            ArgumentError.value(message, 'message', 'Must be a client message'),
-            StackTrace.current);
-        return;
+StreamChannelTransformer<BaseMessage, List<int>> messageTransformer(
+    Encoding encoding) {
+  return StreamChannelTransformer(
+    _readMessages(encoding),
+    StreamSinkTransformer.fromHandlers(
+      handleData: (message, out) {
+        if (message is! ClientMessage) {
+          out.addError(
+              ArgumentError.value(
+                  message, 'message', 'Must be a client message'),
+              StackTrace.current);
+          return;
+        }
+
+        out.add(message.asBytes(encoding: encoding));
+      },
+    ),
+  );
+}
+
+StreamTransformer<Uint8List, ServerMessage> _readMessages(Encoding encoding) {
+  return StreamTransformer.fromBind((rawStream) {
+    return Stream.multi((listener) {
+      final framer = MessageFramer(encoding);
+
+      var paused = false;
+
+      void emitFinishedMessages() {
+        while (framer.hasMessage) {
+          listener.addSync(framer.popMessage());
+
+          if (paused) break;
+        }
       }
 
-      out.add(message.asBytes());
-    },
-  ),
-);
-
-StreamTransformer<Uint8List, ServerMessage> _readMessages =
-    StreamTransformer.fromBind((rawStream) {
-  return Stream.multi((listener) {
-    final framer = MessageFramer();
-
-    var paused = false;
-
-    void emitFinishedMessages() {
-      while (framer.hasMessage) {
-        listener.addSync(framer.popMessage());
-
-        if (paused) break;
+      void handleChunk(Uint8List bytes) {
+        framer.addBytes(bytes);
+        emitFinishedMessages();
       }
-    }
 
-    void handleChunk(Uint8List bytes) {
-      framer.addBytes(bytes);
-      emitFinishedMessages();
-    }
+      final rawSubscription = rawStream.listen(handleChunk)
+        ..onError(listener.addErrorSync);
 
-    final rawSubscription = rawStream.listen(handleChunk)
-      ..onError(listener.addErrorSync);
+      listener.onPause = () {
+        paused = true;
+        rawSubscription.pause();
+      };
 
-    listener.onPause = () {
-      paused = true;
-      rawSubscription.pause();
-    };
+      listener.onResume = () {
+        paused = false;
+        emitFinishedMessages();
 
-    listener.onResume = () {
-      paused = false;
-      emitFinishedMessages();
+        if (!paused) {
+          rawSubscription.resume();
+        }
+      };
 
-      if (!paused) {
-        rawSubscription.resume();
-      }
-    };
-
-    listener.onCancel = () {
-      paused = true;
-      rawSubscription.cancel();
-    };
+      listener.onCancel = () {
+        paused = true;
+        rawSubscription.cancel();
+      };
+    });
   });
-});
+}
