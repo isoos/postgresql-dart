@@ -3,6 +3,7 @@
 ## 2.6.3
 
 - Refactor: replaced `UTF8BackedString` with generic encoding (not complete).
+- Breaking change in `package:postgres/messages.dart`: default constructors made internal, parsing is done with more efficient reader.
 
 ## 2.6.2
 

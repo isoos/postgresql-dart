@@ -38,3 +38,21 @@ class PgByteDataWriter extends ByteDataWriter {
     writeInt8(0);
   }
 }
+
+const _emptyString = '';
+
+class PgByteDataReader extends ByteDataReader {
+  final Encoding encoding;
+
+  PgByteDataReader({
+    this.encoding = utf8,
+  });
+
+  String readNullTerminatedString() {
+    final bytes = readUntilTerminatingByte(0);
+    if (bytes.isEmpty) {
+      return _emptyString;
+    }
+    return encoding.decode(bytes);
+  }
+}

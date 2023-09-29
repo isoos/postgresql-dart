@@ -38,15 +38,12 @@ class CopyDataMessage extends SharedMessages {
   /// might divide the data stream arbitrarily.
   final Uint8List bytes;
 
-  /// Length of message contents in bytes, including self (i.e. int32).
-  int get length => bytes.length + 4;
-
   CopyDataMessage(this.bytes);
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(SharedMessages.copyDataIdentifier);
-    buffer.writeInt32(length);
+    buffer.writeInt32(bytes.length + 4);
     buffer.write(bytes);
   }
 }
