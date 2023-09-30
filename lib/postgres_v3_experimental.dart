@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
@@ -345,6 +346,8 @@ final class PgSessionSettings {
   // Duration(minutes: 5)
   final String? timeZone;
 
+  final Encoding? encoding;
+
   final bool Function(X509Certificate)? onBadSslCertificate;
 
   /// An optional [StreamChannelTransformer] sitting behind the postgres client
@@ -376,6 +379,7 @@ final class PgSessionSettings {
   PgSessionSettings({
     this.connectTimeout,
     this.timeZone,
+    this.encoding,
     this.onBadSslCertificate,
     this.transformer,
     this.replicationMode = ReplicationMode.none,

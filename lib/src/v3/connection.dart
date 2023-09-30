@@ -39,7 +39,7 @@ class _ResolvedSettings {
   final Duration connectTimeout;
   //final Duration queryTimeout;
   final String timeZone;
-  //final Encoding encoding;
+  final Encoding encoding;
 
   final ReplicationMode replicationMode;
 
@@ -54,7 +54,7 @@ class _ResolvedSettings {
             settings?.connectTimeout ?? const Duration(seconds: 15),
         //queryTimeout = settings?.connectTimeout ?? const Duration(minutes: 5),
         timeZone = settings?.timeZone ?? 'UTC',
-        // encoding = settings?.encoding ?? utf8,
+        encoding = settings?.encoding ?? utf8,
         transformer = settings?.transformer,
         replicationMode = settings?.replicationMode ?? ReplicationMode.none;
 
@@ -75,6 +75,7 @@ abstract class _PgSessionBase implements PgSession {
   final Pool _operationLock = Pool(1);
 
   PgConnectionImplementation get _connection;
+  Encoding get encoding => _connection._settings.encoding;
 
   /// Runs [callback], guarded by [_operationLock] and cleans up the pending
   /// resource afterwards.
@@ -277,7 +278,7 @@ class PgConnectionImplementation extends _PgSessionBase
     }));
 
     return StreamChannel<List<int>>(adaptedStream, outgoingSocket)
-        .transform(messageTransformer);
+        .transform(messageTransformer(settings.encoding));
   }
 
   final StreamChannel<BaseMessage> _channel;
@@ -571,11 +572,11 @@ class _PgResultStreamSubscription
             final type = field.type;
             late final dynamic value;
             if (field.binaryEncoding) {
-              value =
-                  PostgresBinaryDecoder(type).convert(message.values[i], utf8);
+              value = PostgresBinaryDecoder(type)
+                  .convert(message.values[i], session.encoding);
             } else {
-              value =
-                  PostgresTextDecoder(type).convert(message.values[i], utf8);
+              value = PostgresTextDecoder(type)
+                  .convert(message.values[i], session.encoding);
             }
 
             columnValues.add(value);

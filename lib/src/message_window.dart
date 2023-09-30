@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
@@ -34,8 +35,11 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
 };
 
 class MessageFramer {
-  final _reader = PgByteDataReader();
+  final Encoding _encoding;
+  late final _reader = PgByteDataReader(encoding: _encoding);
   final messageQueue = Queue<ServerMessage>();
+
+  MessageFramer(this._encoding);
 
   int? _type;
   int _expectedLength = 0;
@@ -112,7 +116,7 @@ ServerMessage _parseCopyDataMessage(PgByteDataReader reader, int length) {
   if (code == ReplicationMessage.primaryKeepAliveIdentifier) {
     return PrimaryKeepAliveMessage.parse(reader);
   } else if (code == ReplicationMessage.xLogDataIdentifier) {
-    return XLogDataMessage.parse(reader.read(length - 1));
+    return XLogDataMessage.parse(reader.read(length - 1), reader.encoding);
   } else {
     final bb = BytesBuffer();
     bb.addByte(code);

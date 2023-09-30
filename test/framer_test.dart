@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
@@ -10,7 +11,7 @@ import 'package:test/test.dart';
 void main() {
   late MessageFramer framer;
   setUp(() {
-    framer = MessageFramer();
+    framer = MessageFramer(utf8);
   });
 
   tearDown(() {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:charcode/ascii.dart';
@@ -31,14 +32,15 @@ abstract class ClientMessage extends BaseMessage {
 
   void applyToBuffer(PgByteDataWriter buffer);
 
-  Uint8List asBytes() {
-    final buffer = PgByteDataWriter();
+  Uint8List asBytes({required Encoding encoding}) {
+    final buffer = PgByteDataWriter(encoding: encoding);
     applyToBuffer(buffer);
     return buffer.toBytes();
   }
 
-  static Uint8List aggregateBytes(List<ClientMessage> messages) {
-    final buffer = PgByteDataWriter();
+  static Uint8List aggregateBytes(List<ClientMessage> messages,
+      {required Encoding encoding}) {
+    final buffer = PgByteDataWriter(encoding: encoding);
     for (final cm in messages) {
       cm.applyToBuffer(buffer);
     }
