@@ -2,6 +2,7 @@
 
 ## 2.6.3
 
+- Allow `encoding` to be specified for connections. The setting will be used for all connection-related string conversions.
 - Refactor: replaced `UTF8BackedString` with generic encoding (not complete).
 - Breaking change in `package:postgres/messages.dart`: default constructors made internal, parsing is done with more efficient reader.
 
