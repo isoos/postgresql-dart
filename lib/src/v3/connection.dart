@@ -75,7 +75,7 @@ abstract class _PgSessionBase implements PgSession {
   final Pool _operationLock = Pool(1);
 
   PgConnectionImplementation get _connection;
-  Encoding get encoding => _connection.encoding;
+  Encoding get encoding => _connection._settings.encoding;
 
   /// Runs [callback], guarded by [_operationLock] and cleans up the pending
   /// resource afterwards.
