@@ -273,9 +273,9 @@ class PostgresBinaryEncoder<T extends Object> {
         return outBuffer;
       case PgDataType.booleanArray:
         {
-          if (input is List<bool>) {
-            return writeListBytes<bool>(
-              input,
+          if (input is List) {
+            return _writeListBytes<bool>(
+              _castOrThrowList<bool>(input),
               16,
               (_) => 1,
               (writer, item) => writer.writeUint8(item ? 1 : 0),
@@ -288,9 +288,9 @@ class PostgresBinaryEncoder<T extends Object> {
 
       case PgDataType.integerArray:
         {
-          if (input is List<int>) {
-            return writeListBytes<int>(
-              input,
+          if (input is List) {
+            return _writeListBytes<int>(
+              _castOrThrowList<int>(input),
               23,
               (_) => 4,
               (writer, item) => writer.writeInt32(item),
@@ -303,9 +303,9 @@ class PostgresBinaryEncoder<T extends Object> {
 
       case PgDataType.bigIntegerArray:
         {
-          if (input is List<int>) {
-            return writeListBytes<int>(
-              input,
+          if (input is List) {
+            return _writeListBytes<int>(
+              _castOrThrowList<int>(input),
               20,
               (_) => 8,
               (writer, item) => writer.writeInt64(item),
@@ -318,9 +318,10 @@ class PostgresBinaryEncoder<T extends Object> {
 
       case PgDataType.varCharArray:
         {
-          if (input is List<String>) {
-            final bytesArray = input.map((v) => encoding.encode(v));
-            return writeListBytes<List<int>>(
+          if (input is List) {
+            final bytesArray =
+                _castOrThrowList<String>(input).map((v) => encoding.encode(v));
+            return _writeListBytes<List<int>>(
               bytesArray,
               1043,
               (item) => item.length,
@@ -334,9 +335,10 @@ class PostgresBinaryEncoder<T extends Object> {
 
       case PgDataType.textArray:
         {
-          if (input is List<String>) {
-            final bytesArray = input.map((v) => encoding.encode(v));
-            return writeListBytes<List<int>>(
+          if (input is List) {
+            final bytesArray =
+                _castOrThrowList<String>(input).map((v) => encoding.encode(v));
+            return _writeListBytes<List<int>>(
               bytesArray,
               25,
               (item) => item.length,
@@ -350,9 +352,9 @@ class PostgresBinaryEncoder<T extends Object> {
 
       case PgDataType.doubleArray:
         {
-          if (input is List<double>) {
-            return writeListBytes<double>(
-              input,
+          if (input is List) {
+            return _writeListBytes<double>(
+              _castOrThrowList<double>(input),
               701,
               (_) => 8,
               (writer, item) => writer.writeFloat64(item),
@@ -367,7 +369,7 @@ class PostgresBinaryEncoder<T extends Object> {
         {
           if (input is List<Object>) {
             final objectsArray = input.map(_jsonFusedEncoding(encoding).encode);
-            return writeListBytes<List<int>>(
+            return _writeListBytes<List<int>>(
               objectsArray,
               3802,
               (item) => item.length + 1,
@@ -384,7 +386,18 @@ class PostgresBinaryEncoder<T extends Object> {
     }
   }
 
-  Uint8List writeListBytes<V>(
+  List<V> _castOrThrowList<V>(List input) {
+    if (input is List<V>) {
+      return input;
+    }
+    if (input.any((e) => e is! V)) {
+      throw FormatException(
+          'Invalid type for parameter value. Expected: List<${V.runtimeType}> Got: ${input.runtimeType}');
+    }
+    return input.cast<V>();
+  }
+
+  Uint8List _writeListBytes<V>(
     Iterable<V> value,
     int type,
     int Function(V item) lengthEncoder,
