@@ -56,7 +56,8 @@ class PostgreSQLConnection extends Object
     this.isUnixSocket = false,
     this.allowClearTextPassword = false,
     this.replicationMode = ReplicationMode.none,
-  }) {
+    Encoding? encoding,
+  }) : _encoding = encoding ?? utf8 {
     _connectionState = _PostgreSQLConnectionStateClosed();
     _connectionState.connection = this;
   }
@@ -166,8 +167,9 @@ class PostgreSQLConnection extends Object
 
   Socket? get socket => _socket;
 
+  final Encoding _encoding;
   @internal
-  Encoding get encoding => utf8;
+  Encoding get encoding => _encoding;
 
   /// Establishes a connection with a PostgreSQL database.
   ///
