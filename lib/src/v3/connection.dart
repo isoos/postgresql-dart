@@ -42,6 +42,7 @@ class _ResolvedSettings {
   final Encoding encoding;
 
   final ReplicationMode replicationMode;
+  final QueryMode queryMode;
 
   final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
 
@@ -56,7 +57,8 @@ class _ResolvedSettings {
         timeZone = settings?.timeZone ?? 'UTC',
         encoding = settings?.encoding ?? utf8,
         transformer = settings?.transformer,
-        replicationMode = settings?.replicationMode ?? ReplicationMode.none;
+        replicationMode = settings?.replicationMode ?? ReplicationMode.none,
+        queryMode = settings?.queryMode ?? QueryMode.extended;
 
   bool onBadSslCertificate(X509Certificate certificate) {
     return settings?.onBadSslCertificate?.call(certificate) ?? false;
@@ -120,36 +122,49 @@ abstract class _PgSessionBase implements PgSession {
     Object query, {
     Object? parameters,
     bool ignoreRows = false,
+    QueryMode? queryMode,
   }) async {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(parameters);
 
-    if (!ignoreRows || variables.isNotEmpty) {
-      // The simple query protocol does not support variables and returns rows
-      // as text. So when we need rows or parameters, we need an explicit prepare.
-      final prepared = await prepare(description);
-      try {
-        return await prepared.run(variables);
-      } finally {
-        await prepared.dispose();
-      }
+    late final bool isSimple;
+    if (queryMode != null) {
+      isSimple = queryMode == QueryMode.simple;
     } else {
+      isSimple = _connection._settings.queryMode == QueryMode.simple;
+    }
+
+    if (isSimple && variables.isNotEmpty) {
+      throw PostgreSQLException('Parameterized queries are not supported when '
+      'using the Simple Query Protocol');
+    }
+
+    if (isSimple || (ignoreRows && variables.isEmpty)) {
       // Great, we can just run a simple query.
       final controller = StreamController<PgResultRow>();
       final items = <PgResultRow>[];
 
-      final querySubscription =
-          _PgResultStreamSubscription.simpleQueryAndIgnoreRows(
+      final querySubscription = _PgResultStreamSubscription.simpleQueryProtocol(
         description.transformedSql,
         this,
         controller,
         controller.stream.listen(items.add),
+        ignoreRows,
       );
       await querySubscription.asFuture();
       await querySubscription.cancel();
 
       return PgResult(items, await querySubscription.affectedRows,
           await querySubscription.schema);
+    } else {
+      // The simple query protocol does not support variables. So when we have
+      // parameters, we need an explicit prepare.
+      final prepared = await prepare(description);
+      try {
+        return await prepared.run(variables);
+      } finally {
+        await prepared.dispose();
+      }
     }
   }
 
@@ -496,9 +511,8 @@ class _PgResultStreamSubscription
     });
   }
 
-  _PgResultStreamSubscription.simpleQueryAndIgnoreRows(
-      String sql, this.session, this._controller, this._source)
-      : ignoreRows = true {
+  _PgResultStreamSubscription.simpleQueryProtocol(String sql, this.session,
+      this._controller, this._source, this.ignoreRows) {
     session._withResource(() async {
       connection._pending = this;
 

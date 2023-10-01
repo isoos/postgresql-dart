@@ -129,11 +129,17 @@ abstract class PgSession {
   /// optimization can be applied also depends on the parameters chosen, so
   /// there is no guarantee that the [PgResult] from a [ignoreRows] excution has
   /// no rows.
+  /// 
+  /// [queryMode] is optional to override the default query execution mode that 
+  /// is defined in [PgSessionSettings]. Unless necessary, always prefer using 
+  /// [QueryMode.extended] which is the default value. For more information,
+  /// see [PgSessionSettings.queryMode]
   Future<PgResult> execute(
     Object /* String | PgSql */ query, {
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
         parameters,
     bool ignoreRows = false,
+    QueryMode? queryMode,
   });
 
   /// Closes this session, cleaning up resources and forbiding further calls to
@@ -376,6 +382,15 @@ final class PgSessionSettings {
   /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
   final ReplicationMode replicationMode;
 
+  /// The Query Execution Mode 
+  /// 
+  /// The default value is [QueryMode.extended] which uses the Extended Query
+  /// Protocol. In certain cases, the Extended protocol cannot be used 
+  /// (e.g. in replication mode or with proxies such as PGBouncer), hence the
+  /// the Simple one would be the only viable option. Unless necessary, always 
+  /// prefer using [QueryMode.extended].
+  final QueryMode queryMode;
+
   PgSessionSettings({
     this.connectTimeout,
     this.timeZone,
@@ -383,6 +398,7 @@ final class PgSessionSettings {
     this.onBadSslCertificate,
     this.transformer,
     this.replicationMode = ReplicationMode.none,
+    this.queryMode = QueryMode.extended,
   });
 }
 
@@ -392,4 +408,12 @@ final class PgPoolSettings {
   const PgPoolSettings({
     this.maxConnectionCount,
   });
+}
+
+/// Options for the Query Execution Mode
+enum QueryMode {
+  /// Extended Query Protocol
+  extended,
+  /// Simple Query Protocol 
+  simple,
 }

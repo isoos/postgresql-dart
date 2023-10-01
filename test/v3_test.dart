@@ -402,6 +402,29 @@ void main() {
         expect(await connection.execute('SELECT id FROM t'), isEmpty);
       });
     });
+
+    group('Simple Query Protocol', () {
+      test('single simple query', () async {
+        final res = await connection.execute(
+          "SELECT 'dart', 42, true, false, NULL",
+          queryMode: QueryMode.simple,
+        );
+        expect(res, [
+          ['dart', 42, true, false, null]
+        ]);
+      });
+
+      test('parameterized query throws', () async {
+        await expectLater(
+          () => connection.execute(
+            r'SELECT 1',
+            parameters: [PgTypedParameter(PgDataType.integer, 1)],
+            queryMode: QueryMode.simple
+          ),
+          _throwsPostgresException,
+        );
+      });
+    });
   });
 
   test('can inject transformer into connection', () async {
