@@ -257,7 +257,10 @@ class PostgresTextDecoder<T extends Object> {
       // TODO: implement the rest of the types 
       // ignore: no_default_cases
       default:
-        return asText as T;
+        if (asText is T) {
+          return asText as T;
+        }
+        throw UnimplementedError('Text decoding for $_dataType');
     }
   }
 }
