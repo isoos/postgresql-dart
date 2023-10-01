@@ -136,7 +136,7 @@ abstract class _PgSessionBase implements PgSession {
 
     if (isSimple && variables.isNotEmpty) {
       throw PostgreSQLException('Parameterized queries are not supported when '
-      'using the Simple Query Protocol');
+          'using the Simple Query Protocol');
     }
 
     if (isSimple || (ignoreRows && variables.isEmpty)) {
@@ -602,6 +602,15 @@ class _PgResultStreamSubscription
       case CommandCompleteMessage():
         _affectedRows.complete(message.rowsAffected);
       case ReadyForQueryMessage():
+        await _completeQuery();
+      case CopyBothResponseMessage():
+        // This message indicates a successful start for Streaming Replication.
+        // Hence, in this context, the query is complete. And from here on,
+        // the server will be streaming replication messages.
+        // But if the connection was used after this point to execute further
+        // queries, the server messages will be blocked.
+        // TODO(osaxma): Prevent executing queries when Streaming Replication
+        //               is ongoing
         await _completeQuery();
       default:
         // Unexpected message - either a severe bug in this package or in the
