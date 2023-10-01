@@ -248,10 +248,18 @@ class PostgresTextDecoder<T extends Object> {
         // TODO: should we check for other representations (e.g. `1`, `on`, `y`,
         // and `yes`)?
         return (asText == 't' || asText == 'true') as T;
+      
+      case PgDataType.voidType:
+        // TODO: is returning `null` here is the appripriate thing to do? 
+        return null;
 
       // We could list out all cases, but it's about 20 lines of code.
+      // TODO: implement the rest of the types 
       // ignore: no_default_cases
       default:
+        if (asText is T) {
+          return asText as T;
+        }
         throw UnimplementedError('Text decoding for $_dataType');
     }
   }
