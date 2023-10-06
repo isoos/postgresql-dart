@@ -129,9 +129,9 @@ abstract class PgSession {
   /// optimization can be applied also depends on the parameters chosen, so
   /// there is no guarantee that the [PgResult] from a [ignoreRows] excution has
   /// no rows.
-  /// 
-  /// [queryMode] is optional to override the default query execution mode that 
-  /// is defined in [PgSessionSettings]. Unless necessary, always prefer using 
+  ///
+  /// [queryMode] is optional to override the default query execution mode that
+  /// is defined in [PgSessionSettings]. Unless necessary, always prefer using
   /// [QueryMode.extended] which is the default value. For more information,
   /// see [PgSessionSettings.queryMode]
   Future<PgResult> execute(
@@ -382,12 +382,12 @@ final class PgSessionSettings {
   /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
   final ReplicationMode replicationMode;
 
-  /// The Query Execution Mode 
-  /// 
+  /// The Query Execution Mode
+  ///
   /// The default value is [QueryMode.extended] which uses the Extended Query
-  /// Protocol. In certain cases, the Extended protocol cannot be used 
+  /// Protocol. In certain cases, the Extended protocol cannot be used
   /// (e.g. in replication mode or with proxies such as PGBouncer), hence the
-  /// the Simple one would be the only viable option. Unless necessary, always 
+  /// the Simple one would be the only viable option. Unless necessary, always
   /// prefer using [QueryMode.extended].
   final QueryMode queryMode;
 
@@ -414,6 +414,7 @@ final class PgPoolSettings {
 enum QueryMode {
   /// Extended Query Protocol
   extended,
-  /// Simple Query Protocol 
+
+  /// Simple Query Protocol
   simple,
 }

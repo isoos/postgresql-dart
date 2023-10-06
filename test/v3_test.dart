@@ -417,9 +417,9 @@ void main() {
       test('parameterized query throws', () async {
         await expectLater(
           () => connection.execute(
-            r'SELECT 1',
+            'SELECT 1',
             parameters: [PgTypedParameter(PgDataType.integer, 1)],
-            queryMode: QueryMode.simple
+            queryMode: QueryMode.simple,
           ),
           _throwsPostgresException,
         );
