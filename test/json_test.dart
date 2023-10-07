@@ -4,24 +4,24 @@ import 'package:test/test.dart';
 import 'docker.dart';
 
 void main() {
-  usePostgresDocker();
-  late PostgreSQLConnection connection;
+  withPostgresServer('JSON storage', (server) {
+    late PostgreSQLConnection connection;
 
-  setUp(() async {
-    connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
-    await connection.open();
+    setUp(() async {
+      connection = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
+          username: 'dart', password: 'dart');
+      await connection.open();
 
-    await connection.execute('''
+      await connection.execute('''
         CREATE TEMPORARY TABLE t (j jsonb)
     ''');
-  });
+    });
 
-  tearDown(() async {
-    await connection.close();
-  });
+    tearDown(() async {
+      await connection.close();
+    });
 
-  group('Storage', () {
     test('Can store JSON String', () async {
       var result = await connection
           .query("INSERT INTO t (j) VALUES ('\"xyz\"'::jsonb) RETURNING j");

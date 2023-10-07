@@ -1,23 +1,67 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:docker_process/containers/postgres.dart';
 import 'package:path/path.dart' as p;
+import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:test/test.dart';
 
-void usePostgresDocker() {
-  final port = 5432;
-  final containerName = 'postgres-dart-test-$port';
+class PostgresServer {
+  final _port = Completer<int>();
+  final _containerName = Completer<String>();
 
-  setUpAll(() async {
-    await _startPostgresContainer(
-      port: port,
-      containerName: containerName,
-    );
-  });
+  Future<int> get port => _port.future;
 
-  tearDownAll(() async {
-    await Process.run('docker', ['stop', containerName]);
+  Future<PgEndpoint> dartTestEndpoint() async => PgEndpoint(
+        host: 'localhost',
+        database: 'dart_test',
+        username: 'dart',
+        password: 'dart',
+        port: await port,
+      );
+}
+
+void withPostgresServer(
+  String name,
+  void Function(PostgresServer server) fn,
+) {
+  group(name, () {
+    final server = PostgresServer();
+
+    setUpAll(() async {
+      try {
+        final port = await selectFreePort();
+
+        final containerName = 'postgres-dart-test-$port';
+        await _startPostgresContainer(
+          port: port,
+          containerName: containerName,
+        );
+
+        server._containerName.complete(containerName);
+        server._port.complete(port);
+      } catch (e, st) {
+        server._containerName.completeError(e, st);
+        server._port.completeError(e, st);
+        rethrow;
+      }
+    });
+
+    tearDownAll(() async {
+      final containerName = await server._containerName.future;
+      await Process.run('docker', ['stop', containerName]);
+      await Process.run('docker', ['kill', containerName]);
+    });
+
+    fn(server);
   });
+}
+
+Future<int> selectFreePort() async {
+  final socket = await ServerSocket.bind(InternetAddress.anyIPv4, 0);
+  final port = socket.port;
+  await socket.close();
+  return port;
 }
 
 Future<void> _startPostgresContainer({

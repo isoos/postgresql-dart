@@ -12,10 +12,9 @@ import 'docker.dart';
 late PostgreSQLConnection conn;
 
 void main() {
-  usePostgresDocker();
-  group('Binary encoders', () {
+  withPostgresServer('Binary encoders', (server) {
     setUp(() async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await conn.open();
     });

@@ -4,12 +4,12 @@ import 'package:test/test.dart';
 import 'docker.dart';
 
 void main() {
-  usePostgresDocker();
-  group('Successful queries', () {
+  withPostgresServer('Successful queries', (server) {
     late PostgreSQLConnection connection;
 
     setUp(() async {
-      connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      connection = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await connection.open();
       await connection.execute('CREATE TEMPORARY TABLE t '
@@ -411,11 +411,12 @@ void main() {
     });
   });
 
-  group('Unsuccesful queries', () {
+  withPostgresServer('Unsuccesful queries', (server) {
     late PostgreSQLConnection connection;
 
     setUp(() async {
-      connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      connection = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await connection.open();
       await connection.execute(
