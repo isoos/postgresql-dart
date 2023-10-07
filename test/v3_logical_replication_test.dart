@@ -38,7 +38,7 @@ void main() {
   //    - One for listening to streaming replications (this connection will be locked).
   //    - The other one to modify the database (e.g. insert, delete, update, truncate)
   withPostgresServer('test logical replication with pgoutput for decoding',
-      (server) {
+      initSqls: replicationSchemaInit, (server) {
     // use this for listening to messages
     late final PgConnection replicationConn;
 
@@ -64,7 +64,7 @@ void main() {
       replicationConn = await PgConnection.open(
         PgEndpoint(
           host: 'localhost',
-          database: 'dart_test',
+          database: 'postgres',
           username: 'replication',
           password: 'replication',
           port: await server.port,
@@ -80,13 +80,7 @@ void main() {
       // used to create changes in the db that are reflected in the replication
       // stream
       changesConn = await PgConnection.open(
-        PgEndpoint(
-          host: 'localhost',
-          database: 'dart_test',
-          username: 'dart',
-          password: 'dart',
-          port: await server.port,
-        ),
+        await server.endpoint,
         sessionSettings: PgSessionSettings(
           onBadSslCertificate: (cert) => true,
         ),

@@ -14,8 +14,7 @@ late PostgreSQLConnection conn;
 void main() {
   withPostgresServer('Binary encoders', (server) {
     setUp(() async {
-      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
-          username: 'dart', password: 'dart');
+      conn = await server.newPostgreSQLConnection();
       await conn.open();
     });
 
