@@ -8,15 +8,13 @@ import 'package:test/scaffolding.dart';
 import 'docker.dart';
 
 void main() {
-  usePostgresDocker();
-
   // NOTES:
   // - Two PostgreSQL connections are needed for testing replication.
   //    - One for listening to streaming replications (this connection will be locked).
   //    - The other one to modify the database (e.g. insert, delete, update, truncate)
-  group('test logical replication with pgoutput for decoding', () {
+  withPostgresServer('test logical replication with pgoutput for decoding',
+      (server) {
     final host = 'localhost';
-    final port = 5432;
     final username = 'dart';
     final password = 'dart';
     final database = 'dart_test';
@@ -24,23 +22,10 @@ void main() {
     final logicalDecodingPlugin = 'pgoutput';
     final replicationMode = ReplicationMode.logical;
     // use this for listening to messages
-    final replicationConn = PostgreSQLConnection(
-      host,
-      port,
-      database,
-      username: 'replication',
-      password: 'replication',
-      replicationMode: replicationMode,
-    );
+    late PostgreSQLConnection replicationConn;
 
     // use this for sending queries
-    final changesConn = PostgreSQLConnection(
-      host,
-      port,
-      database,
-      username: username,
-      password: password,
-    );
+    late PostgreSQLConnection changesConn;
 
     // this table is for insert, update, and delete tests.
     final changesTable = 'test.temp_changes_table';
@@ -49,7 +34,23 @@ void main() {
     final truncateTable = 'test.temp_truncate_table';
 
     setUpAll(() async {
+      replicationConn = PostgreSQLConnection(
+        host,
+        await server.port,
+        database,
+        username: 'replication',
+        password: 'replication',
+        replicationMode: replicationMode,
+      );
       await replicationConn.open();
+
+      changesConn = PostgreSQLConnection(
+        host,
+        await server.port,
+        database,
+        username: username,
+        password: password,
+      );
       await changesConn.open();
 
       // create testing tables

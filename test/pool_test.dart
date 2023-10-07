@@ -5,27 +5,25 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-final _endpoint = PgEndpoint(
-  host: 'localhost',
-  database: 'dart_test',
-  username: 'dart',
-  password: 'dart',
-);
-
 final _sessionSettings = PgSessionSettings(
   // To test SSL, we're running postgres with a self-signed certificate.
   onBadSslCertificate: (cert) => true,
 );
 
 void main() {
-  usePostgresDocker();
-
-  group('generic', () {
+  withPostgresServer('generic', (server) {
     late PgPool pool;
 
     setUp(() async {
+      final endpoint = PgEndpoint(
+        host: 'localhost',
+        database: 'dart_test',
+        username: 'dart',
+        password: 'dart',
+        port: await server.port,
+      );
       pool = PgPool(
-        [_endpoint],
+        [endpoint],
         sessionSettings: _sessionSettings,
       );
 
@@ -90,31 +88,40 @@ void main() {
     });
   });
 
-  test('can limit concurrent connections', () async {
-    final pool = PgPool(
-      [_endpoint],
-      sessionSettings: _sessionSettings,
-      poolSettings: const PgPoolSettings(maxConnectionCount: 2),
-    );
-    addTearDown(pool.close);
+  withPostgresServer('limit pool connections', (server) {
+    test('can limit concurrent connections', () async {
+      final endpoint = PgEndpoint(
+        host: 'localhost',
+        database: 'dart_test',
+        username: 'dart',
+        password: 'dart',
+        port: await server.port,
+      );
+      final pool = PgPool(
+        [endpoint],
+        sessionSettings: _sessionSettings,
+        poolSettings: const PgPoolSettings(maxConnectionCount: 2),
+      );
+      addTearDown(pool.close);
 
-    final completeFirstTwo = Completer();
-    final didInvokeThird = Completer();
+      final completeFirstTwo = Completer();
+      final didInvokeThird = Completer();
 
-    // Take two connections
-    unawaited(pool.withConnection((connection) => completeFirstTwo.future));
-    unawaited(pool.withConnection((connection) => completeFirstTwo.future));
+      // Take two connections
+      unawaited(pool.withConnection((connection) => completeFirstTwo.future));
+      unawaited(pool.withConnection((connection) => completeFirstTwo.future));
 
-    // Creating a third one should block.
+      // Creating a third one should block.
 
-    unawaited(pool.withConnection((connection) async {
-      didInvokeThird.complete();
-    }));
+      unawaited(pool.withConnection((connection) async {
+        didInvokeThird.complete();
+      }));
 
-    await pumpEventQueue();
-    expect(didInvokeThird.isCompleted, isFalse);
+      await pumpEventQueue();
+      expect(didInvokeThird.isCompleted, isFalse);
 
-    completeFirstTwo.complete();
-    await didInvokeThird.future;
+      completeFirstTwo.complete();
+      await didInvokeThird.future;
+    });
   });
 }

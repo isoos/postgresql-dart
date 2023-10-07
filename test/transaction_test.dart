@@ -7,12 +7,11 @@ import 'package:test/test.dart';
 import 'docker.dart';
 
 void main() {
-  usePostgresDocker();
-  group('Transaction behavior', () {
+  withPostgresServer('Transaction behavior', (server) {
     late PostgreSQLConnection conn;
 
     setUp(() async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await conn.open();
       await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
@@ -311,11 +310,11 @@ void main() {
   // A transaction can fail for three reasons: query error, exception in code, or a rollback.
   // After a transaction fails, the changes must be rolled back, it should continue with pending queries, pending transactions, later queries, later transactions
 
-  group('Transaction:Query recovery', () {
+  withPostgresServer('Transaction:Query recovery', (server) {
     late PostgreSQLConnection conn;
 
     setUp(() async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await conn.open();
       await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
@@ -412,11 +411,11 @@ void main() {
     });
   });
 
-  group('Transaction:Exception recovery', () {
+  withPostgresServer('Transaction:Exception recovery', (server) {
     late PostgreSQLConnection conn;
 
     setUp(() async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await conn.open();
       await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
@@ -560,11 +559,11 @@ void main() {
     });
   });
 
-  group('Transaction:Rollback recovery', () {
+  withPostgresServer('Transaction:Rollback recovery', (server) {
     late PostgreSQLConnection conn;
 
     setUp(() async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await conn.open();
       await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');

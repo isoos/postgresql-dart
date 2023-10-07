@@ -33,13 +33,12 @@ class _ServerMessagesInterceptor {
 }
 
 void main() {
-  usePostgresDocker();
-
   // NOTES:
   // - Two PostgreSQL connections are needed for testing replication.
   //    - One for listening to streaming replications (this connection will be locked).
   //    - The other one to modify the database (e.g. insert, delete, update, truncate)
-  group('test logical replication with pgoutput for decoding', () {
+  withPostgresServer('test logical replication with pgoutput for decoding',
+      (server) {
     // use this for listening to messages
     late final PgConnection replicationConn;
 
@@ -68,6 +67,7 @@ void main() {
           database: 'dart_test',
           username: 'replication',
           password: 'replication',
+          port: await server.port,
         ),
         sessionSettings: PgSessionSettings(
             replicationMode: ReplicationMode.logical,
@@ -85,6 +85,7 @@ void main() {
           database: 'dart_test',
           username: 'dart',
           password: 'dart',
+          port: await server.port,
         ),
         sessionSettings: PgSessionSettings(
           onBadSslCertificate: (cert) => true,

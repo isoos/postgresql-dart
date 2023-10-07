@@ -6,6 +6,8 @@ import 'package:postgres/postgres.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
+import 'docker.dart';
+
 void main() {
   final user = 'abc@def';
   final password = 'pöstgrēs_üšęr_pæsswœêrd';
@@ -13,10 +15,11 @@ void main() {
 
   group('non-ascii tests (clear password auth)', () {
     late final DockerProcess docker;
-    final port = 54321;
+    late final int port;
 
     setUpAll(
       () async {
+        port = await selectFreePort();
         docker = await startPostgres(
           name: 'non_ascii_test_clear_password',
           version: 'latest',
@@ -57,9 +60,10 @@ void main() {
 
   group('non-ascii tests (md5 auth)', () {
     late final DockerProcess docker;
-    final port = 54322;
+    late final int port;
     setUpAll(
       () async {
+        port = await selectFreePort();
         docker = await startPostgres(
           name: 'non_ascii_test_md5',
           version: 'latest',
@@ -105,9 +109,10 @@ void main() {
 
   group('non-ascii tests (scram-sha-256 auth)', () {
     late final DockerProcess docker;
-    final port = 54323;
+    late final int port;
     setUpAll(
       () async {
+        port = await selectFreePort();
         docker = await startPostgres(
           name: 'non_ascii_test_scram_sha256',
           version: 'latest',

@@ -10,10 +10,10 @@ import 'package:test/test.dart';
 import 'docker.dart';
 
 void main() {
-  usePostgresDocker();
-  group('connection state', () {
+  withPostgresServer('connection state', (server) {
     test('pre-open failure', () async {
-      final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      final conn = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await expectLater(
           () => conn.query('SELECT 1;'),
@@ -30,7 +30,8 @@ void main() {
     });
 
     test('pre-open failure with transaction', () async {
-      final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      final conn = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await expectLater(
           () => conn.transaction((_) async {}),
@@ -46,7 +47,8 @@ void main() {
     });
 
     test('post-close failure', () async {
-      final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      final conn = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await conn.open();
       final rs = await conn.query('SELECT 1');
@@ -63,7 +65,8 @@ void main() {
     });
 
     test('reopen closed connection', () async {
-      final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      final conn = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await conn.open();
       final rs = await conn.query('SELECT 1');
@@ -83,7 +86,7 @@ void main() {
         () async {
       final conn = PostgreSQLConnection(
         'localhost',
-        5432,
+        await server.port,
         'dart_test',
         username: 'dart',
         password: 'dart',
@@ -99,7 +102,7 @@ void main() {
     test('Connect with logical ReplicationMode.logical', () async {
       final conn = PostgreSQLConnection(
         'localhost',
-        5432,
+        await server.port,
         'dart_test',
         username: 'replication',
         password: 'replication',
@@ -114,7 +117,7 @@ void main() {
     test('IDENTIFY_SYSTEM returns system information', () async {
       final conn = PostgreSQLConnection(
         'localhost',
-        5432,
+        await server.port,
         'dart_test',
         username: 'replication',
         password: 'replication',
@@ -146,7 +149,7 @@ void main() {
     //       settings in the pg_hba.conf
   });
 
-  group('Connection lifecycle', () {
+  withPostgresServer('Connection lifecycle', (server) {
     late PostgreSQLConnection conn;
 
     tearDown(() async {
@@ -154,7 +157,7 @@ void main() {
     });
 
     test('Connect with md5 or scram-sha-256 auth required', () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
 
       await conn.open();
@@ -163,7 +166,7 @@ void main() {
     });
 
     test('SSL Connect with md5 or scram-sha-256 auth required', () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart', useSSL: true);
 
       await conn.open();
@@ -178,7 +181,7 @@ void main() {
     });
 
     test('Connect with no auth required', () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       await conn.open();
 
@@ -186,7 +189,7 @@ void main() {
     });
 
     test('Connect with no auth throws for non trusted users', () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart');
       try {
         await conn.open();
@@ -200,7 +203,7 @@ void main() {
     });
 
     test('SSL Connect with no auth required', () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust', useSSL: true);
       await conn.open();
 
@@ -209,7 +212,7 @@ void main() {
 
     test('Closing idle connection succeeds, closes underlying socket',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       await conn.open();
 
@@ -225,7 +228,7 @@ void main() {
 
     test('SSL Closing idle connection succeeds, closes underlying socket',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust', useSSL: true);
       await conn.open();
 
@@ -242,7 +245,7 @@ void main() {
     test(
         'Closing connection while busy succeeds, queued queries are all accounted for (canceled), closes underlying socket',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       await conn.open();
 
@@ -271,7 +274,7 @@ void main() {
     test(
         'SSL Closing connection while busy succeeds, queued queries are all accounted for (canceled), closes underlying socket',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust', useSSL: true);
       await conn.open();
       final rs = await conn.query('select 1');
@@ -298,11 +301,11 @@ void main() {
     });
   });
 
-  group('Successful queries over time', () {
+  withPostgresServer('Successful queries over time', (server) {
     late PostgreSQLConnection conn;
 
     setUp(() async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       await conn.open();
     });
@@ -374,7 +377,7 @@ void main() {
     });
   });
 
-  group('Unintended user-error situations', () {
+  withPostgresServer('Unintended user-error situations', (server) {
     late PostgreSQLConnection conn;
     Future? openFuture;
 
@@ -384,7 +387,7 @@ void main() {
     });
 
     test('Sending queries to opening connection triggers error', () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       openFuture = conn.open();
 
@@ -397,7 +400,7 @@ void main() {
     });
 
     test('SSL Sending queries to opening connection triggers error', () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust', useSSL: true);
       openFuture = conn.open();
 
@@ -411,7 +414,7 @@ void main() {
 
     test('Starting transaction while opening connection triggers error',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       openFuture = conn.open();
 
@@ -427,7 +430,7 @@ void main() {
 
     test('SSL Starting transaction while opening connection triggers error',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust', useSSL: true);
       openFuture = conn.open();
 
@@ -443,7 +446,7 @@ void main() {
 
     test('Invalid password reports error, conn is closed, disables conn',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart', password: 'notdart');
 
       try {
@@ -458,7 +461,7 @@ void main() {
 
     test('SSL Invalid password reports error, conn is closed, disables conn',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'dart', password: 'notdart', useSSL: true);
 
       try {
@@ -473,7 +476,7 @@ void main() {
 
     test('A query error maintains connectivity, allows future queries',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       await conn.open();
 
@@ -492,7 +495,7 @@ void main() {
     test(
         'A query error maintains connectivity, continues processing pending queries',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       await conn.open();
 
@@ -535,7 +538,7 @@ void main() {
     test(
         'A query error maintains connectivity, continues processing pending transactions',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       await conn.open();
 
@@ -567,7 +570,7 @@ void main() {
     test(
         'Building query throws error, connection continues processing pending queries',
         () async {
-      conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
           username: 'darttrust');
       await conn.open();
 
@@ -616,7 +619,8 @@ void main() {
     test(
         'Socket fails to connect reports error, disables connection for future use',
         () async {
-      final conn = PostgreSQLConnection('localhost', 5431, 'dart_test');
+      final port = await selectFreePort();
+      final conn = PostgreSQLConnection('localhost', port, 'dart_test');
 
       try {
         await conn.open();
@@ -631,8 +635,9 @@ void main() {
     test(
         'SSL Socket fails to connect reports error, disables connection for future use',
         () async {
+      final port = await selectFreePort();
       final conn =
-          PostgreSQLConnection('localhost', 5431, 'dart_test', useSSL: true);
+          PostgreSQLConnection('localhost', port, 'dart_test', useSSL: true);
 
       try {
         await conn.open();
@@ -647,15 +652,16 @@ void main() {
     test(
         'Connection that times out throws appropriate error and cannot be reused',
         () async {
+      final port = await selectFreePort();
       serverSocket =
-          await ServerSocket.bind(InternetAddress.loopbackIPv4, 5433);
+          await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
       serverSocket!.listen((s) {
         socket = s;
         // Don't respond on purpose
         s.listen((bytes) {});
       });
 
-      final conn = PostgreSQLConnection('localhost', 5433, 'dart_test',
+      final conn = PostgreSQLConnection('localhost', port, 'dart_test',
           timeoutInSeconds: 2);
 
       try {
@@ -671,15 +677,16 @@ void main() {
     test(
         'SSL Connection that times out throws appropriate error and cannot be reused',
         () async {
+      final port = await selectFreePort();
       serverSocket =
-          await ServerSocket.bind(InternetAddress.loopbackIPv4, 5433);
+          await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
       serverSocket!.listen((s) {
         socket = s;
         // Don't respond on purpose
         s.listen((bytes) {});
       });
 
-      final conn = PostgreSQLConnection('localhost', 5433, 'dart_test',
+      final conn = PostgreSQLConnection('localhost', port, 'dart_test',
           timeoutInSeconds: 2, useSSL: true);
 
       try {
@@ -695,8 +702,9 @@ void main() {
     test('Connection that times out triggers future for pending queries',
         () async {
       final openCompleter = Completer();
+      final port = await selectFreePort();
       serverSocket =
-          await ServerSocket.bind(InternetAddress.loopbackIPv4, 5433);
+          await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
       serverSocket!.listen((s) {
         socket = s;
         // Don't respond on purpose
@@ -704,7 +712,7 @@ void main() {
         Future.delayed(Duration(milliseconds: 100), openCompleter.complete);
       });
 
-      final conn = PostgreSQLConnection('localhost', 5433, 'dart_test',
+      final conn = PostgreSQLConnection('localhost', port, 'dart_test',
           timeoutInSeconds: 2);
       conn.open().catchError((e) {});
 
@@ -721,8 +729,9 @@ void main() {
     test('SSL Connection that times out triggers future for pending queries',
         () async {
       final openCompleter = Completer();
+      final port = await selectFreePort();
       serverSocket =
-          await ServerSocket.bind(InternetAddress.loopbackIPv4, 5433);
+          await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
       serverSocket!.listen((s) {
         socket = s;
         // Don't respond on purpose
@@ -730,7 +739,7 @@ void main() {
         Future.delayed(Duration(milliseconds: 100), openCompleter.complete);
       });
 
-      final conn = PostgreSQLConnection('localhost', 5433, 'dart_test',
+      final conn = PostgreSQLConnection('localhost', port, 'dart_test',
           timeoutInSeconds: 2, useSSL: true);
       conn.open().catchError((e) {
         return null;
@@ -754,56 +763,62 @@ void main() {
     });
   });
 
-  test('If connection is closed, do not allow .execute', () async {
-    final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
-    try {
-      await conn.execute('SELECT 1');
-      fail('unreachable');
-    } on PostgreSQLException catch (e) {
-      expect(e.toString(), contains('connection is not open'));
-    }
-  });
+  withPostgresServer('connection', (server) {
+    test('If connection is closed, do not allow .execute', () async {
+      final conn = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
+          username: 'dart', password: 'dart');
+      try {
+        await conn.execute('SELECT 1');
+        fail('unreachable');
+      } on PostgreSQLException catch (e) {
+        expect(e.toString(), contains('connection is not open'));
+      }
+    });
 
-  test('If connection is closed, do not allow .query', () async {
-    final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
-    try {
-      await conn.query('SELECT 1');
-      fail('unreachable');
-    } on PostgreSQLException catch (e) {
-      expect(e.toString(), contains('connection is not open'));
-    }
-  });
+    test('If connection is closed, do not allow .query', () async {
+      final conn = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
+          username: 'dart', password: 'dart');
+      try {
+        await conn.query('SELECT 1');
+        fail('unreachable');
+      } on PostgreSQLException catch (e) {
+        expect(e.toString(), contains('connection is not open'));
+      }
+    });
 
-  test('If connection is closed, do not allow .mappedResultsQuery', () async {
-    final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
-    try {
-      await conn.mappedResultsQuery('SELECT 1');
-      fail('unreachable');
-    } on PostgreSQLException catch (e) {
-      expect(e.toString(), contains('connection is not open'));
-    }
-  });
+    test('If connection is closed, do not allow .mappedResultsQuery', () async {
+      final conn = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
+          username: 'dart', password: 'dart');
+      try {
+        await conn.mappedResultsQuery('SELECT 1');
+        fail('unreachable');
+      } on PostgreSQLException catch (e) {
+        expect(e.toString(), contains('connection is not open'));
+      }
+    });
 
-  test(
-      'Queue size, should be 0 on open, >0 if queries added and 0 again after queries executed',
-      () async {
-    final conn = PostgreSQLConnection('localhost', 5432, 'dart_test',
-        username: 'dart', password: 'dart');
-    await conn.open();
-    expect(conn.queueSize, 0);
+    test(
+        'Queue size, should be 0 on open, >0 if queries added and 0 again after queries executed',
+        () async {
+      final conn = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
+          username: 'dart', password: 'dart');
+      await conn.open();
+      expect(conn.queueSize, 0);
 
-    final futures = [
-      conn.query('select 1', allowReuse: false),
-      conn.query('select 2', allowReuse: false),
-      conn.query('select 3', allowReuse: false)
-    ];
-    expect(conn.queueSize, 3);
+      final futures = [
+        conn.query('select 1', allowReuse: false),
+        conn.query('select 2', allowReuse: false),
+        conn.query('select 3', allowReuse: false)
+      ];
+      expect(conn.queueSize, 3);
 
-    await Future.wait(futures);
-    expect(conn.queueSize, 0);
+      await Future.wait(futures);
+      expect(conn.queueSize, 0);
+    });
   });
 }
 

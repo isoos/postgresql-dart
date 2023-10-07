@@ -10,13 +10,6 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-final _endpoint = PgEndpoint(
-  host: 'localhost',
-  database: 'dart_test',
-  username: 'dart',
-  password: 'dart',
-);
-
 // We log all packets sent to and received from the postgres server. This can be
 // used to debug failing tests. To view logs, something like this can be put
 // at the beginning of `main()`:
@@ -52,14 +45,12 @@ final _sessionSettings = PgSessionSettings(
 );
 
 void main() {
-  usePostgresDocker();
-
-  group('PgConnection', () {
+  withPostgresServer('PgConnection', (server) {
     late PgConnection connection;
 
     setUp(() async {
       connection = await PgConnection.open(
-        _endpoint,
+        await server.dartTestEndpoint(),
         sessionSettings: _sessionSettings,
       );
     });
@@ -401,9 +392,7 @@ void main() {
 
         expect(await connection.execute('SELECT id FROM t'), isEmpty);
       });
-    });
 
-    group('Simple Query Protocol', () {
       test('single simple query', () async {
         final res = await connection.execute(
           "SELECT 'dart', 42, true, false, NULL",
@@ -425,51 +414,46 @@ void main() {
         );
       });
     });
-  });
 
-  test('can inject transformer into connection', () async {
-    final incoming = <ServerMessage>[];
-    final outgoing = <ClientMessage>[];
+    test('can inject transformer into connection', () async {
+      final incoming = <ServerMessage>[];
+      final outgoing = <ClientMessage>[];
 
-    final transformer = StreamChannelTransformer<BaseMessage, BaseMessage>(
-      StreamTransformer.fromHandlers(
-        handleData: (msg, sink) {
-          incoming.add(msg as ServerMessage);
+      final transformer = StreamChannelTransformer<BaseMessage, BaseMessage>(
+        StreamTransformer.fromHandlers(
+          handleData: (msg, sink) {
+            incoming.add(msg as ServerMessage);
+            sink.add(msg);
+          },
+        ),
+        StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
+          outgoing.add(msg as ClientMessage);
           sink.add(msg);
-        },
-      ),
-      StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
-        outgoing.add(msg as ClientMessage);
-        sink.add(msg);
-      }),
-    );
+        }),
+      );
 
-    final connection = await PgConnection.open(
-      _endpoint,
-      sessionSettings: PgSessionSettings(
-        transformer: transformer,
-        onBadSslCertificate: (_) => true,
-      ),
-    );
-    addTearDown(connection.close);
+      final connection = await PgConnection.open(
+        await server.dartTestEndpoint(),
+        sessionSettings: PgSessionSettings(
+          transformer: transformer,
+          onBadSslCertificate: (_) => true,
+        ),
+      );
+      addTearDown(connection.close);
 
-    await connection.execute("SELECT 'foo'", ignoreRows: true);
-    expect(incoming, contains(isA<DataRowMessage>()));
-    expect(outgoing, contains(isA<QueryMessage>()));
+      await connection.execute("SELECT 'foo'", ignoreRows: true);
+      expect(incoming, contains(isA<DataRowMessage>()));
+      expect(outgoing, contains(isA<QueryMessage>()));
+    });
   });
 
-  group('can close connection after error conditions', () {
+  withPostgresServer('can close connection after error conditions', (server) {
     late PgConnection conn1;
     late PgConnection conn2;
 
     setUp(() async {
       conn1 = await PgConnection.open(
-        PgEndpoint(
-          host: 'localhost',
-          database: 'dart_test',
-          username: 'dart',
-          password: 'dart',
-        ),
+        await server.dartTestEndpoint(),
         sessionSettings: PgSessionSettings(
           transformer: _loggingTransformer('c1'),
           onBadSslCertificate: (cert) => true,
@@ -477,12 +461,7 @@ void main() {
       );
 
       conn2 = await PgConnection.open(
-        PgEndpoint(
-          host: 'localhost',
-          database: 'dart_test',
-          username: 'postgres',
-          password: 'postgres',
-        ),
+        await server.dartTestEndpoint(),
         sessionSettings: PgSessionSettings(
           transformer: _loggingTransformer('c2'),
           onBadSslCertificate: (cert) => true,

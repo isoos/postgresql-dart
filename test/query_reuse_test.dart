@@ -11,12 +11,12 @@ String sid(String id, PostgreSQLDataType dt) =>
     PostgreSQLFormat.id(id, type: dt);
 
 void main() {
-  usePostgresDocker();
-  group('Retaining type information', () {
+  withPostgresServer('Retaining type information', (server) {
     late PostgreSQLConnection connection;
 
     setUp(() async {
-      connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      connection = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await connection.open();
       await connection.execute(
@@ -282,11 +282,12 @@ void main() {
     });
   });
 
-  group('Mixing prepared statements', () {
+  withPostgresServer('Mixing prepared statements', (server) {
     late PostgreSQLConnection connection;
 
     setUp(() async {
-      connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      connection = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await connection.open();
       await connection.execute(
@@ -441,11 +442,12 @@ void main() {
     });
   });
 
-  group('Failure cases', () {
+  withPostgresServer('Failure cases', (server) {
     late PostgreSQLConnection connection;
 
     setUp(() async {
-      connection = PostgreSQLConnection('localhost', 5432, 'dart_test',
+      connection = PostgreSQLConnection(
+          'localhost', await server.port, 'dart_test',
           username: 'dart', password: 'dart');
       await connection.open();
       await connection.execute(
