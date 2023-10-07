@@ -9,9 +9,7 @@ void main() {
   withPostgresServer('Successful notifications', (server) {
     late PostgreSQLConnection connection;
     setUp(() async {
-      connection = PostgreSQLConnection(
-          'localhost', await server.port, 'dart_test',
-          username: 'dart', password: 'dart');
+      connection = await server.newPostgreSQLConnection();
       await connection.open();
     });
 

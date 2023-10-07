@@ -15,9 +15,7 @@ void main() {
     late PostgreSQLConnection connection;
 
     setUp(() async {
-      connection = PostgreSQLConnection(
-          'localhost', await server.port, 'dart_test',
-          username: 'dart', password: 'dart');
+      connection = await server.newPostgreSQLConnection();
       await connection.open();
       await connection.execute(
           'CREATE TEMPORARY TABLE t (i int, s serial, bi bigint, bs bigserial, bl boolean, si smallint, t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz)');
@@ -286,9 +284,7 @@ void main() {
     late PostgreSQLConnection connection;
 
     setUp(() async {
-      connection = PostgreSQLConnection(
-          'localhost', await server.port, 'dart_test',
-          username: 'dart', password: 'dart');
+      connection = await server.newPostgreSQLConnection();
       await connection.open();
       await connection.execute(
           'CREATE TEMPORARY TABLE t (i1 int not null, i2 int not null)');
@@ -446,9 +442,7 @@ void main() {
     late PostgreSQLConnection connection;
 
     setUp(() async {
-      connection = PostgreSQLConnection(
-          'localhost', await server.port, 'dart_test',
-          username: 'dart', password: 'dart');
+      connection = await server.newPostgreSQLConnection();
       await connection.open();
       await connection.execute(
           'CREATE TEMPORARY TABLE t (i int, s serial, bi bigint, bs bigserial, bl boolean, si smallint, t text, f real, d double precision, dt date, ts timestamp, tsz timestamptz)');

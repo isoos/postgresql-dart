@@ -10,8 +10,7 @@ void main() {
     late PostgreSQLConnection conn;
 
     setUp(() async {
-      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
-          username: 'dart', password: 'dart');
+      conn = await server.newPostgreSQLConnection();
       await conn.open();
       await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
     });

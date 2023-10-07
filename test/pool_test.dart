@@ -15,15 +15,8 @@ void main() {
     late PgPool pool;
 
     setUp(() async {
-      final endpoint = PgEndpoint(
-        host: 'localhost',
-        database: 'dart_test',
-        username: 'dart',
-        password: 'dart',
-        port: await server.port,
-      );
       pool = PgPool(
-        [endpoint],
+        [await server.endpoint],
         sessionSettings: _sessionSettings,
       );
 
@@ -90,15 +83,8 @@ void main() {
 
   withPostgresServer('limit pool connections', (server) {
     test('can limit concurrent connections', () async {
-      final endpoint = PgEndpoint(
-        host: 'localhost',
-        database: 'dart_test',
-        username: 'dart',
-        password: 'dart',
-        port: await server.port,
-      );
       final pool = PgPool(
-        [endpoint],
+        [await server.endpoint],
         sessionSettings: _sessionSettings,
         poolSettings: const PgPoolSettings(maxConnectionCount: 2),
       );

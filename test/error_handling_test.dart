@@ -1,4 +1,3 @@
-import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -6,9 +5,7 @@ import 'docker.dart';
 void main() {
   withPostgresServer('error handling', (server) {
     test('Reports stacktrace correctly', () async {
-      final conn = PostgreSQLConnection(
-          'localhost', await server.port, 'dart_test',
-          username: 'dart', password: 'dart');
+      final conn = await server.newPostgreSQLConnection();
       await conn.open();
       addTearDown(() async => conn.close());
 

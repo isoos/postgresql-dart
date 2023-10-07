@@ -50,7 +50,7 @@ void main() {
 
     setUp(() async {
       connection = await PgConnection.open(
-        await server.dartTestEndpoint(),
+        await server.endpoint,
         sessionSettings: _sessionSettings,
       );
     });
@@ -433,7 +433,7 @@ void main() {
       );
 
       final connection = await PgConnection.open(
-        await server.dartTestEndpoint(),
+        await server.endpoint,
         sessionSettings: PgSessionSettings(
           transformer: transformer,
           onBadSslCertificate: (_) => true,
@@ -453,7 +453,7 @@ void main() {
 
     setUp(() async {
       conn1 = await PgConnection.open(
-        await server.dartTestEndpoint(),
+        await server.endpoint,
         sessionSettings: PgSessionSettings(
           transformer: _loggingTransformer('c1'),
           onBadSslCertificate: (cert) => true,
@@ -461,7 +461,7 @@ void main() {
       );
 
       conn2 = await PgConnection.open(
-        await server.dartTestEndpoint(),
+        await server.endpoint,
         sessionSettings: PgSessionSettings(
           transformer: _loggingTransformer('c2'),
           onBadSslCertificate: (cert) => true,
@@ -478,8 +478,9 @@ void main() {
       test(
         'with concurrent query: $concurrentQuery',
         () async {
+          final endpoint = await server.endpoint;
           final res = await conn2.execute(
-              "SELECT pid FROM pg_stat_activity where usename = 'dart';");
+              "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
           final conn1PID = res.first.first as int;
 
           // Simulate issue by terminating a connection during a query
@@ -497,9 +498,10 @@ void main() {
     }
 
     test('with simple query protocol', () async {
+      final endpoint = await server.endpoint;
       // Get the PID for conn1
-      final res = await conn2
-          .execute("SELECT pid FROM pg_stat_activity where usename = 'dart';");
+      final res = await conn2.execute(
+          "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
       final conn1PID = res.first.first as int;
 
       expect(

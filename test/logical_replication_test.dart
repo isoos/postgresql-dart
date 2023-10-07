@@ -13,12 +13,7 @@ void main() {
   //    - One for listening to streaming replications (this connection will be locked).
   //    - The other one to modify the database (e.g. insert, delete, update, truncate)
   withPostgresServer('test logical replication with pgoutput for decoding',
-      (server) {
-    final host = 'localhost';
-    final username = 'dart';
-    final password = 'dart';
-    final database = 'dart_test';
-
+      initSqls: replicationSchemaInit, (server) {
     final logicalDecodingPlugin = 'pgoutput';
     final replicationMode = ReplicationMode.logical;
     // use this for listening to messages
@@ -35,22 +30,16 @@ void main() {
 
     setUpAll(() async {
       replicationConn = PostgreSQLConnection(
-        host,
+        'localhost',
         await server.port,
-        database,
+        'postgres',
         username: 'replication',
         password: 'replication',
         replicationMode: replicationMode,
       );
       await replicationConn.open();
 
-      changesConn = PostgreSQLConnection(
-        host,
-        await server.port,
-        database,
-        username: username,
-        password: password,
-      );
+      changesConn = await server.newPostgreSQLConnection();
       await changesConn.open();
 
       // create testing tables

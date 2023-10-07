@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:docker_process/containers/postgres.dart';
 import 'package:path/path.dart' as p;
 import 'package:postgres/postgres_v3_experimental.dart';
+import 'package:postgres/src/connection.dart';
+import 'package:postgres/src/replication.dart';
 import 'package:test/test.dart';
 
 class PostgresServer {
@@ -12,19 +14,36 @@ class PostgresServer {
 
   Future<int> get port => _port.future;
 
-  Future<PgEndpoint> dartTestEndpoint() async => PgEndpoint(
+  Future<PgEndpoint> get endpoint async => PgEndpoint(
         host: 'localhost',
-        database: 'dart_test',
-        username: 'dart',
-        password: 'dart',
+        database: 'postgres',
+        username: 'postgres',
+        password: 'postgres',
         port: await port,
       );
+
+  Future<PostgreSQLConnection> newPostgreSQLConnection({
+    bool useSSL = false,
+    ReplicationMode replicationMode = ReplicationMode.none,
+  }) async {
+    final e = await endpoint;
+    return PostgreSQLConnection(
+      e.host,
+      e.port,
+      e.database,
+      username: e.username,
+      password: e.password,
+      useSSL: useSSL,
+      replicationMode: replicationMode,
+    );
+  }
 }
 
 void withPostgresServer(
   String name,
-  void Function(PostgresServer server) fn,
-) {
+  void Function(PostgresServer server) fn, {
+  Iterable<String>? initSqls,
+}) {
   group(name, () {
     final server = PostgresServer();
 
@@ -36,6 +55,7 @@ void withPostgresServer(
         await _startPostgresContainer(
           port: port,
           containerName: containerName,
+          initSqls: initSqls ?? const <String>[],
         );
 
         server._containerName.complete(containerName);
@@ -67,6 +87,7 @@ Future<int> selectFreePort() async {
 Future<void> _startPostgresContainer({
   required int port,
   required String containerName,
+  required Iterable<String> initSqls,
 }) async {
   final isRunning = await _isPostgresContainerRunning(containerName);
   if (isRunning) {
@@ -95,8 +116,7 @@ Future<void> _startPostgresContainer({
   );
 
   // Setup the database to support all kind of tests
-  // see _setupDatabaseStatements definition for details
-  for (final stmt in _setupDatabaseStatements) {
+  for (final stmt in initSqls) {
     final args = [
       'psql',
       '-c',
@@ -131,10 +151,8 @@ Future<bool> _isPostgresContainerRunning(String containerName) async {
       .contains(containerName);
 }
 
-// This setup supports old and new test
-// This is setup is the same as the one from the old travis ci except for the
-// replication user which is a new addition.
-final _setupDatabaseStatements = <String>[
+/// This is setup is the same as the one from the old travis ci.
+const oldSchemaInit = <String>[
   // create testing database
   'create database dart_test;',
   // create dart user
@@ -144,6 +162,9 @@ final _setupDatabaseStatements = <String>[
   // create darttrust user
   'create user darttrust with createdb;',
   'grant all on database dart_test to darttrust;',
+];
+
+const replicationSchemaInit = <String>[
   // create replication user
   "create role replication with replication password 'replication' login;",
 ];
