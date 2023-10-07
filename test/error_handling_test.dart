@@ -29,7 +29,6 @@ void main() {
         await conn.execute('DELETE FROM hello');
         fail('Should not reach');
       } catch (e, st) {
-        print(e);
         expect(e.toString(), contains('relation "hello" does not exist'));
         expect(
           st.toString(),
