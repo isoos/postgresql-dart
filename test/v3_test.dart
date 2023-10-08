@@ -181,7 +181,7 @@ void main() {
       test('for duplicate with extended query', () async {
         await expectLater(
           () => connection.execute(
-            r'INSERT INTO foo VALUES ($1);',
+            PgSql(r'INSERT INTO foo VALUES ($1);'),
             parameters: [PgTypedParameter(PgDataType.integer, 1)],
           ),
           _throwsPostgresException,
@@ -232,7 +232,7 @@ void main() {
 
         final outValue = await connection.runTx((ctx) async {
           return await ctx.execute(
-            r'SELECT * FROM t WHERE id = $1 LIMIT 1',
+            PgSql(r'SELECT * FROM t WHERE id = $1 LIMIT 1'),
             parameters: [PgTypedParameter(PgDataType.integer, 1)],
           );
         });
@@ -378,7 +378,7 @@ void main() {
       test('parameterized query throws', () async {
         await expectLater(
           () => connection.execute(
-            'SELECT 1',
+            PgSql('SELECT 1'),
             parameters: [PgTypedParameter(PgDataType.integer, 1)],
             queryMode: QueryMode.simple,
           ),
