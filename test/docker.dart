@@ -1,13 +1,44 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:async/async.dart';
 import 'package:docker_process/containers/postgres.dart';
+import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
+import 'package:postgres/messages.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:postgres/src/connection.dart';
 import 'package:postgres/src/replication.dart';
+import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
+
+// We log all packets sent to and received from the postgres server. This can be
+// used to debug failing tests. To view logs, something like this can be put
+// at the beginning of `main()`:
+//
+//  Logger.root.level = Level.ALL;
+//  Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
+StreamChannelTransformer<BaseMessage, BaseMessage> loggingTransformer(
+    String prefix) {
+  final inLogger = Logger('postgres.connection.$prefix.in');
+  final outLogger = Logger('postgres.connection.$prefix.out');
+
+  return StreamChannelTransformer(
+    StreamTransformer.fromHandlers(
+      handleData: (data, sink) {
+        inLogger.fine(data);
+        sink.add(data);
+      },
+    ),
+    StreamSinkTransformer.fromHandlers(
+      handleData: (data, sink) {
+        outLogger.fine(data);
+        sink.add(data);
+      },
+    ),
+  );
+}
 
 class PostgresServer {
   final _port = Completer<int>();
@@ -37,6 +68,7 @@ class PostgresServer {
         replicationMode: replicationMode,
         // We use self-signed certificates in tests
         onBadSslCertificate: (_) => true,
+        transformer: loggingTransformer('conn'),
       ),
     );
   }

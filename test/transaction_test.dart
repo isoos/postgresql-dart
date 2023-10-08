@@ -1,6 +1,7 @@
 // ignore_for_file: unawaited_futures
 import 'dart:async';
 
+import 'package:logging/logging.dart';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:test/test.dart';
@@ -8,6 +9,9 @@ import 'package:test/test.dart';
 import 'docker.dart';
 
 void main() {
+  Logger.root.level = Level.ALL;
+//  Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
+
   withPostgresServer('Transaction behavior', (server) {
     late PgConnection conn;
 
@@ -153,11 +157,14 @@ void main() {
       ]);
     });
 
-    test("A transaction doesn't have to await on queries", () async {
+    test("A transaction doesn't have to await on simple queries", () async {
       conn.runTx((ctx) async {
-        ctx.execute('INSERT INTO t (id) VALUES (1)');
-        ctx.execute('INSERT INTO t (id) VALUES (2)');
-        ctx.execute('INSERT INTO t (id) VALUES (3)');
+        ctx.execute('INSERT INTO t (id) VALUES (1)',
+            queryMode: QueryMode.simple);
+        ctx.execute('INSERT INTO t (id) VALUES (2)',
+            queryMode: QueryMode.simple);
+        ctx.execute('INSERT INTO t (id) VALUES (3)',
+            queryMode: QueryMode.simple);
       });
 
       final total = await conn.execute('SELECT id FROM t');
@@ -168,15 +175,30 @@ void main() {
       ]);
     });
 
+    test('A transaction has to await extended queries', () async {
+      await conn.runTx((session) async {
+        expect(
+          session.execute('select 1;'),
+          throwsA(isA<PostgreSQLException>().having((e) => e.message, 'message',
+              contains('did you forget to await a statement?'))),
+        );
+      });
+    });
+
     test(
-        "A transaction doesn't have to await on queries, when the last query fails, it still emits an error from the transaction",
+        "A transaction doesn't have to await on simple queries, when the last query fails, it still emits an error from the transaction",
         () async {
       dynamic transactionError;
       final rs = await conn.execute('SELECT 1');
-      await conn.runTx((ctx) async {
-        ctx.execute('INSERT INTO t (id) VALUES (1)');
-        ctx.execute('INSERT INTO t (id) VALUES (2)');
-        ctx.execute("INSERT INTO t (id) VALUES ('foo')").catchError((e) => rs);
+      await conn.runTx<void>((ctx) async {
+        ctx.execute('INSERT INTO t (id) VALUES (1)',
+            queryMode: QueryMode.simple);
+        ctx.execute('INSERT INTO t (id) VALUES (2)',
+            queryMode: QueryMode.simple);
+        ctx
+            .execute("INSERT INTO t (id) VALUES ('foo')",
+                queryMode: QueryMode.simple)
+            .catchError((e) => rs);
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);
@@ -186,27 +208,34 @@ void main() {
     });
 
     test(
-        "A transaction doesn't have to await on queries, when the non-last query fails, it still emits an error from the transaction",
+        "A transaction doesn't have to await on simple queries, when the non-last query fails, it still emits an error from the transaction",
         () async {
       dynamic failingQueryError;
       dynamic pendingQueryError;
       dynamic transactionError;
       final rs = await conn.execute('SELECT 1');
-      await conn.runTx((ctx) async {
-        ctx.execute('INSERT INTO t (id) VALUES (1)');
-        ctx.execute("INSERT INTO t (id) VALUES ('foo')").catchError((e) {
+      await conn.runTx<void>((ctx) async {
+        ctx.execute('INSERT INTO t (id) VALUES (1)',
+            queryMode: QueryMode.simple);
+        ctx
+            .execute("INSERT INTO t (id) VALUES ('foo')",
+                queryMode: QueryMode.simple)
+            .catchError((e) {
           failingQueryError = e;
           return rs;
         });
-        ctx.execute('INSERT INTO t (id) VALUES (2)').catchError((e) {
+        ctx
+            .execute('INSERT INTO t (id) VALUES (2)',
+                queryMode: QueryMode.simple)
+            .catchError((e) {
           pendingQueryError = e;
           return rs;
         });
       }).catchError((e) => transactionError = e);
       expect(transactionError, isNotNull);
       expect(failingQueryError.toString(), contains('invalid input'));
-      expect(
-          pendingQueryError.toString(), contains('failed prior to execution'));
+      expect(pendingQueryError.toString(),
+          contains('current transaction is aborted'));
       final total = await conn.execute('SELECT id FROM t');
       expect(total, []);
     });
@@ -238,16 +267,22 @@ void main() {
     test(
         'A transaction that mixes awaiting and non-awaiting queries fails gracefully when an awaited query fails',
         () async {
+      final rs = await conn.execute('select 1');
+
       dynamic transactionError;
-      await conn.runTx((ctx) async {
-        unawaited(ctx.execute('INSERT INTO t (id) VALUES (1)'));
-        // ignore: body_might_complete_normally_catch_error
-        await ctx
-            .execute("INSERT INTO t (id) VALUES ('foo')")
-            .catchError((_) {});
-        unawaited(
-            // ignore: body_might_complete_normally_catch_error
-            ctx.execute('INSERT INTO t (id) VALUES (2)').catchError((_) {}));
+      await conn.runTx<void>((ctx) async {
+        unawaited(ctx.execute('INSERT INTO t (id) VALUES (1)',
+            queryMode: QueryMode.simple));
+        try {
+          await ctx.execute("INSERT INTO t (id) VALUES ('foo')");
+        } on PostgreSQLException {
+          // expected
+        }
+
+        unawaited(ctx
+            .execute('INSERT INTO t (id) VALUES (2)',
+                queryMode: QueryMode.simple)
+            .catchError((_) => rs));
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);
@@ -260,12 +295,17 @@ void main() {
         () async {
       dynamic transactionError;
       final rs = conn.execute('SELECT 1');
-      await conn.runTx((ctx) async {
+      await conn.runTx<void>((ctx) async {
         await ctx.execute('INSERT INTO t (id) VALUES (1)');
-        ctx.execute("INSERT INTO t (id) VALUES ('foo')").catchError((_) => rs);
-        await ctx
-            .execute('INSERT INTO t (id) VALUES (2)')
+        ctx
+            .execute("INSERT INTO t (id) VALUES ('foo')",
+                queryMode: QueryMode.simple)
             .catchError((_) => rs);
+        try {
+          await ctx.execute('INSERT INTO t (id) VALUES (2)');
+        } on PostgreSQLException {
+          // expected
+        }
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:async/async.dart';
-import 'package:logging/logging.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart' show PostgreSQLException;
 import 'package:postgres/postgres_v3_experimental.dart';
@@ -10,38 +9,11 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-// We log all packets sent to and received from the postgres server. This can be
-// used to debug failing tests. To view logs, something like this can be put
-// at the beginning of `main()`:
-//
-//  Logger.root.level = Level.ALL;
-//  Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
-StreamChannelTransformer<BaseMessage, BaseMessage> _loggingTransformer(
-    String prefix) {
-  final inLogger = Logger('postgres.connection.$prefix.in');
-  final outLogger = Logger('postgres.connection.$prefix.out');
-
-  return StreamChannelTransformer(
-    StreamTransformer.fromHandlers(
-      handleData: (data, sink) {
-        inLogger.fine(data);
-        sink.add(data);
-      },
-    ),
-    StreamSinkTransformer.fromHandlers(
-      handleData: (data, sink) {
-        outLogger.fine(data);
-        sink.add(data);
-      },
-    ),
-  );
-}
-
 final _sessionSettings = PgSessionSettings(
   // To test SSL, we're running postgres with a self-signed certificate.
   onBadSslCertificate: (cert) => true,
 
-  transformer: _loggingTransformer('conn'),
+  transformer: loggingTransformer('conn'),
 );
 
 void main() {
@@ -50,7 +22,7 @@ void main() {
 
     setUp(() async {
       connection = await PgConnection.open(
-        await server.endpoint,
+        await server.endpoint(),
         sessionSettings: _sessionSettings,
       );
     });
@@ -433,7 +405,7 @@ void main() {
       );
 
       final connection = await PgConnection.open(
-        await server.endpoint,
+        await server.endpoint(),
         sessionSettings: PgSessionSettings(
           transformer: transformer,
           onBadSslCertificate: (_) => true,
@@ -453,17 +425,17 @@ void main() {
 
     setUp(() async {
       conn1 = await PgConnection.open(
-        await server.endpoint,
+        await server.endpoint(),
         sessionSettings: PgSessionSettings(
-          transformer: _loggingTransformer('c1'),
+          transformer: loggingTransformer('c1'),
           onBadSslCertificate: (cert) => true,
         ),
       );
 
       conn2 = await PgConnection.open(
-        await server.endpoint,
+        await server.endpoint(),
         sessionSettings: PgSessionSettings(
-          transformer: _loggingTransformer('c2'),
+          transformer: loggingTransformer('c2'),
           onBadSslCertificate: (cert) => true,
         ),
       );
@@ -478,7 +450,7 @@ void main() {
       test(
         'with concurrent query: $concurrentQuery',
         () async {
-          final endpoint = await server.endpoint;
+          final endpoint = await server.endpoint();
           final res = await conn2.execute(
               "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
           final conn1PID = res.first.first as int;
@@ -498,7 +470,7 @@ void main() {
     }
 
     test('with simple query protocol', () async {
-      final endpoint = await server.endpoint;
+      final endpoint = await server.endpoint();
       // Get the PID for conn1
       final res = await conn2.execute(
           "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");

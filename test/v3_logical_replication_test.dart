@@ -80,7 +80,7 @@ void main() {
       // used to create changes in the db that are reflected in the replication
       // stream
       changesConn = await PgConnection.open(
-        await server.endpoint,
+        await server.endpoint(),
         sessionSettings: PgSessionSettings(
           onBadSslCertificate: (cert) => true,
         ),
