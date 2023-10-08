@@ -555,11 +555,11 @@ class _PgResultStreamSubscription
   void _scheduleStatement(Future<void> Function() sendAndWait) async {
     try {
       await session._withResource(sendAndWait);
-    } on PostgreSQLException catch (e) {
+    } catch (e, s) {
       // _withResource can fail if the connection or the session is already
       // closed. This error should be reported to the user!
       if (!_done.isCompleted) {
-        handleError(e);
+        _controller.addError(e, s);
         await _completeQuery();
       }
     }

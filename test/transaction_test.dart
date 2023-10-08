@@ -1,7 +1,6 @@
 // ignore_for_file: unawaited_futures
 import 'dart:async';
 
-import 'package:logging/logging.dart';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:test/test.dart';
@@ -9,9 +8,6 @@ import 'package:test/test.dart';
 import 'docker.dart';
 
 void main() {
-  Logger.root.level = Level.ALL;
-//  Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
-
   withPostgresServer('Transaction behavior', (server) {
     late PgConnection conn;
 
@@ -318,11 +314,10 @@ void main() {
   // After a transaction fails, the changes must be rolled back, it should continue with pending queries, pending transactions, later queries, later transactions
 
   withPostgresServer('Transaction:Query recovery', (server) {
-    late PostgreSQLConnection conn;
+    late PgConnection conn;
 
     setUp(() async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
+      conn = await server.newConnection();
       await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
     });
 
@@ -332,39 +327,39 @@ void main() {
 
     test('Is rolled back/executes later query', () async {
       try {
-        await conn.transaction((c) async {
-          await c.query('INSERT INTO t (id) VALUES (1)');
-          final oneRow = await c.query('SELECT id FROM t');
+        await conn.runTx((c) async {
+          await c.execute('INSERT INTO t (id) VALUES (1)');
+          final oneRow = await c.execute('SELECT id FROM t');
           expect(oneRow, [
             [1]
           ]);
 
           // This will error
-          await c.query('INSERT INTO t (id) VALUES (1)');
+          await c.execute('INSERT INTO t (id) VALUES (1)');
         });
-        expect(true, false);
+        fail('Should have thrown an exception');
       } on PostgreSQLException catch (e) {
         expect(e.message, contains('unique constraint'));
       }
 
-      final noRows = await conn.query('SELECT id FROM t');
+      final noRows = await conn.execute('SELECT id FROM t');
       expect(noRows, []);
     });
 
     test('Executes pending query', () async {
       final orderEnsurer = [];
 
-      conn.transaction((c) async {
+      conn.runTx((c) async {
         orderEnsurer.add(1);
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
         orderEnsurer.add(2);
 
         // This will error
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
       }).catchError((e) => null);
 
       orderEnsurer.add(11);
-      final result = await conn.query('SELECT id FROM t');
+      final result = await conn.execute('SELECT id FROM t');
       orderEnsurer.add(12);
 
       expect(orderEnsurer, [11, 1, 2, 12]);
@@ -374,18 +369,18 @@ void main() {
     test('Executes pending transaction', () async {
       final orderEnsurer = [];
 
-      conn.transaction((c) async {
+      conn.runTx((c) async {
         orderEnsurer.add(1);
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
         orderEnsurer.add(2);
 
         // This will error
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
       }).catchError((e) => null);
 
-      final result = await conn.transaction((ctx) async {
+      final result = await conn.runTx((ctx) async {
         orderEnsurer.add(11);
-        return await ctx.query('SELECT id FROM t');
+        return await ctx.execute('SELECT id FROM t');
       });
       orderEnsurer.add(12);
 
@@ -395,34 +390,33 @@ void main() {
 
     test('Executes later transaction', () async {
       try {
-        await conn.transaction((c) async {
-          await c.query('INSERT INTO t (id) VALUES (1)');
-          final oneRow = await c.query('SELECT id FROM t');
+        await conn.runTx((c) async {
+          await c.execute('INSERT INTO t (id) VALUES (1)');
+          final oneRow = await c.execute('SELECT id FROM t');
           expect(oneRow, [
             [1]
           ]);
 
           // This will error
-          await c.query('INSERT INTO t (id) VALUES (1)');
+          await c.execute('INSERT INTO t (id) VALUES (1)');
         });
         expect(true, false);
       } on PostgreSQLException {
         // ignore
       }
 
-      final result = await conn.transaction((ctx) async {
-        return await ctx.query('SELECT id FROM t');
+      final result = await conn.runTx((ctx) async {
+        return await ctx.execute('SELECT id FROM t');
       });
       expect(result, []);
     });
   });
 
   withPostgresServer('Transaction:Exception recovery', (server) {
-    late PostgreSQLConnection conn;
+    late PgConnection conn;
 
     setUp(() async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
+      conn = await server.newConnection();
       await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
     });
 
@@ -431,32 +425,29 @@ void main() {
     });
 
     test('Is rolled back/executes later query', () async {
-      try {
-        await conn.transaction((c) async {
-          await c.query('INSERT INTO t (id) VALUES (1)');
-          throw Exception('foo');
-        });
-        expect(true, false);
-      } on Exception {
-        // ignore
-      }
+      final exception = Exception('rollback');
 
-      final noRows = await conn.query('SELECT id FROM t');
+      await expectLater(conn.runTx((c) async {
+        await c.execute('INSERT INTO t (id) VALUES (1)');
+        throw exception;
+      }), throwsA(exception));
+
+      final noRows = await conn.execute('SELECT id FROM t');
       expect(noRows, []);
     });
 
     test('Executes pending query', () async {
       final orderEnsurer = [];
 
-      conn.transaction((c) async {
+      conn.runTx<void>((c) async {
         orderEnsurer.add(1);
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
         orderEnsurer.add(2);
         throw Exception('foo');
       }).catchError((e) => null);
 
       orderEnsurer.add(11);
-      final result = await conn.query('SELECT id FROM t');
+      final result = await conn.execute('SELECT id FROM t');
       orderEnsurer.add(12);
 
       expect(orderEnsurer, [11, 1, 2, 12]);
@@ -466,16 +457,16 @@ void main() {
     test('Executes pending transaction', () async {
       final orderEnsurer = [];
 
-      conn.transaction((c) async {
+      conn.runTx<void>((c) async {
         orderEnsurer.add(1);
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
         orderEnsurer.add(2);
         throw Exception('foo');
       }).catchError((e) => null);
 
-      final result = await conn.transaction((ctx) async {
+      final result = await conn.runTx((ctx) async {
         orderEnsurer.add(11);
-        return await ctx.query('SELECT id FROM t');
+        return await ctx.execute('SELECT id FROM t');
       });
       orderEnsurer.add(12);
 
@@ -484,53 +475,47 @@ void main() {
     });
 
     test('Executes later transaction', () async {
-      try {
-        await conn.transaction((c) async {
-          await c.query('INSERT INTO t (id) VALUES (1)');
-          throw Exception('foo');
-        });
-        expect(true, false);
-      } on Exception {
-        // ignore
-      }
+      await expectLater(conn.runTx((c) async {
+        await c.execute('INSERT INTO t (id) VALUES (1)');
+        throw Exception('foo');
+      }), throwsA(isException));
 
-      final result = await conn.transaction((ctx) async {
-        return await ctx.query('SELECT id FROM t');
+      final result = await conn.runTx((ctx) async {
+        return await ctx.execute('SELECT id FROM t');
       });
       expect(result, []);
     });
 
-    test(
-        'If exception thrown while preparing query, transaction gets rolled back',
-        () async {
-      try {
-        final rs = conn.query('SELECT 1');
-        await conn.transaction((c) async {
-          await c.query('INSERT INTO t (id) VALUES (1)');
+    test("Caught Dart errors don't roll back transactions", () async {
+      await conn.runTx((c) async {
+        await c.execute('INSERT INTO t (id) VALUES (1)');
 
-          c.query('INSERT INTO t (id) VALUES (@id:int4)',
-              substitutionValues: {'id': 'foobar'}).catchError((_) => rs);
-          await c.query('INSERT INTO t (id) VALUES (2)');
-        });
-        expect(true, false);
-      } catch (e) {
-        expect(e is FormatException, true);
-      }
+        // The mismatched type is caught in Dart, but unawaited here
+        expect(
+            c.execute('INSERT INTO t (id) VALUES (@id:int4)',
+                parameters: {'id': 'foobar'}),
+            throwsA(isA<FormatException>()));
 
-      final noRows = await conn.query('SELECT id FROM t');
-      expect(noRows, []);
+        await c.execute('INSERT INTO t (id) VALUES (2)');
+      });
+
+      final rows = await conn.execute('SELECT id FROM t');
+      expect(rows, [
+        [1],
+        [2]
+      ]);
     });
 
     test('Async query failure prevents closure from continuing', () async {
       var reached = false;
 
       try {
-        await conn.transaction((c) async {
-          await c.query('INSERT INTO t (id) VALUES (1)');
-          await c.query("INSERT INTO t (id) VALUE ('foo') RETURNING id");
+        await conn.runTx((c) async {
+          await c.execute('INSERT INTO t (id) VALUES (1)');
+          await c.execute("INSERT INTO t (id) VALUE ('foo') RETURNING id");
 
           reached = true;
-          await c.query('INSERT INTO t (id) VALUES (2)');
+          await c.execute('INSERT INTO t (id) VALUES (2)');
         });
         fail('unreachable');
       } on PostgreSQLException {
@@ -538,7 +523,7 @@ void main() {
       }
 
       expect(reached, false);
-      final res = await conn.query('SELECT * FROM t');
+      final res = await conn.execute('SELECT * FROM t');
       expect(res, []);
     });
 
@@ -546,30 +531,30 @@ void main() {
         'When exception thrown in unawaited on future, transaction is rolled back',
         () async {
       try {
-        final rs = conn.query('SELECT 1');
-        await conn.transaction((c) async {
-          await c.query('INSERT INTO t (id) VALUES (1)');
+        final rs = conn.execute('SELECT 1');
+        await conn.runTx((c) async {
+          await c.execute('INSERT INTO t (id) VALUES (1)');
           c
-              .query("INSERT INTO t (id) VALUE ('foo') RETURNING id")
+              .execute("INSERT INTO t (id) VALUE ('foo') RETURNING id",
+                  queryMode: QueryMode.simple)
               .catchError((_) => rs);
-          await c.query('INSERT INTO t (id) VALUES (2)');
+          await c.execute('INSERT INTO t (id) VALUES (2)');
         });
         fail('unreachable');
       } on PostgreSQLException {
         // ignore
       }
 
-      final res = await conn.query('SELECT * FROM t');
+      final res = await conn.execute('SELECT * FROM t');
       expect(res, []);
     });
   });
 
   withPostgresServer('Transaction:Rollback recovery', (server) {
-    late PostgreSQLConnection conn;
+    late PgConnection conn;
 
     setUp(() async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
+      conn = await server.newConnection();
       await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
     });
 
@@ -578,31 +563,27 @@ void main() {
     });
 
     test('Is rolled back/executes later query', () async {
-      final result = await conn.transaction((c) async {
-        await c.query('INSERT INTO t (id) VALUES (1)');
-        c.cancelTransaction();
-        await c.query('INSERT INTO t (id) VALUES (2)');
-      });
+      expect(conn.runTx((c) async {
+        await c.execute('INSERT INTO t (id) VALUES (1)');
+        throw Exception();
+      }), throwsA(isException));
 
-      expect(result is PostgreSQLRollback, true);
-
-      final noRows = await conn.query('SELECT id FROM t');
+      final noRows = await conn.execute('SELECT id FROM t');
       expect(noRows, []);
     });
 
     test('Executes pending query', () async {
       final orderEnsurer = [];
 
-      conn.transaction((c) async {
+      conn.runTx<void>((c) async {
         orderEnsurer.add(1);
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
         orderEnsurer.add(2);
-        c.cancelTransaction();
-        await c.query('INSERT INTO t (id) VALUES (2)');
-      });
+        throw Exception();
+      }).catchError((_) => {});
 
       orderEnsurer.add(11);
-      final result = await conn.query('SELECT id FROM t');
+      final result = await conn.execute('SELECT id FROM t');
       orderEnsurer.add(12);
 
       expect(orderEnsurer, [11, 1, 2, 12]);
@@ -612,18 +593,16 @@ void main() {
     test('Executes pending transaction', () async {
       final orderEnsurer = [];
 
-      conn.transaction((c) async {
+      expect(conn.runTx((c) async {
         orderEnsurer.add(1);
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
         orderEnsurer.add(2);
-        c.cancelTransaction();
-        await c.query('INSERT INTO t (id) VALUES (2)');
-        orderEnsurer.add(3);
-      });
+        throw Exception();
+      }), throwsA(isException));
 
-      final result = await conn.transaction((ctx) async {
+      final result = await conn.runTx((ctx) async {
         orderEnsurer.add(11);
-        return await ctx.query('SELECT id FROM t');
+        return await ctx.execute('SELECT id FROM t');
       });
       orderEnsurer.add(12);
 
@@ -632,15 +611,13 @@ void main() {
     });
 
     test('Executes later transaction', () async {
-      dynamic result = await conn.transaction((c) async {
-        await c.query('INSERT INTO t (id) VALUES (1)');
-        c.cancelTransaction();
-        await c.query('INSERT INTO t (id) VALUES (2)');
-      });
-      expect(result is PostgreSQLRollback, true);
+      await expectLater(conn.runTx((c) async {
+        await c.execute('INSERT INTO t (id) VALUES (1)');
+        throw Exception();
+      }), throwsA(isException));
 
-      result = await conn.transaction((ctx) async {
-        return await ctx.query('SELECT id FROM t');
+      final result = await conn.runTx((ctx) async {
+        return await ctx.execute('SELECT id FROM t');
       });
       expect(result, []);
     });
@@ -648,12 +625,12 @@ void main() {
     test('can start transactions manually', () async {
       await conn.execute('BEGIN');
       await conn.execute(
-        'INSERT INTO t VALUES (@a)',
-        substitutionValues: {'a': 123},
+        'INSERT INTO t VALUES (@a:int4)',
+        parameters: {'a': 123},
       );
       await conn.execute('ROLLBACK');
 
-      await expectLater(conn.query('SELECT * FROM t'), completion(isEmpty));
+      await expectLater(conn.execute('SELECT * FROM t'), completion(isEmpty));
     });
   });
 }
