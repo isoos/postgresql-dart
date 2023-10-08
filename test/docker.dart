@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:docker_process/containers/postgres.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:postgres/src/connection.dart';
@@ -14,19 +15,37 @@ class PostgresServer {
 
   Future<int> get port => _port.future;
 
-  Future<PgEndpoint> get endpoint async => PgEndpoint(
+  Future<PgEndpoint> endpoint({
+    bool requireSsl = false,
+  }) async =>
+      PgEndpoint(
         host: 'localhost',
         database: 'postgres',
         username: 'postgres',
         password: 'postgres',
         port: await port,
+        requireSsl: requireSsl,
       );
+
+  Future<PgConnection> newConnection({
+    bool useSSL = false,
+    ReplicationMode replicationMode = ReplicationMode.none,
+  }) async {
+    return PgConnection.open(
+      await endpoint(requireSsl: useSSL),
+      sessionSettings: PgSessionSettings(
+        replicationMode: replicationMode,
+        // We use self-signed certificates in tests
+        onBadSslCertificate: (_) => true,
+      ),
+    );
+  }
 
   Future<PostgreSQLConnection> newPostgreSQLConnection({
     bool useSSL = false,
     ReplicationMode replicationMode = ReplicationMode.none,
   }) async {
-    final e = await endpoint;
+    final e = await endpoint();
     return PostgreSQLConnection(
       e.host,
       e.port,
@@ -39,6 +58,7 @@ class PostgresServer {
   }
 }
 
+@isTestGroup
 void withPostgresServer(
   String name,
   void Function(PostgresServer server) fn, {

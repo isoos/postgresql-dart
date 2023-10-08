@@ -2,17 +2,17 @@
 import 'dart:async';
 
 import 'package:postgres/postgres.dart';
+import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
 
 void main() {
   withPostgresServer('Transaction behavior', (server) {
-    late PostgreSQLConnection conn;
+    late PgConnection conn;
 
     setUp(() async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
+      conn = await server.newConnection();
       await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
     });
 
@@ -23,30 +23,28 @@ void main() {
     test('Rows are Lists of column values', () async {
       await conn.execute('INSERT INTO t (id) VALUES (1)');
 
-      final outValue = await conn.transaction((ctx) async {
-        return await ctx.query('SELECT * FROM t WHERE id = @id LIMIT 1',
-            substitutionValues: {'id': 1});
-      }) as List;
+      final outValue = await conn.runTx((ctx) async {
+        return await ctx.execute('SELECT * FROM t WHERE id = @id:int4 LIMIT 1',
+            parameters: {'id': 1});
+      });
 
-      expect(outValue.length, 1);
-      expect(outValue.first is List, true);
-      final firstItem = outValue.first as List;
-      expect(firstItem.length, 1);
-      expect(firstItem.first, 1);
+      expect(outValue, [
+        [1]
+      ]);
     });
 
     test('Send successful transaction succeeds, returns returned value',
         () async {
-      final outResult = await conn.transaction((c) async {
-        await c.query('INSERT INTO t (id) VALUES (1)');
+      final outResult = await conn.runTx((c) async {
+        await c.execute('INSERT INTO t (id) VALUES (1)');
 
-        return await c.query('SELECT id FROM t');
+        return await c.execute('SELECT id FROM t');
       });
       expect(outResult, [
         [1]
       ]);
 
-      final result = await conn.query('SELECT id FROM t');
+      final result = await conn.execute('SELECT id FROM t');
       expect(result, [
         [1]
       ]);
@@ -56,12 +54,12 @@ void main() {
         () async {
       final orderEnsurer = [];
       final nextCompleter = Completer.sync();
-      final outResult = conn.transaction((c) async {
+      final outResult = conn.runTx((c) async {
         orderEnsurer.add(1);
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
         orderEnsurer.add(2);
         nextCompleter.complete();
-        final result = await c.query('SELECT id FROM t');
+        final result = await c.execute('SELECT id FROM t');
         orderEnsurer.add(3);
 
         return result;
@@ -69,9 +67,9 @@ void main() {
 
       await nextCompleter.future;
       orderEnsurer.add(11);
-      await conn.query('INSERT INTO t (id) VALUES (2)');
+      await conn.execute('INSERT INTO t (id) VALUES (2)');
       orderEnsurer.add(12);
-      final laterResults = await conn.query('SELECT id FROM t');
+      final laterResults = await conn.execute('SELECT id FROM t');
       orderEnsurer.add(13);
 
       final firstResult = await outResult;
@@ -90,21 +88,21 @@ void main() {
         () async {
       final orderEnsurer = [];
 
-      final firstTransactionFuture = conn.transaction((c) async {
+      final firstTransactionFuture = conn.runTx((c) async {
         orderEnsurer.add(11);
-        await c.query('INSERT INTO t (id) VALUES (1)');
+        await c.execute('INSERT INTO t (id) VALUES (1)');
         orderEnsurer.add(12);
-        final result = await c.query('SELECT id FROM t');
+        final result = await c.execute('SELECT id FROM t');
         orderEnsurer.add(13);
 
         return result;
       });
 
-      final secondTransactionFuture = conn.transaction((c) async {
+      final secondTransactionFuture = conn.runTx((c) async {
         orderEnsurer.add(21);
-        await c.query('INSERT INTO t (id) VALUES (2)');
+        await c.execute('INSERT INTO t (id) VALUES (2)');
         orderEnsurer.add(22);
-        final result = await c.query('SELECT id FROM t');
+        final result = await c.execute('SELECT id FROM t');
         orderEnsurer.add(23);
 
         return result;
@@ -125,62 +123,28 @@ void main() {
     });
 
     test('May intentionally rollback transaction', () async {
-      var reached = false;
-      await conn.transaction((c) async {
-        await c.query('INSERT INTO t (id) VALUES (1)');
-        c.cancelTransaction();
+      final rollback = Exception();
 
-        reached = true;
-        await c.query('INSERT INTO t (id) VALUES (2)');
-      });
+      await expectLater(conn.runTx((c) async {
+        await c.execute('INSERT INTO t (id) VALUES (1)');
+        throw rollback;
+      }), throwsA(rollback));
 
-      expect(reached, false);
-      final result = await conn.query('SELECT id FROM t');
+      final result = await conn.execute('SELECT id FROM t');
       expect(result, []);
-    });
-
-    test('Intentional rollback on non-transaction has no impact', () async {
-      conn.cancelTransaction();
-      final result = await conn.query('SELECT id FROM t');
-      expect(result, []);
-    });
-
-    test('Intentional rollback from outside of a transaction has no impact',
-        () async {
-      final orderEnsurer = [];
-      final nextCompleter = Completer.sync();
-      final outResult = conn.transaction((c) async {
-        orderEnsurer.add(1);
-        await c.query('INSERT INTO t (id) VALUES (1)');
-        orderEnsurer.add(2);
-        nextCompleter.complete();
-        final result = await c.query('SELECT id FROM t');
-        orderEnsurer.add(3);
-
-        return result;
-      });
-
-      await nextCompleter.future;
-      conn.cancelTransaction();
-
-      orderEnsurer.add(11);
-      final results = await outResult;
-
-      expect(orderEnsurer, [1, 2, 11, 3]);
-      expect(results, [
-        [1]
-      ]);
     });
 
     test('A transaction does not preempt pending queries', () async {
       // Add a few insert queries but don't await, then do a transaction that does a fetch,
       // make sure that transaction contains all of the elements.
-      conn.execute('INSERT INTO t (id) VALUES (1)');
-      conn.execute('INSERT INTO t (id) VALUES (2)');
-      conn.execute('INSERT INTO t (id) VALUES (3)');
+      // This makes use of the implementation detail that simple executes
+      // (no result rows, no parameters) are locking the connection directly.
+      conn.execute('INSERT INTO t (id) VALUES (1)', ignoreRows: true);
+      conn.execute('INSERT INTO t (id) VALUES (2)', ignoreRows: true);
+      conn.execute('INSERT INTO t (id) VALUES (3)', ignoreRows: true);
 
-      final results = await conn.transaction((ctx) async {
-        return await ctx.query('SELECT id FROM t');
+      final results = await conn.runTx((ctx) async {
+        return await ctx.execute('SELECT id FROM t');
       });
       expect(results, [
         [1],
@@ -190,13 +154,13 @@ void main() {
     });
 
     test("A transaction doesn't have to await on queries", () async {
-      conn.transaction((ctx) async {
-        ctx.query('INSERT INTO t (id) VALUES (1)');
-        ctx.query('INSERT INTO t (id) VALUES (2)');
-        ctx.query('INSERT INTO t (id) VALUES (3)');
+      conn.runTx((ctx) async {
+        ctx.execute('INSERT INTO t (id) VALUES (1)');
+        ctx.execute('INSERT INTO t (id) VALUES (2)');
+        ctx.execute('INSERT INTO t (id) VALUES (3)');
       });
 
-      final total = await conn.query('SELECT id FROM t');
+      final total = await conn.execute('SELECT id FROM t');
       expect(total, [
         [1],
         [2],
@@ -208,16 +172,16 @@ void main() {
         "A transaction doesn't have to await on queries, when the last query fails, it still emits an error from the transaction",
         () async {
       dynamic transactionError;
-      final rs = await conn.query('SELECT 1');
-      await conn.transaction((ctx) async {
-        ctx.query('INSERT INTO t (id) VALUES (1)');
-        ctx.query('INSERT INTO t (id) VALUES (2)');
-        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((e) => rs);
+      final rs = await conn.execute('SELECT 1');
+      await conn.runTx((ctx) async {
+        ctx.execute('INSERT INTO t (id) VALUES (1)');
+        ctx.execute('INSERT INTO t (id) VALUES (2)');
+        ctx.execute("INSERT INTO t (id) VALUES ('foo')").catchError((e) => rs);
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);
 
-      final total = await conn.query('SELECT id FROM t');
+      final total = await conn.execute('SELECT id FROM t');
       expect(total, []);
     });
 
@@ -227,14 +191,14 @@ void main() {
       dynamic failingQueryError;
       dynamic pendingQueryError;
       dynamic transactionError;
-      final rs = await conn.query('SELECT 1');
-      await conn.transaction((ctx) async {
-        ctx.query('INSERT INTO t (id) VALUES (1)');
-        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((e) {
+      final rs = await conn.execute('SELECT 1');
+      await conn.runTx((ctx) async {
+        ctx.execute('INSERT INTO t (id) VALUES (1)');
+        ctx.execute("INSERT INTO t (id) VALUES ('foo')").catchError((e) {
           failingQueryError = e;
           return rs;
         });
-        ctx.query('INSERT INTO t (id) VALUES (2)').catchError((e) {
+        ctx.execute('INSERT INTO t (id) VALUES (2)').catchError((e) {
           pendingQueryError = e;
           return rs;
         });
@@ -243,29 +207,29 @@ void main() {
       expect(failingQueryError.toString(), contains('invalid input'));
       expect(
           pendingQueryError.toString(), contains('failed prior to execution'));
-      final total = await conn.query('SELECT id FROM t');
+      final total = await conn.execute('SELECT id FROM t');
       expect(total, []);
     });
 
     test(
         'A transaction with a rollback and non-await queries rolls back transaction',
         () async {
-      final rs = await conn.query('select 1');
+      final rs = await conn.execute('select 1');
+      final rollback = Exception();
       final errs = [];
-      await conn.transaction((ctx) async {
-        PostgreSQLResult errsAdd(e) {
+
+      await expectLater(conn.runTx((ctx) async {
+        PgResult errsAdd(e) {
           errs.add(e);
           return rs;
         }
 
-        ctx.query('INSERT INTO t (id) VALUES (1)').catchError(errsAdd);
-        ctx.query('INSERT INTO t (id) VALUES (2)').catchError(errsAdd);
-        ctx.cancelTransaction();
-        // ignore: body_might_complete_normally_catch_error
-        ctx.query('INSERT INTO t (id) VALUES (3)').catchError((e) {});
-      });
+        ctx.execute('INSERT INTO t (id) VALUES (1)').catchError(errsAdd);
+        ctx.execute('INSERT INTO t (id) VALUES (2)').catchError(errsAdd);
+        throw rollback;
+      }), throwsA(rollback));
 
-      final total = await conn.query('SELECT id FROM t');
+      final total = await conn.execute('SELECT id FROM t');
       expect(total, []);
 
       expect(errs.length, 2);
@@ -275,17 +239,19 @@ void main() {
         'A transaction that mixes awaiting and non-awaiting queries fails gracefully when an awaited query fails',
         () async {
       dynamic transactionError;
-      await conn.transaction((ctx) async {
-        unawaited(ctx.query('INSERT INTO t (id) VALUES (1)'));
+      await conn.runTx((ctx) async {
+        unawaited(ctx.execute('INSERT INTO t (id) VALUES (1)'));
         // ignore: body_might_complete_normally_catch_error
-        await ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((_) {});
+        await ctx
+            .execute("INSERT INTO t (id) VALUES ('foo')")
+            .catchError((_) {});
         unawaited(
             // ignore: body_might_complete_normally_catch_error
-            ctx.query('INSERT INTO t (id) VALUES (2)').catchError((_) {}));
+            ctx.execute('INSERT INTO t (id) VALUES (2)').catchError((_) {}));
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);
-      final total = await conn.query('SELECT id FROM t');
+      final total = await conn.execute('SELECT id FROM t');
       expect(total, []);
     });
 
@@ -293,15 +259,17 @@ void main() {
         'A transaction that mixes awaiting and non-awaiting queries fails gracefully when an unawaited query fails',
         () async {
       dynamic transactionError;
-      final rs = conn.query('SELECT 1');
-      await conn.transaction((ctx) async {
-        await ctx.query('INSERT INTO t (id) VALUES (1)');
-        ctx.query("INSERT INTO t (id) VALUES ('foo')").catchError((_) => rs);
-        await ctx.query('INSERT INTO t (id) VALUES (2)').catchError((_) => rs);
+      final rs = conn.execute('SELECT 1');
+      await conn.runTx((ctx) async {
+        await ctx.execute('INSERT INTO t (id) VALUES (1)');
+        ctx.execute("INSERT INTO t (id) VALUES ('foo')").catchError((_) => rs);
+        await ctx
+            .execute('INSERT INTO t (id) VALUES (2)')
+            .catchError((_) => rs);
       }).catchError((e) => transactionError = e);
 
       expect(transactionError, isNotNull);
-      final total = await conn.query('SELECT id FROM t');
+      final total = await conn.execute('SELECT id FROM t');
       expect(total, []);
     });
   });

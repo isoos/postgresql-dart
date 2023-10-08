@@ -385,15 +385,15 @@ class PgConnectionImplementation extends _PgSessionBase
       // The transaction has its own _operationLock, which means that it (and
       // only it) can be used to run statements while it's active.
       final transaction = _TransactionSession(this);
-      await transaction.execute('BEGIN;');
+      await transaction.execute(PgSql('BEGIN;'));
 
       try {
         final result = await fn(transaction);
-        await transaction.execute('COMMIT;');
+        await transaction.execute(PgSql('COMMIT;'));
 
         return result;
       } catch (e) {
-        await transaction.execute('ROLLBACK;');
+        await transaction.execute(PgSql('ROLLBACK;'));
         rethrow;
       }
     });

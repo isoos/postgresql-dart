@@ -106,23 +106,27 @@ class PgSql {
 abstract class PgSession {
   /// Prepares a reusable statement from a [query].
   ///
-  /// Query can either be a string or a [PgSql] instance. The [query] value used
-  /// alters the behavior of [PgStatement.bind]: When a string is used, the
-  /// query is sent to Postgres without modification and you may only used
-  /// indexed parameters (e.g. `SELECT * FROM users WHERE id = $1`). When using
-  /// [PgSql.map], you can use named parameters as well (e.g. `WHERE id = @id`).
+  /// [query] must either be a [String] or a [PgSql] object with types for
+  /// parameters already set. If the types for parameters are already known from
+  /// the query, a direct list of values can be passed for [parameters].
+  /// Otherwise, the type of parameter types must be made explicit. This can be
+  /// done by passing [PgTypedParameter] objects in a list, or (if a string or
+  /// [PgSql.map] value is passed for [query]), via the names of declared
+  /// statements.
   ///
   /// When the returned future completes, the statement must eventually be freed
-  /// using [PgStatement.close] to avoid resource leaks.
+  /// using [PgStatement.dispose] to avoid resource leaks.
   Future<PgStatement> prepare(Object /* String | PgSql */ query);
 
   /// Executes the [query] with the given [parameters].
   ///
-  /// [query] must either be a [String] or a [PgSql] query with types for
-  /// parameters. When a [PgSql] query object with known types is used,
-  /// [parameters] can be a list of direct values. Otherwise, it must be a list
-  /// of [PgTypedParameter]s. With [PgSql.map], values can also be provided as a
-  /// map from the substituted parameter keys to objects or [PgTypedParameter]s.
+  /// [query] must either be a [String] or a [PgSql] object with types for
+  /// parameters already set. If the types for parameters are already known from
+  /// the query, a direct list of values can be passed for [parameters].
+  /// Otherwise, the type of parameter types must be made explicit. This can be
+  /// done by passing [PgTypedParameter] objects in a list, or (if a string or
+  /// [PgSql.map] value is passed for [query]), via the names of declared
+  /// statements.
   ///
   /// When [ignoreRows] is set to true, the implementation may internally
   /// optimize the execution to ignore rows returned by the query. Whether this
