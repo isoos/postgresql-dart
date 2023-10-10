@@ -11,7 +11,7 @@ void main() {
 
     setUp(() async {
       conn1 = await PgConnection.open(
-        await server.endpoint,
+        await server.endpoint(),
         sessionSettings: PgSessionSettings(
           onBadSslCertificate: (cert) => true,
           //transformer: _loggingTransformer('c1'),
@@ -19,7 +19,7 @@ void main() {
       );
 
       conn2 = await PgConnection.open(
-        await server.endpoint,
+        await server.endpoint(),
         sessionSettings: PgSessionSettings(
           onBadSslCertificate: (cert) => true,
         ),
@@ -35,7 +35,7 @@ void main() {
       test(
         'with concurrent query: $concurrentQuery',
         () async {
-          final endpoint = await server.endpoint;
+          final endpoint = await server.endpoint();
           final res = await conn2.execute(
               "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
           final conn1PID = res.first.first as int;
@@ -54,7 +54,7 @@ void main() {
     }
 
     test('with simple query protocol', () async {
-      final endpoint = await server.endpoint;
+      final endpoint = await server.endpoint();
       // Get the PID for conn1
       final res = await conn2.execute(
           "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");

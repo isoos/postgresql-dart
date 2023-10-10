@@ -53,9 +53,7 @@ class InternalQueryDescription implements PgSql {
 
   factory InternalQueryDescription.wrap(Object query) {
     if (query is String) {
-      // todo: Determine whether we want to use a direct SQL command by default.
-      // Maybe this should be replaced with .map once implemented.
-      return InternalQueryDescription.direct(query);
+      return InternalQueryDescription.map(query);
     } else if (query is InternalQueryDescription) {
       return query;
     } else {

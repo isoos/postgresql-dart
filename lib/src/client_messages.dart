@@ -119,6 +119,11 @@ class QueryMessage extends ClientMessage {
     buffer.writeUint8(ClientMessage.QueryIdentifier);
     buffer.writeLengthEncodedString(_queryString);
   }
+
+  @override
+  String toString() {
+    return 'Query: $_queryString';
+  }
 }
 
 class ParseMessage extends ClientMessage {
@@ -151,6 +156,11 @@ class ParseMessage extends ClientMessage {
     for (final type in _types) {
       buffer.writeInt32(type?.oid ?? 0);
     }
+  }
+
+  @override
+  String toString() {
+    return 'Parse $_statement';
   }
 }
 

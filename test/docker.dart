@@ -1,12 +1,44 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:async/async.dart';
 import 'package:docker_process/containers/postgres.dart';
+import 'package:logging/logging.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
+import 'package:postgres/messages.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:postgres/src/connection.dart';
 import 'package:postgres/src/replication.dart';
+import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
+
+// We log all packets sent to and received from the postgres server. This can be
+// used to debug failing tests. To view logs, something like this can be put
+// at the beginning of `main()`:
+//
+//  Logger.root.level = Level.ALL;
+//  Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
+StreamChannelTransformer<BaseMessage, BaseMessage> loggingTransformer(
+    String prefix) {
+  final inLogger = Logger('postgres.connection.$prefix.in');
+  final outLogger = Logger('postgres.connection.$prefix.out');
+
+  return StreamChannelTransformer(
+    StreamTransformer.fromHandlers(
+      handleData: (data, sink) {
+        inLogger.fine(data);
+        sink.add(data);
+      },
+    ),
+    StreamSinkTransformer.fromHandlers(
+      handleData: (data, sink) {
+        outLogger.fine(data);
+        sink.add(data);
+      },
+    ),
+  );
+}
 
 class PostgresServer {
   final _port = Completer<int>();
@@ -14,19 +46,38 @@ class PostgresServer {
 
   Future<int> get port => _port.future;
 
-  Future<PgEndpoint> get endpoint async => PgEndpoint(
+  Future<PgEndpoint> endpoint({
+    bool requireSsl = false,
+  }) async =>
+      PgEndpoint(
         host: 'localhost',
         database: 'postgres',
         username: 'postgres',
         password: 'postgres',
         port: await port,
+        requireSsl: requireSsl,
       );
+
+  Future<PgConnection> newConnection({
+    bool useSSL = false,
+    ReplicationMode replicationMode = ReplicationMode.none,
+  }) async {
+    return PgConnection.open(
+      await endpoint(requireSsl: useSSL),
+      sessionSettings: PgSessionSettings(
+        replicationMode: replicationMode,
+        // We use self-signed certificates in tests
+        onBadSslCertificate: (_) => true,
+        transformer: loggingTransformer('conn'),
+      ),
+    );
+  }
 
   Future<PostgreSQLConnection> newPostgreSQLConnection({
     bool useSSL = false,
     ReplicationMode replicationMode = ReplicationMode.none,
   }) async {
-    final e = await endpoint;
+    final e = await endpoint();
     return PostgreSQLConnection(
       e.host,
       e.port,
@@ -39,6 +90,7 @@ class PostgresServer {
   }
 }
 
+@isTestGroup
 void withPostgresServer(
   String name,
   void Function(PostgresServer server) fn, {

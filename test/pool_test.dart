@@ -16,7 +16,7 @@ void main() {
 
     setUp(() async {
       pool = PgPool(
-        [await server.endpoint],
+        [await server.endpoint()],
         sessionSettings: _sessionSettings,
       );
 
@@ -84,7 +84,7 @@ void main() {
   withPostgresServer('limit pool connections', (server) {
     test('can limit concurrent connections', () async {
       final pool = PgPool(
-        [await server.endpoint],
+        [await server.endpoint()],
         sessionSettings: _sessionSettings,
         poolSettings: const PgPoolSettings(maxConnectionCount: 2),
       );

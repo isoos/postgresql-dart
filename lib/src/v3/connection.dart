@@ -76,24 +76,32 @@ abstract class _PgSessionBase implements PgSession {
   /// connection in the meantime.
   final Pool _operationLock = Pool(1);
 
+  bool _sessionClosed = false;
+
   PgConnectionImplementation get _connection;
   Encoding get encoding => _connection._settings.encoding;
+
+  void _checkActive() {
+    if (_sessionClosed) {
+      throw PostgreSQLException(
+          'Session or transaction has already finished, did you forget to await a statement?');
+    } else if (_connection._isClosing) {
+      throw PostgreSQLException('Connection is closing down');
+    }
+  }
 
   /// Runs [callback], guarded by [_operationLock] and cleans up the pending
   /// resource afterwards.
   Future<T> _withResource<T>(FutureOr<T> Function() callback) {
-    if (_connection._isClosing) {
-      throw PostgreSQLException('Connection is closing down');
-    }
+    _checkActive();
+    return _operationLock.withResource(() {
+      _checkActive();
+      assert(_connection._pending == null,
+          'Previous operation ${_connection._pending} did not clean up.');
 
-    return _operationLock.withResource(() async {
-      assert(_connection._pending == null);
-
-      try {
-        return await callback();
-      } finally {
+      return Future(callback).whenComplete(() {
         _connection._pending = null;
-      }
+      });
     });
   }
 
@@ -303,6 +311,9 @@ class PgConnectionImplementation extends _PgSessionBase
   final _ResolvedSettings _settings;
 
   _PendingOperation? _pending;
+  // Errors happening while a transaction is active will roll back the
+  // transaction and should be reporte to the user.
+  _TransactionSession? _activeTransaction;
 
   final Map<String, String> _parameters = {};
 
@@ -355,6 +366,8 @@ class PgConnectionImplementation extends _PgSessionBase
         if (exception.willAbortConnection || _pending == null) {
           _closeAfterError(exception);
         } else {
+          _connection._activeTransaction?._transactionException = exception;
+
           _pending!.handleError(exception);
         }
       } else if (_pending != null) {
@@ -384,16 +397,27 @@ class PgConnectionImplementation extends _PgSessionBase
     return _operationLock.withResource(() async {
       // The transaction has its own _operationLock, which means that it (and
       // only it) can be used to run statements while it's active.
-      final transaction = _TransactionSession(this);
-      await transaction.execute('BEGIN;');
+      final transaction =
+          _connection._activeTransaction = _TransactionSession(this);
+      await transaction.execute(PgSql('BEGIN;'), queryMode: QueryMode.simple);
 
       try {
         final result = await fn(transaction);
-        await transaction.execute('COMMIT;');
+        await transaction._sendAndMarkClosed('COMMIT;');
+
+        // If we have received an error while the transaction was active, it
+        // will always be rolled back.
+        if (transaction._transactionException
+            case final PostgreSQLException e) {
+          throw e;
+        }
 
         return result;
       } catch (e) {
-        await transaction.execute('ROLLBACK;');
+        if (!transaction._sessionClosed) {
+          await transaction._sendAndMarkClosed('ROLLBACK;');
+        }
+
         rethrow;
       }
     });
@@ -490,7 +514,7 @@ class _PgResultStreamSubscription
       _BoundStatement statement, this._controller, this._source)
       : session = statement.statement._session,
         ignoreRows = false {
-    session._withResource(() async {
+    _scheduleStatement(() async {
       connection._pending = this;
 
       connection._channel.sink.add(AggregatedClientMessage([
@@ -511,14 +535,34 @@ class _PgResultStreamSubscription
     });
   }
 
-  _PgResultStreamSubscription.simpleQueryProtocol(String sql, this.session,
-      this._controller, this._source, this.ignoreRows) {
-    session._withResource(() async {
+  _PgResultStreamSubscription.simpleQueryProtocol(
+    String sql,
+    this.session,
+    this._controller,
+    this._source,
+    this.ignoreRows, {
+    void Function()? cleanup,
+  }) {
+    _scheduleStatement(() async {
       connection._pending = this;
 
       connection._channel.sink.add(QueryMessage(sql));
       await _done.future;
+      cleanup?.call();
     });
+  }
+
+  void _scheduleStatement(Future<void> Function() sendAndWait) async {
+    try {
+      await session._withResource(sendAndWait);
+    } catch (e, s) {
+      // _withResource can fail if the connection or the session is already
+      // closed. This error should be reported to the user!
+      if (!_done.isCompleted) {
+        _controller.addError(e, s);
+        await _completeQuery();
+      }
+    }
   }
 
   @override
@@ -749,7 +793,33 @@ class _TransactionSession extends _PgSessionBase {
   @override
   final PgConnectionImplementation _connection;
 
+  PostgreSQLException? _transactionException;
+
   _TransactionSession(this._connection);
+
+  /// Sends the [command] and, before releasing the internal connection lock,
+  /// marks the session as closed.
+  ///
+  /// This prevents other pending operations on the transaction that haven't
+  /// been awaited from running.
+  Future<void> _sendAndMarkClosed(String command) async {
+    final controller = StreamController<PgResultRow>();
+    final items = <PgResultRow>[];
+
+    final querySubscription = _PgResultStreamSubscription.simpleQueryProtocol(
+      command,
+      this,
+      controller,
+      controller.stream.listen(items.add),
+      true,
+      cleanup: () {
+        _sessionClosed = true;
+        _connection._activeTransaction = null;
+      },
+    );
+    await querySubscription.asFuture();
+    await querySubscription.cancel();
+  }
 
   @override
   Future<void> close() async {
