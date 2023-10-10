@@ -67,6 +67,14 @@ class VariableTokenizer {
   /// Reads the upcoming character and advances the read index.
   int _consume() => _codeUnits[_index++];
 
+  /// Reads the upcoming character without advancing the read index.
+  int _peek() => _codeUnits[_index];
+
+  /// Advance the read index with [amount] character.
+  void _advance([int amount = 1]) {
+    _index += amount;
+  }
+
   /// Returns true and advances the read index if the next character is
   /// [charCode]. Otherwise, returns false and leaves the current index unchanged.
   bool _consumeIfMatches(int charCode) {
@@ -293,23 +301,30 @@ class VariableTokenizer {
 
     var isReadingName = true;
     var consumedColonForType = false;
-    int? charAfterVariable;
 
     while (!_isAtEnd) {
-      final nextChar = _consume();
-      if (_canAppearInVariable(nextChar)) {
-        if (isReadingName) {
-          nameBuffer.writeCharCode(nextChar);
-        } else {
-          typeBuffer.writeCharCode(nextChar);
-        }
-      } else if (!consumedColonForType && nextChar == $colon) {
-        consumedColonForType = true;
-        isReadingName = false;
-      } else {
-        charAfterVariable = nextChar;
+      final nextChar = _peek();
+      if (isReadingName && _canAppearInVariable(nextChar)) {
+        nameBuffer.writeCharCode(nextChar);
+        _advance();
+        continue;
+      }
+      if (isReadingName && nextChar != $colon) {
         break;
       }
+      if (isReadingName) {
+        assert(nextChar == $colon);
+        _advance();
+        consumedColonForType = true;
+        isReadingName = false;
+        continue;
+      }
+      if (_canAppearInVariable(nextChar)) {
+        typeBuffer.writeCharCode(nextChar);
+        _advance();
+        continue;
+      }
+      break;
     }
 
     if (nameBuffer.isEmpty) {
@@ -317,9 +332,6 @@ class VariableTokenizer {
       // postgres operators (e.g `@>`). So in that case, we just write the
       // original syntax.
       _rewrittenSql.writeCharCode(_variableCodeUnit);
-      if (charAfterVariable != null) {
-        _rewrittenSql.writeCharCode(charAfterVariable);
-      }
       return;
     }
 
@@ -338,12 +350,25 @@ class VariableTokenizer {
       }
 
       _variableTypes[actualVariableIndex] = type;
+      if (type == PgDataType.varCharArray && _peek() == $openParenthesis) {
+        // read through `([0-9]+)`
+        final closeOffset = _codeUnits.indexOf($closeParenthesis, _index);
+        if (closeOffset == -1) {
+          error('_varchar opening parenthesis without closing');
+        }
+        final length = closeOffset + 1 - _index;
+        if (length <= 2 ||
+            _codeUnits
+                .skip(_index + 1)
+                .take(length - 2)
+                .any((c) => c < $0 || c > $9)) {
+          error('expected _varchar([0-9]+)');
+        }
+        _advance(length);
+      }
     }
 
     _rewrittenSql.write('\$$actualVariableIndex');
-    if (charAfterVariable != null) {
-      _rewrittenSql.writeCharCode(charAfterVariable);
-    }
   }
 
   static bool _canAppearInVariable(int charcode) {

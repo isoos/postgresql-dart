@@ -71,6 +71,38 @@ void main() {
     expect(desc.namedVariables?.keys, ['b']);
   });
 
+  group('VARCHAR(x)', () {
+    test('accept with some length', () {
+      final desc = InternalQueryDescription.map('SELECT @x:_varchar(10), 0');
+      expect(desc.transformedSql, r'SELECT $1, 0');
+      expect(desc.namedVariables, {'x': 1});
+      expect(desc.parameterTypes, [PgDataType.varCharArray]);
+    });
+
+    test('throws', () {
+      final badSnippets = [
+        '@x:_varchar(',
+        '@x:_varchar()',
+        '@x:_varchar(())',
+        '@x:_varchar((1))',
+        '@x:_varchar(a)',
+        '@x:_varchar( 0 )',
+      ];
+      for (final snippet in badSnippets) {
+        expect(
+          () => InternalQueryDescription.map('SELECT $snippet'),
+          throwsFormatException,
+          reason: snippet,
+        );
+        expect(
+          () => InternalQueryDescription.map('SELECT $snippet, 0'),
+          throwsFormatException,
+          reason: '$snippet, 0',
+        );
+      }
+    });
+  });
+
   group('ignores', () {
     test('line comments', () {
       final desc = InternalQueryDescription.map('SELECT @1, -- @2 \n @3');
