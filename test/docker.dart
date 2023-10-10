@@ -10,6 +10,7 @@ import 'package:postgres/messages.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:postgres/src/connection.dart';
 import 'package:postgres/src/replication.dart';
+import 'package:postgres/src/v2_v3_delegate.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
 
@@ -78,6 +79,16 @@ class PostgresServer {
     ReplicationMode replicationMode = ReplicationMode.none,
   }) async {
     final e = await endpoint();
+
+    if (Platform.environment['V3'] == '1') {
+      return V3BackedPostgreSQLConnection(
+        e,
+        PgSessionSettings(
+          onBadSslCertificate: (_) => true,
+        ),
+      );
+    }
+
     return PostgreSQLConnection(
       e.host,
       e.port,
