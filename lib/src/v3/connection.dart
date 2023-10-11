@@ -509,11 +509,13 @@ class _PgResultStreamSubscription
   PgConnectionImplementation get connection => session._connection;
 
   late final _portalName = 'p/${connection._portalCounter++}';
+  final StackTrace _trace;
 
   _PgResultStreamSubscription(
       _BoundStatement statement, this._controller, this._source)
       : session = statement.statement._session,
-        ignoreRows = false {
+        ignoreRows = false,
+        _trace = StackTrace.current {
     _scheduleStatement(() async {
       connection._pending = this;
 
@@ -542,7 +544,7 @@ class _PgResultStreamSubscription
     this._source,
     this.ignoreRows, {
     void Function()? cleanup,
-  }) {
+  }) : _trace = StackTrace.current {
     _scheduleStatement(() async {
       connection._pending = this;
 
@@ -589,14 +591,14 @@ class _PgResultStreamSubscription
   @override
   void handleConnectionClosed(PostgreSQLException? dueToException) {
     if (dueToException != null) {
-      _controller.addError(dueToException);
+      _controller.addError(dueToException, _trace);
     }
     _completeQuery();
   }
 
   @override
   void handleError(PostgreSQLException exception) {
-    _controller.addError(exception);
+    _controller.addError(exception, _trace);
   }
 
   @override
@@ -905,11 +907,12 @@ class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
 }
 
 class _AuthenticationProcedure extends _PendingOperation {
+  final StackTrace _trace;
   final Completer<void> _done = Completer();
 
   late PostgresAuthenticator _authenticator;
 
-  _AuthenticationProcedure(super.connection);
+  _AuthenticationProcedure(super.connection) : _trace = StackTrace.current;
 
   void _initializeAuthenticate(
       AuthenticationMessage message, AuthenticationScheme scheme) {
@@ -925,13 +928,16 @@ class _AuthenticationProcedure extends _PendingOperation {
 
   @override
   void handleConnectionClosed(PostgreSQLException? dueToException) {
-    _done.completeError(dueToException ??
-        PostgreSQLException('Connection closed during authentication'));
+    _done.completeError(
+      dueToException ??
+          PostgreSQLException('Connection closed during authentication'),
+      _trace,
+    );
   }
 
   @override
   void handleError(PostgreSQLException exception) {
-    _done.completeError(exception);
+    _done.completeError(exception, _trace);
 
     // If the authentication procedure fails, the connection is unusable - so we
     // might as well close it right away.
@@ -941,7 +947,8 @@ class _AuthenticationProcedure extends _PendingOperation {
   @override
   Future<void> handleMessage(ServerMessage message) async {
     if (message is ErrorResponseMessage) {
-      _done.completeError(PostgreSQLException.fromFields(message.fields));
+      _done.completeError(
+          PostgreSQLException.fromFields(message.fields), _trace);
     } else if (message is AuthenticationMessage) {
       switch (message.type) {
         case AuthenticationMessage.KindOK:
@@ -955,7 +962,7 @@ class _AuthenticationProcedure extends _PendingOperation {
               PostgreSQLException(
                   'Refused to send clear text password to server',
                   stackTrace: StackTrace.current),
-              StackTrace.current,
+              _trace,
             );
             return;
           }
@@ -970,7 +977,8 @@ class _AuthenticationProcedure extends _PendingOperation {
           _authenticator.onMessage(message);
           break;
         default:
-          _done.completeError(PostgreSQLException('Unhandled auth mechanism'));
+          _done.completeError(
+              PostgreSQLException('Unhandled auth mechanism'), _trace);
       }
     } else if (message is ReadyForQueryMessage) {
       _done.complete();
