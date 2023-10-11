@@ -89,12 +89,11 @@ class V3BackedPostgreSQLConnection implements PostgreSQLConnection {
     Map<String, dynamic>? substitutionValues = const {},
     int? timeoutInSeconds,
   }) async {
-    final rs = await _connection!.execute(
-      PgSql.map(fmtString),
-      parameters: substitutionValues,
-      ignoreRows: true,
+    return _PostgreSQLExecutionContext(_connection!).execute(
+      fmtString,
+      substitutionValues: substitutionValues,
+      timeoutInSeconds: timeoutInSeconds,
     );
-    return rs.affectedRows;
   }
 
   @override
@@ -105,12 +104,13 @@ class V3BackedPostgreSQLConnection implements PostgreSQLConnection {
     int? timeoutInSeconds,
     bool? useSimpleQueryProtocol,
   }) async {
-    final rs = await _connection!.execute(
-      PgSql.map(fmtString),
-      parameters: substitutionValues,
-      queryMode: (useSimpleQueryProtocol ?? false) ? QueryMode.simple : null,
+    return await _PostgreSQLExecutionContext(_connection!).query(
+      fmtString,
+      substitutionValues: substitutionValues,
+      allowReuse: allowReuse,
+      timeoutInSeconds: timeoutInSeconds,
+      useSimpleQueryProtocol: useSimpleQueryProtocol,
     );
-    return _PostgreSQLResult(rs, rs.map((e) => _PostgreSQLResultRow(e, e)));
   }
 
   @override
@@ -136,9 +136,12 @@ class V3BackedPostgreSQLConnection implements PostgreSQLConnection {
 
   @override
   Future transaction(
-      Future Function(PostgreSQLExecutionContext connection) queryBlock,
-      {int? commitTimeoutInSeconds}) {
-    throw UnimplementedError();
+    Future Function(PostgreSQLExecutionContext connection) queryBlock, {
+    int? commitTimeoutInSeconds,
+  }) async {
+    return await _connection!.runTx((session) async {
+      return await queryBlock(_PostgreSQLExecutionContext(session));
+    });
   }
 
   @override
@@ -204,4 +207,56 @@ class _PostgreSQLResultRow extends UnmodifiableListView
   Map<String, Map<String, dynamic>> toTableColumnMap() {
     throw UnimplementedError();
   }
+}
+
+class _PostgreSQLExecutionContext implements PostgreSQLExecutionContext {
+  final PgSession _session;
+  _PostgreSQLExecutionContext(this._session);
+
+  @override
+  void cancelTransaction({String? reason}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<int> execute(
+    String fmtString, {
+    Map<String, dynamic>? substitutionValues,
+    int? timeoutInSeconds,
+  }) async {
+    final rs = await _session.execute(
+      PgSql.map(fmtString),
+      parameters: substitutionValues,
+      ignoreRows: true,
+    );
+    return rs.affectedRows;
+  }
+
+  @override
+  Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
+      String fmtString,
+      {Map<String, dynamic>? substitutionValues,
+      bool? allowReuse,
+      int? timeoutInSeconds}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<PostgreSQLResult> query(
+    String fmtString, {
+    Map<String, dynamic>? substitutionValues,
+    bool? allowReuse,
+    int? timeoutInSeconds,
+    bool? useSimpleQueryProtocol,
+  }) async {
+    final rs = await _session.execute(
+      PgSql.map(fmtString),
+      parameters: substitutionValues,
+      queryMode: (useSimpleQueryProtocol ?? false) ? QueryMode.simple : null,
+    );
+    return _PostgreSQLResult(rs, rs.map((e) => _PostgreSQLResultRow(e, e)));
+  }
+
+  @override
+  int get queueSize => throw UnimplementedError();
 }
