@@ -120,7 +120,7 @@ void main() {
 
       await connection.mappedResultsQuery('SELECT u.id FROM u');
       expect(getOidQueryCount(connection), 2);
-    });
+    }, skip: skippedOnV3('oid cache is not implemented in v3'));
 
     test('Non-table mappedResultsQuery succeeds', () async {
       final result = await connection.mappedResultsQuery('SELECT 1');

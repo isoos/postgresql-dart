@@ -47,11 +47,50 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
       timeoutInSeconds: timeoutInSeconds,
     );
 
-    return rs.map((row) => row.toTableColumnMap()).toList();
+    // Load table names which are not returned by Postgres reliably. The v2
+    // implementation used to do this with its own cache, the v3 API doesn't do
+    // it at all and defers that logic to the user.
+    final raw = rs._result;
+    final tableOids = raw.schema.columns
+        .map((c) => c.tableOid)
+        .where((id) => id != null && id > 0)
+        .toList()
+      ..sort();
+
+    if (tableOids.isEmpty) {
+      return rs.map((row) => row.toTableColumnMap()).toList();
+    }
+
+    final oidToName = <int, String>{};
+    final oidResults = await query(
+      "SELECT oid::int8, relname FROM pg_class WHERE relkind='r' AND oid = ANY(@ids:_int8::oid[])",
+      substitutionValues: {'ids': tableOids},
+    );
+    for (final row in oidResults) {
+      oidToName[row[0]] = row[1];
+    }
+
+    final results = <Map<String, Map<String, dynamic>>>[];
+    for (final row in raw) {
+      final tables = <String, Map<String, dynamic>>{};
+
+      for (final (i, col) in row.schema.columns.indexed) {
+        final tableName = oidToName[col.tableOid];
+        final columnName = col.columnName;
+
+        if (tableName != null && columnName != null) {
+          tables.putIfAbsent(tableName, () => {})[columnName] = row[i];
+        }
+      }
+
+      results.add(tables);
+    }
+
+    return results;
   }
 
   @override
-  Future<PostgreSQLResult> query(String fmtString,
+  Future<_PostgreSQLResult> query(String fmtString,
       {Map<String, dynamic>? substitutionValues,
       bool? allowReuse,
       int? timeoutInSeconds,
@@ -119,7 +158,10 @@ class V3BackedPostgreSQLConnection
   Stream<ServerMessage> get messages => throw UnimplementedError();
 
   @override
-  Stream<Notification> get notifications => throw UnimplementedError();
+  Stream<Notification> get notifications =>
+      _connection!.channels.all.map((event) {
+        return Notification(event.processId, event.channel, event.payload);
+      });
 
   @override
   Future open() async {
@@ -236,12 +278,30 @@ class _PostgreSQLResultRow extends UnmodifiableListView
 
   @override
   Map<String, dynamic> toColumnMap() {
-    throw UnimplementedError();
+    final map = <String, dynamic>{};
+    for (final (i, col) in _row.schema.columns.indexed) {
+      if (col.columnName case final String name) {
+        map[name] = _row[i];
+      }
+    }
+
+    return map;
   }
 
   @override
   Map<String, Map<String, dynamic>> toTableColumnMap() {
-    throw UnimplementedError();
+    final tables = <String, Map<String, dynamic>>{};
+
+    for (final (i, col) in _row.schema.columns.indexed) {
+      final tableName = col.tableName;
+      final columnName = col.columnName;
+
+      if (tableName != null && columnName != null) {
+        tables.putIfAbsent(tableName, () => {})[columnName] = _row[i];
+      }
+    }
+
+    return tables;
   }
 }
 

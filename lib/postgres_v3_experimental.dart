@@ -318,10 +318,19 @@ final class PgResultColumn {
 }
 
 abstract class PgChannels {
+  /// A stream of all notifications delivered from the server.
+  ///
+  /// This stream can be used to listen to notifications manually subscribed to.
+  /// The `[]` operator on [PgChannels] can be used to register subscriptions to
+  /// notifications only when a stream is being listened to.
+  Stream<PgNotification> get all;
+
   Stream<String> operator [](String channel);
   Future<void> notify(String channel, [String? payload]);
   Future<void> cancelAll();
 }
+
+typedef PgNotification = ({int processId, String channel, String payload});
 
 final class PgEndpoint {
   final String host;

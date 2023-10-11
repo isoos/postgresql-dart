@@ -707,12 +707,16 @@ class _Channels implements PgChannels {
   final PgConnectionImplementation _connection;
 
   final Map<String, List<MultiStreamController<String>>> _activeListeners = {};
+  final StreamController<PgNotification> _all = StreamController.broadcast();
 
   // We are using the pg_notify function in a prepared select statement to
   // efficiently implement [notify].
   Completer<PgStatement>? _notifyStatement;
 
   _Channels(this._connection);
+
+  @override
+  Stream<PgNotification> get all => _all.stream;
 
   @override
   Stream<String> operator [](String channel) {
@@ -760,6 +764,8 @@ class _Channels implements PgChannels {
   }
 
   void deliverNotification(NotificationResponseMessage msg) {
+    _all.add(
+        (processId: msg.processID, channel: msg.channel, payload: msg.payload));
     final listeners = _activeListeners[msg.channel] ?? const [];
 
     for (final listener in listeners) {
