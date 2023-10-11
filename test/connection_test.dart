@@ -153,7 +153,7 @@ void main() {
       final underlyingSocket =
           reflect(conn).getField(socketMirror.simpleName).reflectee;
       expect(underlyingSocket is SecureSocket, true);
-    });
+    }, skip: skippedOnV3('Tests internals'));
 
     test('Connect with no auth required', () async {
       conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
@@ -507,7 +507,7 @@ void main() {
       final queue =
           reflect(conn).getField(queueMirror.simpleName).reflectee as List;
       expect(queue, isEmpty);
-    });
+    }, skip: skippedOnV3('Tests internals'));
 
     test(
         'A query error maintains connectivity, continues processing pending transactions',
@@ -572,7 +572,7 @@ void main() {
       final queue =
           reflect(conn).getField(queueMirror.simpleName).reflectee as List;
       expect(queue, isEmpty);
-    });
+    }, skip: skippedOnV3('Tests internals'));
   });
 
   group('Network error situations', () {
@@ -782,7 +782,9 @@ void main() {
 
       await Future.wait(futures);
       expect(conn.queueSize, 0);
-    });
+    },
+        skip: skippedOnV3(
+            'queueSize is an internal property not exposed in the V3 API'));
   });
 }
 

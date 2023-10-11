@@ -10,12 +10,81 @@ import 'package:postgres/src/execution_context.dart';
 import 'package:postgres/src/replication.dart';
 import 'package:postgres/src/server_messages.dart';
 
-class V3BackedPostgreSQLConnection implements PostgreSQLConnection {
+mixin _DelegatingContext implements PostgreSQLExecutionContext {
+  PgSession? get _session;
+
+  @override
+  void cancelTransaction({String? reason}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<int> execute(String fmtString,
+      {Map<String, dynamic>? substitutionValues, int? timeoutInSeconds}) async {
+    if (_session case final PgSession session) {
+      final rs = await session.execute(
+        PgSql.map(fmtString),
+        parameters: substitutionValues,
+        ignoreRows: true,
+      );
+      return rs.affectedRows;
+    } else {
+      throw PostgreSQLException(
+          'Attempting to execute query, but connection is not open.');
+    }
+  }
+
+  @override
+  Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
+      String fmtString,
+      {Map<String, dynamic>? substitutionValues,
+      bool? allowReuse,
+      int? timeoutInSeconds}) async {
+    final rs = await query(
+      fmtString,
+      substitutionValues: substitutionValues,
+      allowReuse: allowReuse ?? false,
+      timeoutInSeconds: timeoutInSeconds,
+    );
+
+    return rs.map((row) => row.toTableColumnMap()).toList();
+  }
+
+  @override
+  Future<PostgreSQLResult> query(String fmtString,
+      {Map<String, dynamic>? substitutionValues,
+      bool? allowReuse,
+      int? timeoutInSeconds,
+      bool? useSimpleQueryProtocol}) async {
+    if (_session case final PgSession session) {
+      final rs = await session.execute(
+        PgSql.map(fmtString),
+        parameters: substitutionValues,
+        queryMode: (useSimpleQueryProtocol ?? false) ? QueryMode.simple : null,
+      );
+      return _PostgreSQLResult(rs, rs.map((e) => _PostgreSQLResultRow(e, e)));
+    } else {
+      throw PostgreSQLException(
+          'Attempting to execute query, but connection is not open.');
+    }
+  }
+
+  @override
+  int get queueSize => throw UnimplementedError();
+}
+
+class V3BackedPostgreSQLConnection
+    with _DelegatingContext
+    implements PostgreSQLConnection {
   final PgEndpoint _endpoint;
   final PgSessionSettings _sessionSettings;
   PgConnection? _connection;
+  bool _hasConnectedPreviously = false;
 
   V3BackedPostgreSQLConnection(this._endpoint, this._sessionSettings);
+
+  @override
+  PgSession? get _session => _connection;
 
   @override
   void addMessage(ClientMessage message) {
@@ -24,11 +93,6 @@ class V3BackedPostgreSQLConnection implements PostgreSQLConnection {
 
   @override
   bool get allowClearTextPassword => throw UnimplementedError();
-
-  @override
-  void cancelTransaction({String? reason}) {
-    throw UnimplementedError();
-  }
 
   @override
   Future close() async {
@@ -52,15 +116,6 @@ class V3BackedPostgreSQLConnection implements PostgreSQLConnection {
   bool get isUnixSocket => throw UnimplementedError();
 
   @override
-  Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
-      String fmtString,
-      {Map<String, dynamic>? substitutionValues = const {},
-      bool? allowReuse,
-      int? timeoutInSeconds}) {
-    throw UnimplementedError();
-  }
-
-  @override
   Stream<ServerMessage> get messages => throw UnimplementedError();
 
   @override
@@ -68,6 +123,12 @@ class V3BackedPostgreSQLConnection implements PostgreSQLConnection {
 
   @override
   Future open() async {
+    if (_hasConnectedPreviously) {
+      throw PostgreSQLException(
+          'Attempting to reopen a closed connection. Create a instance instead.');
+    }
+
+    _hasConnectedPreviously = true;
     _connection = await PgConnection.open(
       _endpoint,
       sessionSettings: _sessionSettings,
@@ -82,36 +143,6 @@ class V3BackedPostgreSQLConnection implements PostgreSQLConnection {
 
   @override
   int get processID => throw UnimplementedError();
-
-  @override
-  Future<int> execute(
-    String fmtString, {
-    Map<String, dynamic>? substitutionValues = const {},
-    int? timeoutInSeconds,
-  }) async {
-    return _PostgreSQLExecutionContext(_connection!).execute(
-      fmtString,
-      substitutionValues: substitutionValues,
-      timeoutInSeconds: timeoutInSeconds,
-    );
-  }
-
-  @override
-  Future<PostgreSQLResult> query(
-    String fmtString, {
-    Map<String, dynamic>? substitutionValues,
-    bool? allowReuse,
-    int? timeoutInSeconds,
-    bool? useSimpleQueryProtocol,
-  }) async {
-    return await _PostgreSQLExecutionContext(_connection!).query(
-      fmtString,
-      substitutionValues: substitutionValues,
-      allowReuse: allowReuse,
-      timeoutInSeconds: timeoutInSeconds,
-      useSimpleQueryProtocol: useSimpleQueryProtocol,
-    );
-  }
 
   @override
   int get queryTimeoutInSeconds => throw UnimplementedError();
@@ -139,9 +170,14 @@ class V3BackedPostgreSQLConnection implements PostgreSQLConnection {
     Future Function(PostgreSQLExecutionContext connection) queryBlock, {
     int? commitTimeoutInSeconds,
   }) async {
-    return await _connection!.runTx((session) async {
-      return await queryBlock(_PostgreSQLExecutionContext(session));
-    });
+    if (_connection case final PgConnection conn) {
+      return await conn.runTx((session) async {
+        return await queryBlock(_PostgreSQLExecutionContext(session));
+      });
+    } else {
+      throw PostgreSQLException(
+          'Attempting to execute query, but connection is not open.');
+    }
   }
 
   @override
@@ -209,54 +245,11 @@ class _PostgreSQLResultRow extends UnmodifiableListView
   }
 }
 
-class _PostgreSQLExecutionContext implements PostgreSQLExecutionContext {
+class _PostgreSQLExecutionContext
+    with _DelegatingContext
+    implements PostgreSQLExecutionContext {
+  @override
   final PgSession _session;
+
   _PostgreSQLExecutionContext(this._session);
-
-  @override
-  void cancelTransaction({String? reason}) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<int> execute(
-    String fmtString, {
-    Map<String, dynamic>? substitutionValues,
-    int? timeoutInSeconds,
-  }) async {
-    final rs = await _session.execute(
-      PgSql.map(fmtString),
-      parameters: substitutionValues,
-      ignoreRows: true,
-    );
-    return rs.affectedRows;
-  }
-
-  @override
-  Future<List<Map<String, Map<String, dynamic>>>> mappedResultsQuery(
-      String fmtString,
-      {Map<String, dynamic>? substitutionValues,
-      bool? allowReuse,
-      int? timeoutInSeconds}) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<PostgreSQLResult> query(
-    String fmtString, {
-    Map<String, dynamic>? substitutionValues,
-    bool? allowReuse,
-    int? timeoutInSeconds,
-    bool? useSimpleQueryProtocol,
-  }) async {
-    final rs = await _session.execute(
-      PgSql.map(fmtString),
-      parameters: substitutionValues,
-      queryMode: (useSimpleQueryProtocol ?? false) ? QueryMode.simple : null,
-    );
-    return _PostgreSQLResult(rs, rs.map((e) => _PostgreSQLResultRow(e, e)));
-  }
-
-  @override
-  int get queueSize => throw UnimplementedError();
 }
