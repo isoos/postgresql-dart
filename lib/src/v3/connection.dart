@@ -501,6 +501,7 @@ class _PgResultStreamSubscription
   final bool ignoreRows;
 
   final Completer<int> _affectedRows = Completer();
+  int _affectedRowsSoFar = 0;
   final Completer<PgResultSchema> _schema = Completer();
   final Completer<void> _done = Completer();
   PgResultSchema? _resultSchema;
@@ -580,7 +581,7 @@ class _PgResultStreamSubscription
     // after the query is done, even if we didn't get a row description
     // message.
     if (!_affectedRows.isCompleted) {
-      _affectedRows.complete(0);
+      _affectedRows.complete(_affectedRowsSoFar);
     }
     if (!_schema.isCompleted) {
       _schema.complete(PgResultSchema(const []));
@@ -646,7 +647,10 @@ class _PgResultStreamSubscription
           _controller.add(row);
         }
       case CommandCompleteMessage():
-        _affectedRows.complete(message.rowsAffected);
+        // We can't complete _affectedRows directly after receiving the message
+        // since, if multiple statements are running in a single SQL string,
+        // we'll get this more than once.
+        _affectedRowsSoFar += message.rowsAffected;
       case ReadyForQueryMessage():
         await _completeQuery();
       case CopyBothResponseMessage():
@@ -707,12 +711,16 @@ class _Channels implements PgChannels {
   final PgConnectionImplementation _connection;
 
   final Map<String, List<MultiStreamController<String>>> _activeListeners = {};
+  final StreamController<PgNotification> _all = StreamController.broadcast();
 
   // We are using the pg_notify function in a prepared select statement to
   // efficiently implement [notify].
   Completer<PgStatement>? _notifyStatement;
 
   _Channels(this._connection);
+
+  @override
+  Stream<PgNotification> get all => _all.stream;
 
   @override
   Stream<String> operator [](String channel) {
@@ -760,6 +768,8 @@ class _Channels implements PgChannels {
   }
 
   void deliverNotification(NotificationResponseMessage msg) {
+    _all.add(
+        (processId: msg.processID, channel: msg.channel, payload: msg.payload));
     final listeners = _activeListeners[msg.channel] ?? const [];
 
     for (final listener in listeners) {

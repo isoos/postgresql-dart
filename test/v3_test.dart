@@ -56,6 +56,18 @@ void main() {
       expect(response.schema.columns, isEmpty);
     });
 
+    test('can run multiple statements at once', () async {
+      await connection.execute('CREATE TEMPORARY TABLE foo (bar INTEGER);');
+
+      final res = await connection.execute(
+        'INSERT INTO foo VALUES (1); INSERT INTO foo VALUES (2);',
+        // Postgres doesn't allow to prepare multiple statements at once, but
+        // we should handle the responses when running simple statements.
+        queryMode: QueryMode.simple,
+      );
+      expect(res.affectedRows, 2);
+    });
+
     group('binary encoding and decoding', () {
       Future<void> shouldPassthrough<T extends Object>(
           PgDataType<T> type, T? value,
