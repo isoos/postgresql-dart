@@ -21,8 +21,8 @@ void main() {
       final channel = 'virtual';
       final payload = 'This is the payload';
       final futureMsg = connection.notifications.first;
-      await connection.execute('LISTEN $channel;');
-      await connection.execute("NOTIFY $channel, '$payload';");
+      await connection.execute('LISTEN $channel;'
+          "NOTIFY $channel, '$payload';");
 
       final msg = await futureMsg.timeout(Duration(milliseconds: 200));
       expect(msg.channel, channel);
@@ -32,8 +32,8 @@ void main() {
     test('Notification Response empty payload', () async {
       final channel = 'virtual';
       final futureMsg = connection.notifications.first;
-      await connection.execute('LISTEN $channel;');
-      await connection.execute('NOTIFY $channel;');
+      await connection.execute('LISTEN $channel;'
+          'NOTIFY $channel;');
 
       final msg = await futureMsg.timeout(Duration(milliseconds: 200));
       expect(msg.channel, channel);
@@ -44,8 +44,8 @@ void main() {
       final channel = 'virtual';
       final payload = 'This is the payload';
       var futureMsg = connection.notifications.first;
-      await connection.execute('LISTEN $channel;');
-      await connection.execute("NOTIFY $channel, '$payload';");
+      await connection.execute('LISTEN $channel;'
+          "NOTIFY $channel, '$payload';");
 
       final msg = await futureMsg.timeout(Duration(milliseconds: 200));
 
@@ -81,8 +81,8 @@ void main() {
 
       Future<void> notifier() async {
         for (var i = 0; i < 5; i++) {
-          await connection.execute('NOTIFY $channel1;');
-          await connection.execute('NOTIFY $channel2;');
+          await connection.execute('NOTIFY $channel1;'
+              'NOTIFY $channel2;');
         }
       }
 
