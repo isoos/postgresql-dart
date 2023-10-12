@@ -28,9 +28,11 @@ void main() {
         PgTypedParameter(PgDataType.text, 'z'),
       ],
     );
-    expect(() => desc.bindParameters({'x': 4, 'y': true, 'z': 'z'}),
-        throwsArgumentError,
-        reason: 'No data type given for z');
+    expect(desc.bindParameters({'x': 4, 'y': true, 'z': 'z'}), [
+      PgTypedParameter(PgDataType.bigInteger, 4),
+      PgTypedParameter(PgDataType.boolean, true),
+      PgTypedParameter(PgDataType.varChar, 'z'),
+    ]);
 
     // Make sure we can still bind by index
     expect(
@@ -42,9 +44,12 @@ void main() {
       ],
     );
     expect(
-      () => desc.bindParameters([1, true, 3]),
-      throwsArgumentError,
-      reason: 'No data type given for third parameter',
+      desc.bindParameters([1, true, 3]),
+      [
+        PgTypedParameter(PgDataType.bigInteger, 1),
+        PgTypedParameter(PgDataType.boolean, true),
+        PgTypedParameter(PgDataType.smallInteger, 3),
+      ],
     );
   });
 
