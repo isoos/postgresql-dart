@@ -62,7 +62,11 @@ class InternalQueryDescription implements PgSql {
     }
   }
 
-  PgTypedParameter _toParameter(Object? value, PgDataType? knownType) {
+  PgTypedParameter _toParameter(
+    Object? value,
+    PgDataType? knownType, {
+    String? name,
+  }) {
     if (value is PgTypedParameter) {
       return value;
     } else if (knownType != null) {
@@ -83,12 +87,16 @@ class InternalQueryDescription implements PgSql {
       return PgTypedParameter(PgDataType.double, value);
     } else if (value is DateTime) {
       return PgTypedParameter(PgDataType.timestampWithoutTimezone, value);
+    } else if (value is Map<String, dynamic>) {
+      return PgTypedParameter(PgDataType.jsonb, value);
+    } else if (value is PgPoint) {
+      return PgTypedParameter(PgDataType.point, value);
     } else {
       throw ArgumentError.value(
         value,
-        'parameter',
+        name == null ? 'parameter' : '$name parameter',
         'Is not a `PgTypedParameter` and appears in a location for which no '
-            'type could be inferred.',
+        'type could be inferred.',
       );
     }
   }
@@ -113,8 +121,7 @@ class InternalQueryDescription implements PgSql {
       for (var i = 0; i < params.length; i++) {
         final param = params[i];
         final knownType = knownTypes != null ? knownTypes[i] : null;
-
-        parameters.add(_toParameter(param, knownType));
+        parameters.add(_toParameter(param, knownType, name: '[$i]'));
       }
     } else if (params is Map) {
       final byName = namedVariables;
@@ -138,7 +145,7 @@ class InternalQueryDescription implements PgSql {
 
         final value = params[name];
         unmatchedVariables.remove(name);
-        parameters.add(_toParameter(value, type));
+        parameters.add(_toParameter(value, type, name: name));
 
         variableIndex++;
       }

@@ -1,4 +1,5 @@
 import 'package:postgres/postgres.dart';
+import 'package:postgres/src/v2_v3_delegate.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -42,7 +43,10 @@ void main() {
 
       result = await connection.query('select t from t');
       expect(result.columnDescriptions, hasLength(1));
-      expect(result.columnDescriptions.single.tableName, 't');
+      expect(
+          result.columnDescriptions.single.tableName,
+          // v3 does not query the table oids
+          connection is V3BackedPostgreSQLConnection ? '' : 't');
       expect(result.columnDescriptions.single.columnName, 't');
       expect(result, [expectedRow]);
     });
@@ -468,8 +472,12 @@ void main() {
             substitutionValues: {'i1': '1', 'i2': 1});
         expect(true, false);
       } on FormatException catch (e) {
-        expect(e.toString(), contains('Invalid type code'));
-        expect(e.toString(), contains("'@i1:qwerty"));
+        expect(
+            e.toString(),
+            connection is V3BackedPostgreSQLConnection
+                ? contains('Unknown type')
+                : contains('Invalid type code'));
+        expect(e.toString(), contains('qwerty'));
       }
     });
   });
