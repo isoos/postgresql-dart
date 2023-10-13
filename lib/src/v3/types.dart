@@ -27,6 +27,9 @@ enum PgDataType<Dart extends Object> {
   /// Used to represent a type not yet understood by this package.
   unknownType<Object>(null),
 
+  /// Used to represent value without any type representation.
+  unspecified<Object>(null),
+
   /// Must be a [String].
   text<String>(25, nameForSubstitution: 'text'),
 

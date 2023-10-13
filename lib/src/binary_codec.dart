@@ -57,8 +57,9 @@ class PostgresBinaryEncoder<T extends Object> {
     // ignore: unnecessary_cast
     switch (_dataType as PgDataType<Object>) {
       case PgDataType.unknownType:
+      case PgDataType.unspecified:
       case PgDataType.voidType:
-        throw ArgumentError('Cannot encode into an unknown type or into void');
+        throw ArgumentError('Cannot encode into ${_dataType.name}.');
       case PgDataType.boolean:
         {
           if (input is bool) {
@@ -621,6 +622,7 @@ class PostgresBinaryDecoder<T> {
         }) as T;
 
       case PostgreSQLDataType.unknownType:
+      case PostgreSQLDataType.unspecified:
         {
           // We'll try and decode this as a utf8 string and return that
           // for many internal types, this is valid. If it fails,

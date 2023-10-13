@@ -522,10 +522,13 @@ class _PgResultStreamSubscription
 
       connection._channel.sink.add(AggregatedClientMessage([
         BindMessage(
-          [
-            for (final parameter in statement.parameters)
-              ParameterValue(parameter.type, parameter.value)
-          ],
+          statement.parameters.map((p) {
+            PgDataType? type = p.type;
+            if (type == PgDataType.unspecified) {
+              type = null;
+            }
+            return ParameterValue(type, p.value);
+          }).toList(),
           portalName: _portalName,
           statementName: statement.statement._name,
         ),
