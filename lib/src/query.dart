@@ -234,10 +234,10 @@ class ParameterValue {
     return ParameterValue(type, value);
   }
 
-  bool get hasKnownType => _type != null;
+  late final hasKnownType = _type != null && _type != PgDataType.unspecified;
 
   Uint8List? encodeAsBytes(Encoding encoding) {
-    if (_type != null) {
+    if (hasKnownType) {
       final encoder = PostgresBinaryEncoder(_type!);
       return encoder.convert(_value, encoding);
     }
