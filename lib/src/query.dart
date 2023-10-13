@@ -248,6 +248,11 @@ class ParameterValue {
     }
     return null;
   }
+
+  @override
+  String toString() {
+    return '($_type, $_value)';
+  }
 }
 
 class FieldDescription implements ColumnDescription {

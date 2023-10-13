@@ -123,7 +123,9 @@ void main() {
       expect(results, [expectedRow1, expectedRow2]);
 
       expect(hasCachedQueryNamed(connection, insertQueryString), true);
-    });
+    },
+        skip: skippedOnV3(
+            'Tests internals (query cache) which has been removed from v3'));
 
     test('Call query multiple times without type data succeeds ', () async {
       final insertQueryString =
@@ -335,11 +337,13 @@ void main() {
         [3, 4]
       ]);
 
-      expect(
-          hasCachedQueryNamed(
-              connection, 'select i1, i2 from t where i1 > @i1'),
-          true);
-      expect(getQueryCache(connection).length, 1);
+      if (!useV3) {
+        expect(
+            hasCachedQueryNamed(
+                connection, 'select i1, i2 from t where i1 > @i1'),
+            true);
+        expect(getQueryCache(connection).length, 1);
+      }
     });
 
     test('Call query multiple times, mixing in other named queries, succeeds',
@@ -382,7 +386,9 @@ void main() {
           hasCachedQueryNamed(connection, 'select i1,i2 from t where i2 < @i2'),
           true);
       expect(getQueryCache(connection).length, 2);
-    });
+    },
+        skip: skippedOnV3(
+            'Tests internals (query cache) which has been removed from v3'));
 
     test(
         'Call a bunch of named and unnamed queries without awaiting, still process correctly',
@@ -565,7 +571,9 @@ void main() {
       expect(getQueryCache(connection).length, 2); // 1: SELECT 1
       expect(hasCachedQueryNamed(connection, string), true);
     });
-  });
+  },
+      skip: skippedOnV3(
+          'Tests internals (query cache) which has been removed from v3'));
 }
 
 QueryCache getQueryCache(PostgreSQLConnection connection) {

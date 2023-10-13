@@ -68,6 +68,15 @@ void main() {
       expect(res.affectedRows, 2);
     });
 
+    test('fall back to text encoding for untyped parse messages', () async {
+      final stmt = await connection.prepare(PgSql(r'SELECT $1'));
+      final result =
+          await stmt.run([PgTypedParameter(PgDataType.bigInteger, 123)]);
+      expect(result, [
+        ['123']
+      ]);
+    });
+
     group('binary encoding and decoding', () {
       Future<void> shouldPassthrough<T extends Object>(
           PgDataType<T> type, T? value,

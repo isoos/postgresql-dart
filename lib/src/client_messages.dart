@@ -160,7 +160,7 @@ class ParseMessage extends ClientMessage {
 
   @override
   String toString() {
-    return 'Parse $_statement';
+    return 'Parse $_statement with types: $_types';
   }
 }
 
@@ -259,6 +259,11 @@ class BindMessage extends ClientMessage {
     // Result columns - we always want binary for all of them, so specify 1:1.
     buffer.writeUint16(1);
     buffer.writeUint16(1);
+  }
+
+  @override
+  String toString() {
+    return 'Bind ($_parameters)';
   }
 }
 

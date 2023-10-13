@@ -14,12 +14,12 @@ import 'package:postgres/src/v2_v3_delegate.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
 
-bool get _useV3 => Platform.environment['V3'] == '1';
+bool get useV3 => Platform.environment['V3'] == '1';
 
 /// Can be used as the `skip` parameter on tests that can't run with the v3
 /// backend for v2 API, for instance because they're testing internals.
 String? skippedOnV3([String? reason]) {
-  if (_useV3) {
+  if (useV3) {
     return reason != null
         ? 'Skipped with v3 delegate: $reason'
         : 'Skipped with v3 delegate.';
@@ -94,12 +94,13 @@ class PostgresServer {
   }) async {
     final e = await endpoint();
 
-    if (_useV3) {
+    if (useV3) {
       return V3BackedPostgreSQLConnection(
         e,
         PgSessionSettings(
           onBadSslCertificate: (_) => true,
           replicationMode: replicationMode,
+          transformer: loggingTransformer('conn'),
         ),
       );
     }
@@ -121,6 +122,7 @@ void withPostgresServer(
   String name,
   void Function(PostgresServer server) fn, {
   Iterable<String>? initSqls,
+  Object? skip,
 }) {
   group(name, () {
     final server = PostgresServer();
@@ -152,7 +154,7 @@ void withPostgresServer(
     });
 
     fn(server);
-  });
+  }, skip: skip);
 }
 
 Future<int> selectFreePort() async {

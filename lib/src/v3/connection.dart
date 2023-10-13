@@ -461,7 +461,22 @@ class _PreparedStatement extends PgStatement {
 
   @override
   PgResultStream bind(Object? parameters) {
-    return _BoundStatement(this, _description.bindParameters(parameters));
+    // bindParameters returns a list of PgTypedParameters - which all have their
+    // type set and will use a binary encoding. If the statement has been
+    // prepared without explicit types, postgres expects a textual encoding.
+    final params = _description.bindParameters(parameters);
+    final typesFromParseMessage = _description.parameterTypes ?? const [];
+    final bound = [
+      for (var i = 0; i < params.length; i++)
+        if (typesFromParseMessage.length > i &&
+            typesFromParseMessage[i] == params[i].type)
+          // Type was present when the statement has been prepared.
+          ParameterValue(params[i].type, params[i].value)
+        else
+          ParameterValue(null, params[i].value),
+    ];
+
+    return _BoundStatement(this, bound);
   }
 
   @override
@@ -476,7 +491,7 @@ class _PreparedStatement extends PgStatement {
 
 class _BoundStatement extends Stream<PgResultRow> implements PgResultStream {
   final _PreparedStatement statement;
-  final List<PgTypedParameter> parameters;
+  final List<ParameterValue> parameters;
 
   _BoundStatement(this.statement, this.parameters);
 
@@ -522,10 +537,7 @@ class _PgResultStreamSubscription
 
       connection._channel.sink.add(AggregatedClientMessage([
         BindMessage(
-          [
-            for (final parameter in statement.parameters)
-              ParameterValue(parameter.type, parameter.value)
-          ],
+          statement.parameters,
           portalName: _portalName,
           statementName: statement.statement._name,
         ),
