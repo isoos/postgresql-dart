@@ -31,7 +31,7 @@ void main() {
     expect(desc.bindParameters({'x': 4, 'y': true, 'z': 'z'}), [
       PgTypedParameter(PgDataType.bigInteger, 4),
       PgTypedParameter(PgDataType.boolean, true),
-      PgTypedParameter(PgDataType.varChar, 'z'),
+      PgTypedParameter(PgDataType.unspecified, 'z'),
     ]);
 
     // Make sure we can still bind by index
@@ -48,7 +48,7 @@ void main() {
       [
         PgTypedParameter(PgDataType.bigInteger, 1),
         PgTypedParameter(PgDataType.boolean, true),
-        PgTypedParameter(PgDataType.smallInteger, 3),
+        PgTypedParameter(PgDataType.unspecified, 3),
       ],
     );
   });

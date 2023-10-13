@@ -7,6 +7,7 @@ import 'package:test/test.dart';
 void main() {
   test('Ensure all types/format type mappings are available and accurate', () {
     const withoutMapping = {
+      PostgreSQLDataType.unspecified, // Can't bind into unspecified type
       PostgreSQLDataType.unknownType, // Can't bind into unknown type
       PostgreSQLDataType.voidType, // Can't assign to void
       PostgreSQLDataType.bigSerial, // Can only be created from a table sequence

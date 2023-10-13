@@ -71,33 +71,8 @@ class InternalQueryDescription implements PgSql {
       return value;
     } else if (knownType != null) {
       return PgTypedParameter(knownType, value);
-    } else if (value == null) {
-      return PgTypedParameter(PgDataType.voidType, value);
-    } else if (value is String) {
-      return PgTypedParameter(PgDataType.varChar, value);
-    } else if (value is bool) {
-      return PgTypedParameter(PgDataType.boolean, value);
-    } else if (value is int && value.bitLength <= 16) {
-      return PgTypedParameter(PgDataType.smallInteger, value);
-    } else if (value is int && value.bitLength <= 32) {
-      return PgTypedParameter(PgDataType.integer, value);
-    } else if (value is int && value.bitLength <= 64) {
-      return PgTypedParameter(PgDataType.bigInteger, value);
-    } else if (value is double) {
-      return PgTypedParameter(PgDataType.double, value);
-    } else if (value is DateTime) {
-      return PgTypedParameter(PgDataType.timestampWithoutTimezone, value);
-    } else if (value is Map<String, dynamic>) {
-      return PgTypedParameter(PgDataType.jsonb, value);
-    } else if (value is PgPoint) {
-      return PgTypedParameter(PgDataType.point, value);
     } else {
-      throw ArgumentError.value(
-        value,
-        name == null ? 'parameter' : '$name parameter',
-        'Is not a `PgTypedParameter` and appears in a location for which no '
-        'type could be inferred.',
-      );
+      return PgTypedParameter(PgDataType.unspecified, value);
     }
   }
 

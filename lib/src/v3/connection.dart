@@ -522,10 +522,9 @@ class _PgResultStreamSubscription
 
       connection._channel.sink.add(AggregatedClientMessage([
         BindMessage(
-          [
-            for (final parameter in statement.parameters)
-              ParameterValue(parameter.type, parameter.value)
-          ],
+          statement.parameters
+              .map((p) => ParameterValue(p.type, p.value))
+              .toList(),
           portalName: _portalName,
           statementName: statement.statement._name,
         ),
