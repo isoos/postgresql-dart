@@ -101,7 +101,10 @@ class InternalQueryDescription implements PgSql {
     }
   }
 
-  List<PgTypedParameter> bindParameters(Object? params) {
+  List<PgTypedParameter> bindParameters(
+    Object? params, {
+    bool allowSuperfluous = false,
+  }) {
     final knownTypes = parameterTypes;
     final parameters = <PgTypedParameter>[];
 
@@ -150,7 +153,7 @@ class InternalQueryDescription implements PgSql {
         variableIndex++;
       }
 
-      if (unmatchedVariables.isNotEmpty) {
+      if (unmatchedVariables.isNotEmpty && !allowSuperfluous) {
         throw ArgumentError.value(params, 'parameters',
             'Contains superfluous variables: ${unmatchedVariables.join(', ')}');
       }

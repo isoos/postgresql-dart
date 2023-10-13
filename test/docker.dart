@@ -100,6 +100,7 @@ class PostgresServer {
         PgSessionSettings(
           onBadSslCertificate: (_) => true,
           replicationMode: replicationMode,
+          allowSuperfluousParameters: true,
         ),
       );
     }
