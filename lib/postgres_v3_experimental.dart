@@ -404,6 +404,9 @@ final class PgSessionSettings {
   /// prefer using [QueryMode.extended].
   final QueryMode queryMode;
 
+  /// Override the default query map check if superfluous parameters are found.
+  final bool? allowSuperfluousParameters;
+
   PgSessionSettings({
     this.connectTimeout,
     this.timeZone,
@@ -412,6 +415,7 @@ final class PgSessionSettings {
     this.transformer,
     this.replicationMode = ReplicationMode.none,
     this.queryMode = QueryMode.extended,
+    this.allowSuperfluousParameters,
   });
 }
 

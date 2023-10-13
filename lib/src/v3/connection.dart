@@ -46,6 +46,8 @@ class _ResolvedSettings {
 
   final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
 
+  final bool allowSuperfluousParameters;
+
   _ResolvedSettings(
     this.endpoint,
     this.settings,
@@ -58,7 +60,9 @@ class _ResolvedSettings {
         encoding = settings?.encoding ?? utf8,
         transformer = settings?.transformer,
         replicationMode = settings?.replicationMode ?? ReplicationMode.none,
-        queryMode = settings?.queryMode ?? QueryMode.extended;
+        queryMode = settings?.queryMode ?? QueryMode.extended,
+        allowSuperfluousParameters =
+            settings?.allowSuperfluousParameters ?? false;
 
   bool onBadSslCertificate(X509Certificate certificate) {
     return settings?.onBadSslCertificate?.call(certificate) ?? false;
@@ -133,7 +137,10 @@ abstract class _PgSessionBase implements PgSession {
     QueryMode? queryMode,
   }) async {
     final description = InternalQueryDescription.wrap(query);
-    final variables = description.bindParameters(parameters);
+    final variables = description.bindParameters(
+      parameters,
+      allowSuperfluous: _connection._settings.allowSuperfluousParameters,
+    );
 
     late final bool isSimple;
     if (queryMode != null) {
@@ -461,7 +468,13 @@ class _PreparedStatement extends PgStatement {
 
   @override
   PgResultStream bind(Object? parameters) {
-    return _BoundStatement(this, _description.bindParameters(parameters));
+    return _BoundStatement(
+        this,
+        _description.bindParameters(
+          parameters,
+          allowSuperfluous:
+              _session._connection._settings.allowSuperfluousParameters,
+        ));
   }
 
   @override
