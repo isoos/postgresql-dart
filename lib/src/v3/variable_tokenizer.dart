@@ -304,21 +304,33 @@ class VariableTokenizer {
 
     while (!_isAtEnd) {
       final nextChar = _peek();
-      if (isReadingName && _canAppearInVariable(nextChar)) {
-        nameBuffer.writeCharCode(nextChar);
-        _advance();
-        continue;
-      }
-      if (isReadingName && nextChar != $colon) {
-        break;
-      }
       if (isReadingName) {
-        assert(nextChar == $colon);
+        // part of name
+        if (_canAppearInVariable(nextChar)) {
+          nameBuffer.writeCharCode(nextChar);
+          _advance();
+          continue;
+        }
+
+        // next non-name character is not a colon
+        if (nextChar != $colon) {
+          break;
+        }
+
+        // we have double colons (server-side CAST)
+        if (_index + 1 < _codeUnits.length &&
+            _codeUnits[_index + 1] == $colon) {
+          break;
+        }
+
+        // switching to reading the type
         _advance();
         consumedColonForType = true;
         isReadingName = false;
         continue;
       }
+
+      // reading the type
       if (_canAppearInVariable(nextChar)) {
         typeBuffer.writeCharCode(nextChar);
         _advance();
