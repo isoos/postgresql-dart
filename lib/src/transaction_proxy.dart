@@ -105,7 +105,7 @@ class _TransactionProxy extends Object
     }
 
     if (object is _TransactionRollbackException) {
-      _completer.complete(PostgreSQLRollback._(object.reason));
+      _completer.complete(PostgreSQLRollback(object.reason));
     } else {
       _completer.completeError(object as Object, trace);
     }
@@ -133,7 +133,8 @@ class _TransactionProxy extends Object
 /// returned from [PostgreSQLConnection.transaction] will be an instance of this type. [reason] will be the [String]
 /// value of the optional argument to [PostgreSQLExecutionContext.cancelTransaction].
 class PostgreSQLRollback {
-  PostgreSQLRollback._(this.reason);
+  @internal
+  PostgreSQLRollback(this.reason);
 
   /// The reason the transaction was cancelled.
   final String reason;

@@ -15,7 +15,10 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
 
   @override
   void cancelTransaction({String? reason}) {
-    throw UnimplementedError();
+    if (_session is PgConnection) {
+      return;
+    }
+    throw _CancelTx();
   }
 
   @override
@@ -213,9 +216,13 @@ class V3BackedPostgreSQLConnection
     int? commitTimeoutInSeconds,
   }) async {
     if (_connection case final PgConnection conn) {
-      return await conn.runTx((session) async {
-        return await queryBlock(_PostgreSQLExecutionContext(session));
-      });
+      try {
+        return await conn.runTx((session) async {
+          return await queryBlock(_PostgreSQLExecutionContext(session));
+        });
+      } on _CancelTx catch (_) {
+        return PostgreSQLRollback('');
+      }
     } else {
       throw PostgreSQLException(
           'Attempting to execute query, but connection is not open.');
@@ -228,6 +235,8 @@ class V3BackedPostgreSQLConnection
   @override
   String? get username => throw UnimplementedError();
 }
+
+class _CancelTx implements Exception {}
 
 class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
     implements PostgreSQLResult {
