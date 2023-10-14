@@ -49,7 +49,9 @@ void main() {
         'tsz': DateTime.utc(2000, 3)
       });
 
-      expect(hasCachedQueryNamed(connection, insertQueryString), true);
+      if (!server.useV3) {
+        expect(hasCachedQueryNamed(connection, insertQueryString), true);
+      }
 
       final expectedRow1 = [
         1,
@@ -80,7 +82,9 @@ void main() {
         'tsz': DateTime.utc(2001, 3)
       });
 
-      expect(hasCachedQueryNamed(connection, insertQueryString), true);
+      if (!server.useV3) {
+        expect(hasCachedQueryNamed(connection, insertQueryString), true);
+      }
 
       final expectedRow2 = [
         2,
@@ -102,10 +106,12 @@ void main() {
           .query('select i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t');
       expect(results, [expectedRow1, expectedRow2]);
 
-      expect(
-          hasCachedQueryNamed(connection,
-              'select i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t'),
-          true);
+      if (!server.useV3) {
+        expect(
+            hasCachedQueryNamed(connection,
+                'select i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t'),
+            true);
+      }
 
       results = await connection.query(
           'select i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t where i < @i',
@@ -122,7 +128,9 @@ void main() {
           substitutionValues: {'i': 5});
       expect(results, [expectedRow1, expectedRow2]);
 
-      expect(hasCachedQueryNamed(connection, insertQueryString), true);
+      if (!server.useV3) {
+        expect(hasCachedQueryNamed(connection, insertQueryString), true);
+      }
     });
 
     test('Call query multiple times without type data succeeds ', () async {
@@ -335,11 +343,13 @@ void main() {
         [3, 4]
       ]);
 
-      expect(
-          hasCachedQueryNamed(
-              connection, 'select i1, i2 from t where i1 > @i1'),
-          true);
-      expect(getQueryCache(connection).length, 1);
+      if (!server.useV3) {
+        expect(
+            hasCachedQueryNamed(
+                connection, 'select i1, i2 from t where i1 > @i1'),
+            true);
+        expect(getQueryCache(connection).length, 1);
+      }
     });
 
     test('Call query multiple times, mixing in other named queries, succeeds',
@@ -374,14 +384,17 @@ void main() {
         [3, 4]
       ]);
 
-      expect(
-          hasCachedQueryNamed(
-              connection, 'select i1, i2 from t where i1 > @i1'),
-          true);
-      expect(
-          hasCachedQueryNamed(connection, 'select i1,i2 from t where i2 < @i2'),
-          true);
-      expect(getQueryCache(connection).length, 2);
+      if (!server.useV3) {
+        expect(
+            hasCachedQueryNamed(
+                connection, 'select i1, i2 from t where i1 > @i1'),
+            true);
+        expect(
+            hasCachedQueryNamed(
+                connection, 'select i1,i2 from t where i2 < @i2'),
+            true);
+        expect(getQueryCache(connection).length, 2);
+      }
     });
 
     test(
@@ -464,7 +477,9 @@ void main() {
         // ignore
       }
 
-      expect(getQueryCache(connection).isEmpty, true);
+      if (!server.useV3) {
+        expect(getQueryCache(connection).isEmpty, true);
+      }
     });
 
     test(
@@ -481,7 +496,9 @@ void main() {
         // ignore
       }
 
-      expect(getQueryCache(connection).length, 0);
+      if (!server.useV3) {
+        expect(getQueryCache(connection).length, 0);
+      }
     });
 
     test(
@@ -498,8 +515,9 @@ void main() {
         // ignores
       }
 
-      expect(hasCachedQueryNamed(connection, string), false);
-
+      if (!server.useV3) {
+        expect(hasCachedQueryNamed(connection, string), false);
+      }
       var results = await connection.query('select i1, i2 from u');
       expect(results, []);
 
@@ -508,7 +526,9 @@ void main() {
       expect(results, [
         [1, 2]
       ]);
-      expect(hasCachedQueryNamed(connection, string), true);
+      if (!server.useV3) {
+        expect(hasCachedQueryNamed(connection, string), true);
+      }
     });
 
     test(
@@ -527,7 +547,9 @@ void main() {
       expect(results, [
         [1, 2]
       ]);
-      expect(hasCachedQueryNamed(connection, string), true);
+      if (!server.useV3) {
+        expect(hasCachedQueryNamed(connection, string), true);
+      }
 
       try {
         await connection.query(string, substitutionValues: {'i': 'foo'});
@@ -539,7 +561,9 @@ void main() {
       expect(results, [
         [2, 3]
       ]);
-      expect(hasCachedQueryNamed(connection, string), true);
+      if (!server.useV3) {
+        expect(hasCachedQueryNamed(connection, string), true);
+      }
     });
 
     test(
@@ -562,8 +586,10 @@ void main() {
       expect(results, [
         [1, 2]
       ]);
-      expect(getQueryCache(connection).length, 2); // 1: SELECT 1
-      expect(hasCachedQueryNamed(connection, string), true);
+      if (!server.useV3) {
+        expect(getQueryCache(connection).length, 2); // 1: SELECT 1
+        expect(hasCachedQueryNamed(connection, string), true);
+      }
     });
   });
 }
