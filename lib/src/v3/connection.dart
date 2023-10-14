@@ -135,6 +135,7 @@ abstract class _PgSessionBase implements PgSession {
     Object? parameters,
     bool ignoreRows = false,
     QueryMode? queryMode,
+    Duration? timeout,
   }) async {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(
@@ -166,17 +167,19 @@ abstract class _PgSessionBase implements PgSession {
         controller.stream.listen(items.add),
         ignoreRows,
       );
-      await querySubscription.asFuture();
-      await querySubscription.cancel();
-
-      return PgResult(items, await querySubscription.affectedRows,
-          await querySubscription.schema);
+      try {
+        await querySubscription.asFuture().optionalTimeout(timeout);
+        return PgResult(items, await querySubscription.affectedRows,
+            await querySubscription.schema);
+      } finally {
+        await querySubscription.cancel();
+      }
     } else {
       // The simple query protocol does not support variables. So when we have
       // parameters, we need an explicit prepare.
-      final prepared = await prepare(description);
+      final prepared = await _prepare(description, timeout: timeout);
       try {
-        return await prepared.run(variables);
+        return await prepared.run(variables, timeout: timeout);
       } finally {
         await prepared.dispose();
       }
@@ -184,7 +187,12 @@ abstract class _PgSessionBase implements PgSession {
   }
 
   @override
-  Future<PgStatement> prepare(Object query) async {
+  Future<PgStatement> prepare(Object query) async => await _prepare(query);
+
+  Future<_PreparedStatement> _prepare(
+    Object query, {
+    Duration? timeout,
+  }) async {
     final conn = _connection;
     final name = 's/${conn._statementCounter++}';
     final description = InternalQueryDescription.wrap(query);
@@ -193,7 +201,7 @@ abstract class _PgSessionBase implements PgSession {
       description.transformedSql,
       statementName: name,
       types: description.parameterTypes,
-    ));
+    )).optionalTimeout(timeout);
 
     return _PreparedStatement(description, name, this);
   }
@@ -1012,5 +1020,14 @@ extension on PostgreSQLException {
   bool get willAbortConnection {
     return severity == PostgreSQLSeverity.fatal ||
         severity == PostgreSQLSeverity.panic;
+  }
+}
+
+extension FutureExt<R> on Future<R> {
+  Future<R> optionalTimeout(Duration? duration) {
+    if (duration == null) {
+      return this;
+    }
+    return timeout(duration);
   }
 }

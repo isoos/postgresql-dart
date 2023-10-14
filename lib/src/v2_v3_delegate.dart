@@ -103,6 +103,9 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
         PgSql.map(fmtString),
         parameters: substitutionValues,
         queryMode: (useSimpleQueryProtocol ?? false) ? QueryMode.simple : null,
+        timeout: timeoutInSeconds == null
+            ? null
+            : Duration(seconds: timeoutInSeconds),
       );
       return _PostgreSQLResult(rs, rs.map((e) => _PostgreSQLResultRow(e, e)));
     } else {
