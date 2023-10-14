@@ -47,12 +47,14 @@ class PoolImplementation implements PgPool {
     Object? parameters,
     bool ignoreRows = false,
     QueryMode? queryMode,
+    Duration? timeout,
   }) {
     return withConnection((connection) => connection.execute(
           query,
           parameters: parameters,
           ignoreRows: ignoreRows,
           queryMode: queryMode,
+          timeout: timeout,
         ));
   }
 
@@ -171,12 +173,14 @@ class _PoolConnection implements PgConnection {
     Object? parameters,
     bool ignoreRows = false,
     QueryMode? queryMode,
+    Duration? timeout,
   }) {
     return _connection.execute(
       query,
       parameters: parameters,
       ignoreRows: ignoreRows,
       queryMode: queryMode,
+      timeout: timeout,
     );
   }
 
@@ -212,7 +216,10 @@ class _PoolStatement implements PgStatement {
   }
 
   @override
-  Future<PgResult> run([Object? parameters]) {
-    return _underlying.run(parameters);
+  Future<PgResult> run(
+    Object? parameters, {
+    Duration? timeout,
+  }) {
+    return _underlying.run(parameters, timeout: timeout);
   }
 }

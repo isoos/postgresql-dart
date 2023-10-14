@@ -14,8 +14,6 @@ import 'package:postgres/src/v2_v3_delegate.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
 
-bool get _useV3 => Platform.environment['V3'] == '1';
-
 // We log all packets sent to and received from the postgres server. This can be
 // used to debug failing tests. To view logs, something like this can be put
 // at the beginning of `main()`:
@@ -48,6 +46,9 @@ class PostgresServer {
   final _containerName = Completer<String>();
 
   Future<int> get port => _port.future;
+  final bool _useV3;
+
+  PostgresServer({bool? useV3}) : _useV3 = useV3 ?? false;
 
   bool get useV3 => _useV3;
 
@@ -125,37 +126,46 @@ void withPostgresServer(
   void Function(PostgresServer server) fn, {
   Iterable<String>? initSqls,
 }) {
-  group(name, () {
-    final server = PostgresServer();
+  void setupGroup(bool useV3) {
+    group(useV3 ? '$name v3' : name, () {
+      final server = PostgresServer(useV3: useV3);
 
-    setUpAll(() async {
-      try {
-        final port = await selectFreePort();
+      setUpAll(() async {
+        try {
+          final port = await selectFreePort();
 
-        final containerName = 'postgres-dart-test-$port';
-        await _startPostgresContainer(
-          port: port,
-          containerName: containerName,
-          initSqls: initSqls ?? const <String>[],
-        );
+          final containerName = 'postgres-dart-test-$port';
+          await _startPostgresContainer(
+            port: port,
+            containerName: containerName,
+            initSqls: initSqls ?? const <String>[],
+          );
 
-        server._containerName.complete(containerName);
-        server._port.complete(port);
-      } catch (e, st) {
-        server._containerName.completeError(e, st);
-        server._port.completeError(e, st);
-        rethrow;
-      }
+          server._containerName.complete(containerName);
+          server._port.complete(port);
+        } catch (e, st) {
+          server._containerName.completeError(e, st);
+          server._port.completeError(e, st);
+          rethrow;
+        }
+      });
+
+      tearDownAll(() async {
+        final containerName = await server._containerName.future;
+        await Process.run('docker', ['stop', containerName]);
+        await Process.run('docker', ['kill', containerName]);
+      });
+
+      fn(server);
     });
+  }
 
-    tearDownAll(() async {
-      final containerName = await server._containerName.future;
-      await Process.run('docker', ['stop', containerName]);
-      await Process.run('docker', ['kill', containerName]);
-    });
-
-    fn(server);
-  });
+  if (Platform.environment['V3'] == '1') {
+    setupGroup(true);
+  } else {
+    setupGroup(false);
+    setupGroup(true);
+  }
 }
 
 Future<int> selectFreePort() async {

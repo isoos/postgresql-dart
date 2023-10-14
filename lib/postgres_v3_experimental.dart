@@ -144,6 +144,7 @@ abstract class PgSession {
         parameters,
     bool ignoreRows = false,
     QueryMode? queryMode,
+    Duration? timeout,
   });
 
   /// Closes this session, cleaning up resources and forbiding further calls to
@@ -198,13 +199,14 @@ abstract class PgStatement {
       Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
           parameters);
 
-  Future<PgResult> run([
+  Future<PgResult> run(
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
-        parameters,
-  ]) async {
+        parameters, {
+    Duration? timeout,
+  }) async {
     final items = <PgResultRow>[];
     final subscription = bind(parameters).listen(items.add);
-    await subscription.asFuture();
+    await subscription.asFuture().optionalTimeout(timeout);
     await subscription.cancel();
 
     return PgResult(
