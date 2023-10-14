@@ -202,7 +202,7 @@ void main() {
         [2],
         [3]
       ]);
-    });
+    }, skip: server.skippedOnV3('v3 does not support unawaited query queue'));
 
     test(
         "A transaction doesn't have to await on queries, when the last query fails, it still emits an error from the transaction",
@@ -219,7 +219,7 @@ void main() {
 
       final total = await conn.query('SELECT id FROM t');
       expect(total, []);
-    });
+    }, skip: server.skippedOnV3('v3 does not support unawaited query queue'));
 
     test(
         "A transaction doesn't have to await on queries, when the non-last query fails, it still emits an error from the transaction",
@@ -245,7 +245,7 @@ void main() {
           pendingQueryError.toString(), contains('failed prior to execution'));
       final total = await conn.query('SELECT id FROM t');
       expect(total, []);
-    });
+    }, skip: server.skippedOnV3('v3 does not support unawaited query queue'));
 
     test(
         'A transaction with a rollback and non-await queries rolls back transaction',
@@ -269,7 +269,7 @@ void main() {
       expect(total, []);
 
       expect(errs.length, 2);
-    });
+    }, skip: server.skippedOnV3('v3 does not support unawaited query queue'));
 
     test(
         'A transaction that mixes awaiting and non-awaiting queries fails gracefully when an awaited query fails',
@@ -287,7 +287,7 @@ void main() {
       expect(transactionError, isNotNull);
       final total = await conn.query('SELECT id FROM t');
       expect(total, []);
-    });
+    }, skip: server.skippedOnV3('v3 does not support unawaited query queue'));
 
     test(
         'A transaction that mixes awaiting and non-awaiting queries fails gracefully when an unawaited query fails',
@@ -303,7 +303,7 @@ void main() {
       expect(transactionError, isNotNull);
       final total = await conn.query('SELECT id FROM t');
       expect(total, []);
-    });
+    }, skip: server.skippedOnV3('v3 does not support unawaited query queue'));
   });
 
   // A transaction can fail for three reasons: query error, exception in code, or a rollback.
@@ -511,7 +511,7 @@ void main() {
 
       final noRows = await conn.query('SELECT id FROM t');
       expect(noRows, []);
-    });
+    }, skip: server.skippedOnV3('v3 does not support unawaited query queue'));
 
     test('Async query failure prevents closure from continuing', () async {
       var reached = false;
