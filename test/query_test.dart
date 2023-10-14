@@ -1,5 +1,4 @@
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/v2_v3_delegate.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -46,7 +45,7 @@ void main() {
       expect(
           result.columnDescriptions.single.tableName,
           // v3 does not query the table oids
-          connection is V3BackedPostgreSQLConnection ? '' : 't');
+          server.useV3 ? '' : 't');
       expect(result.columnDescriptions.single.columnName, 't');
       expect(result, [expectedRow]);
     });
@@ -200,9 +199,15 @@ void main() {
         [false, true, false]
       ];
       expect(result.columnDescriptions, hasLength(24));
-      expect(result.columnDescriptions.first.tableName, 't');
+      expect(
+          result.columnDescriptions.first.tableName,
+          // v3 does not query the table oids
+          server.useV3 ? '' : 't');
       expect(result.columnDescriptions.first.columnName, 'i');
-      expect(result.columnDescriptions.last.tableName, 't');
+      expect(
+          result.columnDescriptions.last.tableName,
+          // v3 does not query the table oids
+          server.useV3 ? '' : 't');
       expect(result.columnDescriptions.last.columnName, 'ba');
       expect(result, [expectedRow]);
       result = await connection.query(
@@ -474,7 +479,7 @@ void main() {
       } on FormatException catch (e) {
         expect(
             e.toString(),
-            connection is V3BackedPostgreSQLConnection
+            server.useV3
                 ? contains('Unknown type')
                 : contains('Invalid type code'));
         expect(e.toString(), contains('qwerty'));
