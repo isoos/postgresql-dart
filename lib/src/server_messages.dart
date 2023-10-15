@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:meta/meta.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/src/buffer.dart';
-import 'package:postgres/src/v3/types.dart';
 
 import 'query.dart';
 import 'time_converters.dart';

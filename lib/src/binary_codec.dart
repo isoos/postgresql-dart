@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/v3/types.dart';
 
 import 'buffer.dart';
+import 'types.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;
 final _bool1 = Uint8List(1)..[0] = 1;

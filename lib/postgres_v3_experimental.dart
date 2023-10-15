@@ -6,13 +6,13 @@ import 'package:collection/collection.dart';
 import 'package:postgres/src/replication.dart';
 import 'package:stream_channel/stream_channel.dart';
 
+import 'src/types.dart';
 import 'src/v3/connection.dart';
 import 'src/v3/pool.dart';
 import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
-import 'src/v3/types.dart';
 
-export 'src/v3/types.dart';
+export 'src/types.dart';
 
 abstract class PgPool implements PgSession, PgSessionExecutor {
   factory PgPool(

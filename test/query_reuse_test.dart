@@ -3,7 +3,6 @@ import 'dart:mirrors';
 
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/query_cache.dart';
-import 'package:postgres/src/v3/types.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';

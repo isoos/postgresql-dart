@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:charcode/ascii.dart';
 import 'package:postgres/src/time_converters.dart';
-import 'package:postgres/src/v3/types.dart';
 
 import 'buffer.dart';
 import 'constants.dart';

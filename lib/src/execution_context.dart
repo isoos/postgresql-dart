@@ -4,7 +4,7 @@ import 'connection.dart';
 import 'query.dart';
 import 'substituter.dart';
 
-import 'v3/types.dart';
+import 'types.dart';
 
 abstract class PostgreSQLExecutionContext {
   /// Returns this context queue size
