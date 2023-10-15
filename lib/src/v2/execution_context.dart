@@ -110,15 +110,21 @@ abstract class PostgreSQLExecutionContext {
 }
 
 /// A description of a column.
-abstract class ColumnDescription {
+class ColumnDescription {
   /// The name of the column returned by the query.
-  String get columnName;
+  final String columnName;
 
   /// The resolved name of the referenced table.
-  String get tableName;
+  final String tableName;
 
   /// The Object Identifier of the column type.
-  int get typeId;
+  final int typeId;
+
+  ColumnDescription({
+    required this.typeId,
+    required this.tableName,
+    required this.columnName,
+  });
 }
 
 /// A single row of a query result.

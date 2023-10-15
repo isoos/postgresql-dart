@@ -526,12 +526,15 @@ abstract mixin class _PostgreSQLExecutionContextMixin
 
     final queryResult =
         await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
-    var columnDescriptions = query.fieldDescriptions;
+    var fieldDescriptions = query.fieldDescriptions;
     if (resolveOids) {
-      columnDescriptions = await _connection._oidCache
-          ._resolveTableNames(this, columnDescriptions);
+      fieldDescriptions = await _connection._oidCache
+          ._resolveTableNames(this, fieldDescriptions);
     }
-    final metaData = _PostgreSQLResultMetaData(columnDescriptions!);
+    final metaData = _PostgreSQLResultMetaData(fieldDescriptions!
+        .map((e) => ColumnDescription(
+            typeId: e.typeId, tableName: e.tableName, columnName: e.columnName))
+        .toList());
 
     return _PostgreSQLResult(
         queryResult.affectedRowCount,
@@ -598,8 +601,11 @@ abstract mixin class _PostgreSQLExecutionContextMixin
     final result = await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
 
     final affectedRowCount = result.affectedRowCount;
-    final columnDescriptions = query.fieldDescriptions ?? [];
-    final metaData = _PostgreSQLResultMetaData(columnDescriptions);
+    final fieldDescriptions = query.fieldDescriptions ?? [];
+    final metaData = _PostgreSQLResultMetaData(fieldDescriptions
+        .map((e) => ColumnDescription(
+            typeId: e.typeId, tableName: e.tableName, columnName: e.columnName))
+        .toList());
 
     final value = result.value;
     late final List<PostgreSQLResultRow> rows;
