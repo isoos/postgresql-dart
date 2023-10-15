@@ -1,4 +1,5 @@
 import 'package:postgres/postgres.dart';
+import 'package:postgres/src/v3/types.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -31,7 +32,7 @@ void main() {
     test('UTF16 strings in value', () async {
       var result = await connection.query(
           'INSERT INTO t (t) values '
-          "(${PostgreSQLFormat.id("t", type: PostgreSQLDataType.text)})"
+          "(${PostgreSQLFormat.id("t", type: PgDataType.text)})"
           'returning t',
           substitutionValues: {
             't': '°∆',
@@ -64,7 +65,7 @@ void main() {
     test('UTF16 strings in value with escape characters', () async {
       await connection.execute(
           'INSERT INTO t (t) values '
-          '(${PostgreSQLFormat.id('t', type: PostgreSQLDataType.text)})',
+          '(${PostgreSQLFormat.id('t', type: PgDataType.text)})',
           substitutionValues: {
             't': "'©™®'",
           });
@@ -78,7 +79,7 @@ void main() {
     test('UTF16 strings in value with backslash', () async {
       await connection.execute(
           'INSERT INTO t (t) values '
-          '(${PostgreSQLFormat.id('t', type: PostgreSQLDataType.text)})',
+          '(${PostgreSQLFormat.id('t', type: PgDataType.text)})',
           substitutionValues: {
             't': r"°\'©™®'",
           });
@@ -100,7 +101,7 @@ void main() {
 
     test('Really long raw substitution value', () async {
       final result = await connection.query(
-          "INSERT INTO t (t) VALUES (${PostgreSQLFormat.id("t", type: PostgreSQLDataType.text)}) returning t;",
+          "INSERT INTO t (t) VALUES (${PostgreSQLFormat.id("t", type: PgDataType.text)}) returning t;",
           substitutionValues: {'t': lorumIpsum});
       expect(result, [
         [lorumIpsum]
@@ -218,28 +219,28 @@ void main() {
     test('Query by specifying all types', () async {
       var result = await connection.query(
           'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
-          '(${PostgreSQLFormat.id('i', type: PostgreSQLDataType.integer)},'
-          '${PostgreSQLFormat.id('bi', type: PostgreSQLDataType.bigInteger)},'
-          '${PostgreSQLFormat.id('bl', type: PostgreSQLDataType.boolean)},'
-          '${PostgreSQLFormat.id('si', type: PostgreSQLDataType.smallInteger)},'
-          '${PostgreSQLFormat.id('t', type: PostgreSQLDataType.text)},'
-          '${PostgreSQLFormat.id('f', type: PostgreSQLDataType.real)},'
-          '${PostgreSQLFormat.id('d', type: PostgreSQLDataType.double)},'
-          '${PostgreSQLFormat.id('dt', type: PostgreSQLDataType.date)},'
-          '${PostgreSQLFormat.id('ts', type: PostgreSQLDataType.timestampWithoutTimezone)},'
-          '${PostgreSQLFormat.id('tsz', type: PostgreSQLDataType.timestampWithTimezone)},'
-          '${PostgreSQLFormat.id('j', type: PostgreSQLDataType.jsonb)},'
-          '${PostgreSQLFormat.id('u', type: PostgreSQLDataType.uuid)},'
-          '${PostgreSQLFormat.id('v', type: PostgreSQLDataType.varChar)},'
-          '${PostgreSQLFormat.id('p', type: PostgreSQLDataType.point)},'
-          '${PostgreSQLFormat.id('jj', type: PostgreSQLDataType.json)},'
-          '${PostgreSQLFormat.id('ia', type: PostgreSQLDataType.integerArray)},'
-          '${PostgreSQLFormat.id('bia', type: PostgreSQLDataType.bigIntegerArray)},'
-          '${PostgreSQLFormat.id('ta', type: PostgreSQLDataType.textArray)},'
-          '${PostgreSQLFormat.id('da', type: PostgreSQLDataType.doubleArray)},'
-          '${PostgreSQLFormat.id('ja', type: PostgreSQLDataType.jsonbArray)},'
-          '${PostgreSQLFormat.id('va', type: PostgreSQLDataType.varCharArray)},'
-          '${PostgreSQLFormat.id('ba', type: PostgreSQLDataType.booleanArray)}'
+          '(${PostgreSQLFormat.id('i', type: PgDataType.integer)},'
+          '${PostgreSQLFormat.id('bi', type: PgDataType.bigInteger)},'
+          '${PostgreSQLFormat.id('bl', type: PgDataType.boolean)},'
+          '${PostgreSQLFormat.id('si', type: PgDataType.smallInteger)},'
+          '${PostgreSQLFormat.id('t', type: PgDataType.text)},'
+          '${PostgreSQLFormat.id('f', type: PgDataType.real)},'
+          '${PostgreSQLFormat.id('d', type: PgDataType.double)},'
+          '${PostgreSQLFormat.id('dt', type: PgDataType.date)},'
+          '${PostgreSQLFormat.id('ts', type: PgDataType.timestampWithoutTimezone)},'
+          '${PostgreSQLFormat.id('tsz', type: PgDataType.timestampWithTimezone)},'
+          '${PostgreSQLFormat.id('j', type: PgDataType.jsonb)},'
+          '${PostgreSQLFormat.id('u', type: PgDataType.uuid)},'
+          '${PostgreSQLFormat.id('v', type: PgDataType.varChar)},'
+          '${PostgreSQLFormat.id('p', type: PgDataType.point)},'
+          '${PostgreSQLFormat.id('jj', type: PgDataType.json)},'
+          '${PostgreSQLFormat.id('ia', type: PgDataType.integerArray)},'
+          '${PostgreSQLFormat.id('bia', type: PgDataType.bigIntegerArray)},'
+          '${PostgreSQLFormat.id('ta', type: PgDataType.textArray)},'
+          '${PostgreSQLFormat.id('da', type: PgDataType.doubleArray)},'
+          '${PostgreSQLFormat.id('ja', type: PgDataType.jsonbArray)},'
+          '${PostgreSQLFormat.id('va', type: PgDataType.varCharArray)},'
+          '${PostgreSQLFormat.id('ba', type: PgDataType.booleanArray)}'
           ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba',
           substitutionValues: {
             'i': 1,
@@ -311,15 +312,15 @@ void main() {
       var result = await connection.query(
           'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) values '
           '(${PostgreSQLFormat.id('i')},'
-          '${PostgreSQLFormat.id('bi', type: PostgreSQLDataType.bigInteger)},'
+          '${PostgreSQLFormat.id('bi', type: PgDataType.bigInteger)},'
           '${PostgreSQLFormat.id('bl')},'
-          '${PostgreSQLFormat.id('si', type: PostgreSQLDataType.smallInteger)},'
+          '${PostgreSQLFormat.id('si', type: PgDataType.smallInteger)},'
           '${PostgreSQLFormat.id('t')},'
-          '${PostgreSQLFormat.id('f', type: PostgreSQLDataType.real)},'
+          '${PostgreSQLFormat.id('f', type: PgDataType.real)},'
           '${PostgreSQLFormat.id('d')},'
-          '${PostgreSQLFormat.id('dt', type: PostgreSQLDataType.date)},'
+          '${PostgreSQLFormat.id('dt', type: PgDataType.date)},'
           '${PostgreSQLFormat.id('ts')},'
-          '${PostgreSQLFormat.id('tsz', type: PostgreSQLDataType.timestampWithTimezone)}) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz',
+          '${PostgreSQLFormat.id('tsz', type: PgDataType.timestampWithTimezone)}) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz',
           substitutionValues: {
             'i': 1,
             'bi': 2,

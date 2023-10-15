@@ -3,7 +3,8 @@ import 'dart:async';
 import 'connection.dart';
 import 'query.dart';
 import 'substituter.dart';
-import 'types.dart';
+
+import 'v3/types.dart';
 
 abstract class PostgreSQLExecutionContext {
   /// Returns this context queue size
@@ -22,7 +23,7 @@ abstract class PostgreSQLExecutionContext {
   ///         connection.query("SELECT * FROM table WHERE id = @idParam:int4", {"idParam" : 2});
   ///
   /// Available types are listed in [PostgreSQLFormatIdentifier.typeStringToCodeMap]. Some types have multiple options. It is preferable to use the [PostgreSQLFormat.id]
-  /// function to add parameters to a query string. This method inserts a parameter name and the appropriate ':type' string for a [PostgreSQLDataType].
+  /// function to add parameters to a query string. This method inserts a parameter name and the appropriate ':type' string for a [PgDataType].
   ///
   /// If successful, the returned [Future] completes with a [List] of rows. Each is row is represented by a [List] of column values for that row that were returned by the query.
   ///

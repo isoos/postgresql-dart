@@ -5,7 +5,6 @@ import 'package:buffer/buffer.dart';
 import 'package:postgres/src/v3/types.dart';
 
 import 'buffer.dart';
-import 'types.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;
 final _bool1 = Uint8List(1)..[0] = 1;
@@ -515,42 +514,42 @@ class PostgresBinaryDecoder<T> {
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
 
     switch (type) {
-      case PostgreSQLDataType.name:
-      case PostgreSQLDataType.text:
-      case PostgreSQLDataType.varChar:
+      case PgDataType.name:
+      case PgDataType.text:
+      case PgDataType.varChar:
         return encoding.decode(input) as T;
-      case PostgreSQLDataType.boolean:
+      case PgDataType.boolean:
         return (buffer.getInt8(0) != 0) as T;
-      case PostgreSQLDataType.smallInteger:
+      case PgDataType.smallInteger:
         return buffer.getInt16(0) as T;
-      case PostgreSQLDataType.serial:
-      case PostgreSQLDataType.integer:
+      case PgDataType.serial:
+      case PgDataType.integer:
         return buffer.getInt32(0) as T;
-      case PostgreSQLDataType.bigSerial:
-      case PostgreSQLDataType.bigInteger:
+      case PgDataType.bigSerial:
+      case PgDataType.bigInteger:
         return buffer.getInt64(0) as T;
-      case PostgreSQLDataType.real:
+      case PgDataType.real:
         return buffer.getFloat32(0) as T;
-      case PostgreSQLDataType.double:
+      case PgDataType.double:
         return buffer.getFloat64(0) as T;
-      case PostgreSQLDataType.timestampWithoutTimezone:
-      case PostgreSQLDataType.timestampWithTimezone:
+      case PgDataType.timestampWithoutTimezone:
+      case PgDataType.timestampWithTimezone:
         return DateTime.utc(2000)
             .add(Duration(microseconds: buffer.getInt64(0))) as T;
 
-      case PostgreSQLDataType.interval:
+      case PgDataType.interval:
         {
           if (buffer.getInt64(8) != 0) throw UnimplementedError();
           return Duration(microseconds: buffer.getInt64(0)) as T;
         }
 
-      case PostgreSQLDataType.numeric:
+      case PgDataType.numeric:
         return _decodeNumeric(input) as T;
 
-      case PostgreSQLDataType.date:
+      case PgDataType.date:
         return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0))) as T;
 
-      case PostgreSQLDataType.jsonb:
+      case PgDataType.jsonb:
         {
           // Removes version which is first character and currently always '1'
           final bytes = input.buffer
@@ -558,13 +557,13 @@ class PostgresBinaryDecoder<T> {
           return _jsonFusedEncoding(encoding).decode(bytes) as T;
         }
 
-      case PostgreSQLDataType.json:
+      case PgDataType.json:
         return _jsonFusedEncoding(encoding).decode(input) as T;
 
-      case PostgreSQLDataType.byteArray:
+      case PgDataType.byteArray:
         return input as T;
 
-      case PostgreSQLDataType.uuid:
+      case PgDataType.uuid:
         {
           final buf = StringBuffer();
           for (var i = 0; i < buffer.lengthInBytes; i++) {
@@ -590,39 +589,39 @@ class PostgresBinaryDecoder<T> {
       case PgDataType.voidType:
         return null;
 
-      case PostgreSQLDataType.point:
+      case PgDataType.point:
         return PgPoint(buffer.getFloat64(0), buffer.getFloat64(8)) as T;
 
-      case PostgreSQLDataType.booleanArray:
+      case PgDataType.booleanArray:
         return readListBytes<bool>(
             input, (reader, _) => reader.readUint8() != 0) as T;
 
-      case PostgreSQLDataType.integerArray:
+      case PgDataType.integerArray:
         return readListBytes<int>(input, (reader, _) => reader.readInt32())
             as T;
-      case PostgreSQLDataType.bigIntegerArray:
+      case PgDataType.bigIntegerArray:
         return readListBytes<int>(input, (reader, _) => reader.readInt64())
             as T;
 
-      case PostgreSQLDataType.varCharArray:
-      case PostgreSQLDataType.textArray:
+      case PgDataType.varCharArray:
+      case PgDataType.textArray:
         return readListBytes<String>(input, (reader, length) {
           return encoding.decode(length > 0 ? reader.read(length) : []);
         }) as T;
 
-      case PostgreSQLDataType.doubleArray:
+      case PgDataType.doubleArray:
         return readListBytes<double>(input, (reader, _) => reader.readFloat64())
             as T;
 
-      case PostgreSQLDataType.jsonbArray:
+      case PgDataType.jsonbArray:
         return readListBytes<dynamic>(input, (reader, length) {
           reader.read(1);
           final bytes = reader.read(length - 1);
           return _jsonFusedEncoding(encoding).decode(bytes);
         }) as T;
 
-      case PostgreSQLDataType.unknownType:
-      case PostgreSQLDataType.unspecified:
+      case PgDataType.unknownType:
+      case PgDataType.unspecified:
         {
           // We'll try and decode this as a utf8 string and return that
           // for many internal types, this is valid. If it fails,
@@ -660,7 +659,7 @@ class PostgresBinaryDecoder<T> {
   }
 
   /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
-  static final Map<int, PostgreSQLDataType> typeMap = PgDataType.byTypeOid;
+  static final Map<int, PgDataType> typeMap = PgDataType.byTypeOid;
 
   /// Decode numeric / decimal to String without loosing precision.
   /// See encoding: https://github.com/postgres/postgres/blob/0e39a608ed5545cc6b9d538ac937c3c1ee8cdc36/src/backend/utils/adt/numeric.c#L305

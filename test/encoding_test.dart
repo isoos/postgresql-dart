@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/binary_codec.dart';
 import 'package:postgres/src/text_codec.dart';
+import 'package:postgres/src/v3/types.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -27,8 +28,8 @@ void main() {
     // 2. can actually encode and decode a real pg query
     // it also creates a table named t with column v of type being tested
     test('bool', () async {
-      await expectInverse(true, PostgreSQLDataType.boolean);
-      await expectInverse(false, PostgreSQLDataType.boolean);
+      await expectInverse(true, PgDataType.boolean);
+      await expectInverse(false, PgDataType.boolean);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:boolean)',
             substitutionValues: {'v': 'not-bool'});
@@ -39,9 +40,9 @@ void main() {
     });
 
     test('smallint', () async {
-      await expectInverse(-1, PostgreSQLDataType.smallInteger);
-      await expectInverse(0, PostgreSQLDataType.smallInteger);
-      await expectInverse(1, PostgreSQLDataType.smallInteger);
+      await expectInverse(-1, PgDataType.smallInteger);
+      await expectInverse(0, PgDataType.smallInteger);
+      await expectInverse(1, PgDataType.smallInteger);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:int2)',
             substitutionValues: {'v': 'not-int2'});
@@ -52,9 +53,9 @@ void main() {
     });
 
     test('integer', () async {
-      await expectInverse(-1, PostgreSQLDataType.integer);
-      await expectInverse(0, PostgreSQLDataType.integer);
-      await expectInverse(1, PostgreSQLDataType.integer);
+      await expectInverse(-1, PgDataType.integer);
+      await expectInverse(0, PgDataType.integer);
+      await expectInverse(1, PgDataType.integer);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:int4)',
             substitutionValues: {'v': 'not-int4'});
@@ -65,8 +66,8 @@ void main() {
     });
 
     test('serial', () async {
-      await expectInverse(0, PostgreSQLDataType.serial);
-      await expectInverse(1, PostgreSQLDataType.serial);
+      await expectInverse(0, PgDataType.serial);
+      await expectInverse(1, PgDataType.serial);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:int4)',
             substitutionValues: {'v': 'not-serial'});
@@ -77,9 +78,9 @@ void main() {
     });
 
     test('bigint', () async {
-      await expectInverse(-1, PostgreSQLDataType.bigInteger);
-      await expectInverse(0, PostgreSQLDataType.bigInteger);
-      await expectInverse(1, PostgreSQLDataType.bigInteger);
+      await expectInverse(-1, PgDataType.bigInteger);
+      await expectInverse(0, PgDataType.bigInteger);
+      await expectInverse(1, PgDataType.bigInteger);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:int8)',
             substitutionValues: {'v': 'not-int8'});
@@ -90,8 +91,8 @@ void main() {
     });
 
     test('bigserial', () async {
-      await expectInverse(0, PostgreSQLDataType.bigSerial);
-      await expectInverse(1, PostgreSQLDataType.bigSerial);
+      await expectInverse(0, PgDataType.bigSerial);
+      await expectInverse(1, PgDataType.bigSerial);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:int8)',
             substitutionValues: {'v': 'not-bigserial'});
@@ -102,10 +103,10 @@ void main() {
     });
 
     test('text', () async {
-      await expectInverse('', PostgreSQLDataType.text);
-      await expectInverse('foo', PostgreSQLDataType.text);
-      await expectInverse('foo\n', PostgreSQLDataType.text);
-      await expectInverse('foo\nbar;s', PostgreSQLDataType.text);
+      await expectInverse('', PgDataType.text);
+      await expectInverse('foo', PgDataType.text);
+      await expectInverse('foo\n', PgDataType.text);
+      await expectInverse('foo\nbar;s', PgDataType.text);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:text)',
             substitutionValues: {'v': 0});
@@ -116,9 +117,9 @@ void main() {
     });
 
     test('real', () async {
-      await expectInverse(-1.0, PostgreSQLDataType.real);
-      await expectInverse(0.0, PostgreSQLDataType.real);
-      await expectInverse(1.0, PostgreSQLDataType.real);
+      await expectInverse(-1.0, PgDataType.real);
+      await expectInverse(0.0, PgDataType.real);
+      await expectInverse(1.0, PgDataType.real);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:float4)',
             substitutionValues: {'v': 'not-real'});
@@ -129,9 +130,9 @@ void main() {
     });
 
     test('double', () async {
-      await expectInverse(-1.0, PostgreSQLDataType.double);
-      await expectInverse(0.0, PostgreSQLDataType.double);
-      await expectInverse(1.0, PostgreSQLDataType.double);
+      await expectInverse(-1.0, PgDataType.double);
+      await expectInverse(0.0, PgDataType.double);
+      await expectInverse(1.0, PgDataType.double);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:float8)',
             substitutionValues: {'v': 'not-double'});
@@ -142,9 +143,9 @@ void main() {
     });
 
     test('date', () async {
-      await expectInverse(DateTime.utc(1920, 10, 1), PostgreSQLDataType.date);
-      await expectInverse(DateTime.utc(2120, 10, 5), PostgreSQLDataType.date);
-      await expectInverse(DateTime.utc(2016, 10, 1), PostgreSQLDataType.date);
+      await expectInverse(DateTime.utc(1920, 10, 1), PgDataType.date);
+      await expectInverse(DateTime.utc(2120, 10, 5), PgDataType.date);
+      await expectInverse(DateTime.utc(2016, 10, 1), PgDataType.date);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:date)',
             substitutionValues: {'v': 'not-date'});
@@ -155,10 +156,10 @@ void main() {
     });
 
     test('timestamp', () async {
-      await expectInverse(DateTime.utc(1920, 10, 1),
-          PostgreSQLDataType.timestampWithoutTimezone);
-      await expectInverse(DateTime.utc(2120, 10, 5),
-          PostgreSQLDataType.timestampWithoutTimezone);
+      await expectInverse(
+          DateTime.utc(1920, 10, 1), PgDataType.timestampWithoutTimezone);
+      await expectInverse(
+          DateTime.utc(2120, 10, 5), PgDataType.timestampWithoutTimezone);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:timestamp)',
             substitutionValues: {'v': 'not-timestamp'});
@@ -170,9 +171,9 @@ void main() {
 
     test('timestamptz', () async {
       await expectInverse(
-          DateTime.utc(1920, 10, 1), PostgreSQLDataType.timestampWithTimezone);
+          DateTime.utc(1920, 10, 1), PgDataType.timestampWithTimezone);
       await expectInverse(
-          DateTime.utc(2120, 10, 5), PostgreSQLDataType.timestampWithTimezone);
+          DateTime.utc(2120, 10, 5), PgDataType.timestampWithTimezone);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:timestamptz)',
             substitutionValues: {'v': 'not-timestamptz'});
@@ -183,15 +184,13 @@ void main() {
     });
 
     test('interval', () async {
-      await expectInverse(Duration(minutes: 15), PostgreSQLDataType.interval);
+      await expectInverse(Duration(minutes: 15), PgDataType.interval);
+      await expectInverse(Duration(days: 1, minutes: 15), PgDataType.interval);
+      await expectInverse(-Duration(days: 1, seconds: 5), PgDataType.interval);
       await expectInverse(
-          Duration(days: 1, minutes: 15), PostgreSQLDataType.interval);
+          Duration(days: 365 * 100000, microseconds: 1), PgDataType.interval);
       await expectInverse(
-          -Duration(days: 1, seconds: 5), PostgreSQLDataType.interval);
-      await expectInverse(Duration(days: 365 * 100000, microseconds: 1),
-          PostgreSQLDataType.interval);
-      await expectInverse(-Duration(days: 365 * 100000, microseconds: 1),
-          PostgreSQLDataType.interval);
+          -Duration(days: 365 * 100000, microseconds: 1), PgDataType.interval);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:interval)',
             substitutionValues: {'v': 'not-interval'});
@@ -248,7 +247,7 @@ void main() {
         '0.0': [0, 0, 0, 0, 0, 0, 0, 1], // .0 or 0.0
       };
 
-      final encoder = PostgresBinaryEncoder<Object>(PostgreSQLDataType.numeric);
+      final encoder = PostgresBinaryEncoder<Object>(PgDataType.numeric);
       binaries.forEach((key, value) {
         final uint8List = Uint8List.fromList(value);
         final res = encoder.convert(key, utf8);
@@ -257,24 +256,24 @@ void main() {
 
       await expectInverse(
           '1000000000000000000000000000.0000000000000000000000000001',
-          PostgreSQLDataType.numeric);
+          PgDataType.numeric);
       await expectInverse(
           '3141592653589793238462643383279502.1618033988749894848204586834365638',
-          PostgreSQLDataType.numeric);
+          PgDataType.numeric);
       await expectInverse(
           '-3141592653589793238462643383279502.1618033988749894848204586834365638',
-          PostgreSQLDataType.numeric);
-      await expectInverse('0.0', PostgreSQLDataType.numeric);
-      await expectInverse('0.1', PostgreSQLDataType.numeric);
-      await expectInverse('0.0001', PostgreSQLDataType.numeric);
-      await expectInverse('0.00001', PostgreSQLDataType.numeric);
-      await expectInverse('0.000001', PostgreSQLDataType.numeric);
-      await expectInverse('0.000000001', PostgreSQLDataType.numeric);
-      await expectInverse('1.000000000', PostgreSQLDataType.numeric);
-      await expectInverse('1000.000000000', PostgreSQLDataType.numeric);
-      await expectInverse('10000.000000000', PostgreSQLDataType.numeric);
-      await expectInverse('100000000.00000000', PostgreSQLDataType.numeric);
-      await expectInverse('NaN', PostgreSQLDataType.numeric);
+          PgDataType.numeric);
+      await expectInverse('0.0', PgDataType.numeric);
+      await expectInverse('0.1', PgDataType.numeric);
+      await expectInverse('0.0001', PgDataType.numeric);
+      await expectInverse('0.00001', PgDataType.numeric);
+      await expectInverse('0.000001', PgDataType.numeric);
+      await expectInverse('0.000000001', PgDataType.numeric);
+      await expectInverse('1.000000000', PgDataType.numeric);
+      await expectInverse('1000.000000000', PgDataType.numeric);
+      await expectInverse('10000.000000000', PgDataType.numeric);
+      await expectInverse('100000000.00000000', PgDataType.numeric);
+      await expectInverse('NaN', PgDataType.numeric);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:numeric)',
             substitutionValues: {'v': 'not-numeric'});
@@ -285,14 +284,14 @@ void main() {
     });
 
     test('jsonb', () async {
-      await expectInverse('string', PostgreSQLDataType.jsonb);
-      await expectInverse(2, PostgreSQLDataType.jsonb);
-      await expectInverse(['foo'], PostgreSQLDataType.jsonb);
+      await expectInverse('string', PgDataType.jsonb);
+      await expectInverse(2, PgDataType.jsonb);
+      await expectInverse(['foo'], PgDataType.jsonb);
       await expectInverse({
         'key': 'val',
         'key1': 1,
         'array': ['foo']
-      }, PostgreSQLDataType.jsonb);
+      }, PgDataType.jsonb);
 
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:jsonb)',
@@ -302,9 +301,9 @@ void main() {
     });
 
     test('bytea', () async {
-      await expectInverse([0], PostgreSQLDataType.byteArray);
-      await expectInverse([1, 2, 3, 4, 5], PostgreSQLDataType.byteArray);
-      await expectInverse([255, 254, 253], PostgreSQLDataType.byteArray);
+      await expectInverse([0], PgDataType.byteArray);
+      await expectInverse([1, 2, 3, 4, 5], PgDataType.byteArray);
+      await expectInverse([255, 254, 253], PgDataType.byteArray);
 
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:bytea)',
@@ -317,9 +316,9 @@ void main() {
 
     test('uuid', () async {
       await expectInverse(
-          '00000000-0000-0000-0000-000000000000', PostgreSQLDataType.uuid);
+          '00000000-0000-0000-0000-000000000000', PgDataType.uuid);
       await expectInverse(
-          '12345678-abcd-efab-cdef-012345678901', PostgreSQLDataType.uuid);
+          '12345678-abcd-efab-cdef-012345678901', PgDataType.uuid);
 
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:uuid)',
@@ -331,10 +330,10 @@ void main() {
     });
 
     test('varchar', () async {
-      await expectInverse('', PostgreSQLDataType.varChar);
-      await expectInverse('foo', PostgreSQLDataType.varChar);
-      await expectInverse('foo\n', PostgreSQLDataType.varChar);
-      await expectInverse('foo\nbar;s', PostgreSQLDataType.varChar);
+      await expectInverse('', PgDataType.varChar);
+      await expectInverse('foo', PgDataType.varChar);
+      await expectInverse('foo\n', PgDataType.varChar);
+      await expectInverse('foo\nbar;s', PgDataType.varChar);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:varchar)',
             substitutionValues: {'v': 0});
@@ -345,14 +344,14 @@ void main() {
     });
 
     test('json', () async {
-      await expectInverse('string', PostgreSQLDataType.json);
-      await expectInverse(2, PostgreSQLDataType.json);
-      await expectInverse(['foo'], PostgreSQLDataType.json);
+      await expectInverse('string', PgDataType.json);
+      await expectInverse(2, PgDataType.json);
+      await expectInverse(['foo'], PgDataType.json);
       await expectInverse({
         'key': 'val',
         'key1': 1,
         'array': ['foo']
-      }, PostgreSQLDataType.json);
+      }, PgDataType.json);
 
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:json)',
@@ -362,9 +361,9 @@ void main() {
     });
 
     test('point', () async {
-      await expectInverse(PgPoint(0, 0), PostgreSQLDataType.point);
-      await expectInverse(PgPoint(100, 123.456), PostgreSQLDataType.point);
-      await expectInverse(PgPoint(0.001, -999), PostgreSQLDataType.point);
+      await expectInverse(PgPoint(0, 0), PgDataType.point);
+      await expectInverse(PgPoint(100, 123.456), PgDataType.point);
+      await expectInverse(PgPoint(0.001, -999), PgDataType.point);
 
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:point)',
@@ -376,9 +375,9 @@ void main() {
     });
 
     test('booleanArray', () async {
-      await expectInverse(<bool>[], PostgreSQLDataType.booleanArray);
-      await expectInverse([false, true], PostgreSQLDataType.booleanArray);
-      await expectInverse([true], PostgreSQLDataType.booleanArray);
+      await expectInverse(<bool>[], PgDataType.booleanArray);
+      await expectInverse([false, true], PgDataType.booleanArray);
+      await expectInverse([true], PgDataType.booleanArray);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:_bool)',
             substitutionValues: {'v': 'not-list-bool'});
@@ -389,9 +388,9 @@ void main() {
     });
 
     test('integerArray', () async {
-      await expectInverse(<int>[], PostgreSQLDataType.integerArray);
-      await expectInverse([-1, 0, 200], PostgreSQLDataType.integerArray);
-      await expectInverse([-123], PostgreSQLDataType.integerArray);
+      await expectInverse(<int>[], PgDataType.integerArray);
+      await expectInverse([-1, 0, 200], PgDataType.integerArray);
+      await expectInverse([-123], PgDataType.integerArray);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:_int4)',
             substitutionValues: {'v': 'not-list-int'});
@@ -402,9 +401,9 @@ void main() {
     });
 
     test('bigIntegerArray', () async {
-      await expectInverse(<int>[], PostgreSQLDataType.bigIntegerArray);
-      await expectInverse([-1, 0, 200], PostgreSQLDataType.bigIntegerArray);
-      await expectInverse([-123], PostgreSQLDataType.bigIntegerArray);
+      await expectInverse(<int>[], PgDataType.bigIntegerArray);
+      await expectInverse([-1, 0, 200], PgDataType.bigIntegerArray);
+      await expectInverse([-123], PgDataType.bigIntegerArray);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:_int8)',
             substitutionValues: {'v': 'not-list-int'});
@@ -415,9 +414,9 @@ void main() {
     });
 
     test('doubleArray', () async {
-      await expectInverse(<double>[], PostgreSQLDataType.doubleArray);
-      await expectInverse([-123.0, 0.0, 1.0], PostgreSQLDataType.doubleArray);
-      await expectInverse([0.001, 45.678], PostgreSQLDataType.doubleArray);
+      await expectInverse(<double>[], PgDataType.doubleArray);
+      await expectInverse([-123.0, 0.0, 1.0], PgDataType.doubleArray);
+      await expectInverse([0.001, 45.678], PgDataType.doubleArray);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:_float8)',
             substitutionValues: {'v': 'not-list-double'});
@@ -428,11 +427,9 @@ void main() {
     });
 
     test('varCharArray', () async {
-      await expectInverse(<String>[], PostgreSQLDataType.varCharArray);
-      await expectInverse(
-          ['', 'foo', 'foo\n'], PostgreSQLDataType.varCharArray);
-      await expectInverse(
-          ['foo\nbar;s', '"\'"'], PostgreSQLDataType.varCharArray);
+      await expectInverse(<String>[], PgDataType.varCharArray);
+      await expectInverse(['', 'foo', 'foo\n'], PgDataType.varCharArray);
+      await expectInverse(['foo\nbar;s', '"\'"'], PgDataType.varCharArray);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:_varchar(10))',
             substitutionValues: {'v': 0});
@@ -443,9 +440,9 @@ void main() {
     });
 
     test('textArray', () async {
-      await expectInverse(<String>[], PostgreSQLDataType.textArray);
-      await expectInverse(['', 'foo', 'foo\n'], PostgreSQLDataType.textArray);
-      await expectInverse(['foo\nbar;s', '"\'"'], PostgreSQLDataType.textArray);
+      await expectInverse(<String>[], PgDataType.textArray);
+      await expectInverse(['', 'foo', 'foo\n'], PgDataType.textArray);
+      await expectInverse(['foo\nbar;s', '"\'"'], PgDataType.textArray);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:_text)',
             substitutionValues: {'v': 0});
@@ -456,12 +453,12 @@ void main() {
     });
 
     test('jsonbArray', () async {
-      await expectInverse(['string', 2, 0.1], PostgreSQLDataType.jsonbArray);
+      await expectInverse(['string', 2, 0.1], PgDataType.jsonbArray);
       await expectInverse([
         1,
         {},
         {'a': 'b'}
-      ], PostgreSQLDataType.jsonbArray);
+      ], PgDataType.jsonbArray);
       await expectInverse([
         ['foo'],
         [
@@ -470,14 +467,14 @@ void main() {
             'a': ['b']
           }
         ]
-      ], PostgreSQLDataType.jsonbArray);
+      ], PgDataType.jsonbArray);
       await expectInverse([
         {
           'key': 'val',
           'key1': 1,
           'array': ['foo']
         }
-      ], PostgreSQLDataType.jsonbArray);
+      ], PgDataType.jsonbArray);
 
       try {
         await conn
@@ -492,7 +489,7 @@ void main() {
       final result = await conn.query('SELECT NULL::void AS r');
       expect(result.columnDescriptions, [
         isA<ColumnDescription>()
-            .having((e) => e.typeId, 'typeId', PostgreSQLDataType.voidType.oid)
+            .having((e) => e.typeId, 'typeId', PgDataType.voidType.oid)
       ]);
 
       expect(result, [
@@ -500,17 +497,14 @@ void main() {
       ]);
 
       expect(
-        () =>
-            PostgresBinaryEncoder(PostgreSQLDataType.voidType).convert(1, utf8),
+        () => PostgresBinaryEncoder(PgDataType.voidType).convert(1, utf8),
         throwsArgumentError,
       );
     });
 
     test('regtype', () async {
-      await expectInverse(
-          PostgreSQLDataType.bigInteger, PostgreSQLDataType.regtype);
-      await expectInverse(
-          PostgreSQLDataType.voidType, PostgreSQLDataType.regtype);
+      await expectInverse(PgDataType.bigInteger, PgDataType.regtype);
+      await expectInverse(PgDataType.voidType, PgDataType.regtype);
     });
   });
 
@@ -630,7 +624,7 @@ void main() {
   });
 
   test('Invalid UUID encoding', () {
-    final converter = PostgresBinaryEncoder<Object>(PostgreSQLDataType.uuid);
+    final converter = PostgresBinaryEncoder<Object>(PgDataType.uuid);
     try {
       converter.convert('z0000000-0000-0000-0000-000000000000', utf8);
       fail('unreachable');
@@ -661,7 +655,7 @@ void main() {
   });
 }
 
-Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
+Future expectInverse(dynamic value, PgDataType dataType) async {
   final type = PostgreSQLFormat.dataTypeStringForDataType(dataType);
 
   await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $type)');
@@ -673,10 +667,10 @@ Future expectInverse(dynamic value, PostgreSQLDataType dataType) async {
   final encoder = PostgresBinaryEncoder(dataType);
   final encodedValue = encoder.convert(value, utf8);
 
-  if (dataType == PostgreSQLDataType.serial) {
-    dataType = PostgreSQLDataType.integer;
-  } else if (dataType == PostgreSQLDataType.bigSerial) {
-    dataType = PostgreSQLDataType.bigInteger;
+  if (dataType == PgDataType.serial) {
+    dataType = PgDataType.integer;
+  } else if (dataType == PgDataType.bigSerial) {
+    dataType = PgDataType.bigInteger;
   }
 
   final decoder = PostgresBinaryDecoder(dataType);

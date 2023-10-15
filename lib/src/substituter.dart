@@ -1,11 +1,12 @@
+import 'package:postgres/src/v3/types.dart';
+
 import 'query.dart';
 import 'text_codec.dart';
-import 'types.dart';
 
 class PostgreSQLFormat {
   static final int _atSignCodeUnit = '@'.codeUnitAt(0);
 
-  static String id(String name, {PostgreSQLDataType? type}) {
+  static String id(String name, {PgDataType? type}) {
     if (type != null) {
       return '@$name:${dataTypeStringForDataType(type)}';
     }
@@ -13,7 +14,7 @@ class PostgreSQLFormat {
     return '@$name';
   }
 
-  static String? dataTypeStringForDataType(PostgreSQLDataType? dt) {
+  static String? dataTypeStringForDataType(PgDataType? dt) {
     return dt?.nameForSubstitution;
   }
 
