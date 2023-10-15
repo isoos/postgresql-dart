@@ -252,27 +252,12 @@ class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
 
   @override
   late final columnDescriptions = _result.schema.columns
-      .map((e) => _ColumnDescription(
-            e.type.oid ?? 0,
-            e.tableName ?? '',
-            e.columnName ?? '',
+      .map((e) => ColumnDescription(
+            typeId: e.type.oid ?? 0,
+            tableName: e.tableName ?? '',
+            columnName: e.columnName ?? '',
           ))
       .toList();
-}
-
-class _ColumnDescription implements ColumnDescription {
-  @override
-  final int typeId;
-  @override
-  final String tableName;
-  @override
-  final String columnName;
-
-  _ColumnDescription(
-    this.typeId,
-    this.tableName,
-    this.columnName,
-  );
 }
 
 class _PostgreSQLResultRow extends UnmodifiableListView
@@ -282,10 +267,10 @@ class _PostgreSQLResultRow extends UnmodifiableListView
 
   @override
   late final columnDescriptions = _row.schema.columns
-      .map((e) => _ColumnDescription(
-            e.type.oid ?? 0,
-            e.tableName ?? '',
-            e.columnName ?? '',
+      .map((e) => ColumnDescription(
+            typeId: e.type.oid ?? 0,
+            tableName: e.tableName ?? '',
+            columnName: e.columnName ?? '',
           ))
       .toList();
 

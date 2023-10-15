@@ -232,20 +232,16 @@ class ParameterValue extends PgTypedParameter {
       : super(type ?? PgDataType.unspecified, value);
 }
 
-class FieldDescription implements ColumnDescription {
+class FieldDescription {
   final PostgresBinaryDecoder converter;
 
-  @override
   final String columnName;
   final int tableID;
   final int columnID;
-  @override
   final int typeId;
   final int dataTypeSize;
   final int typeModifier;
   final int formatCode;
-
-  @override
   final String tableName;
 
   FieldDescription._(
