@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
+import 'package:postgres/src/binary_codec.dart';
+import 'package:postgres/src/text_codec.dart';
 import 'package:postgres/src/time_converters.dart';
 
 import 'buffer.dart';
@@ -9,7 +12,6 @@ import 'constants.dart';
 import 'replication.dart';
 import 'shared_messages.dart';
 import 'types.dart';
-import 'v2/query.dart';
 
 abstract class ClientMessage extends BaseMessage {
   static const int FormatText = 0;
@@ -185,8 +187,35 @@ class DescribeMessage extends ClientMessage {
   }
 }
 
+class PgTypedParameter {
+  final PgDataType _type;
+  final Object? _value;
+
+  PgTypedParameter(this._type, this._value);
+
+  late final _hasKnownType = _type != PgDataType.unspecified;
+
+  Uint8List? encodeAsBytes(Encoding encoding) {
+    if (_hasKnownType) {
+      final encoder = PostgresBinaryEncoder(_type);
+      return encoder.convert(_value, encoding);
+    }
+    if (_value != null) {
+      const converter = PostgresTextEncoder();
+      return castBytes(
+          encoding.encode(converter.convert(_value, escapeStrings: false)));
+    }
+    return null;
+  }
+
+  @override
+  String toString() {
+    return 'PgTypedParameter($_type, $_value)';
+  }
+}
+
 class BindMessage extends ClientMessage {
-  final List<ParameterValue> _parameters;
+  final List<PgTypedParameter> _parameters;
   final String _portalName;
   final String _statementName;
 
@@ -203,7 +232,7 @@ class BindMessage extends ClientMessage {
 
     final parameterBytes =
         _parameters.map((p) => p.encodeAsBytes(buffer.encoding)).toList();
-    final typeSpecCount = _parameters.where((p) => p.hasKnownType).length;
+    final typeSpecCount = _parameters.where((p) => p._hasKnownType).length;
     var inputParameterElementCount = _parameters.length;
     if (typeSpecCount == _parameters.length || typeSpecCount == 0) {
       inputParameterElementCount = 1;
@@ -237,7 +266,7 @@ class BindMessage extends ClientMessage {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.writeUint16(_parameters.length);
       for (final p in _parameters) {
-        buffer.writeUint16(p.hasKnownType
+        buffer.writeUint16(p._hasKnownType
             ? ClientMessage.FormatBinary
             : ClientMessage.FormatText);
       }

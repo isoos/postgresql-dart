@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,7 +7,6 @@ import 'package:buffer/buffer.dart';
 import '../binary_codec.dart';
 import '../client_messages.dart';
 import '../exceptions.dart';
-import '../text_codec.dart';
 import '../types.dart';
 import 'connection.dart';
 import 'execution_context.dart';
@@ -84,7 +82,7 @@ class Query<T> {
         formatIdentifiers.map((i) => i.type).toList();
 
     final parameterList = formatIdentifiers
-        .map((id) => ParameterValue.resolve(id, substitutionValues))
+        .map((id) => _resolveParameterValue(id, substitutionValues))
         .toList();
 
     final messages = [
@@ -108,7 +106,7 @@ class Query<T> {
     final statementName = cacheQuery.preparedStatementName;
     final parameterList = cacheQuery.orderedParameters!
         .map((identifier) =>
-            ParameterValue.resolve(identifier, substitutionValues))
+            _resolveParameterValue(identifier, substitutionValues))
         .toList();
 
     final bytes = ClientMessage.aggregateBytes(
@@ -222,32 +220,16 @@ class CachedQuery {
   }
 }
 
-class ParameterValue {
-  final PgDataType<Object>? _type;
-  final Object? _value;
-  ParameterValue(this._type, this._value);
+ParameterValue _resolveParameterValue(PostgreSQLFormatIdentifier identifier,
+    Map<String, dynamic>? substitutionValues) {
+  final value = substitutionValues?[identifier.name];
+  final type = identifier.type;
+  return ParameterValue(type, value);
+}
 
-  factory ParameterValue.resolve(PostgreSQLFormatIdentifier identifier,
-      Map<String, dynamic>? substitutionValues) {
-    final value = substitutionValues?[identifier.name];
-    final type = identifier.type;
-    return ParameterValue(type, value);
-  }
-
-  late final hasKnownType = _type != null && _type != PgDataType.unspecified;
-
-  Uint8List? encodeAsBytes(Encoding encoding) {
-    if (hasKnownType) {
-      final encoder = PostgresBinaryEncoder(_type!);
-      return encoder.convert(_value, encoding);
-    }
-    if (_value != null) {
-      const converter = PostgresTextEncoder();
-      return castBytes(
-          encoding.encode(converter.convert(_value, escapeStrings: false)));
-    }
-    return null;
-  }
+class ParameterValue extends PgTypedParameter {
+  ParameterValue(PgDataType? type, Object? value)
+      : super(type ?? PgDataType.unspecified, value);
 }
 
 class FieldDescription implements ColumnDescription {
