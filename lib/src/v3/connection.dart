@@ -852,15 +852,6 @@ class _TransactionSession extends _PgSessionBase {
     await querySubscription.asFuture();
     await querySubscription.cancel();
   }
-
-  @override
-  Future<void> close() async {
-    throw UnsupportedError(
-      'Transactions cannot be closed explicitly. Instead, return from the '
-      '`runTx` callback with a value to complete it or throw an exception to '
-      'revert the transaction.',
-    );
-  }
 }
 
 abstract class _PendingOperation {

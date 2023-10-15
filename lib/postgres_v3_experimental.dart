@@ -146,10 +146,6 @@ abstract class PgSession {
     QueryMode? queryMode,
     Duration? timeout,
   });
-
-  /// Closes this session, cleaning up resources and forbiding further calls to
-  /// [prepare] and [execute].
-  Future<void> close();
 }
 
 abstract class PgSessionExecutor {
@@ -168,6 +164,10 @@ abstract class PgSessionExecutor {
   /// Note that other invocations on a [PgConnection] are blocked while a
   /// transaction is active.
   Future<R> runTx<R>(Future<R> Function(PgSession session) fn);
+
+  /// Closes this session, cleaning up resources and forbiding further calls to
+  /// [prepare] and [execute].
+  Future<void> close();
 }
 
 abstract class PgConnection implements PgSession, PgSessionExecutor {
