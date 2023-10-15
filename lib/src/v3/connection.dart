@@ -15,7 +15,6 @@ import '../binary_codec.dart';
 import '../exceptions.dart';
 import '../replication.dart';
 import '../text_codec.dart';
-import '../v2/query.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 
@@ -543,9 +542,7 @@ class _PgResultStreamSubscription
 
       connection._channel.sink.add(AggregatedClientMessage([
         BindMessage(
-          statement.parameters
-              .map((p) => ParameterValue(p.type, p.value))
-              .toList(),
+          statement.parameters,
           portalName: _portalName,
           statementName: statement.statement._name,
         ),

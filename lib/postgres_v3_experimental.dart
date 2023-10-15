@@ -12,6 +12,7 @@ import 'src/v3/pool.dart';
 import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
 
+export 'src/client_messages.dart' show PgTypedParameter;
 export 'src/types.dart';
 
 abstract class PgPool implements PgSession, PgSessionExecutor {
@@ -214,28 +215,6 @@ abstract class PgStatement {
   }
 
   Future<void> dispose();
-}
-
-final class PgTypedParameter {
-  final PgDataType type;
-  final Object? value;
-
-  PgTypedParameter(this.type, this.value);
-
-  @override
-  String toString() {
-    return 'PgTypedParameter($type, $value)';
-  }
-
-  @override
-  int get hashCode => Object.hash(type, value);
-
-  @override
-  bool operator ==(Object other) {
-    return other is PgTypedParameter &&
-        other.type == type &&
-        other.value == value;
-  }
 }
 
 abstract class PgResult implements List<PgResultRow> {
