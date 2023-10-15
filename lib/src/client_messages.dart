@@ -6,11 +6,10 @@ import 'package:postgres/src/time_converters.dart';
 
 import 'buffer.dart';
 import 'constants.dart';
-import 'query.dart';
 import 'replication.dart';
-
 import 'shared_messages.dart';
 import 'types.dart';
+import 'v2/query.dart';
 
 abstract class ClientMessage extends BaseMessage {
   static const int FormatText = 0;

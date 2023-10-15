@@ -1,4 +1,7 @@
-part of postgres.connection;
+import 'package:meta/meta.dart';
+
+import 'server_messages.dart';
+import 'types.dart';
 
 /// Exception thrown by [PostgreSQLConnection] instances.
 class PostgreSQLException implements Exception {

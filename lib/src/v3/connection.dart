@@ -12,10 +12,10 @@ import 'package:stream_channel/stream_channel.dart';
 
 import '../auth/auth.dart';
 import '../binary_codec.dart';
-import '../connection.dart' show PostgreSQLException;
-import '../query.dart';
+import '../exceptions.dart';
 import '../replication.dart';
 import '../text_codec.dart';
+import '../v2/query.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 

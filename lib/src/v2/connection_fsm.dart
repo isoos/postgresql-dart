@@ -16,7 +16,7 @@ abstract class _PostgreSQLConnectionState {
   }
 
   _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
-    final exception = PostgreSQLException._(message.fields);
+    final exception = PostgreSQLException.fromFields(message.fields);
 
     if (exception.severity == PgSeverity.fatal ||
         exception.severity == PgSeverity.panic) {
@@ -60,7 +60,7 @@ class _PostgreSQLConnectionStateSocketConnected
 
   @override
   _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
-    final exception = PostgreSQLException._(message.fields);
+    final exception = PostgreSQLException.fromFields(message.fields);
 
     completer.completeError(exception);
 
@@ -94,7 +94,7 @@ class _PostgreSQLConnectionStateAuthenticating
 
   @override
   _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
-    final exception = PostgreSQLException._(message.fields);
+    final exception = PostgreSQLException.fromFields(message.fields);
 
     completer.completeError(exception);
 
@@ -195,7 +195,7 @@ class _PostgreSQLConnectionStateAuthenticated
 
   @override
   _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
-    final exception = PostgreSQLException._(message.fields);
+    final exception = PostgreSQLException.fromFields(message.fields);
 
     completer.completeError(exception);
 
@@ -288,7 +288,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     // If we get an error here, then we should eat the rest of the messages
     // and we are always confirmed to get a _ReadyForQueryMessage to finish up.
     // We should only report the error once that is done.
-    final exception = PostgreSQLException._(message.fields);
+    final exception = PostgreSQLException.fromFields(message.fields);
     returningException ??= exception;
 
     if (exception.severity == PgSeverity.fatal ||

@@ -2,9 +2,9 @@ import 'dart:typed_data';
 
 import 'package:sasl_scram/sasl_scram.dart';
 
-import '../../postgres.dart';
 import '../buffer.dart';
 import '../client_messages.dart';
+import '../exceptions.dart';
 import '../server_messages.dart';
 import 'auth.dart';
 
