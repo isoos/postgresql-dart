@@ -164,3 +164,58 @@ enum PgDataType<Dart extends Object> {
         type.nameForSubstitution: type,
   });
 }
+
+/// The severity level of a [PostgreSQLException].
+///
+/// [panic] and [fatal] errors will close the connection.
+enum PgSeverity {
+  /// A [PostgreSQLException] with this severity indicates the throwing connection is now closed.
+  panic,
+
+  /// A [PostgreSQLException] with this severity indicates the throwing connection is now closed.
+  fatal,
+
+  /// A [PostgreSQLException] with this severity indicates the throwing connection encountered an error when executing a query and the query has failed.
+  error,
+
+  /// Currently unsupported.
+  warning,
+
+  /// Currently unsupported.
+  notice,
+
+  /// Currently unsupported.
+  debug,
+
+  /// Currently unsupported.
+  info,
+
+  /// Currently unsupported.
+  log,
+
+  /// A [PostgreSQLException] with this severity indicates a failed a precondition or other error that doesn't originate from the database.
+  unknown;
+
+  static PgSeverity parseServerString(String? str) {
+    switch (str) {
+      case 'ERROR':
+        return PgSeverity.error;
+      case 'FATAL':
+        return PgSeverity.fatal;
+      case 'PANIC':
+        return PgSeverity.panic;
+      case 'WARNING':
+        return PgSeverity.warning;
+      case 'NOTICE':
+        return PgSeverity.notice;
+      case 'DEBUG':
+        return PgSeverity.debug;
+      case 'INFO':
+        return PgSeverity.info;
+      case 'LOG':
+        return PgSeverity.log;
+      default:
+        return PgSeverity.unknown;
+    }
+  }
+}

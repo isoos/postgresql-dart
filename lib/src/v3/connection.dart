@@ -12,7 +12,7 @@ import 'package:stream_channel/stream_channel.dart';
 
 import '../auth/auth.dart';
 import '../binary_codec.dart';
-import '../connection.dart' show PostgreSQLException, PostgreSQLSeverity;
+import '../connection.dart' show PostgreSQLException;
 import '../query.dart';
 import '../replication.dart';
 import '../text_codec.dart';
@@ -1009,8 +1009,7 @@ class _AuthenticationProcedure extends _PendingOperation {
 
 extension on PostgreSQLException {
   bool get willAbortConnection {
-    return severity == PostgreSQLSeverity.fatal ||
-        severity == PostgreSQLSeverity.panic;
+    return severity == PgSeverity.fatal || severity == PgSeverity.panic;
   }
 }
 

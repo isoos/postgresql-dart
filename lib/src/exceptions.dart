@@ -1,41 +1,9 @@
 part of postgres.connection;
 
-/// The severity level of a [PostgreSQLException].
-///
-/// [panic] and [fatal] errors will close the connection.
-enum PostgreSQLSeverity {
-  /// A [PostgreSQLException] with this severity indicates the throwing connection is now closed.
-  panic,
-
-  /// A [PostgreSQLException] with this severity indicates the throwing connection is now closed.
-  fatal,
-
-  /// A [PostgreSQLException] with this severity indicates the throwing connection encountered an error when executing a query and the query has failed.
-  error,
-
-  /// Currently unsupported.
-  warning,
-
-  /// Currently unsupported.
-  notice,
-
-  /// Currently unsupported.
-  debug,
-
-  /// Currently unsupported.
-  info,
-
-  /// Currently unsupported.
-  log,
-
-  /// A [PostgreSQLException] with this severity indicates a failed a precondition or other error that doesn't originate from the database.
-  unknown
-}
-
 /// Exception thrown by [PostgreSQLConnection] instances.
 class PostgreSQLException implements Exception {
   PostgreSQLException(this.message,
-      {this.severity = PostgreSQLSeverity.error, this.stackTrace}) {
+      {this.severity = PgSeverity.error, this.stackTrace}) {
     code = '';
   }
 
@@ -77,7 +45,7 @@ class PostgreSQLException implements Exception {
   }
 
   /// The severity of the exception.
-  PostgreSQLSeverity? severity;
+  PgSeverity? severity;
 
   /// The PostgreSQL error code.
   ///
