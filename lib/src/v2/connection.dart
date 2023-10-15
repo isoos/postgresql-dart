@@ -8,23 +8,23 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:meta/meta.dart';
-import 'auth/auth.dart';
+import '../auth/auth.dart';
 
-import 'client_messages.dart';
+import '../client_messages.dart';
+import '../exceptions.dart';
+import '../message_window.dart';
+import '../replication.dart';
+import '../server_messages.dart';
+import '../types.dart' show PgSeverity;
+
 import 'execution_context.dart';
-import 'message_window.dart';
 import 'query.dart';
 import 'query_cache.dart';
 import 'query_queue.dart';
-import 'replication.dart';
-import 'server_messages.dart';
-import 'types.dart' show PgSeverity;
 
 part 'connection_fsm.dart';
 
 part 'transaction_proxy.dart';
-
-part 'exceptions.dart';
 
 /// Instances of this class connect to and communicate with a PostgreSQL database.
 ///

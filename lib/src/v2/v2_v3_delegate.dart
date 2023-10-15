@@ -5,10 +5,11 @@ import 'dart:io';
 
 import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:postgres/src/client_messages.dart';
-import 'package:postgres/src/connection.dart';
-import 'package:postgres/src/execution_context.dart';
+import 'package:postgres/src/exceptions.dart';
 import 'package:postgres/src/replication.dart';
 import 'package:postgres/src/server_messages.dart';
+import 'package:postgres/src/v2/connection.dart';
+import 'package:postgres/src/v2/execution_context.dart';
 
 mixin _DelegatingContext implements PostgreSQLExecutionContext {
   PgSession? get _session;

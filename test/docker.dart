@@ -8,9 +8,9 @@ import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
-import 'package:postgres/src/connection.dart';
 import 'package:postgres/src/replication.dart';
-import 'package:postgres/src/v2_v3_delegate.dart';
+import 'package:postgres/src/v2/connection.dart';
+import 'package:postgres/src/v2/v2_v3_delegate.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
 

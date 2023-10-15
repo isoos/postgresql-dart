@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
-import 'package:postgres/messages.dart';
-import 'package:postgres/src/buffer.dart';
 
-import 'query.dart';
+import 'buffer.dart';
+import 'logical_replication_messages.dart';
+import 'shared_messages.dart';
 import 'time_converters.dart';
 import 'types.dart';
+import 'v2/query.dart';
 
 abstract class ServerMessage extends BaseMessage {}
 

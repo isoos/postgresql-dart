@@ -5,13 +5,14 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-import 'binary_codec.dart';
-import 'client_messages.dart';
+import '../binary_codec.dart';
+import '../client_messages.dart';
+import '../exceptions.dart';
+import '../text_codec.dart';
+import '../types.dart';
 import 'connection.dart';
 import 'execution_context.dart';
 import 'substituter.dart';
-import 'text_codec.dart';
-import 'types.dart';
 
 class Query<T> {
   Query(
