@@ -1,7 +1,6 @@
-import 'package:postgres/src/v3/types.dart';
-
 import 'query.dart';
 import 'text_codec.dart';
+import 'types.dart';
 
 class PostgreSQLFormat {
   static final int _atSignCodeUnit = '@'.codeUnitAt(0);

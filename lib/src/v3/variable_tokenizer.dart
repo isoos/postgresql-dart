@@ -1,7 +1,7 @@
 import 'package:charcode/charcode.dart';
 
+import '../types.dart';
 import 'query_description.dart';
-import 'types.dart';
 
 /// In addition to indexed variables supported by the postgres protocol, most
 /// postgres clients (including this package) support a variable mode in which

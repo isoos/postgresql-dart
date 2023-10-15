@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/v3/types.dart';
 
 import 'binary_codec.dart';
 import 'client_messages.dart';
@@ -12,6 +11,7 @@ import 'connection.dart';
 import 'execution_context.dart';
 import 'substituter.dart';
 import 'text_codec.dart';
+import 'types.dart';
 
 class Query<T> {
   Query(
