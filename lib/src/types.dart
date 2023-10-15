@@ -9,10 +9,6 @@
   5. add identifying key to PostgreSQLFormat.dataTypeStringForDataType
  */
 
-import 'package:postgres/src/v3/types.dart';
-
-typedef PostgreSQLDataType = PgDataType<Object>;
-
 /// LSN is a PostgreSQL Log Sequence Number.
 ///
 /// For more details, see: https://www.postgresql.org/docs/current/datatype-pg-lsn.html

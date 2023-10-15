@@ -12,7 +12,6 @@ import 'connection.dart';
 import 'execution_context.dart';
 import 'substituter.dart';
 import 'text_codec.dart';
-import 'types.dart';
 
 class Query<T> {
   Query(
@@ -38,7 +37,7 @@ class Query<T> {
   final PostgreSQLExecutionContext transaction;
   final PostgreSQLConnection connection;
 
-  late List<PostgreSQLDataType?> _specifiedParameterTypeCodes;
+  late List<PgDataType?> _specifiedParameterTypeCodes;
   final rows = <List<dynamic>>[];
 
   CachedQuery? cache;
@@ -298,8 +297,7 @@ class FieldDescription implements ColumnDescription {
     final formatCode = reader.readUint16();
 
     final converter = PostgresBinaryDecoder(
-        PostgreSQLDataType.byTypeOid[typeOid] ??
-            PostgreSQLDataType.unknownType);
+        PgDataType.byTypeOid[typeOid] ?? PgDataType.unknownType);
     return FieldDescription._(
       converter, fieldName, tableID, columnID, typeOid,
       dataTypeSize, typeModifier, formatCode,
@@ -331,12 +329,12 @@ class PostgreSQLFormatToken {
 }
 
 class PostgreSQLFormatIdentifier {
-  static Map<String, PostgreSQLDataType> typeStringToCodeMap =
-      PostgreSQLDataType.bySubstitutionName;
+  static Map<String, PgDataType> typeStringToCodeMap =
+      PgDataType.bySubstitutionName;
 
   factory PostgreSQLFormatIdentifier(String t) {
     String name;
-    PostgreSQLDataType? type;
+    PgDataType? type;
     String? typeCast;
 
     final components = t.split('::');
@@ -369,6 +367,6 @@ class PostgreSQLFormatIdentifier {
   PostgreSQLFormatIdentifier._(this.name, this.type, this.typeCast);
 
   final String name;
-  final PostgreSQLDataType? type;
+  final PgDataType? type;
   final String? typeCast;
 }

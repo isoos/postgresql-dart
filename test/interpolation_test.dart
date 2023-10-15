@@ -2,19 +2,20 @@ import 'dart:convert';
 
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/query.dart';
+import 'package:postgres/src/v3/types.dart';
 import 'package:test/test.dart';
 
 void main() {
   test('Ensure all types/format type mappings are available and accurate', () {
     const withoutMapping = {
-      PostgreSQLDataType.unspecified, // Can't bind into unspecified type
-      PostgreSQLDataType.unknownType, // Can't bind into unknown type
-      PostgreSQLDataType.voidType, // Can't assign to void
-      PostgreSQLDataType.bigSerial, // Can only be created from a table sequence
-      PostgreSQLDataType.serial,
+      PgDataType.unspecified, // Can't bind into unspecified type
+      PgDataType.unknownType, // Can't bind into unknown type
+      PgDataType.voidType, // Can't assign to void
+      PgDataType.bigSerial, // Can only be created from a table sequence
+      PgDataType.serial,
     };
 
-    for (final type in PostgreSQLDataType.values) {
+    for (final type in PgDataType.values) {
       if (withoutMapping.contains(type)) continue;
 
       expect(
@@ -29,14 +30,11 @@ void main() {
 
   test('Ensure bigserial gets translated to int8', () {
     expect(
-        PostgreSQLFormat.dataTypeStringForDataType(PostgreSQLDataType.serial),
-        'int4');
+        PostgreSQLFormat.dataTypeStringForDataType(PgDataType.serial), 'int4');
   });
 
   test('Ensure serial gets translated to int4', () {
-    expect(
-        PostgreSQLFormat.dataTypeStringForDataType(
-            PostgreSQLDataType.bigSerial),
+    expect(PostgreSQLFormat.dataTypeStringForDataType(PgDataType.bigSerial),
         'int8');
   });
 
