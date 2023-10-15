@@ -209,6 +209,16 @@ class PgTypedParameter {
   }
 
   @override
+  int get hashCode => Object.hash(_type, _value);
+
+  @override
+  bool operator ==(Object other) {
+    return other is PgTypedParameter &&
+        other._type == _type &&
+        other._value == _value;
+  }
+
+  @override
   String toString() {
     return 'PgTypedParameter($_type, $_value)';
   }
