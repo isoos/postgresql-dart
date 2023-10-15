@@ -10,3 +10,4 @@ export 'src/types.dart';
 export 'src/v3/types.dart' show PgPoint;
 
 typedef PostgreSQLDataType = PgDataType<Object>;
+typedef PostgreSQLSeverity = PgSeverity;

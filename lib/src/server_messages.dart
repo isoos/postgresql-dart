@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:meta/meta.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/src/buffer.dart';
+import 'package:postgres/src/v3/types.dart';
 
-import 'connection.dart';
 import 'query.dart';
 import 'time_converters.dart';
 import 'types.dart';
@@ -400,28 +400,8 @@ class ErrorField {
   static const int LineIdentifier = 76;
   static const int RoutineIdentifier = 82;
 
-  static PostgreSQLSeverity severityFromString(String? str) {
-    switch (str) {
-      case 'ERROR':
-        return PostgreSQLSeverity.error;
-      case 'FATAL':
-        return PostgreSQLSeverity.fatal;
-      case 'PANIC':
-        return PostgreSQLSeverity.panic;
-      case 'WARNING':
-        return PostgreSQLSeverity.warning;
-      case 'NOTICE':
-        return PostgreSQLSeverity.notice;
-      case 'DEBUG':
-        return PostgreSQLSeverity.debug;
-      case 'INFO':
-        return PostgreSQLSeverity.info;
-      case 'LOG':
-        return PostgreSQLSeverity.log;
-      default:
-        return PostgreSQLSeverity.unknown;
-    }
-  }
+  static PgSeverity severityFromString(String? str) =>
+      PgSeverity.parseServerString(str);
 
   final int? identificationToken;
   final String? text;

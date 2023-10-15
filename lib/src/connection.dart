@@ -18,6 +18,7 @@ import 'query_cache.dart';
 import 'query_queue.dart';
 import 'replication.dart';
 import 'server_messages.dart';
+import 'v3/types.dart' show PgSeverity;
 
 part 'connection_fsm.dart';
 
