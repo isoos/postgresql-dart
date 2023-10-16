@@ -633,4 +633,60 @@ void main() {
       await expectLater(conn.execute('SELECT * FROM t'), completion(isEmpty));
     });
   });
+
+  withPostgresServer('exception inside transaction', (server) {
+    late PgConnection conn;
+
+    setUp(() async {
+      conn = await server.newConnection();
+      await conn.execute('CREATE TEMPORARY TABLE t (id INT UNIQUE)');
+    });
+
+    tearDown(() async {
+      await conn.close();
+    });
+
+    test('exception thrown in transaction is propagated out', () async {
+      final expectedException = Exception('my custom exception');
+      dynamic actualException;
+      dynamic thrownException;
+      await conn.runTx((session) async {
+        await session.execute('INSERT INTO t (id) VALUES (1)');
+        try {
+          await session.execute('INSERT INTO t (id) VALUES (1)');
+        } on PgException catch (e) {
+          thrownException = e;
+          throw expectedException;
+        }
+      }).catchError((error) {
+        actualException = error;
+      });
+      expect(actualException, expectedException);
+
+      // testing the same exception without the try-catch block inside the transaction:
+      dynamic uncaughtException;
+      await conn.runTx((session) async {
+        await session.execute('INSERT INTO t (id) VALUES (1)');
+        await session.execute('INSERT INTO t (id) VALUES (1)');
+      }).catchError((error) {
+        uncaughtException = error;
+      });
+      expect(uncaughtException.toString(), thrownException.toString());
+    }, skip: !server.useV3);
+
+    // TODO: decide if this is the desired outcome.
+    test('exception caught in transaction is propagated out', () async {
+      await expectLater(
+        () => conn.runTx((c) async {
+          await c.execute('INSERT INTO t (id) VALUES (1)');
+          try {
+            await c.execute('INSERT INTO t (id) VALUES (1)');
+          } catch (_) {
+            // ignore
+          }
+        }),
+        throwsA(isA<PgServerException>()),
+      );
+    }, skip: !server.useV3);
+  });
 }
