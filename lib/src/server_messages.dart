@@ -8,7 +8,6 @@ import 'logical_replication_messages.dart';
 import 'shared_messages.dart';
 import 'time_converters.dart';
 import 'types.dart';
-import 'v2/query.dart';
 
 abstract class ServerMessage extends BaseMessage {}
 
@@ -100,6 +99,53 @@ class BackendKeyMessage extends ServerMessage {
     final processID = reader.readUint32();
     final secretKey = reader.readUint32();
     return BackendKeyMessage._(processID, secretKey);
+  }
+}
+
+class FieldDescription {
+  final String fieldName;
+  final int tableOid;
+  final int columnOid;
+  final int typeOid;
+  final int typeSize;
+  final int typeModifier;
+  final int formatCode;
+
+  FieldDescription._(
+    this.fieldName,
+    this.tableOid,
+    this.columnOid,
+    this.typeOid,
+    this.typeSize,
+    this.typeModifier,
+    this.formatCode,
+  );
+
+  factory FieldDescription.read(PgByteDataReader reader) {
+    final fieldName = reader.readNullTerminatedString();
+    final tableOid = reader.readUint32();
+    final columnOid = reader.readUint16();
+    final typeOid = reader.readUint32();
+    final dataTypeSize = reader.readUint16();
+    final typeModifier = reader.readInt32();
+    final formatCode = reader.readUint16();
+
+    return FieldDescription._(
+      fieldName,
+      tableOid,
+      columnOid,
+      typeOid,
+      dataTypeSize,
+      typeModifier,
+      formatCode,
+    );
+  }
+
+  late final isBinaryEncoding = formatCode != 0;
+
+  @override
+  String toString() {
+    return '$fieldName $tableOid $columnOid $typeOid $typeSize $typeModifier $formatCode';
   }
 }
 

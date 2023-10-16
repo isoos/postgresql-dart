@@ -2,11 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:buffer/buffer.dart';
-
 import '../binary_codec.dart';
 import '../client_messages.dart';
 import '../exceptions.dart';
+import '../server_messages.dart';
 import '../types.dart';
 import 'connection.dart';
 import 'execution_context.dart';
@@ -168,7 +167,10 @@ class Query<T> {
     final iterator = fieldDescriptions!.iterator;
     final lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
-      return iterator.current.converter.convert(bd, connection.encoding);
+      final converter = PostgresBinaryDecoder(
+          PgDataType.byTypeOid[iterator.current.typeOid] ??
+              PgDataType.unknownType);
+      return converter.convert(bd, connection.encoding);
     });
 
     rows.add(lazyDecodedData.toList());
@@ -230,69 +232,6 @@ ParameterValue _resolveParameterValue(PostgreSQLFormatIdentifier identifier,
 class ParameterValue extends PgTypedParameter {
   ParameterValue(PgDataType? type, Object? value)
       : super(type ?? PgDataType.unspecified, value);
-}
-
-class FieldDescription {
-  final PostgresBinaryDecoder converter;
-
-  final String columnName;
-  final int tableID;
-  final int columnID;
-  final int typeId;
-  final int dataTypeSize;
-  final int typeModifier;
-  final int formatCode;
-  final String tableName;
-
-  FieldDescription._(
-    this.converter,
-    this.columnName,
-    this.tableID,
-    this.columnID,
-    this.typeId,
-    this.dataTypeSize,
-    this.typeModifier,
-    this.formatCode,
-    this.tableName,
-  );
-
-  factory FieldDescription.read(ByteDataReader reader) {
-    final buf = StringBuffer();
-    var byte = 0;
-    do {
-      byte = reader.readUint8();
-      if (byte != 0) {
-        buf.writeCharCode(byte);
-      }
-    } while (byte != 0);
-
-    final fieldName = buf.toString();
-
-    final tableID = reader.readUint32();
-    final columnID = reader.readUint16();
-    final typeOid = reader.readUint32();
-    final dataTypeSize = reader.readUint16();
-    final typeModifier = reader.readInt32();
-    final formatCode = reader.readUint16();
-
-    final converter = PostgresBinaryDecoder(
-        PgDataType.byTypeOid[typeOid] ?? PgDataType.unknownType);
-    return FieldDescription._(
-      converter, fieldName, tableID, columnID, typeOid,
-      dataTypeSize, typeModifier, formatCode,
-      '', // tableName
-    );
-  }
-
-  FieldDescription change({String? tableName}) {
-    return FieldDescription._(converter, columnName, tableID, columnID, typeId,
-        dataTypeSize, typeModifier, formatCode, tableName ?? this.tableName);
-  }
-
-  @override
-  String toString() {
-    return '$columnName $tableID $columnID $typeId $dataTypeSize $typeModifier $formatCode';
-  }
 }
 
 typedef SQLReplaceIdentifierFunction = String Function(

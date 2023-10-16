@@ -1,12 +1,12 @@
 library postgres.connection;
 
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import '../auth/auth.dart';
 
@@ -416,16 +416,14 @@ class _OidCache {
     _tableOIDNameMap.clear();
   }
 
-  Future<List<FieldDescription>> _resolveTableNames(
-      _PostgreSQLExecutionContextMixin c,
-      List<FieldDescription?>? columns) async {
+  Future<List<String?>> _resolveTableNames(_PostgreSQLExecutionContextMixin c,
+      List<FieldDescription>? columns) async {
     if (columns == null) return [];
     //todo (joeconwaystk): If this was a cached query, resolving is table oids is unnecessary.
     // It's not a significant impact here, but an area for optimization. This includes
     // assigning resolvedTableName
     final unresolvedTableOIDs = columns
-        .where((f) => f != null)
-        .map((f) => f!.tableID)
+        .map((f) => f.tableOid)
         .toSet()
         .where((oid) => oid > 0 && !_tableOIDNameMap.containsKey(oid))
         .toList()
@@ -435,9 +433,7 @@ class _OidCache {
       await _resolveTableOIDs(c, unresolvedTableOIDs);
     }
 
-    return columns
-        .map((c) => c!.change(tableName: _tableOIDNameMap[c.tableID]))
-        .toList();
+    return columns.map((c) => _tableOIDNameMap[c.tableOid]).toList();
   }
 
   Future _resolveTableOIDs(
@@ -526,15 +522,19 @@ abstract mixin class _PostgreSQLExecutionContextMixin
 
     final queryResult =
         await _enqueue(query, timeoutInSeconds: timeoutInSeconds);
-    var fieldDescriptions = query.fieldDescriptions;
+    var tableNames = const <String?>[];
     if (resolveOids) {
-      fieldDescriptions = await _connection._oidCache
-          ._resolveTableNames(this, fieldDescriptions);
+      tableNames = await _connection._oidCache
+          ._resolveTableNames(this, query.fieldDescriptions);
     }
-    final metaData = _PostgreSQLResultMetaData(fieldDescriptions!
-        .map((e) => ColumnDescription(
-            typeId: e.typeId, tableName: e.tableName, columnName: e.columnName))
-        .toList());
+    final metaData =
+        _PostgreSQLResultMetaData((query.fieldDescriptions ?? const [])
+            .mapIndexed((i, e) => ColumnDescription(
+                  typeId: e.typeOid,
+                  tableName: tableNames.isEmpty ? '' : tableNames[i] ?? '',
+                  columnName: e.fieldName,
+                ))
+            .toList());
 
     return _PostgreSQLResult(
         queryResult.affectedRowCount,
@@ -604,7 +604,10 @@ abstract mixin class _PostgreSQLExecutionContextMixin
     final fieldDescriptions = query.fieldDescriptions ?? [];
     final metaData = _PostgreSQLResultMetaData(fieldDescriptions
         .map((e) => ColumnDescription(
-            typeId: e.typeId, tableName: e.tableName, columnName: e.columnName))
+              typeId: e.typeOid,
+              tableName: '',
+              columnName: e.fieldName,
+            ))
         .toList());
 
     final value = result.value;

@@ -42,10 +42,12 @@ void main() {
 
       result = await connection.query('select t from t');
       expect(result.columnDescriptions, hasLength(1));
-      expect(
-          result.columnDescriptions.single.tableName,
-          // v3 does not query the table oids
-          server.useV3 ? '' : 't');
+      if (server.useV3) {
+        expect(() => result.columnDescriptions.single.tableName,
+            throwsUnimplementedError);
+      } else {
+        expect(result.columnDescriptions.single.tableName, 't');
+      }
       expect(result.columnDescriptions.single.columnName, 't');
       expect(result, [expectedRow]);
     });
@@ -199,15 +201,13 @@ void main() {
         [false, true, false]
       ];
       expect(result.columnDescriptions, hasLength(24));
-      expect(
-          result.columnDescriptions.first.tableName,
-          // v3 does not query the table oids
-          server.useV3 ? '' : 't');
+      if (server.useV3) {
+        expect(() => result.columnDescriptions.first.tableName,
+            throwsUnimplementedError);
+      } else {
+        expect(result.columnDescriptions.first.tableName, 't');
+      }
       expect(result.columnDescriptions.first.columnName, 'i');
-      expect(
-          result.columnDescriptions.last.tableName,
-          // v3 does not query the table oids
-          server.useV3 ? '' : 't');
       expect(result.columnDescriptions.last.columnName, 'ba');
       expect(result, [expectedRow]);
       result = await connection.query(
