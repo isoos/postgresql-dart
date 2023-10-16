@@ -245,6 +245,11 @@ class _PgResult extends DelegatingList<PgResultRow> implements PgResult {
 
 abstract class PgResultRow implements List<Object?> {
   PgResultSchema get schema;
+
+  /// Returns a single-level map that maps the column name (or its alias) to the
+  /// value returned on that position. Multiple column with the same name may
+  /// override the previous values.
+  Map<String, dynamic> toColumnMap();
 }
 
 final class PgResultSchema {
