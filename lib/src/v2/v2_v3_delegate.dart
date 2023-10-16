@@ -252,9 +252,8 @@ class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
 
   @override
   late final columnDescriptions = _result.schema.columns
-      .map((e) => ColumnDescription(
+      .map((e) => _ColumnDescription(
             typeId: e.type.oid ?? 0,
-            tableName: e.tableName ?? '',
             columnName: e.columnName ?? '',
           ))
       .toList();
@@ -267,9 +266,8 @@ class _PostgreSQLResultRow extends UnmodifiableListView
 
   @override
   late final columnDescriptions = _row.schema.columns
-      .map((e) => ColumnDescription(
+      .map((e) => _ColumnDescription(
             typeId: e.type.oid ?? 0,
-            tableName: e.tableName ?? '',
             columnName: e.columnName ?? '',
           ))
       .toList();
@@ -288,18 +286,7 @@ class _PostgreSQLResultRow extends UnmodifiableListView
 
   @override
   Map<String, Map<String, dynamic>> toTableColumnMap() {
-    final tables = <String, Map<String, dynamic>>{};
-
-    for (final (i, col) in _row.schema.columns.indexed) {
-      final tableName = col.tableName;
-      final columnName = col.columnName;
-
-      if (tableName != null && columnName != null) {
-        tables.putIfAbsent(tableName, () => {})[columnName] = _row[i];
-      }
-    }
-
-    return tables;
+    throw UnimplementedError('toTableColumnMap is not supported in v3');
   }
 }
 
@@ -310,4 +297,21 @@ class _PostgreSQLExecutionContext
   final PgSession _session;
 
   _PostgreSQLExecutionContext(this._session);
+}
+
+class _ColumnDescription implements ColumnDescription {
+  @override
+  final String columnName;
+
+  @override
+  String get tableName =>
+      throw UnimplementedError('table name is resolved in v3');
+
+  @override
+  final int typeId;
+
+  _ColumnDescription({
+    required this.columnName,
+    required this.typeId,
+  });
 }

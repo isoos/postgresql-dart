@@ -260,7 +260,6 @@ final class PgResultSchema {
 
 final class PgResultColumn {
   final PgDataType type;
-  final String? tableName;
   final int? tableOid;
   final String? columnName;
   final int? columnOid;
@@ -268,7 +267,6 @@ final class PgResultColumn {
 
   PgResultColumn({
     required this.type,
-    this.tableName,
     this.tableOid,
     this.columnName,
     this.columnOid,
@@ -278,11 +276,7 @@ final class PgResultColumn {
   @override
   String toString() {
     final buffer = StringBuffer('${type.name} ');
-    if (tableName != null && tableName != '') {
-      buffer
-        ..write(tableName)
-        ..write('.');
-    } else if (tableOid != null && tableOid != 0) {
+    if (tableOid != null && tableOid != 0) {
       buffer
         ..write('@$tableOid')
         ..write('.');

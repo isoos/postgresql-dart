@@ -630,12 +630,11 @@ class _PgResultStreamSubscription
         final schema = _resultSchema = PgResultSchema([
           for (final field in message.fieldDescriptions)
             PgResultColumn(
-              type: PgDataType.byTypeOid[field.typeId] ?? PgDataType.byteArray,
-              tableName: field.tableName,
-              columnName: field.columnName,
-              columnOid: field.columnID,
-              tableOid: field.tableID,
-              binaryEncoding: field.formatCode != 0,
+              type: PgDataType.byTypeOid[field.typeOid] ?? PgDataType.byteArray,
+              columnName: field.fieldName,
+              columnOid: field.columnOid,
+              tableOid: field.tableOid,
+              binaryEncoding: field.isBinaryEncoding,
             ),
         ]);
         _schema.complete(schema);

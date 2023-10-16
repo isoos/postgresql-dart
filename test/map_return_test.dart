@@ -129,7 +129,7 @@ void main() {
           '': {'?column?': 1}
         }
       ]);
-    });
+    }, skip: server.skippedOnV3('mappedResultsQuery is a removed feature'));
   });
 }
 
