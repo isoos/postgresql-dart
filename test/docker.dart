@@ -91,9 +91,12 @@ class PostgresServer {
 
   Future<PostgreSQLConnection> newPostgreSQLConnection({
     bool useSSL = false,
+    bool allowClearTextPassword = false,
     ReplicationMode replicationMode = ReplicationMode.none,
+    PgEndpoint? endpoint,
+    Duration? connectTimeout,
   }) async {
-    final e = await endpoint();
+    final e = endpoint ?? await this.endpoint();
 
     if (_useV3) {
       return LegacyPostgreSQLConnection(
@@ -102,10 +105,12 @@ class PostgresServer {
           onBadSslCertificate: (_) => true,
           replicationMode: replicationMode,
           allowSuperfluousParameters: true,
+          connectTimeout: connectTimeout,
         ),
       );
     }
 
+    // ignore: deprecated_member_use_from_same_package
     return PostgreSQLConnection(
       e.host,
       e.port,
@@ -114,6 +119,8 @@ class PostgresServer {
       password: e.password,
       useSSL: useSSL,
       replicationMode: replicationMode,
+      allowClearTextPassword: allowClearTextPassword,
+      timeoutInSeconds: connectTimeout?.inSeconds ?? 30,
     );
   }
 }
@@ -123,20 +130,30 @@ void withPostgresServer(
   String name,
   void Function(PostgresServer server) fn, {
   Iterable<String>? initSqls,
+  String? pgHbaConfContent,
 }) {
   void setupGroup(bool useV3) {
     group(useV3 ? '$name v3' : name, () {
       final server = PostgresServer(useV3: useV3);
+      Directory? tempDir;
 
       setUpAll(() async {
         try {
           final port = await selectFreePort();
+          String? pgHbaConfPath;
+          if (pgHbaConfContent != null) {
+            tempDir = await Directory.systemTemp
+                .createTemp('postgres-dart-test-$port');
+            pgHbaConfPath = p.join(tempDir!.path, 'pg_hba.conf');
+            await File(pgHbaConfPath).writeAsString(pgHbaConfContent);
+          }
 
           final containerName = 'postgres-dart-test-$port';
           await _startPostgresContainer(
             port: port,
             containerName: containerName,
             initSqls: initSqls ?? const <String>[],
+            pgHbaConfPath: pgHbaConfPath,
           );
 
           server._containerName.complete(containerName);
@@ -152,6 +169,7 @@ void withPostgresServer(
         final containerName = await server._containerName.future;
         await Process.run('docker', ['stop', containerName]);
         await Process.run('docker', ['kill', containerName]);
+        await tempDir?.delete(recursive: true);
       });
 
       fn(server);
@@ -177,6 +195,7 @@ Future<void> _startPostgresContainer({
   required int port,
   required String containerName,
   required Iterable<String> initSqls,
+  String? pgHbaConfPath,
 }) async {
   final isRunning = await _isPostgresContainerRunning(containerName);
   if (isRunning) {
@@ -200,7 +219,7 @@ Future<void> _startPostgresContainer({
       'ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem',
       'ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key',
     ],
-    pgHbaConfPath: p.join(configPath, 'pg_hba.conf'),
+    pgHbaConfPath: pgHbaConfPath ?? p.join(configPath, 'pg_hba.conf'),
     postgresqlConfPath: p.join(configPath, 'postgresql.conf'),
   );
 

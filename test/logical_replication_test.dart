@@ -29,6 +29,7 @@ void main() {
     final truncateTable = 'test.temp_truncate_table';
 
     setUpAll(() async {
+      // ignore: deprecated_member_use_from_same_package
       replicationConn = PostgreSQLConnection(
         'localhost',
         await server.port,
