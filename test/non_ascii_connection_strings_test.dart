@@ -43,6 +43,7 @@ void main() {
     PostgreSQLConnection? conn;
 
     setUp(() async {
+      // ignore: deprecated_member_use_from_same_package
       conn = PostgreSQLConnection('localhost', port, db,
           username: user, password: password, allowClearTextPassword: true);
       await conn!.open();
@@ -87,6 +88,7 @@ void main() {
     PostgreSQLConnection? conn;
 
     setUp(() async {
+      // ignore: deprecated_member_use_from_same_package
       conn = PostgreSQLConnection(
         'localhost',
         port,
@@ -136,6 +138,7 @@ void main() {
     PostgreSQLConnection? conn;
 
     setUp(() async {
+      // ignore: deprecated_member_use_from_same_package
       conn = PostgreSQLConnection(
         'localhost',
         port,

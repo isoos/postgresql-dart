@@ -46,6 +46,7 @@ class PostgreSQLConnection extends Object
   /// [timeZone] is the timezone the connection is in. Defaults to 'UTC'.
   /// [useSSL] when true, uses a secure socket when connecting to a PostgreSQL database.
   /// [allowClearTextPassword] when true, allows sending the password during authentication in clear text. Use only when required by the database server and under encrypted connections, this feature may lead to security issues.
+  @Deprecated('Use PgConnection (v3) instead')
   PostgreSQLConnection(
     this.host,
     this.port,
