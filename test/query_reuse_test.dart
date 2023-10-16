@@ -491,7 +491,7 @@ void main() {
             .query(string, substitutionValues: {'i1': 'foo', 'i2': 'bar'});
 
         expect(true, false);
-      } on PostgreSQLException {
+      } on PgException {
         // ignore
       }
 

@@ -47,7 +47,7 @@ class PostgresTextEncoder extends Converter<Object, String> {
 
     // TODO: use custom type encoders
 
-    throw PostgreSQLException("Could not infer type of value '$input'.");
+    throw PgException("Could not infer type of value '$input'.");
   }
 
   String _encodeString(String text, bool escapeStrings) {
@@ -213,7 +213,7 @@ class PostgresTextEncoder extends Converter<Object, String> {
       }).join(',')}}';
     }
 
-    throw PostgreSQLException("Could not infer array type of value '$value'.");
+    throw PgException("Could not infer array type of value '$value'.");
   }
 }
 

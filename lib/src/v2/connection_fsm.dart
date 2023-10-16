@@ -69,8 +69,8 @@ class _PostgreSQLConnectionStateSocketConnected
 
   @override
   _PostgreSQLConnectionState onMessage(ServerMessage message) {
-    completer.completeError(PostgreSQLException(
-        'Unsupported message "$message", closing connection.'));
+    completer.completeError(
+        PgException('Unsupported message "$message", closing connection.'));
 
     return _PostgreSQLConnectionStateClosed();
   }
@@ -122,7 +122,7 @@ class _PostgreSQLConnectionStateAuthenticating
           // this means the server is requesting an md5 challenge
           // so the password must not be null
           if (connection!.password == null) {
-            completer.completeError(PostgreSQLException(
+            completer.completeError(PgException(
               'Password is required for "${connection!.username}" user to establish a connection',
             ));
             break;
@@ -136,7 +136,7 @@ class _PostgreSQLConnectionStateAuthenticating
                 _authConnection(), AuthenticationScheme.clear);
             continue authMsg;
           } else {
-            completer.completeError(PostgreSQLException(
+            completer.completeError(PgException(
                 'type ${message.type} connections disabled. Set AllowClearTextPassword flag on PostgreSQLConnection to enable this feature.'));
             break;
           }
@@ -144,7 +144,7 @@ class _PostgreSQLConnectionStateAuthenticating
           // this means the server is requesting a scram-sha-256 challenge
           // so the password must not be null
           if (connection!.password == null) {
-            completer.completeError(PostgreSQLException(
+            completer.completeError(PgException(
               'Password is required for "${connection!.username}" user to establish a connection',
             ));
             break;
@@ -166,7 +166,7 @@ class _PostgreSQLConnectionStateAuthenticating
           }
       }
 
-      completer.completeError(PostgreSQLException(
+      completer.completeError(PgException(
           'Unsupported authentication type ${message.type}, closing connection.'));
     } else if (message is ParameterStatusMessage) {
       connection!.settings[message.name] = message.value;
@@ -280,7 +280,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
   _PostgreSQLConnectionStateBusy(this.query);
 
   Query<dynamic> query;
-  PostgreSQLException? returningException;
+  PgException? returningException;
   int rowsAffected = 0;
 
   @override
