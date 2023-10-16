@@ -764,7 +764,7 @@ void main() {
       } on PgException catch (e) {
         expect(e.toString(), contains('connection is not open'));
       }
-    });
+    }, skip: server.skippedOnV3('v3 does not need explicit opening'));
 
     test(
         'Queue size, should be 0 on open, >0 if queries added and 0 again after queries executed',

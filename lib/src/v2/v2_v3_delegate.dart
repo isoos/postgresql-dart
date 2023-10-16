@@ -41,53 +41,7 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
       {Map<String, dynamic>? substitutionValues,
       bool? allowReuse,
       int? timeoutInSeconds}) async {
-    final rs = await query(
-      fmtString,
-      substitutionValues: substitutionValues,
-      allowReuse: allowReuse ?? false,
-      timeoutInSeconds: timeoutInSeconds,
-    );
-
-    // Load table names which are not returned by Postgres reliably. The v2
-    // implementation used to do this with its own cache, the v3 API doesn't do
-    // it at all and defers that logic to the user.
-    final raw = rs._result;
-    final tableOids = raw.schema.columns
-        .map((c) => c.tableOid)
-        .where((id) => id != null && id > 0)
-        .toList()
-      ..sort();
-
-    if (tableOids.isEmpty) {
-      return rs.map((row) => row.toTableColumnMap()).toList();
-    }
-
-    final oidToName = <int, String>{};
-    final oidResults = await query(
-      "SELECT oid::int8, relname FROM pg_class WHERE relkind='r' AND oid = ANY(@ids:_int8::oid[])",
-      substitutionValues: {'ids': tableOids},
-    );
-    for (final row in oidResults) {
-      oidToName[row[0]] = row[1];
-    }
-
-    final results = <Map<String, Map<String, dynamic>>>[];
-    for (final row in raw) {
-      final tables = <String, Map<String, dynamic>>{};
-
-      for (final (i, col) in row.schema.columns.indexed) {
-        final tableName = oidToName[col.tableOid];
-        final columnName = col.columnName;
-
-        if (tableName != null && columnName != null) {
-          tables.putIfAbsent(tableName, () => {})[columnName] = row[i];
-        }
-      }
-
-      results.add(tables);
-    }
-
-    return results;
+    throw UnimplementedError('table name is not resolved in v3');
   }
 
   @override
@@ -274,7 +228,7 @@ class _PostgreSQLResultRow extends UnmodifiableListView
 
   @override
   Map<String, Map<String, dynamic>> toTableColumnMap() {
-    throw UnimplementedError('toTableColumnMap is not supported in v3');
+    throw UnimplementedError('table name is not resolved in v3');
   }
 }
 
@@ -293,7 +247,7 @@ class _ColumnDescription implements ColumnDescription {
 
   @override
   String get tableName =>
-      throw UnimplementedError('table name is resolved in v3');
+      throw UnimplementedError('table name is not resolved in v3');
 
   @override
   final int typeId;

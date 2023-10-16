@@ -49,7 +49,7 @@ void main() {
           't': {'id': 3, 'name': 'c'}
         },
       ]);
-    });
+    }, skip: server.skippedOnV3('table names are not resolved'));
 
     test('Get row map by with specified columns', () async {
       final results = await connection
@@ -79,7 +79,7 @@ void main() {
           't': {'name': 'a'}
         },
       ]);
-    });
+    }, skip: server.skippedOnV3('table names are not resolved'));
 
     test('Get row with joined row', () async {
       final results = await connection.mappedResultsQuery(
@@ -102,7 +102,7 @@ void main() {
           'u': {'name': null, 'id': null, 't_id': null}
         }
       ]);
-    });
+    }, skip: server.skippedOnV3('table names are not resolved'));
 
     test('Table names get cached', () async {
       clearOidQueryCount(connection);
