@@ -7,13 +7,11 @@ import 'package:async/async.dart';
 import 'package:charcode/ascii.dart';
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart';
-import 'package:postgres/postgres.dart';
 import 'package:stream_channel/stream_channel.dart';
 
+import '../../postgres.dart';
 import '../auth/auth.dart';
 import '../binary_codec.dart';
-import '../exceptions.dart';
-import '../replication.dart';
 import '../text_codec.dart';
 import 'protocol.dart';
 import 'query_description.dart';

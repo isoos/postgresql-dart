@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:pool/pool.dart';
-import 'package:postgres/postgres.dart';
 
+import '../../postgres.dart';
 import 'connection.dart';
 
 class PoolImplementation implements PgPool {

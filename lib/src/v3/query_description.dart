@@ -1,5 +1,4 @@
-import 'package:postgres/postgres.dart';
-
+import '../../postgres.dart';
 import 'variable_tokenizer.dart';
 
 class InternalQueryDescription implements PgSql {

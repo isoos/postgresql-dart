@@ -3,13 +3,10 @@ import 'dart:convert';
 
 import 'dart:io';
 
-import 'package:postgres/postgres.dart';
-import 'package:postgres/src/client_messages.dart';
-import 'package:postgres/src/exceptions.dart';
-import 'package:postgres/src/replication.dart';
-import 'package:postgres/src/server_messages.dart';
-import 'package:postgres/src/v2/connection.dart';
-import 'package:postgres/src/v2/execution_context.dart';
+import '../../messages.dart';
+import '../../postgres.dart';
+import 'connection.dart';
+import 'execution_context.dart';
 
 mixin _DelegatingContext implements PostgreSQLExecutionContext {
   PgSession? get _session;
@@ -119,7 +116,7 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
   int get queueSize => throw UnimplementedError();
 }
 
-class V3BackedPostgreSQLConnection
+class LegacyPostgreSQLConnection
     with _DelegatingContext
     implements PostgreSQLConnection {
   final PgEndpoint _endpoint;
@@ -127,7 +124,7 @@ class V3BackedPostgreSQLConnection
   PgConnection? _connection;
   bool _hasConnectedPreviously = false;
 
-  V3BackedPostgreSQLConnection(this._endpoint, this._sessionSettings);
+  LegacyPostgreSQLConnection(this._endpoint, this._sessionSettings);
 
   @override
   PgSession? get _session => _connection;
