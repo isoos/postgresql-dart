@@ -1,8 +1,8 @@
 // ignore_for_file: unawaited_futures
 import 'dart:async';
 
-import 'package:postgres/postgres.dart';
 import 'package:postgres/postgres_v3_experimental.dart';
+import 'package:postgres/src/exceptions.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -175,7 +175,7 @@ void main() {
       await conn.runTx((session) async {
         expect(
           session.execute('select 1;'),
-          throwsA(isA<PostgreSQLException>().having((e) => e.message, 'message',
+          throwsA(isA<PgException>().having((e) => e.message, 'message',
               contains('did you forget to await a statement?'))),
         );
       });
@@ -271,7 +271,7 @@ void main() {
             queryMode: QueryMode.simple));
         try {
           await ctx.execute("INSERT INTO t (id) VALUES ('foo')");
-        } on PostgreSQLException {
+        } on PgException {
           // expected
         }
 
@@ -299,7 +299,7 @@ void main() {
             .catchError((_) => rs);
         try {
           await ctx.execute('INSERT INTO t (id) VALUES (2)');
-        } on PostgreSQLException {
+        } on PgException {
           // expected
         }
       }).catchError((e) => transactionError = e);
@@ -338,7 +338,7 @@ void main() {
           await c.execute('INSERT INTO t (id) VALUES (1)');
         });
         fail('Should have thrown an exception');
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('unique constraint'));
       }
 
@@ -401,7 +401,7 @@ void main() {
           await c.execute('INSERT INTO t (id) VALUES (1)');
         });
         expect(true, false);
-      } on PostgreSQLException {
+      } on PgException {
         // ignore
       }
 
@@ -518,7 +518,7 @@ void main() {
           await c.execute('INSERT INTO t (id) VALUES (2)');
         });
         fail('unreachable');
-      } on PostgreSQLException {
+      } on PgException {
         // ignore
       }
 
@@ -541,7 +541,7 @@ void main() {
           await c.execute('INSERT INTO t (id) VALUES (2)');
         });
         fail('unreachable');
-      } on PostgreSQLException {
+      } on PgException {
         // ignore
       }
 
