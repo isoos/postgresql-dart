@@ -33,7 +33,7 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
       );
       return rs.affectedRows;
     } else {
-      throw PostgreSQLException(
+      throw PgServerException(
           'Attempting to execute query, but connection is not open.');
     }
   }

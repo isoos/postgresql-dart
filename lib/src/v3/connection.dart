@@ -86,10 +86,10 @@ abstract class _PgSessionBase implements PgSession {
 
   void _checkActive() {
     if (_sessionClosed) {
-      throw PostgreSQLException(
+      throw PgException(
           'Session or transaction has already finished, did you forget to await a statement?');
     } else if (_connection._isClosing) {
-      throw PostgreSQLException('Connection is closing down');
+      throw PgException('Connection is closing down');
     }
   }
 
@@ -150,7 +150,7 @@ abstract class _PgSessionBase implements PgSession {
     }
 
     if (isSimple && variables.isNotEmpty) {
-      throw PostgreSQLException('Parameterized queries are not supported when '
+      throw PgException('Parameterized queries are not supported when '
           'using the Simple Query Protocol');
     }
 
@@ -260,14 +260,14 @@ class PgConnectionImplementation extends _PgSessionBase
     final subscription = socket.listen(
       (data) {
         if (data.length != 1) {
-          sslCompleter.completeError(PostgreSQLException(
+          sslCompleter.completeError(PgException(
               'Could not initialize SSL connection, received unknown byte stream.'));
           return;
         }
 
         sslCompleter.complete(data.first);
       },
-      onDone: () => sslCompleter.completeError(PostgreSQLException(
+      onDone: () => sslCompleter.completeError(PgException(
           'Could not initialize SSL connection, connection closed during handshake.')),
       onError: sslCompleter.completeError,
     );
@@ -297,8 +297,7 @@ class PgConnectionImplementation extends _PgSessionBase
     } else {
       // This server does not support SSL
       if (settings.endpoint.requireSsl) {
-        throw PostgreSQLException(
-            'Server does not support SSL, but it was required.');
+        throw PgException('Server does not support SSL, but it was required.');
       }
 
       // We've listened to the stream already and sockets are single-subscription
@@ -373,7 +372,7 @@ class PgConnectionImplementation extends _PgSessionBase
       } else if (message is NotificationResponseMessage) {
         _channels.deliverNotification(message);
       } else if (message is ErrorResponseMessage) {
-        final exception = PostgreSQLException.fromFields(message.fields);
+        final exception = PgServerException.fromFields(message.fields);
 
         // Close the connection in response to fatal errors or if we get them
         // out of nowhere.
@@ -421,8 +420,7 @@ class PgConnectionImplementation extends _PgSessionBase
 
         // If we have received an error while the transaction was active, it
         // will always be rolled back.
-        if (transaction._transactionException
-            case final PostgreSQLException e) {
+        if (transaction._transactionException case final PgException e) {
           throw e;
         }
 
@@ -442,7 +440,7 @@ class PgConnectionImplementation extends _PgSessionBase
     await _close(false, null);
   }
 
-  Future<void> _close(bool interruptRunning, PostgreSQLException? cause) async {
+  Future<void> _close(bool interruptRunning, PgException? cause) async {
     if (!_isClosing) {
       _isClosing = true;
 
@@ -461,7 +459,7 @@ class PgConnectionImplementation extends _PgSessionBase
     }
   }
 
-  void _closeAfterError([PostgreSQLException? cause]) {
+  void _closeAfterError([PgException? cause]) {
     _close(true, cause);
   }
 }
@@ -607,7 +605,7 @@ class _PgResultStreamSubscription
   }
 
   @override
-  void handleConnectionClosed(PostgreSQLException? dueToException) {
+  void handleConnectionClosed(PgException? dueToException) {
     if (dueToException != null) {
       _controller.addError(dueToException, _trace);
     }
@@ -615,7 +613,7 @@ class _PgResultStreamSubscription
   }
 
   @override
-  void handleError(PostgreSQLException exception) {
+  void handleError(PgException exception) {
     _controller.addError(exception, _trace);
   }
 
@@ -821,7 +819,7 @@ class _TransactionSession extends _PgSessionBase {
   @override
   final PgConnectionImplementation _connection;
 
-  PostgreSQLException? _transactionException;
+  PgException? _transactionException;
 
   _TransactionSession(this._connection);
 
@@ -859,12 +857,12 @@ abstract class _PendingOperation {
 
   /// Handle the connection being closed, either because it has been closed
   /// explicitly or because a fatal exception is interrupting the connection.
-  void handleConnectionClosed(PostgreSQLException? dueToException);
+  void handleConnectionClosed(PgException? dueToException);
 
   /// Handles an [ErrorResponseMessage] in an exception form. If the exception
   /// is severe enough to close the connection, [handleConnectionClosed] will
   /// be called instead.
-  void handleError(PostgreSQLException exception);
+  void handleError(PgException exception);
 
   /// Handles a message from the postgres server. The [message] will never be
   /// a [ErrorResponseMessage] - these are delivered through [handleError] or
@@ -887,17 +885,17 @@ class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
   _WaitForMessage(super.session, this.trace);
 
   @override
-  void handleConnectionClosed(PostgreSQLException? dueToException) {
+  void handleConnectionClosed(PgException? dueToException) {
     result = Result.error(
       dueToException ??
-          PostgreSQLException('Connection closed while waiting for message'),
+          PgException('Connection closed while waiting for message'),
       trace,
     );
     doneWithOperation.complete();
   }
 
   @override
-  void handleError(PostgreSQLException exception) {
+  void handleError(PgException exception) {
     result = Result.error(exception, trace);
     // We're not done yet! Exceptions delivered through handleError aren't
     // fatal, so we'll continue waiting for a ReadyForQuery message.
@@ -944,16 +942,15 @@ class _AuthenticationProcedure extends _PendingOperation {
   }
 
   @override
-  void handleConnectionClosed(PostgreSQLException? dueToException) {
+  void handleConnectionClosed(PgException? dueToException) {
     _done.completeError(
-      dueToException ??
-          PostgreSQLException('Connection closed during authentication'),
+      dueToException ?? PgException('Connection closed during authentication'),
       _trace,
     );
   }
 
   @override
-  void handleError(PostgreSQLException exception) {
+  void handleError(PgException exception) {
     _done.completeError(exception, _trace);
 
     // If the authentication procedure fails, the connection is unusable - so we
@@ -964,8 +961,7 @@ class _AuthenticationProcedure extends _PendingOperation {
   @override
   Future<void> handleMessage(ServerMessage message) async {
     if (message is ErrorResponseMessage) {
-      _done.completeError(
-          PostgreSQLException.fromFields(message.fields), _trace);
+      _done.completeError(PgServerException.fromFields(message.fields), _trace);
     } else if (message is AuthenticationMessage) {
       switch (message.type) {
         case AuthenticationMessage.KindOK:
@@ -976,9 +972,8 @@ class _AuthenticationProcedure extends _PendingOperation {
         case AuthenticationMessage.KindClearTextPassword:
           if (!connection._settings.endpoint.allowCleartextPassword) {
             _done.completeError(
-              PostgreSQLException(
-                  'Refused to send clear text password to server',
-                  stackTrace: StackTrace.current),
+              PgServerException(
+                  'Refused to send clear text password to server'),
               _trace,
             );
             return;
@@ -994,8 +989,7 @@ class _AuthenticationProcedure extends _PendingOperation {
           _authenticator.onMessage(message);
           break;
         default:
-          _done.completeError(
-              PostgreSQLException('Unhandled auth mechanism'), _trace);
+          _done.completeError(PgException('Unhandled auth mechanism'), _trace);
       }
     } else if (message is ReadyForQueryMessage) {
       _done.complete();
@@ -1003,7 +997,7 @@ class _AuthenticationProcedure extends _PendingOperation {
   }
 }
 
-extension on PostgreSQLException {
+extension on PgException {
   bool get willAbortConnection {
     return severity == PgSeverity.fatal || severity == PgSeverity.panic;
   }

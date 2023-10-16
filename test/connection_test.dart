@@ -169,9 +169,9 @@ void main() {
       try {
         await conn.open();
       } catch (e) {
-        expect(e, isA<PostgreSQLException>());
+        expect(e, isA<PgException>());
         expect(
-          (e as PostgreSQLException).message,
+          (e as PgException).message,
           contains('Password is required'),
         );
       }
@@ -225,7 +225,7 @@ void main() {
       await conn.open();
 
       final rs = await conn.query('select 1');
-      final errors = <PostgreSQLException>[];
+      final errors = <PgException>[];
       PostgreSQLResult catcher(e) {
         errors.add(e);
         return rs;
@@ -254,7 +254,7 @@ void main() {
       await conn.open();
       final rs = await conn.query('select 1');
 
-      final errors = <PostgreSQLException>[];
+      final errors = <PgException>[];
       PostgreSQLResult catcher(e) {
         errors.add(e);
         return rs;
@@ -371,7 +371,7 @@ void main() {
       try {
         await conn.execute('select 1');
         expect(true, false);
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('connection is not open'));
       }
     });
@@ -384,7 +384,7 @@ void main() {
       try {
         await conn.execute('select 1');
         expect(true, false);
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('connection is not open'));
       }
     });
@@ -400,7 +400,7 @@ void main() {
           await ctx.execute('select 1');
         });
         expect(true, false);
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('connection is not open'));
       }
     });
@@ -415,7 +415,7 @@ void main() {
           await ctx.execute('select 1');
         });
         expect(true, false);
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('connection is not open'));
       }
     });
@@ -428,7 +428,7 @@ void main() {
       try {
         await conn.open();
         expect(true, false);
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('password authentication failed'));
       }
 
@@ -443,7 +443,7 @@ void main() {
       try {
         await conn.open();
         expect(true, false);
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('password authentication failed'));
       }
 
@@ -460,7 +460,7 @@ void main() {
       try {
         await conn.execute('INSERT INTO t (i) VALUES (1)');
         expect(true, false);
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('duplicate key value violates'));
       }
 
@@ -693,7 +693,7 @@ void main() {
       try {
         await conn.execute('select 1');
         expect(true, false);
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('Failed to connect'));
       }
     });
@@ -722,14 +722,14 @@ void main() {
       try {
         await conn.execute('select 1');
         expect(true, false);
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.message, contains('but connection is not open'));
       }
 
       try {
         await conn.open();
         expect(true, false);
-      } on PostgreSQLException {
+      } on PgException {
         // ignore
       }
     });
@@ -741,7 +741,7 @@ void main() {
       try {
         await conn.execute('SELECT 1');
         fail('unreachable');
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.toString(), contains('connection is not open'));
       }
     });
@@ -751,7 +751,7 @@ void main() {
       try {
         await conn.query('SELECT 1');
         fail('unreachable');
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.toString(), contains('connection is not open'));
       }
     });
@@ -761,7 +761,7 @@ void main() {
       try {
         await conn.mappedResultsQuery('SELECT 1');
         fail('unreachable');
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.toString(), contains('connection is not open'));
       }
     });
@@ -792,14 +792,14 @@ Future expectConnectionIsInvalid(PostgreSQLConnection conn) async {
   try {
     await conn.execute('select 1');
     expect(true, false);
-  } on PostgreSQLException catch (e) {
+  } on PgException catch (e) {
     expect(e.message, contains('connection is not open'));
   }
 
   try {
     await conn.open();
     expect(true, false);
-  } on PostgreSQLException catch (e) {
+  } on PgException catch (e) {
     expect(e.message, contains('Attempting to reopen a closed connection'));
   }
 }

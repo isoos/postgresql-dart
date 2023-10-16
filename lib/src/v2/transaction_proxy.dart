@@ -86,7 +86,7 @@ class _TransactionProxy extends Object
       unawaited(q.future.catchError((_) {}));
     }
 
-    final err = PostgreSQLException('Query failed prior to execution. '
+    final err = PgException('Query failed prior to execution. '
         "This query's transaction encountered an error earlier in the transaction "
         'that prevented this query from executing.');
     _queue.cancel(err);

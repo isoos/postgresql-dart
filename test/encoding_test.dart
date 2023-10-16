@@ -616,7 +616,7 @@ void main() {
       try {
         encoder.convert(Object());
         fail('unreachable');
-      } on PostgreSQLException catch (e) {
+      } on PgException catch (e) {
         expect(e.toString(), contains('Could not infer type'));
       }
     });

@@ -120,7 +120,7 @@ class Query<T> {
     socket.add(bytes);
   }
 
-  PostgreSQLException? validateParameters(List<int> parameterTypeIDs) {
+  PgException? validateParameters(List<int> parameterTypeIDs) {
     final actualParameterTypeCodeIterator = parameterTypeIDs.iterator;
     final parametersAreMismatched =
         _specifiedParameterTypeCodes.map((specifiedType) {
@@ -136,7 +136,7 @@ class Query<T> {
     }).any((v) => v == false);
 
     if (parametersAreMismatched) {
-      return PostgreSQLException(
+      return PgException(
           'Specified parameter types do not match column parameter types in query $statement');
     }
 

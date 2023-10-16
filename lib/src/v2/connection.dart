@@ -26,6 +26,8 @@ part 'connection_fsm.dart';
 
 part 'transaction_proxy.dart';
 
+typedef PostgreSQLException = PgServerException;
+
 /// Instances of this class connect to and communicate with a PostgreSQL database.
 ///
 /// The primary type of this library, a connection is responsible for connecting to databases and executing queries.
@@ -182,7 +184,7 @@ class PostgreSQLConnection extends Object
   /// opened and this method is called, an exception will be thrown.
   Future open() async {
     if (_hasConnectedPreviously) {
-      throw PostgreSQLException(
+      throw PgException(
           'Attempting to reopen a closed connection. Create a instance instead.');
     }
 
@@ -212,7 +214,7 @@ class PostgreSQLConnection extends Object
       await connectionComplete.future
           .timeout(Duration(seconds: timeoutInSeconds));
     } on TimeoutException catch (e, st) {
-      final err = PostgreSQLException(
+      final err = PgException(
           'Failed to connect to database $host:$port/$databaseName failed to connect.');
       await _close(err, st);
       rethrow;
@@ -235,7 +237,7 @@ class PostgreSQLConnection extends Object
   /// does not interfere with any running queries or transactions.
   void addMessage(ClientMessage message) {
     if (isClosed) {
-      throw PostgreSQLException(
+      throw PgException(
           'Attempting to add a message, but connection is not open.');
     }
     _socket!.add(message.asBytes(encoding: encoding));
@@ -274,7 +276,7 @@ class PostgreSQLConnection extends Object
     int? commitTimeoutInSeconds,
   }) async {
     if (isClosed) {
-      throw PostgreSQLException(
+      throw PgException(
           'Attempting to execute query, but connection is not open.');
     }
 
@@ -351,14 +353,14 @@ class PostgreSQLConnection extends Object
 
     originalSocket.listen((data) {
       if (data.length != 1) {
-        sslCompleter.completeError(PostgreSQLException(
+        sslCompleter.completeError(PgException(
             'Could not initialize SSL connection, received unknown byte stream.'));
         return;
       }
 
       sslCompleter.complete(data.first);
     },
-        onDone: () => sslCompleter.completeError(PostgreSQLException(
+        onDone: () => sslCompleter.completeError(PgException(
             'Could not initialize SSL connection, connection closed during handshake.')),
         onError: sslCompleter.completeError);
 
@@ -371,7 +373,7 @@ class PostgreSQLConnection extends Object
         .timeout(Duration(seconds: timeout))
         .then((responseByte) {
       if (responseByte != 83) {
-        throw PostgreSQLException(
+        throw PgException(
             'The database server is not accepting SSL connections.');
       }
 
@@ -505,7 +507,7 @@ abstract mixin class _PostgreSQLExecutionContextMixin
     }
 
     if (_connection.isClosed) {
-      throw PostgreSQLException(
+      throw PgException(
           'Attempting to execute query, but connection is not open.');
     }
 
@@ -582,7 +584,7 @@ abstract mixin class _PostgreSQLExecutionContextMixin
     required bool onlyReturnAffectedRows,
   }) async {
     if (_connection.isClosed) {
-      throw PostgreSQLException(
+      throw PgException(
           'Attempting to execute query, but connection is not open.');
     }
 
