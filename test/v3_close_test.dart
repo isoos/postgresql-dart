@@ -1,4 +1,3 @@
-import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
@@ -72,5 +71,5 @@ void main() {
   });
 }
 
-final _isPostgresException = isA<PostgreSQLException>();
+final _isPostgresException = isA<PgException>();
 final _throwsPostgresException = throwsA(_isPostgresException);

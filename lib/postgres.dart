@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
-import 'package:postgres/src/replication.dart';
 import 'package:stream_channel/stream_channel.dart';
 
+import 'src/replication.dart';
 import 'src/types.dart';
 import 'src/v3/connection.dart';
 import 'src/v3/pool.dart';
@@ -13,6 +13,8 @@ import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
 
 export 'src/client_messages.dart' show PgTypedParameter;
+export 'src/exceptions.dart';
+export 'src/replication.dart';
 export 'src/types.dart';
 
 abstract class PgPool implements PgSession, PgSessionExecutor {

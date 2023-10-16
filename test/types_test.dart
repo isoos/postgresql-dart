@@ -1,4 +1,4 @@
-import 'package:postgres/legacy.dart';
+import 'package:postgres/postgres.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 

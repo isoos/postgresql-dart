@@ -3,14 +3,14 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
-import 'package:postgres/src/binary_codec.dart';
-import 'package:postgres/src/text_codec.dart';
-import 'package:postgres/src/time_converters.dart';
 
+import 'binary_codec.dart';
 import 'buffer.dart';
 import 'constants.dart';
 import 'replication.dart';
 import 'shared_messages.dart';
+import 'text_codec.dart';
+import 'time_converters.dart';
 import 'types.dart';
 
 abstract class ClientMessage extends BaseMessage {

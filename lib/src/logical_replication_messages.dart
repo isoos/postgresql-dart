@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/buffer.dart';
 
 import 'binary_codec.dart';
+import 'buffer.dart';
 import 'server_messages.dart';
 import 'shared_messages.dart';
 import 'time_converters.dart';

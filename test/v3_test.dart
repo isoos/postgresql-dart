@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:async/async.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/exceptions.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
 

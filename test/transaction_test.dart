@@ -2,7 +2,6 @@
 import 'dart:async';
 
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/exceptions.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
