@@ -273,16 +273,7 @@ class _PostgreSQLResultRow extends UnmodifiableListView
       .toList();
 
   @override
-  Map<String, dynamic> toColumnMap() {
-    final map = <String, dynamic>{};
-    for (final (i, col) in _row.schema.columns.indexed) {
-      if (col.columnName case final String name) {
-        map[name] = _row[i];
-      }
-    }
-
-    return map;
-  }
+  Map<String, dynamic> toColumnMap() => _row.toColumnMap();
 
   @override
   Map<String, Map<String, dynamic>> toTableColumnMap() {
