@@ -1,4 +1,4 @@
-import 'package:postgres/postgres.dart';
+import 'package:postgres/legacy.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';

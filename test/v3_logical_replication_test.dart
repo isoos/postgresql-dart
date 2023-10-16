@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:async/async.dart';
+import 'package:postgres/legacy.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart';
-import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
