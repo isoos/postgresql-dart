@@ -875,6 +875,19 @@ class _ResultRow extends UnmodifiableListView<Object?> implements PgResultRow {
   final PgResultSchema schema;
 
   _ResultRow(this.schema, super.source);
+
+  @override
+  Map<String, dynamic> toColumnMap() {
+    final map = <String, dynamic>{};
+    for (final (i, col) in schema.columns.indexed) {
+      if (col.columnName case final String name) {
+        map[name] = this[i];
+      } else {
+        map['[$i]'] = this[i];
+      }
+    }
+    return map;
+  }
 }
 
 class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {

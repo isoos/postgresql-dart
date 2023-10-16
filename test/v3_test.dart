@@ -30,9 +30,11 @@ void main() {
     tearDown(() => connection.close());
 
     test('simple queries', () async {
-      expect(await connection.execute("SELECT 'dart', 42, NULL"), [
+      final rs = await connection.execute("SELECT 'dart', 42, NULL");
+      expect(rs, [
         ['dart', 42, null]
       ]);
+      expect(rs.single.toColumnMap(), {'?column?': null});
     });
 
     test('statement without rows', () async {
@@ -143,6 +145,7 @@ void main() {
       expect(rows, [
         [10, 12]
       ]);
+      expect(rows.single.toColumnMap(), {'a': 10, 'b': 12});
     });
 
     test('can use mapped queries with json-contains operator', () async {
