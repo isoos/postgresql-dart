@@ -1,4 +1,4 @@
-import 'package:postgres/postgres_v3_experimental.dart';
+import 'package:postgres/postgres.dart';
 
 import 'variable_tokenizer.dart';
 

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:docker_process/containers/postgres.dart';
 import 'package:path/path.dart' as p;
-import 'package:postgres/postgres.dart';
+import 'package:postgres/legacy.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 

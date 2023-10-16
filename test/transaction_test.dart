@@ -1,7 +1,7 @@
 // ignore_for_file: unawaited_futures
 import 'dart:async';
 
-import 'package:postgres/postgres_v3_experimental.dart';
+import 'package:postgres/postgres.dart';
 import 'package:postgres/src/exceptions.dart';
 import 'package:test/test.dart';
 

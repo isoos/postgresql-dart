@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:postgres/postgres.dart';
+import 'package:postgres/legacy.dart';
 import 'package:postgres/src/binary_codec.dart';
 import 'package:test/test.dart';
 

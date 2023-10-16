@@ -1,5 +1,5 @@
+import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
-import 'package:postgres/postgres_v3_experimental.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';

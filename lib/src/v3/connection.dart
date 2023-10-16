@@ -7,7 +7,7 @@ import 'package:async/async.dart';
 import 'package:charcode/ascii.dart';
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart';
-import 'package:postgres/postgres_v3_experimental.dart';
+import 'package:postgres/postgres.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../auth/auth.dart';

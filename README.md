@@ -11,34 +11,35 @@ This driver uses the more efficient and secure extended query format of the Post
 Create `PostgreSQLConnection`s and `open` them:
 
 ```dart
-var connection = PostgreSQLConnection("localhost", 5432, "dart_test", username: "dart", password: "dart");
-await connection.open();
+  final endpoint = PgEndpoint(
+    host: 'localhost',
+    database: 'postgres',
+    username: 'user',
+    password: 'pass',
+  );
+  final conn = await PgConnection.open(endpoint);
 ```
 
 Execute queries with `query`:
 
 ```dart
-List<List<dynamic>> results = await connection.query("SELECT a, b FROM table WHERE a = @aValue", substitutionValues: {
+final results = await conn.execute('SELECT a, b FROM table WHERE a = @aValue', parameters: {
     "aValue" : 3
 });
 
 for (final row in results) {
-  var a = row[0];
-  var b = row[1];
-
-} 
+  final col1 = row[0];
+  final col2 = row[1];
+}
 ```
 
-Return rows as maps containing table and column names:
+Return rows as maps containing column names:
 
 ```dart
-List<Map<String, Map<String, dynamic>>> results = await connection.mappedResultsQuery(
-  "SELECT t.id, t.name, u.name FROM t LEFT OUTER JOIN u ON t.id=u.t_id");
+final results = await conn.execute('SELECT t.id, t.name, u.name FROM t');
 
 for (final row in results) {
-  var tID = row["t"]["id"];
-  var tName = row["t"]["name"];
-  var uName = row["u"]["name"];
+  print(row.toColumnMap());
 }
 ```
 

@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'dart:io';
 
-import 'package:postgres/postgres_v3_experimental.dart';
+import 'package:postgres/postgres.dart';
 import 'package:postgres/src/client_messages.dart';
 import 'package:postgres/src/exceptions.dart';
 import 'package:postgres/src/replication.dart';
