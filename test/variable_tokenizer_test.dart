@@ -21,34 +21,34 @@ void main() {
 
     expect(
       desc.bindParameters(
-          {'x': 4, 'y': true, 'z': PgTypedParameter(DataType.text, 'z')}),
+          {'x': 4, 'y': true, 'z': TypedValue(DataType.text, 'z')}),
       [
-        PgTypedParameter(DataType.bigInteger, 4),
-        PgTypedParameter(DataType.boolean, true),
-        PgTypedParameter(DataType.text, 'z'),
+        TypedValue(DataType.bigInteger, 4),
+        TypedValue(DataType.boolean, true),
+        TypedValue(DataType.text, 'z'),
       ],
     );
     expect(desc.bindParameters({'x': 4, 'y': true, 'z': 'z'}), [
-      PgTypedParameter(DataType.bigInteger, 4),
-      PgTypedParameter(DataType.boolean, true),
-      PgTypedParameter(DataType.unspecified, 'z'),
+      TypedValue(DataType.bigInteger, 4),
+      TypedValue(DataType.boolean, true),
+      TypedValue(DataType.unspecified, 'z'),
     ]);
 
     // Make sure we can still bind by index
     expect(
-      desc.bindParameters([1, true, PgTypedParameter(DataType.text, 'z')]),
+      desc.bindParameters([1, true, TypedValue(DataType.text, 'z')]),
       [
-        PgTypedParameter(DataType.bigInteger, 1),
-        PgTypedParameter(DataType.boolean, true),
-        PgTypedParameter(DataType.text, 'z'),
+        TypedValue(DataType.bigInteger, 1),
+        TypedValue(DataType.boolean, true),
+        TypedValue(DataType.text, 'z'),
       ],
     );
     expect(
       desc.bindParameters([1, true, 3]),
       [
-        PgTypedParameter(DataType.bigInteger, 1),
-        PgTypedParameter(DataType.boolean, true),
-        PgTypedParameter(DataType.unspecified, 3),
+        TypedValue(DataType.bigInteger, 1),
+        TypedValue(DataType.boolean, true),
+        TypedValue(DataType.unspecified, 3),
       ],
     );
   });

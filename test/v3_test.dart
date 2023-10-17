@@ -196,7 +196,7 @@ void main() {
         await expectLater(
           () => connection.execute(
             PgSql(r'INSERT INTO foo VALUES ($1);'),
-            parameters: [PgTypedParameter(DataType.integer, 1)],
+            parameters: [TypedValue(DataType.integer, 1)],
           ),
           _throwsPostgresException,
         );
@@ -247,7 +247,7 @@ void main() {
         final outValue = await connection.runTx((ctx) async {
           return await ctx.execute(
             PgSql(r'SELECT * FROM t WHERE id = $1 LIMIT 1'),
-            parameters: [PgTypedParameter(DataType.integer, 1)],
+            parameters: [TypedValue(DataType.integer, 1)],
           );
         });
 
@@ -393,7 +393,7 @@ void main() {
         await expectLater(
           () => connection.execute(
             PgSql('SELECT 1'),
-            parameters: [PgTypedParameter(DataType.integer, 1)],
+            parameters: [TypedValue(DataType.integer, 1)],
             queryMode: QueryMode.simple,
           ),
           _throwsPostgresException,

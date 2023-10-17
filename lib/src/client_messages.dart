@@ -187,45 +187,25 @@ class DescribeMessage extends ClientMessage {
   }
 }
 
-class PgTypedParameter {
-  final DataType _type;
-  final Object? _value;
-
-  PgTypedParameter(this._type, this._value);
-
-  late final _hasKnownType = _type != DataType.unspecified;
+extension on TypedValue {
+  bool get _hasKnownType => type != DataType.unspecified;
 
   Uint8List? encodeAsBytes(Encoding encoding) {
     if (_hasKnownType) {
-      final encoder = PostgresBinaryEncoder(_type);
-      return encoder.convert(_value, encoding);
+      final encoder = PostgresBinaryEncoder(type);
+      return encoder.convert(value, encoding);
     }
-    if (_value != null) {
+    if (value != null) {
       const converter = PostgresTextEncoder();
       return castBytes(
-          encoding.encode(converter.convert(_value, escapeStrings: false)));
+          encoding.encode(converter.convert(value, escapeStrings: false)));
     }
     return null;
-  }
-
-  @override
-  int get hashCode => Object.hash(_type, _value);
-
-  @override
-  bool operator ==(Object other) {
-    return other is PgTypedParameter &&
-        other._type == _type &&
-        other._value == _value;
-  }
-
-  @override
-  String toString() {
-    return 'PgTypedParameter($_type, $_value)';
   }
 }
 
 class BindMessage extends ClientMessage {
-  final List<PgTypedParameter> _parameters;
+  final List<TypedValue> _parameters;
   final String _portalName;
   final String _statementName;
 

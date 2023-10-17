@@ -12,7 +12,6 @@ import 'src/v3/pool.dart';
 import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
 
-export 'src/client_messages.dart' show PgTypedParameter;
 export 'src/exceptions.dart';
 export 'src/replication.dart';
 export 'src/types.dart';
@@ -46,7 +45,7 @@ abstract class PgPool implements PgSession, PgSessionExecutor {
 /// constructor. These queries are not intepreted or altered by this package in
 /// any way. If you're using parameter in those queries, you either have to
 /// specify their types in the [PgSql] constructor, or exclusively use
-/// [PgTypedParameter] instances in [PgSession.execute], [PgStatement.bind] and
+/// [TypedValue] instances in [PgSession.execute], [PgStatement.bind] and
 /// [PgStatement.run].
 ///
 /// Alternatively, you can use named variables that will be desugared by this
@@ -56,7 +55,7 @@ class PgSql {
   /// any modification.
   ///
   /// The [types] parameter can optionally be used to pass the types of
-  /// parameters in the query. If they're not set, only [PgTypedParameter]
+  /// parameters in the query. If they're not set, only [TypedValue]
   /// instances can be used when binding values later.
   factory PgSql(String sql, {List<DataType>? types}) =
       InternalQueryDescription.direct;
@@ -113,7 +112,7 @@ abstract class PgSession {
   /// parameters already set. If the types for parameters are already known from
   /// the query, a direct list of values can be passed for [parameters].
   /// Otherwise, the type of parameter types must be made explicit. This can be
-  /// done by passing [PgTypedParameter] objects in a list, or (if a string or
+  /// done by passing [TypedValue] objects in a list, or (if a string or
   /// [PgSql.map] value is passed for [query]), via the names of declared
   /// statements.
   ///
@@ -127,7 +126,7 @@ abstract class PgSession {
   /// parameters already set. If the types for parameters are already known from
   /// the query, a direct list of values can be passed for [parameters].
   /// Otherwise, the type of parameter types must be made explicit. This can be
-  /// done by passing [PgTypedParameter] objects in a list, or (if a string or
+  /// done by passing [TypedValue] objects in a list, or (if a string or
   /// [PgSql.map] value is passed for [query]), via the names of declared
   /// statements.
   ///
