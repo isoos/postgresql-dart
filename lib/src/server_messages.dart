@@ -446,8 +446,8 @@ class ErrorField {
   static const int LineIdentifier = 76;
   static const int RoutineIdentifier = 82;
 
-  static PgSeverity severityFromString(String? str) =>
-      PgSeverity.parseServerString(str);
+  static Severity severityFromString(String? str) =>
+      Severity.parseServerString(str);
 
   final int? identificationToken;
   final String? text;

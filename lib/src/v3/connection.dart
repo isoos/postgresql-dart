@@ -626,7 +626,7 @@ class _PgResultStreamSubscription
         final schema = _resultSchema = PgResultSchema([
           for (final field in message.fieldDescriptions)
             PgResultColumn(
-              type: PgDataType.byTypeOid[field.typeOid] ?? PgDataType.byteArray,
+              type: DataType.byTypeOid[field.typeOid] ?? DataType.byteArray,
               columnName: field.fieldName,
               columnOid: field.columnOid,
               tableOid: field.tableOid,
@@ -805,7 +805,7 @@ class _Channels implements PgChannels {
     final statementCompleter = _notifyStatement ??= Completer()
       ..complete(Future(() async {
         return _connection.prepare(PgSql(r'SELECT pg_notify($1, $2)',
-            types: [PgDataType.text, PgDataType.text]));
+            types: [DataType.text, DataType.text]));
       }));
     final statement = await statementCompleter.future;
 
@@ -1010,7 +1010,7 @@ class _AuthenticationProcedure extends _PendingOperation {
 
 extension on PgException {
   bool get willAbortConnection {
-    return severity == PgSeverity.fatal || severity == PgSeverity.panic;
+    return severity == Severity.fatal || severity == Severity.panic;
   }
 }
 

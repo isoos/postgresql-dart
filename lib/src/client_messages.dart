@@ -129,10 +129,10 @@ class QueryMessage extends ClientMessage {
 class ParseMessage extends ClientMessage {
   final String _statementName;
   final String _statement;
-  final List<PgDataType?> _types;
+  final List<DataType?> _types;
 
   ParseMessage(String statement,
-      {String statementName = '', List<PgDataType?>? types})
+      {String statementName = '', List<DataType?>? types})
       : _statement = statement,
         _statementName = statementName,
         _types = types ?? const [];
@@ -188,12 +188,12 @@ class DescribeMessage extends ClientMessage {
 }
 
 class PgTypedParameter {
-  final PgDataType _type;
+  final DataType _type;
   final Object? _value;
 
   PgTypedParameter(this._type, this._value);
 
-  late final _hasKnownType = _type != PgDataType.unspecified;
+  late final _hasKnownType = _type != DataType.unspecified;
 
   Uint8List? encodeAsBytes(Encoding encoding) {
     if (_hasKnownType) {

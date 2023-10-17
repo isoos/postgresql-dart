@@ -15,7 +15,7 @@ import '../exceptions.dart';
 import '../message_window.dart';
 import '../replication.dart';
 import '../server_messages.dart';
-import '../types.dart' show PgSeverity;
+import '../types.dart' show Severity;
 
 import 'execution_context.dart';
 import 'query.dart';

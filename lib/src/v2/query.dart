@@ -35,7 +35,7 @@ class Query<T> {
   final PostgreSQLExecutionContext transaction;
   final PostgreSQLConnection connection;
 
-  late List<PgDataType?> _specifiedParameterTypeCodes;
+  late List<DataType?> _specifiedParameterTypeCodes;
   final rows = <List<dynamic>>[];
 
   CachedQuery? cache;
@@ -168,8 +168,7 @@ class Query<T> {
     final lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
       final converter = PostgresBinaryDecoder(
-          PgDataType.byTypeOid[iterator.current.typeOid] ??
-              PgDataType.unknownType);
+          DataType.byTypeOid[iterator.current.typeOid] ?? DataType.unknownType);
       return converter.convert(bd, connection.encoding);
     });
 
@@ -230,8 +229,8 @@ ParameterValue _resolveParameterValue(PostgreSQLFormatIdentifier identifier,
 }
 
 class ParameterValue extends PgTypedParameter {
-  ParameterValue(PgDataType? type, Object? value)
-      : super(type ?? PgDataType.unspecified, value);
+  ParameterValue(DataType? type, Object? value)
+      : super(type ?? DataType.unspecified, value);
 }
 
 typedef SQLReplaceIdentifierFunction = String Function(
@@ -247,12 +246,12 @@ class PostgreSQLFormatToken {
 }
 
 class PostgreSQLFormatIdentifier {
-  static Map<String, PgDataType> typeStringToCodeMap =
-      PgDataType.bySubstitutionName;
+  static Map<String, DataType> typeStringToCodeMap =
+      DataType.bySubstitutionName;
 
   factory PostgreSQLFormatIdentifier(String t) {
     String name;
-    PgDataType? type;
+    DataType? type;
     String? typeCast;
 
     final components = t.split('::');
@@ -285,6 +284,6 @@ class PostgreSQLFormatIdentifier {
   PostgreSQLFormatIdentifier._(this.name, this.type, this.typeCast);
 
   final String name;
-  final PgDataType? type;
+  final DataType? type;
   final String? typeCast;
 }

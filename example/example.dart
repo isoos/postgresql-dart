@@ -22,7 +22,7 @@ void main() async {
 
   // preared statement with types
   final anotherStatement =
-      await conn.prepare(PgSql(r'SELECT $1;', types: [PgDataType.bigInteger]));
+      await conn.prepare(PgSql(r'SELECT $1;', types: [DataType.bigInteger]));
   final bound = anotherStatement.bind([1]);
   final subscription = bound.listen((row) {
     print('row: $row');

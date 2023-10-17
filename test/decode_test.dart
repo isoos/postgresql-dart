@@ -85,7 +85,7 @@ void main() {
       expect(row1[14], equals([0]));
       expect(row1[15], equals('00000000-0000-0000-0000-000000000000'));
       expect(row1[16], equals('abcdef'));
-      expect(row1[17], equals(PgPoint(0.01, 12.34)));
+      expect(row1[17], equals(Point(0.01, 12.34)));
       expect(row1[18], equals({'key': 'value'}));
       expect(row1[19], equals(<int>[]));
       expect(row1[20], equals(<int>[]));
@@ -125,7 +125,7 @@ void main() {
       expect(row2[14], equals([255]));
       expect(row2[15], equals('ffffffff-ffff-ffff-ffff-ffffffffffff'));
       expect(row2[16], equals('01234'));
-      expect(row2[17], equals(PgPoint(0.2, 100)));
+      expect(row2[17], equals(Point(0.2, 100)));
       expect(row2[18], equals({}));
       expect(row2[19], equals(<int>[-123, 999]));
       expect(row2[20], equals(<int>[-123, 999]));
@@ -249,7 +249,7 @@ void main() {
         '0.0': [0, 0, 0, 0, 0, 0, 0, 1], // .0 or 0.0
       };
 
-      final decoder = PostgresBinaryDecoder(PgDataType.numeric);
+      final decoder = PostgresBinaryDecoder(DataType.numeric);
       binaries.forEach((key, value) {
         final uint8List = Uint8List.fromList(value);
         final res = decoder.convert(uint8List, utf8);

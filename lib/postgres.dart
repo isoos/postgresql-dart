@@ -58,7 +58,7 @@ class PgSql {
   /// The [types] parameter can optionally be used to pass the types of
   /// parameters in the query. If they're not set, only [PgTypedParameter]
   /// instances can be used when binding values later.
-  factory PgSql(String sql, {List<PgDataType>? types}) =
+  factory PgSql(String sql, {List<DataType>? types}) =
       InternalQueryDescription.direct;
 
   /// Looks for named parameters in [sql] and desugars them.
@@ -266,7 +266,7 @@ final class PgResultSchema {
 }
 
 final class PgResultColumn {
-  final PgDataType type;
+  final DataType type;
   final int? tableOid;
   final String? columnName;
   final int? columnOid;

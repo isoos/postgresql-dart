@@ -11,7 +11,7 @@ class InternalQueryDescription implements PgSql {
   /// The SQL query as supplied by the user.
   final String originalSql;
 
-  final List<PgDataType?>? parameterTypes;
+  final List<DataType?>? parameterTypes;
   final Map<String, int>? namedVariables;
 
   InternalQueryDescription._(
@@ -21,13 +21,13 @@ class InternalQueryDescription implements PgSql {
     this.namedVariables,
   );
 
-  InternalQueryDescription.direct(String sql, {List<PgDataType>? types})
+  InternalQueryDescription.direct(String sql, {List<DataType>? types})
       : this._(sql, sql, types, null);
 
   InternalQueryDescription.transformed(
     String original,
     String transformed,
-    List<PgDataType?> parameterTypes,
+    List<DataType?> parameterTypes,
     Map<String, int> namedVariables,
   ) : this._(
           transformed,
@@ -63,7 +63,7 @@ class InternalQueryDescription implements PgSql {
 
   PgTypedParameter _toParameter(
     Object? value,
-    PgDataType? knownType, {
+    DataType? knownType, {
     String? name,
   }) {
     if (value is PgTypedParameter) {
@@ -71,7 +71,7 @@ class InternalQueryDescription implements PgSql {
     } else if (knownType != null) {
       return PgTypedParameter(knownType, value);
     } else {
-      return PgTypedParameter(PgDataType.unspecified, value);
+      return PgTypedParameter(DataType.unspecified, value);
     }
   }
 

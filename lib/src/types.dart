@@ -3,6 +3,8 @@ import 'dart:core' as core;
 
 import 'package:meta/meta.dart';
 
+import 'exceptions.dart' show PgException;
+
 /// LSN is a PostgreSQL Log Sequence Number.
 ///
 /// For more details, see: https://www.postgresql.org/docs/current/datatype-pg-lsn.html
@@ -54,15 +56,19 @@ class LSN {
 
 /// Describes PostgreSQL's geometric type: `point`.
 @immutable
-class PgPoint {
+class Point {
+  /// also referred as `x`
   final double latitude;
+
+  /// also referred as `y`
   final double longitude;
-  const PgPoint(this.latitude, this.longitude);
+
+  const Point(this.latitude, this.longitude);
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is PgPoint &&
+      other is Point &&
           runtimeType == other.runtimeType &&
           latitude == other.latitude &&
           longitude == other.longitude;
@@ -72,7 +78,7 @@ class PgPoint {
 }
 
 /// Supported data types.
-enum PgDataType<Dart extends Object> {
+enum DataType<Dart extends Object> {
   /// Used to represent a type not yet understood by this package.
   unknownType<Object>(null),
 
@@ -151,8 +157,8 @@ enum PgDataType<Dart extends Object> {
   /// When returned from database, format will be xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
   uuid<String>(2950, nameForSubstitution: 'uuid'),
 
-  /// Must be a [PgPoint]
-  point<PgPoint>(600, nameForSubstitution: 'point'),
+  /// Must be a [Point]
+  point<Point>(600, nameForSubstitution: 'point'),
 
   /// Must be a [List<bool>]
   booleanArray<List<bool>>(1000, nameForSubstitution: '_bool'),
@@ -178,8 +184,8 @@ enum PgDataType<Dart extends Object> {
   /// Must be a [List] of encodable objects
   jsonbArray<List>(3807, nameForSubstitution: '_jsonb'),
 
-  /// Must be a [PgDataType].
-  regtype<PgDataType>(2206, nameForSubstitution: 'regtype'),
+  /// Must be a [DataType].
+  regtype<DataType>(2206, nameForSubstitution: 'regtype'),
 
   /// Impossible to bind to, always null when read.
   voidType<Object>(2278),
@@ -194,14 +200,16 @@ enum PgDataType<Dart extends Object> {
   /// name can be used.
   final String? nameForSubstitution;
 
-  const PgDataType(this.oid, {this.nameForSubstitution});
+  const DataType(this.oid, {this.nameForSubstitution});
 
-  static final Map<int, PgDataType> byTypeOid = Map.unmodifiable({
+  @internal
+  static final Map<int, DataType> byTypeOid = Map.unmodifiable({
     for (final type in values)
       if (type.oid != null) type.oid: type,
   });
 
-  static final Map<String, PgDataType> bySubstitutionName = Map.unmodifiable({
+  @internal
+  static final Map<String, DataType> bySubstitutionName = Map.unmodifiable({
     for (final type in values)
       // We don't index serial and bigSerial types here because they're using
       // the same names as int4 and int8, respectively.
@@ -214,17 +222,17 @@ enum PgDataType<Dart extends Object> {
   });
 }
 
-/// The severity level of a [PostgreSQLException].
+/// The severity level of a [PgException].
 ///
 /// [panic] and [fatal] errors will close the connection.
-enum PgSeverity {
-  /// A [PostgreSQLException] with this severity indicates the throwing connection is now closed.
+enum Severity {
+  /// A [PgException] with this severity indicates the throwing connection is now closed.
   panic,
 
-  /// A [PostgreSQLException] with this severity indicates the throwing connection is now closed.
+  /// A [PgException] with this severity indicates the throwing connection is now closed.
   fatal,
 
-  /// A [PostgreSQLException] with this severity indicates the throwing connection encountered an error when executing a query and the query has failed.
+  /// A [PgException] with this severity indicates the throwing connection encountered an error when executing a query and the query has failed.
   error,
 
   /// Currently unsupported.
@@ -242,29 +250,31 @@ enum PgSeverity {
   /// Currently unsupported.
   log,
 
-  /// A [PostgreSQLException] with this severity indicates a failed a precondition or other error that doesn't originate from the database.
-  unknown;
+  /// A [PgException] with this severity indicates a failed a precondition or other error that doesn't originate from the database.
+  unknown,
+  ;
 
-  static PgSeverity parseServerString(String? str) {
+  @internal
+  static Severity parseServerString(String? str) {
     switch (str) {
       case 'ERROR':
-        return PgSeverity.error;
+        return Severity.error;
       case 'FATAL':
-        return PgSeverity.fatal;
+        return Severity.fatal;
       case 'PANIC':
-        return PgSeverity.panic;
+        return Severity.panic;
       case 'WARNING':
-        return PgSeverity.warning;
+        return Severity.warning;
       case 'NOTICE':
-        return PgSeverity.notice;
+        return Severity.notice;
       case 'DEBUG':
-        return PgSeverity.debug;
+        return Severity.debug;
       case 'INFO':
-        return PgSeverity.info;
+        return Severity.info;
       case 'LOG':
-        return PgSeverity.log;
+        return Severity.log;
       default:
-        return PgSeverity.unknown;
+        return Severity.unknown;
     }
   }
 }

@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-String sid(String id, PgDataType dt) => PostgreSQLFormat.id(id, type: dt);
+String sid(String id, DataType dt) => PostgreSQLFormat.id(id, type: dt);
 
 void main() {
   withPostgresServer('Retaining type information', (server) {
@@ -28,11 +28,11 @@ void main() {
         () async {
       final insertQueryString =
           'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) VALUES '
-          '(${sid('i', PgDataType.integer)}, ${sid('bi', PgDataType.bigInteger)},'
-          '${sid('bl', PgDataType.boolean)}, ${sid('si', PgDataType.smallInteger)},'
-          '${sid('t', PgDataType.text)}, ${sid('f', PgDataType.real)},'
-          '${sid('d', PgDataType.double)}, ${sid('dt', PgDataType.date)},'
-          '${sid('ts', PgDataType.timestampWithoutTimezone)}, ${sid('tsz', PgDataType.timestampWithTimezone)}'
+          '(${sid('i', DataType.integer)}, ${sid('bi', DataType.bigInteger)},'
+          '${sid('bl', DataType.boolean)}, ${sid('si', DataType.smallInteger)},'
+          '${sid('t', DataType.text)}, ${sid('f', DataType.real)},'
+          '${sid('d', DataType.double)}, ${sid('dt', DataType.date)},'
+          '${sid('ts', DataType.timestampWithoutTimezone)}, ${sid('tsz', DataType.timestampWithTimezone)}'
           ') returning i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz';
       var results =
           await connection.query(insertQueryString, substitutionValues: {
@@ -201,11 +201,11 @@ void main() {
         () async {
       final insertQueryString =
           'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) VALUES '
-          '(${sid('i', PgDataType.integer)}, @bi,'
-          '${sid('bl', PgDataType.boolean)}, @si,'
-          '${sid('t', PgDataType.text)}, @f,'
-          '${sid('d', PgDataType.double)}, @dt,'
-          '${sid('ts', PgDataType.timestampWithoutTimezone)}, @tsz'
+          '(${sid('i', DataType.integer)}, @bi,'
+          '${sid('bl', DataType.boolean)}, @si,'
+          '${sid('t', DataType.text)}, @f,'
+          '${sid('d', DataType.double)}, @dt,'
+          '${sid('ts', DataType.timestampWithoutTimezone)}, @tsz'
           ') returning i, s, bi, bs, bl, si, t, f, d, dt, ts, tsz';
       var results =
           await connection.query(insertQueryString, substitutionValues: {

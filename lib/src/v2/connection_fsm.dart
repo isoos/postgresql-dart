@@ -18,8 +18,8 @@ abstract class _PostgreSQLConnectionState {
   _PostgreSQLConnectionState onErrorResponse(ErrorResponseMessage message) {
     final exception = PostgreSQLException.fromFields(message.fields);
 
-    if (exception.severity == PgSeverity.fatal ||
-        exception.severity == PgSeverity.panic) {
+    if (exception.severity == Severity.fatal ||
+        exception.severity == Severity.panic) {
       return _PostgreSQLConnectionStateClosed();
     }
 
@@ -291,8 +291,8 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     final exception = PostgreSQLException.fromFields(message.fields);
     returningException ??= exception;
 
-    if (exception.severity == PgSeverity.fatal ||
-        exception.severity == PgSeverity.panic) {
+    if (exception.severity == Severity.fatal ||
+        exception.severity == Severity.panic) {
       return _PostgreSQLConnectionStateClosed();
     }
 
