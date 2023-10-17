@@ -242,18 +242,16 @@ class PgConnectionImplementation extends _PgSessionBase
   static Future<StreamChannel<Message>> _connect(
     _ResolvedSettings settings,
   ) async {
-    Socket socket;
-
     final host = settings.endpoint.host;
     final port = settings.endpoint.port;
 
-    if (settings.endpoint.isUnixSocket) {
-      socket =
-          await Socket.connect(host, port, timeout: settings.connectTimeout);
-    } else {
-      socket =
-          await Socket.connect(host, port, timeout: settings.connectTimeout);
-    }
+    var socket = await Socket.connect(
+      settings.endpoint.isUnixSocket
+          ? InternetAddress(host, type: InternetAddressType.unix)
+          : host,
+      port,
+      timeout: settings.connectTimeout,
+    );
 
     final sslCompleter = Completer<int>.sync();
     // ignore: cancel_subscriptions
