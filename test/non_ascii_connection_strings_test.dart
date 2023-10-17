@@ -1,4 +1,5 @@
 import 'package:postgres/legacy.dart';
+import 'package:postgres/postgres.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
 
@@ -20,8 +21,7 @@ void main() {
       });
 
       test('- Connect with non-ascii connection string', () async {
-        conn =
-            await server.newPostgreSQLConnection(allowClearTextPassword: true);
+        conn = await server.newPostgreSQLConnection(sslMode: SslMode.disable);
         await conn!.open();
         final res = await conn!.query('select 1;');
         expect(res.length, 1);

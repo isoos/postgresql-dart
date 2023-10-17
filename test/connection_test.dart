@@ -135,7 +135,7 @@ void main() {
     });
 
     test('Connect with md5 or scram-sha-256 auth required', () async {
-      conn = await server.newPostgreSQLConnection();
+      conn = await server.newPostgreSQLConnection(sslMode: SslMode.disable);
 
       await conn.open();
 
@@ -143,7 +143,7 @@ void main() {
     });
 
     test('SSL Connect with md5 or scram-sha-256 auth required', () async {
-      conn = await server.newPostgreSQLConnection(useSSL: true);
+      conn = await server.newPostgreSQLConnection(sslMode: SslMode.require);
 
       await conn.open();
 
@@ -158,13 +158,13 @@ void main() {
 
     test('Connect with no auth required', () async {
       conn = await server.newPostgreSQLConnection(
-        endpoint: PgEndpoint(
-          host: 'localhost',
-          database: 'dart_test',
-          port: await server.port,
-          username: 'darttrust',
-        ),
-      );
+          endpoint: PgEndpoint(
+            host: 'localhost',
+            database: 'dart_test',
+            port: await server.port,
+            username: 'darttrust',
+          ),
+          sslMode: SslMode.disable);
       await conn.open();
       expect(await conn.execute('select 1'), equals(1));
     });
@@ -177,6 +177,7 @@ void main() {
           port: await server.port,
           username: 'dart',
         ),
+        sslMode: SslMode.disable,
       );
       try {
         await conn.open();
@@ -198,8 +199,8 @@ void main() {
           database: 'dart_test',
           port: await server.port,
           username: 'darttrust',
-          requireSsl: true,
         ),
+        sslMode: SslMode.require,
       );
       await conn.open();
 
@@ -417,7 +418,7 @@ void main() {
 
     test('Starting transaction while opening connection triggers error',
         () async {
-      conn = await server.newPostgreSQLConnection(useSSL: true);
+      conn = await server.newPostgreSQLConnection(sslMode: SslMode.require);
       openFuture = conn.open();
 
       try {
@@ -432,7 +433,7 @@ void main() {
 
     test('SSL Starting transaction while opening connection triggers error',
         () async {
-      conn = await server.newPostgreSQLConnection(useSSL: true);
+      conn = await server.newPostgreSQLConnection(sslMode: SslMode.require);
       openFuture = conn.open();
 
       try {
@@ -458,6 +459,7 @@ void main() {
             username: 'dart',
             password: 'notdart',
           ),
+          sslMode: SslMode.disable,
         );
         await conn.open();
         expect(true, false);
@@ -479,8 +481,8 @@ void main() {
             port: await server.port,
             username: 'dart',
             password: 'notdart',
-            requireSsl: true,
           ),
+          sslMode: SslMode.require,
         );
         await conn.open();
         expect(true, false);
@@ -639,6 +641,7 @@ void main() {
         conn = await server.newPostgreSQLConnection(
           endpoint:
               PgEndpoint(host: 'localhost', database: 'dart_test', port: port),
+          sslMode: SslMode.disable,
         );
         await conn.open();
         expect(true, false);
@@ -661,8 +664,8 @@ void main() {
             host: 'localhost',
             database: 'dart_test',
             port: port,
-            requireSsl: true,
           ),
+          sslMode: SslMode.require,
         );
         await conn.open();
         expect(true, false);
@@ -694,6 +697,7 @@ void main() {
             database: 'dart_test',
           ),
           connectTimeout: Duration(seconds: 2),
+          sslMode: SslMode.disable,
         );
         await conn.open();
         fail('unreachable');
@@ -723,9 +727,9 @@ void main() {
             host: 'localhost',
             port: port,
             database: 'dart_test',
-            requireSsl: true,
           ),
           connectTimeout: Duration(seconds: 2),
+          sslMode: SslMode.require,
         );
         await conn.open();
         fail('unreachable');

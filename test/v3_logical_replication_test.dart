@@ -70,7 +70,6 @@ void main() {
         ),
         sessionSettings: PgSessionSettings(
             replicationMode: ReplicationMode.logical,
-            onBadSslCertificate: (cert) => true,
             transformer: serverMessagesInterceptor.transformer,
             queryMode: QueryMode.simple),
       );
@@ -80,9 +79,6 @@ void main() {
       // stream
       changesConn = await PgConnection.open(
         await server.endpoint(),
-        sessionSettings: PgSessionSettings(
-          onBadSslCertificate: (cert) => true,
-        ),
       );
 
       // create testing tables

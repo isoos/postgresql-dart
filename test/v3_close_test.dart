@@ -12,16 +12,12 @@ void main() {
       conn1 = await PgConnection.open(
         await server.endpoint(),
         sessionSettings: PgSessionSettings(
-          onBadSslCertificate: (cert) => true,
-          //transformer: _loggingTransformer('c1'),
-        ),
+            //transformer: _loggingTransformer('c1'),
+            ),
       );
 
       conn2 = await PgConnection.open(
         await server.endpoint(),
-        sessionSettings: PgSessionSettings(
-          onBadSslCertificate: (cert) => true,
-        ),
       );
     });
 

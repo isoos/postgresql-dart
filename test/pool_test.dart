@@ -5,10 +5,7 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-final _sessionSettings = PgSessionSettings(
-  // To test SSL, we're running postgres with a self-signed certificate.
-  onBadSslCertificate: (cert) => true,
-);
+final _sessionSettings = PgSessionSettings();
 
 void main() {
   withPostgresServer('generic', (server) {

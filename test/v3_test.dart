@@ -9,9 +9,6 @@ import 'package:test/test.dart';
 import 'docker.dart';
 
 final _sessionSettings = PgSessionSettings(
-  // To test SSL, we're running postgres with a self-signed certificate.
-  onBadSslCertificate: (cert) => true,
-
   transformer: loggingTransformer('conn'),
 );
 
@@ -422,7 +419,6 @@ void main() {
         await server.endpoint(),
         sessionSettings: PgSessionSettings(
           transformer: transformer,
-          onBadSslCertificate: (_) => true,
         ),
       );
       addTearDown(connection.close);
@@ -442,7 +438,6 @@ void main() {
         await server.endpoint(),
         sessionSettings: PgSessionSettings(
           transformer: loggingTransformer('c1'),
-          onBadSslCertificate: (cert) => true,
         ),
       );
 
@@ -450,7 +445,6 @@ void main() {
         await server.endpoint(),
         sessionSettings: PgSessionSettings(
           transformer: loggingTransformer('c2'),
-          onBadSslCertificate: (cert) => true,
         ),
       );
     });
