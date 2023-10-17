@@ -42,7 +42,7 @@ class _ResolvedSettings {
   final ReplicationMode replicationMode;
   final QueryMode queryMode;
 
-  final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
+  final StreamChannelTransformer<Message, Message>? transformer;
 
   final bool allowSuperfluousParameters;
 
@@ -239,7 +239,7 @@ class PgConnectionImplementation extends _PgSessionBase
     return connection;
   }
 
-  static Future<StreamChannel<BaseMessage>> _connect(
+  static Future<StreamChannel<Message>> _connect(
     _ResolvedSettings settings,
   ) async {
     Socket socket;
@@ -317,8 +317,8 @@ class PgConnectionImplementation extends _PgSessionBase
         .transform(messageTransformer(settings.encoding));
   }
 
-  final StreamChannel<BaseMessage> _channel;
-  late final StreamSubscription<BaseMessage> _serverMessages;
+  final StreamChannel<Message> _channel;
+  late final StreamSubscription<Message> _serverMessages;
   bool _isClosing = false;
 
   final _ResolvedSettings _settings;
@@ -360,7 +360,7 @@ class PgConnectionImplementation extends _PgSessionBase
     });
   }
 
-  Future<void> _handleMessage(BaseMessage message) async {
+  Future<void> _handleMessage(Message message) async {
     _serverMessages.pause();
     try {
       message as ServerMessage;

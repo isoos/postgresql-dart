@@ -9,7 +9,7 @@ import 'shared_messages.dart';
 import 'time_converters.dart';
 import 'types.dart';
 
-abstract class ServerMessage extends BaseMessage {}
+abstract class ServerMessage extends Message {}
 
 sealed class ErrorOrNoticeMessage implements ServerMessage {
   final fields = <ErrorField>[];

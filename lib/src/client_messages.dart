@@ -13,7 +13,7 @@ import 'text_codec.dart';
 import 'time_converters.dart';
 import 'types.dart';
 
-abstract class ClientMessage extends BaseMessage {
+abstract class ClientMessage extends Message {
   static const int FormatText = 0;
   static const int FormatBinary = 1;
 

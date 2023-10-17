@@ -33,7 +33,7 @@ class AggregatedClientMessage extends ClientMessage {
   }
 }
 
-StreamChannelTransformer<BaseMessage, List<int>> messageTransformer(
+StreamChannelTransformer<Message, List<int>> messageTransformer(
     Encoding encoding) {
   return StreamChannelTransformer(
     _readMessages(encoding),

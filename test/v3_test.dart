@@ -405,7 +405,7 @@ void main() {
       final incoming = <ServerMessage>[];
       final outgoing = <ClientMessage>[];
 
-      final transformer = StreamChannelTransformer<BaseMessage, BaseMessage>(
+      final transformer = StreamChannelTransformer<Message, Message>(
         StreamTransformer.fromHandlers(
           handleData: (msg, sink) {
             incoming.add(msg as ServerMessage);
