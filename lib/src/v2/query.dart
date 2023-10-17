@@ -228,7 +228,7 @@ ParameterValue _resolveParameterValue(PostgreSQLFormatIdentifier identifier,
   return ParameterValue(type, value);
 }
 
-class ParameterValue extends PgTypedParameter {
+class ParameterValue extends TypedValue {
   ParameterValue(DataType? type, Object? value)
       : super(type ?? DataType.unspecified, value);
 }

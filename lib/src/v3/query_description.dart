@@ -61,26 +61,26 @@ class InternalQueryDescription implements PgSql {
     }
   }
 
-  PgTypedParameter _toParameter(
+  TypedValue _toParameter(
     Object? value,
     DataType? knownType, {
     String? name,
   }) {
-    if (value is PgTypedParameter) {
+    if (value is TypedValue) {
       return value;
     } else if (knownType != null) {
-      return PgTypedParameter(knownType, value);
+      return TypedValue(knownType, value);
     } else {
-      return PgTypedParameter(DataType.unspecified, value);
+      return TypedValue(DataType.unspecified, value);
     }
   }
 
-  List<PgTypedParameter> bindParameters(
+  List<TypedValue> bindParameters(
     Object? params, {
     bool allowSuperfluous = false,
   }) {
     final knownTypes = parameterTypes;
-    final parameters = <PgTypedParameter>[];
+    final parameters = <TypedValue>[];
 
     if (params == null) {
       if (knownTypes != null && knownTypes.isNotEmpty) {

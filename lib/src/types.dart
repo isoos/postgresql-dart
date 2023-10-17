@@ -78,7 +78,7 @@ class Point {
 }
 
 /// Supported data types.
-enum DataType<Dart extends Object> {
+enum DataType<T extends Object> {
   /// Used to represent a type not yet understood by this package.
   unknownType<Object>(null),
 
@@ -202,6 +202,8 @@ enum DataType<Dart extends Object> {
 
   const DataType(this.oid, {this.nameForSubstitution});
 
+  TypedValue value(T value) => TypedValue(this, value);
+
   @internal
   static final Map<int, DataType> byTypeOid = Map.unmodifiable({
     for (final type in values)
@@ -276,5 +278,25 @@ enum Severity {
       default:
         return Severity.unknown;
     }
+  }
+}
+
+class TypedValue {
+  final DataType type;
+  final Object? value;
+
+  TypedValue(this.type, this.value);
+
+  @override
+  int get hashCode => Object.hash(type, value);
+
+  @override
+  bool operator ==(Object other) {
+    return other is TypedValue && other.type == type && other.value == value;
+  }
+
+  @override
+  String toString() {
+    return 'TypedValue($type, $value)';
   }
 }

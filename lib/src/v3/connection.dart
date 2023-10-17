@@ -494,7 +494,7 @@ class _PreparedStatement extends PgStatement {
 
 class _BoundStatement extends Stream<PgResultRow> implements PgResultStream {
   final _PreparedStatement statement;
-  final List<PgTypedParameter> parameters;
+  final List<TypedValue> parameters;
 
   _BoundStatement(this.statement, this.parameters);
 
