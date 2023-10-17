@@ -18,8 +18,7 @@ import 'package:test/test.dart';
 //
 //  Logger.root.level = Level.ALL;
 //  Logger.root.onRecord.listen((r) => print('${r.loggerName}: ${r.message}'));
-StreamChannelTransformer<BaseMessage, BaseMessage> loggingTransformer(
-    String prefix) {
+StreamChannelTransformer<Message, Message> loggingTransformer(String prefix) {
   final inLogger = Logger('postgres.connection.$prefix.in');
   final outLogger = Logger('postgres.connection.$prefix.out');
 

@@ -360,7 +360,7 @@ final class PgSessionSettings {
   /// package.
   ///
   /// For an example, see `example/v3/transformer.dart`.
-  final StreamChannelTransformer<BaseMessage, BaseMessage>? transformer;
+  final StreamChannelTransformer<Message, Message>? transformer;
 
   /// The replication mode for connecting in streaming replication mode.
   ///

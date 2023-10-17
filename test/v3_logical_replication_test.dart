@@ -18,7 +18,7 @@ class _ServerMessagesInterceptor {
   // For the current set of tests, we are only listening to server events and
   // we are not sending anything to the server so the second handler is left
   // empty
-  late final transformer = StreamChannelTransformer<BaseMessage, BaseMessage>(
+  late final transformer = StreamChannelTransformer<Message, Message>(
     StreamTransformer.fromHandlers(
       handleData: (data, sink) {
         if (!controller.isClosed) {

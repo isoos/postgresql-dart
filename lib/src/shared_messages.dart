@@ -5,8 +5,8 @@ import 'client_messages.dart';
 import 'server_messages.dart';
 
 /// Either a [ServerMessage] or a [ClientMessage].
-abstract class BaseMessage {
-  const BaseMessage();
+abstract class Message {
+  const Message();
 }
 
 /// An abstraction for all client and server replication messages
