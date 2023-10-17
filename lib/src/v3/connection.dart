@@ -38,6 +38,7 @@ class _ResolvedSettings {
   final String timeZone;
   final Encoding encoding;
 
+  final bool allowCleartextPassword;
   final ReplicationMode replicationMode;
   final QueryMode queryMode;
 
@@ -58,6 +59,7 @@ class _ResolvedSettings {
         transformer = settings?.transformer,
         replicationMode = settings?.replicationMode ?? ReplicationMode.none,
         queryMode = settings?.queryMode ?? QueryMode.extended,
+        allowCleartextPassword = settings?.allowCleartextPassword ?? false,
         allowSuperfluousParameters =
             settings?.allowSuperfluousParameters ?? false;
 
@@ -981,7 +983,7 @@ class _AuthenticationProcedure extends _PendingOperation {
           _initializeAuthenticate(message, AuthenticationScheme.md5);
           break;
         case AuthenticationMessage.KindClearTextPassword:
-          if (!connection._settings.endpoint.allowCleartextPassword) {
+          if (!connection._settings.allowCleartextPassword) {
             _done.completeError(
               PgServerException(
                   'Refused to send clear text password to server'),

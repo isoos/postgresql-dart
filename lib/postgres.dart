@@ -323,12 +323,6 @@ final class PgEndpoint {
   final bool requireSsl;
   final bool isUnixSocket;
 
-  /// Whether the client should send the password to the server in clear-text
-  /// for authentication.
-  ///
-  /// For security reasons, it is recommended to keep this disabled.
-  final bool allowCleartextPassword;
-
   PgEndpoint({
     required this.host,
     this.port = 5432,
@@ -337,7 +331,6 @@ final class PgEndpoint {
     this.password,
     this.requireSsl = false,
     this.isUnixSocket = false,
-    this.allowCleartextPassword = false,
   });
 }
 
@@ -348,6 +341,12 @@ final class PgSessionSettings {
   final String? timeZone;
 
   final Encoding? encoding;
+
+  /// Whether the client should send the password to the server in clear-text
+  /// for authentication.
+  ///
+  /// For security reasons, it is recommended to keep this disabled.
+  final bool? allowCleartextPassword;
 
   final bool Function(X509Certificate)? onBadSslCertificate;
 
@@ -393,6 +392,7 @@ final class PgSessionSettings {
     this.connectTimeout,
     this.timeZone,
     this.encoding,
+    this.allowCleartextPassword,
     this.onBadSslCertificate,
     this.transformer,
     this.replicationMode = ReplicationMode.none,
