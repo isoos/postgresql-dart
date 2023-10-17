@@ -37,7 +37,7 @@ class PostgresTextEncoder extends Converter<Object, String> {
       return _encodeJSON(input, escapeStrings);
     }
 
-    if (input is PgPoint) {
+    if (input is Point) {
       return _encodePoint(input);
     }
 
@@ -169,7 +169,7 @@ class PostgresTextEncoder extends Converter<Object, String> {
     return _encodeString(json.encode(value), escapeStrings);
   }
 
-  String _encodePoint(PgPoint value) {
+  String _encodePoint(Point value) {
     return '(${_encodeDouble(value.latitude)}, ${_encodeDouble(value.longitude)})';
   }
 
@@ -218,7 +218,7 @@ class PostgresTextEncoder extends Converter<Object, String> {
 }
 
 class PostgresTextDecoder<T extends Object> {
-  final PgDataType<T> _dataType;
+  final DataType<T> _dataType;
 
   const PostgresTextDecoder(this._dataType);
 
@@ -228,19 +228,19 @@ class PostgresTextDecoder<T extends Object> {
     final asText = encoding.decode(input);
 
     // ignore: unnecessary_cast
-    switch (_dataType as PgDataType<Object>) {
-      case PgDataType.text:
+    switch (_dataType as DataType<Object>) {
+      case DataType.text:
         return asText as T;
-      case PgDataType.integer:
-      case PgDataType.smallInteger:
-      case PgDataType.bigInteger:
-      case PgDataType.serial:
-      case PgDataType.bigSerial:
+      case DataType.integer:
+      case DataType.smallInteger:
+      case DataType.bigInteger:
+      case DataType.serial:
+      case DataType.bigSerial:
         return int.parse(asText) as T;
-      case PgDataType.real:
-      case PgDataType.double:
+      case DataType.real:
+      case DataType.double:
         return num.parse(asText) as T;
-      case PgDataType.boolean:
+      case DataType.boolean:
         // In text data format when using simple query protocol, "true" & "false"
         // are represented as `t` and `f`,  respectively.
         // we will check for both just in case
@@ -248,7 +248,7 @@ class PostgresTextDecoder<T extends Object> {
         // and `yes`)?
         return (asText == 't' || asText == 'true') as T;
 
-      case PgDataType.voidType:
+      case DataType.voidType:
         // TODO: is returning `null` here is the appripriate thing to do?
         return null;
 

@@ -7,14 +7,14 @@ import 'package:test/test.dart';
 void main() {
   test('Ensure all types/format type mappings are available and accurate', () {
     const withoutMapping = {
-      PgDataType.unspecified, // Can't bind into unspecified type
-      PgDataType.unknownType, // Can't bind into unknown type
-      PgDataType.voidType, // Can't assign to void
-      PgDataType.bigSerial, // Can only be created from a table sequence
-      PgDataType.serial,
+      DataType.unspecified, // Can't bind into unspecified type
+      DataType.unknownType, // Can't bind into unknown type
+      DataType.voidType, // Can't assign to void
+      DataType.bigSerial, // Can only be created from a table sequence
+      DataType.serial,
     };
 
-    for (final type in PgDataType.values) {
+    for (final type in DataType.values) {
       if (withoutMapping.contains(type)) continue;
 
       expect(
@@ -28,13 +28,12 @@ void main() {
   });
 
   test('Ensure bigserial gets translated to int8', () {
-    expect(
-        PostgreSQLFormat.dataTypeStringForDataType(PgDataType.serial), 'int4');
+    expect(PostgreSQLFormat.dataTypeStringForDataType(DataType.serial), 'int4');
   });
 
   test('Ensure serial gets translated to int4', () {
-    expect(PostgreSQLFormat.dataTypeStringForDataType(PgDataType.bigSerial),
-        'int8');
+    expect(
+        PostgreSQLFormat.dataTypeStringForDataType(DataType.bigSerial), 'int8');
   });
 
   test('Simple replacement', () {

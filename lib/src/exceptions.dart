@@ -7,14 +7,14 @@ import 'types.dart';
 /// Exception thrown by the package (client or server side).
 class PgException implements Exception {
   /// The severity of the exception.
-  final PgSeverity severity;
+  final Severity severity;
 
   /// A message indicating the error.
   final String message;
 
   PgException(
     this.message, {
-    this.severity = PgSeverity.error,
+    this.severity = Severity.error,
   });
 
   @override
@@ -76,10 +76,10 @@ class PgServerException extends PgException {
   @internal
   PgServerException(
     String message, {
-    PgSeverity? severity,
+    Severity? severity,
   }) : this._(
           message,
-          severity: severity ?? PgSeverity.error,
+          severity: severity ?? Severity.error,
         );
 
   @internal

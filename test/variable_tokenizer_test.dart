@@ -12,8 +12,8 @@ void main() {
       {'x': 1, 'y': 2, 'z': 3},
     );
     expect(desc.parameterTypes, [
-      PgDataType.bigInteger, // x
-      PgDataType.boolean, // y
+      DataType.bigInteger, // x
+      DataType.boolean, // y
       null, // z, didn't have a specified type
     ]);
 
@@ -21,34 +21,34 @@ void main() {
 
     expect(
       desc.bindParameters(
-          {'x': 4, 'y': true, 'z': PgTypedParameter(PgDataType.text, 'z')}),
+          {'x': 4, 'y': true, 'z': PgTypedParameter(DataType.text, 'z')}),
       [
-        PgTypedParameter(PgDataType.bigInteger, 4),
-        PgTypedParameter(PgDataType.boolean, true),
-        PgTypedParameter(PgDataType.text, 'z'),
+        PgTypedParameter(DataType.bigInteger, 4),
+        PgTypedParameter(DataType.boolean, true),
+        PgTypedParameter(DataType.text, 'z'),
       ],
     );
     expect(desc.bindParameters({'x': 4, 'y': true, 'z': 'z'}), [
-      PgTypedParameter(PgDataType.bigInteger, 4),
-      PgTypedParameter(PgDataType.boolean, true),
-      PgTypedParameter(PgDataType.unspecified, 'z'),
+      PgTypedParameter(DataType.bigInteger, 4),
+      PgTypedParameter(DataType.boolean, true),
+      PgTypedParameter(DataType.unspecified, 'z'),
     ]);
 
     // Make sure we can still bind by index
     expect(
-      desc.bindParameters([1, true, PgTypedParameter(PgDataType.text, 'z')]),
+      desc.bindParameters([1, true, PgTypedParameter(DataType.text, 'z')]),
       [
-        PgTypedParameter(PgDataType.bigInteger, 1),
-        PgTypedParameter(PgDataType.boolean, true),
-        PgTypedParameter(PgDataType.text, 'z'),
+        PgTypedParameter(DataType.bigInteger, 1),
+        PgTypedParameter(DataType.boolean, true),
+        PgTypedParameter(DataType.text, 'z'),
       ],
     );
     expect(
       desc.bindParameters([1, true, 3]),
       [
-        PgTypedParameter(PgDataType.bigInteger, 1),
-        PgTypedParameter(PgDataType.boolean, true),
-        PgTypedParameter(PgDataType.unspecified, 3),
+        PgTypedParameter(DataType.bigInteger, 1),
+        PgTypedParameter(DataType.boolean, true),
+        PgTypedParameter(DataType.unspecified, 3),
       ],
     );
   });
@@ -67,7 +67,7 @@ void main() {
         substitution: ':');
     expect(desc.transformedSql, r'SELECT * FROM foo WHERE a = $1');
     expect(desc.namedVariables?.keys, ['x']);
-    expect(desc.parameterTypes, [PgDataType.bigInteger]);
+    expect(desc.parameterTypes, [DataType.bigInteger]);
   });
 
   test('finds correct end for string literal', () {
@@ -81,7 +81,7 @@ void main() {
       final desc = InternalQueryDescription.map('SELECT @x:_varchar(10), 0');
       expect(desc.transformedSql, r'SELECT $1, 0');
       expect(desc.namedVariables, {'x': 1});
-      expect(desc.parameterTypes, [PgDataType.varCharArray]);
+      expect(desc.parameterTypes, [DataType.varCharArray]);
     });
 
     test('throws', () {
