@@ -45,8 +45,16 @@ class PostgresServer {
 
   Future<int> get port => _port.future;
   final bool _useV3;
+  final String? _pgUser;
+  final String? _pgPassword;
 
-  PostgresServer({bool? useV3}) : _useV3 = useV3 ?? false;
+  PostgresServer({
+    bool? useV3,
+    String? pgUser,
+    String? pgPassword,
+  })  : _useV3 = useV3 ?? false,
+        _pgUser = pgUser,
+        _pgPassword = pgPassword;
 
   bool get useV3 => _useV3;
 
@@ -68,8 +76,8 @@ class PostgresServer {
       PgEndpoint(
         host: 'localhost',
         database: 'postgres',
-        username: 'postgres',
-        password: 'postgres',
+        username: _pgUser ?? 'postgres',
+        password: _pgPassword ?? 'postgres',
         port: await port,
         requireSsl: requireSsl,
       );
@@ -104,6 +112,7 @@ class PostgresServer {
         PgSessionSettings(
           onBadSslCertificate: (_) => true,
           replicationMode: replicationMode,
+          allowCleartextPassword: allowClearTextPassword,
           allowSuperfluousParameters: true,
           connectTimeout: connectTimeout,
         ),
@@ -130,11 +139,17 @@ void withPostgresServer(
   String name,
   void Function(PostgresServer server) fn, {
   Iterable<String>? initSqls,
+  String? pgUser,
+  String? pgPassword,
   String? pgHbaConfContent,
 }) {
   void setupGroup(bool useV3) {
     group(useV3 ? '$name v3' : name, () {
-      final server = PostgresServer(useV3: useV3);
+      final server = PostgresServer(
+        useV3: useV3,
+        pgUser: pgUser,
+        pgPassword: pgPassword,
+      );
       Directory? tempDir;
 
       setUpAll(() async {
@@ -153,6 +168,8 @@ void withPostgresServer(
             port: port,
             containerName: containerName,
             initSqls: initSqls ?? const <String>[],
+            pgUser: pgUser,
+            pgPassword: pgPassword,
             pgHbaConfPath: pgHbaConfPath,
           );
 
@@ -195,6 +212,8 @@ Future<void> _startPostgresContainer({
   required int port,
   required String containerName,
   required Iterable<String> initSqls,
+  String? pgUser,
+  String? pgPassword,
   String? pgHbaConfPath,
 }) async {
   final isRunning = await _isPostgresContainerRunning(containerName);
@@ -209,8 +228,8 @@ Future<void> _startPostgresContainer({
     version: 'latest',
     pgPort: port,
     pgDatabase: 'postgres',
-    pgUser: 'postgres',
-    pgPassword: 'postgres',
+    pgUser: pgUser ?? 'postgres',
+    pgPassword: pgPassword ?? 'postgres',
     cleanup: true,
     configurations: [
       // SSL settings

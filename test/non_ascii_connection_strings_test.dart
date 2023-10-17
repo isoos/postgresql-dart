@@ -1,7 +1,3 @@
-import 'dart:io';
-
-import 'package:docker_process/containers/postgres.dart';
-import 'package:path/path.dart' as p;
 import 'package:postgres/legacy.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
@@ -9,175 +5,75 @@ import 'package:test/scaffolding.dart';
 import 'docker.dart';
 
 void main() {
-  final user = 'abc@def';
+  final username = 'abc@def';
   final password = 'pöstgrēs_üšęr_pæsswœêrd';
-  final db = 'postgres';
 
-  group('non-ascii tests (clear password auth)', () {
-    late final DockerProcess docker;
-    late final int port;
+  withPostgresServer(
+    'non-ascii tests (clear password auth)',
+    pgUser: username,
+    pgPassword: password,
+    pgHbaConfContent: _sampleHbaConfigPassword,
+    (server) {
+      PostgreSQLConnection? conn;
+      tearDown(() async {
+        await conn?.close();
+      });
 
-    setUpAll(
-      () async {
-        port = await selectFreePort();
-        docker = await startPostgres(
-          name: 'non_ascii_test_clear_password',
-          version: 'latest',
-          pgPort: port,
-          pgDatabase: db,
-          pgUser: user,
-          pgPassword: password,
-          cleanup: true,
-          pgHbaConfPath: _createTempFile(
-            fileName: 'pg_hba.conf',
-            contents: _sampleHbaConfigPassword,
-          ),
-        );
-      },
-    );
+      test('- Connect with non-ascii connection string', () async {
+        conn =
+            await server.newPostgreSQLConnection(allowClearTextPassword: true);
+        await conn!.open();
+        final res = await conn!.query('select 1;');
+        expect(res.length, 1);
+      });
+    },
+  );
 
-    tearDownAll(() {
-      docker.stop();
-      docker.kill();
-    });
-    PostgreSQLConnection? conn;
+  withPostgresServer(
+    'non-ascii tests (md5 auth)',
+    pgUser: username,
+    pgPassword: password,
+    pgHbaConfContent: _sampleHbaConfigMd5,
+    (server) {
+      PostgreSQLConnection? conn;
+      tearDown(() async {
+        await conn?.close();
+      });
 
-    setUp(() async {
-      // ignore: deprecated_member_use_from_same_package
-      conn = PostgreSQLConnection('localhost', port, db,
-          username: user, password: password, allowClearTextPassword: true);
-      await conn!.open();
-    });
+      test('- Connect with non-ascii connection string', () async {
+        conn = await server.newPostgreSQLConnection();
+        await conn!.open();
+        final res = await conn!.query('select 1;');
+        expect(res.length, 1);
+      });
+    },
+  );
 
-    tearDown(() async {
-      await conn?.close();
-    });
+  withPostgresServer(
+    'non-ascii tests (scram-sha-256 auth)',
+    pgUser: username,
+    pgPassword: password,
+    pgHbaConfContent: _sampleHbaConfigScramSha256,
+    (server) {
+      PostgreSQLConnection? conn;
 
-    test('- Connect with non-ascii connection string', () async {
-      final res = await conn!.query('select 1;');
-      expect(res.length, 1);
-    });
-  });
+      tearDown(() async {
+        await conn?.close();
+      });
 
-  group('non-ascii tests (md5 auth)', () {
-    late final DockerProcess docker;
-    late final int port;
-    setUpAll(
-      () async {
-        port = await selectFreePort();
-        docker = await startPostgres(
-          name: 'non_ascii_test_md5',
-          version: 'latest',
-          pgPort: port,
-          pgDatabase: db,
-          pgUser: user,
-          pgPassword: password,
-          cleanup: true,
-          pgHbaConfPath: _createTempFile(
-            fileName: 'pg_hba.conf',
-            contents: _sampleHbaConfigMd5,
-          ),
-        );
-      },
-    );
-
-    tearDownAll(() {
-      docker.stop();
-      docker.kill();
-    });
-    PostgreSQLConnection? conn;
-
-    setUp(() async {
-      // ignore: deprecated_member_use_from_same_package
-      conn = PostgreSQLConnection(
-        'localhost',
-        port,
-        db,
-        username: user,
-        password: password,
-      );
-      await conn!.open();
-    });
-
-    tearDown(() async {
-      await conn?.close();
-    });
-
-    test('- Connect with non-ascii connection string', () async {
-      final res = await conn!.query('select 1;');
-      expect(res.length, 1);
-    });
-  });
-
-  group('non-ascii tests (scram-sha-256 auth)', () {
-    late final DockerProcess docker;
-    late final int port;
-    setUpAll(
-      () async {
-        port = await selectFreePort();
-        docker = await startPostgres(
-          name: 'non_ascii_test_scram_sha256',
-          version: 'latest',
-          pgPort: port,
-          pgDatabase: db,
-          pgUser: user,
-          pgPassword: password,
-          cleanup: true,
-          pgHbaConfPath: _createTempFile(
-            fileName: 'pg_hba.conf',
-            contents: _sampleHbaConfigScramSha256,
-          ),
-        );
-      },
-    );
-
-    tearDownAll(() {
-      docker.stop();
-      docker.kill();
-    });
-    PostgreSQLConnection? conn;
-
-    setUp(() async {
-      // ignore: deprecated_member_use_from_same_package
-      conn = PostgreSQLConnection(
-        'localhost',
-        port,
-        db,
-        username: user,
-        password: password,
-      );
-      await conn!.open();
-    });
-
-    tearDown(() async {
-      await conn?.close();
-    });
-
-    test('- Connect with non-ascii connection string', () async {
-      final res = await conn!.query('select 1;');
-      expect(res.length, 1);
-    });
-  });
+      test('- Connect with non-ascii connection string', () async {
+        conn = await server.newPostgreSQLConnection();
+        await conn!.open();
+        final res = await conn!.query('select 1;');
+        expect(res.length, 1);
+      });
+    },
+  );
 }
 
 /* -------------------------------------------------------------------------- */
 /*                         helper methods and getters                         */
 /* -------------------------------------------------------------------------- */
-
-String _createTempFile({
-  required String fileName,
-  required String contents,
-}) {
-  final file = File(p.join(
-    Directory.systemTemp.path,
-    DateTime.now().millisecondsSinceEpoch.toString(),
-    fileName,
-  ));
-
-  file.createSync(recursive: true);
-  file.writeAsStringSync(contents);
-  return file.path;
-}
 
 String get _sampleHbaConfigPassword =>
     _sampleHbaContentTrust.replaceAll('trust', 'password');
