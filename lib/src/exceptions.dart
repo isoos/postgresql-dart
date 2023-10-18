@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
@@ -19,6 +21,14 @@ class PgException implements Exception {
 
   @override
   String toString() => '$severity $message';
+}
+
+/// Exception thrown when server certificate validate failed.
+class BadCertificateException extends PgException {
+  final X509Certificate certificate;
+
+  BadCertificateException(this.certificate)
+      : super('Bad server certificate.', severity: Severity.fatal);
 }
 
 /// Exception thrown by the server.

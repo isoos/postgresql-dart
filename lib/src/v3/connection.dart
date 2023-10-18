@@ -282,8 +282,9 @@ class PgConnectionImplementation extends _PgSessionBase
 
         socket = await SecureSocket.secure(
           socket,
-          onBadCertificate:
-              settings.sslMode.ignoreCertificateIssues ? (_) => true : null,
+          onBadCertificate: settings.sslMode.ignoreCertificateIssues
+              ? (_) => true
+              : (c) => throw BadCertificateException(c),
         ).timeout(settings.connectTimeout);
 
         // We can listen to the secured socket again, the existing subscription is
