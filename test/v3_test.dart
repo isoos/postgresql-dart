@@ -35,7 +35,7 @@ void main() {
 
     test('statement without rows', () async {
       final result = await connection.execute(
-        PgSql('''SELECT pg_notify('VIRTUAL','Payload 2');'''),
+        Sql('''SELECT pg_notify('VIRTUAL','Payload 2');'''),
         ignoreRows: true,
       );
 
@@ -71,7 +71,7 @@ void main() {
           DataType<T> type, T? value,
           {dynamic matcher}) async {
         final rowFromExplicitType = await connection.execute(
-          PgSql(r'SELECT $1', types: [type]),
+          Sql(r'SELECT $1', types: [type]),
           parameters: [value],
         );
         expect(rowFromExplicitType, [
@@ -80,7 +80,7 @@ void main() {
 
         if (type.nameForSubstitution != null) {
           final rowFromInferredType = await connection.execute(
-            PgSql.map('SELECT @var:${type.nameForSubstitution}'),
+            Sql.named('SELECT @var:${type.nameForSubstitution}'),
             parameters: [value],
           );
           expect(rowFromInferredType, [
@@ -135,7 +135,7 @@ void main() {
 
     test('can use same variable multiple times', () async {
       final stmt = await connection.prepare(
-          PgSql(r'SELECT $1 AS a, $1 + 2 AS b', types: [DataType.integer]));
+          Sql(r'SELECT $1 AS a, $1 + 2 AS b', types: [DataType.integer]));
       final rows = await stmt.run([10]);
 
       expect(rows, [
@@ -146,7 +146,7 @@ void main() {
 
     test('can use mapped queries with json-contains operator', () async {
       final rows = await connection.execute(
-        PgSql.map('SELECT @a:jsonb @> @b:jsonb'),
+        Sql.named('SELECT @a:jsonb @> @b:jsonb'),
         parameters: {
           'a': {'foo': 'bar', 'another': 'as well'},
           'b': {'foo': 'bar'},
@@ -160,7 +160,7 @@ void main() {
 
     test('can use json path predicate check operator', () async {
       final rows = await connection.execute(
-        PgSql.map('SELECT @a:jsonb @@ @b:text::jsonpath'),
+        Sql.named('SELECT @a:jsonb @@ @b:text::jsonpath'),
         parameters: {
           'a': [1, 2, 3, 4, 5],
           'b': r'$.a[*] > 2',
@@ -192,7 +192,7 @@ void main() {
       test('for duplicate with extended query', () async {
         await expectLater(
           () => connection.execute(
-            PgSql(r'INSERT INTO foo VALUES ($1);'),
+            Sql(r'INSERT INTO foo VALUES ($1);'),
             parameters: [TypedValue(DataType.integer, 1)],
           ),
           _throwsPostgresException,
@@ -204,7 +204,7 @@ void main() {
 
       test('for duplicate in prepared statement', () async {
         final stmt = await connection.prepare(
-          PgSql(r'INSERT INTO foo VALUES ($1);', types: [DataType.integer]),
+          Sql(r'INSERT INTO foo VALUES ($1);', types: [DataType.integer]),
         );
         final stream = stmt.bind([1]);
         await expectLater(stream, emitsError(_isPostgresException));
@@ -243,7 +243,7 @@ void main() {
 
         final outValue = await connection.runTx((ctx) async {
           return await ctx.execute(
-            PgSql(r'SELECT * FROM t WHERE id = $1 LIMIT 1'),
+            Sql(r'SELECT * FROM t WHERE id = $1 LIMIT 1'),
             parameters: [TypedValue(DataType.integer, 1)],
           );
         });
@@ -389,7 +389,7 @@ void main() {
       test('parameterized query throws', () async {
         await expectLater(
           () => connection.execute(
-            PgSql('SELECT 1'),
+            Sql('SELECT 1'),
             parameters: [TypedValue(DataType.integer, 1)],
             queryMode: QueryMode.simple,
           ),

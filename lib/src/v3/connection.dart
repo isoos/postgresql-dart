@@ -407,7 +407,7 @@ class PgConnectionImplementation extends _PgSessionBase
       // only it) can be used to run statements while it's active.
       final transaction =
           _connection._activeTransaction = _TransactionSession(this);
-      await transaction.execute(PgSql('BEGIN;'), queryMode: QueryMode.simple);
+      await transaction.execute(Sql('BEGIN;'), queryMode: QueryMode.simple);
 
       try {
         final result = await fn(transaction);
@@ -752,7 +752,7 @@ class _Channels implements PgChannels {
 
   void _subscribe(String channel, MultiStreamController firstListener) {
     Future(() async {
-      await _connection.execute(PgSql('LISTEN ${identifier(channel)}'),
+      await _connection.execute(Sql('LISTEN ${identifier(channel)}'),
           ignoreRows: true);
     }).onError<Object>((error, stackTrace) {
       _activeListeners[channel]?.remove(firstListener);
@@ -771,7 +771,7 @@ class _Channels implements PgChannels {
       _activeListeners.remove(channel);
 
       // Send unlisten command
-      await _connection.execute(PgSql('UNLISTEN ${identifier(channel)}'),
+      await _connection.execute(Sql('UNLISTEN ${identifier(channel)}'),
           ignoreRows: true);
     }
   }
@@ -788,7 +788,7 @@ class _Channels implements PgChannels {
 
   @override
   Future<void> cancelAll() async {
-    await _connection.execute(PgSql('UNLISTEN *'));
+    await _connection.execute(Sql('UNLISTEN *'));
 
     for (final entry in _activeListeners.values) {
       for (final listener in entry) {
@@ -801,7 +801,7 @@ class _Channels implements PgChannels {
   Future<void> notify(String channel, [String? payload]) async {
     final statementCompleter = _notifyStatement ??= Completer()
       ..complete(Future(() async {
-        return _connection.prepare(PgSql(r'SELECT pg_notify($1, $2)',
+        return _connection.prepare(Sql(r'SELECT pg_notify($1, $2)',
             types: [DataType.text, DataType.text]));
       }));
     final statement = await statementCompleter.future;

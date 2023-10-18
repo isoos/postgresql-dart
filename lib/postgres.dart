@@ -40,23 +40,23 @@ abstract class PgPool implements PgSession, PgSessionExecutor {
 /// for parameters, if any.
 ///
 /// Queries can be sent to postgres as-is. To do that, pass a string to
-/// [PgSession.prepare] or [PgSession.execute] or use the default [PgSql]
+/// [PgSession.prepare] or [PgSession.execute] or use the default [Sql]
 /// constructor. These queries are not intepreted or altered by this package in
 /// any way. If you're using parameter in those queries, you either have to
-/// specify their types in the [PgSql] constructor, or exclusively use
+/// specify their types in the [Sql] constructor, or exclusively use
 /// [TypedValue] instances in [PgSession.execute], [PgStatement.bind] and
 /// [PgStatement.run].
 ///
 /// Alternatively, you can use named variables that will be desugared by this
-/// package with the [PgSql.map] factory.
-class PgSql {
+/// package with the [Sql.named] factory.
+class Sql {
   /// The default constructor, sending [sql] to the Postgres database without
   /// any modification.
   ///
   /// The [types] parameter can optionally be used to pass the types of
   /// parameters in the query. If they're not set, only [TypedValue]
   /// instances can be used when binding values later.
-  factory PgSql(String sql, {List<DataType>? types}) =
+  factory Sql(String sql, {List<DataType>? types}) =
       InternalQueryDescription.direct;
 
   /// Looks for named parameters in [sql] and desugars them.
@@ -66,7 +66,7 @@ class PgSql {
   /// In those queries, `@variableName` can be used to declare a variable.
   ///
   /// ```dart
-  /// final sql = PgSql.map('SELECT * FROM users WHERE id = @id');
+  /// final sql = Sql.named('SELECT * FROM users WHERE id = @id');
   /// final stmt = await connection.prepare(sql);
   /// final vars = {'id': PgTypedParameter(PgDataType.integer, 3)};
   /// await for (final row in stmt.bind(vars)) {
@@ -78,7 +78,7 @@ class PgSql {
   /// in the query:
   ///
   /// ```dart
-  /// final sql = PgSql.map('SELECT * FROM users WHERE id = @id:int4');
+  /// final sql = Sql.named('SELECT * FROM users WHERE id = @id:int4');
   /// final stmt = await connection.prepare(sql);
   /// final vars = {'id': 3};
   /// await for (final row in stmt.bind(vars)) {
@@ -96,37 +96,37 @@ class PgSql {
   /// Note that this syntax is a feature of this package and not directly
   /// understood by postgres. This requires the package to scan the [sql] for
   /// variables, which adds a small overhead over when compared to a direct
-  /// [PgSql] query.
+  /// [Sql] query.
   /// Also, the scanner might interpret queries incorrectly in the case of
   /// malformed [sql] (like an unterminated string literal or comment). In that
   /// case, the transformation might not recognize all variables.
-  factory PgSql.map(String sql, {String substitution}) =
-      InternalQueryDescription.map;
+  factory Sql.named(String sql, {String substitution}) =
+      InternalQueryDescription.named;
 }
 
 abstract class PgSession {
   /// Prepares a reusable statement from a [query].
   ///
-  /// [query] must either be a [String] or a [PgSql] object with types for
+  /// [query] must either be a [String] or a [Sql] object with types for
   /// parameters already set. If the types for parameters are already known from
   /// the query, a direct list of values can be passed for [parameters].
   /// Otherwise, the type of parameter types must be made explicit. This can be
   /// done by passing [TypedValue] objects in a list, or (if a string or
-  /// [PgSql.map] value is passed for [query]), via the names of declared
+  /// [Sql.named] value is passed for [query]), via the names of declared
   /// statements.
   ///
   /// When the returned future completes, the statement must eventually be freed
   /// using [PgStatement.dispose] to avoid resource leaks.
-  Future<PgStatement> prepare(Object /* String | PgSql */ query);
+  Future<PgStatement> prepare(Object /* String | Sql */ query);
 
   /// Executes the [query] with the given [parameters].
   ///
-  /// [query] must either be a [String] or a [PgSql] object with types for
+  /// [query] must either be a [String] or a [Sql] object with types for
   /// parameters already set. If the types for parameters are already known from
   /// the query, a direct list of values can be passed for [parameters].
   /// Otherwise, the type of parameter types must be made explicit. This can be
   /// done by passing [TypedValue] objects in a list, or (if a string or
-  /// [PgSql.map] value is passed for [query]), via the names of declared
+  /// [Sql.named] value is passed for [query]), via the names of declared
   /// statements.
   ///
   /// When [ignoreRows] is set to true, the implementation may internally
@@ -140,7 +140,7 @@ abstract class PgSession {
   /// [QueryMode.extended] which is the default value. For more information,
   /// see [PgSessionSettings.queryMode]
   Future<PgResult> execute(
-    Object /* String | PgSql */ query, {
+    Object /* String | Sql */ query, {
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
         parameters,
     bool ignoreRows = false,
