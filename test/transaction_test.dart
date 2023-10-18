@@ -23,7 +23,8 @@ void main() {
       await conn.execute('INSERT INTO t (id) VALUES (1)');
 
       final outValue = await conn.runTx((ctx) async {
-        return await ctx.execute('SELECT * FROM t WHERE id = @id:int4 LIMIT 1',
+        return await ctx.execute(
+            PgSql.map('SELECT * FROM t WHERE id = @id:int4 LIMIT 1'),
             parameters: {'id': 1});
       });
 
@@ -491,7 +492,7 @@ void main() {
 
         // The mismatched type is caught in Dart, but unawaited here
         expect(
-            c.execute('INSERT INTO t (id) VALUES (@id:int4)',
+            c.execute(PgSql.map('INSERT INTO t (id) VALUES (@id:int4)'),
                 parameters: {'id': 'foobar'}),
             throwsA(isA<FormatException>()));
 
@@ -624,7 +625,7 @@ void main() {
     test('can start transactions manually', () async {
       await conn.execute('BEGIN');
       await conn.execute(
-        'INSERT INTO t VALUES (@a:int4)',
+        PgSql.map('INSERT INTO t VALUES (@a:int4)'),
         parameters: {'a': 123},
       );
       await conn.execute('ROLLBACK');
