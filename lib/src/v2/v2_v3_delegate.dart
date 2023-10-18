@@ -24,7 +24,7 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
       {Map<String, dynamic>? substitutionValues, int? timeoutInSeconds}) async {
     if (_session case final PgSession session) {
       final rs = await session.execute(
-        PgSql.map(fmtString),
+        Sql.named(fmtString),
         parameters: substitutionValues,
         ignoreRows: true,
       );
@@ -52,7 +52,7 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
       bool? useSimpleQueryProtocol}) async {
     if (_session case final PgSession session) {
       final rs = await session.execute(
-        PgSql.map(fmtString),
+        Sql.named(fmtString),
         parameters: substitutionValues,
         queryMode: (useSimpleQueryProtocol ?? false) ? QueryMode.simple : null,
         timeout: timeoutInSeconds == null

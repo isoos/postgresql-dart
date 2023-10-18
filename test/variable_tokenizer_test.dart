@@ -4,7 +4,8 @@ import 'package:test/test.dart';
 
 void main() {
   test('can declare variables', () {
-    final desc = InternalQueryDescription.map('SELECT @x:int8, @y:boolean, @z');
+    final desc =
+        InternalQueryDescription.named('SELECT @x:int8, @y:boolean, @z');
 
     expect(desc.transformedSql, r'SELECT $1, $2, $3');
     expect(
@@ -54,7 +55,7 @@ void main() {
   });
 
   test('can use the same variable more than once', () {
-    final desc = InternalQueryDescription.map(
+    final desc = InternalQueryDescription.named(
         'SELECT * FROM foo WHERE a = @x OR bar = @y OR b = @x');
     expect(desc.transformedSql,
         r'SELECT * FROM foo WHERE a = $1 OR bar = $2 OR b = $1');
@@ -62,7 +63,7 @@ void main() {
   });
 
   test('can use custom variable symbol', () {
-    final desc = InternalQueryDescription.map(
+    final desc = InternalQueryDescription.named(
         'SELECT * FROM foo WHERE a = :x:int8',
         substitution: ':');
     expect(desc.transformedSql, r'SELECT * FROM foo WHERE a = $1');
@@ -71,14 +72,14 @@ void main() {
   });
 
   test('finds correct end for string literal', () {
-    final desc = InternalQueryDescription.map(r"SELECT e'@a\\' @b");
+    final desc = InternalQueryDescription.named(r"SELECT e'@a\\' @b");
     expect(desc.transformedSql, r"SELECT e'@a\\' $1");
     expect(desc.namedVariables?.keys, ['b']);
   });
 
   group('VARCHAR(x)', () {
     test('accept with some length', () {
-      final desc = InternalQueryDescription.map('SELECT @x:_varchar(10), 0');
+      final desc = InternalQueryDescription.named('SELECT @x:_varchar(10), 0');
       expect(desc.transformedSql, r'SELECT $1, 0');
       expect(desc.namedVariables, {'x': 1});
       expect(desc.parameterTypes, [DataType.varCharArray]);
@@ -95,12 +96,12 @@ void main() {
       ];
       for (final snippet in badSnippets) {
         expect(
-          () => InternalQueryDescription.map('SELECT $snippet'),
+          () => InternalQueryDescription.named('SELECT $snippet'),
           throwsFormatException,
           reason: snippet,
         );
         expect(
-          () => InternalQueryDescription.map('SELECT $snippet, 0'),
+          () => InternalQueryDescription.named('SELECT $snippet, 0'),
           throwsFormatException,
           reason: '$snippet, 0',
         );
@@ -110,53 +111,53 @@ void main() {
 
   group('ignores', () {
     test('line comments', () {
-      final desc = InternalQueryDescription.map('SELECT @1, -- @2 \n @3');
+      final desc = InternalQueryDescription.named('SELECT @1, -- @2 \n @3');
       expect(desc.transformedSql, r'SELECT $1,  $2');
       expect(desc.namedVariables?.keys, ['1', '3']);
     });
 
     test('block comments', () {
-      final desc = InternalQueryDescription.map(
+      final desc = InternalQueryDescription.named(
           'SELECT @1 /* this is ignored: @2 */, @3');
       expect(desc.transformedSql, r'SELECT $1 , $2');
       expect(desc.namedVariables?.keys, ['1', '3']);
     });
 
     test('string literals', () {
-      final desc = InternalQueryDescription.map(
+      final desc = InternalQueryDescription.named(
           "SELECT @1, 'isn''t a variable: @2', @3");
       expect(desc.transformedSql, r"SELECT $1, 'isn''t a variable: @2', $2");
       expect(desc.namedVariables?.keys, ['1', '3']);
     });
 
     test('string literals with C-style escapes', () {
-      final desc = InternalQueryDescription.map(
+      final desc = InternalQueryDescription.named(
           r"SELECT @1, E'isn\'t a variable: @2', @3");
       expect(desc.transformedSql, r"SELECT $1, E'isn\'t a variable: @2', $2");
       expect(desc.namedVariables?.keys, ['1', '3']);
     });
 
     test('strings with unicode escapes', () {
-      final desc = InternalQueryDescription.map(r"U&'d\0061t@1\+000061', @2");
+      final desc = InternalQueryDescription.named(r"U&'d\0061t@1\+000061', @2");
       expect(desc.transformedSql, r"U&'d\0061t@1\+000061', $1");
       expect(desc.namedVariables?.keys, ['2']);
     });
 
     test('identifiers', () {
-      final desc = InternalQueryDescription.map('SELECT @1 AS "@2", @3');
+      final desc = InternalQueryDescription.named('SELECT @1 AS "@2", @3');
       expect(desc.transformedSql, r'SELECT $1 AS "@2", $2');
       expect(desc.namedVariables?.keys, ['1', '3']);
     });
 
     test('identifiers with unicode escapes', () {
       final desc =
-          InternalQueryDescription.map(r'SELECT U&"d\0061t@1\+000061", @2');
+          InternalQueryDescription.named(r'SELECT U&"d\0061t@1\+000061", @2');
       expect(desc.transformedSql, r'SELECT U&"d\0061t@1\+000061", $1');
       expect(desc.namedVariables?.keys, ['2']);
     });
 
     test('dollar quoted string', () {
-      final desc = InternalQueryDescription.map(
+      final desc = InternalQueryDescription.named(
         r"SELECT $foo$ This is a string literal $foo that still hasn't ended here $foo$, @1",
       );
 
@@ -168,7 +169,7 @@ void main() {
     });
 
     test('invalid dollar quoted string', () {
-      final desc = InternalQueryDescription.map(r'SELECT $foo @1');
+      final desc = InternalQueryDescription.named(r'SELECT $foo @1');
       expect(desc.transformedSql, r'SELECT $foo $1');
       expect(desc.namedVariables?.keys, ['1']);
     });
@@ -177,7 +178,8 @@ void main() {
     final operators = ['@>', '<@', '@?', '@@'];
     for (final operator in operators) {
       test('can use $operator', () {
-        final desc = InternalQueryDescription.map('SELECT @foo $operator @bar');
+        final desc =
+            InternalQueryDescription.named('SELECT @foo $operator @bar');
         expect(desc.transformedSql, 'SELECT \$1 $operator \$2');
         expect(desc.namedVariables?.keys, ['foo', 'bar']);
       });
@@ -186,19 +188,20 @@ void main() {
 
   group('throws', () {
     test('for variable with empty type name', () {
-      expect(() => InternalQueryDescription.map('SELECT @var: FROM foo'),
+      expect(() => InternalQueryDescription.named('SELECT @var: FROM foo'),
           throwsFormatException);
     });
 
     test('for invalid type name', () {
       expect(
-          () => InternalQueryDescription.map('SELECT @var:nosuchtype FROM foo'),
+          () =>
+              InternalQueryDescription.named('SELECT @var:nosuchtype FROM foo'),
           throwsFormatException);
     });
 
     test('for missing variable', () {
       expect(
-        () => InternalQueryDescription.map('SELECT @foo').bindParameters({}),
+        () => InternalQueryDescription.named('SELECT @foo').bindParameters({}),
         throwsA(isA<ArgumentError>().having(
           (e) => e.message,
           'message',
@@ -209,7 +212,8 @@ void main() {
 
     test('for superfluous variables', () {
       expect(
-        () => InternalQueryDescription.map('SELECT @foo:int4').bindParameters({
+        () =>
+            InternalQueryDescription.named('SELECT @foo:int4').bindParameters({
           'foo': 3,
           'X': 'Y',
           'Y': 'Z',

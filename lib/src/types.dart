@@ -194,7 +194,7 @@ enum DataType<T extends Object> {
   /// The object ID of this data type.
   final int? oid;
 
-  /// The name of this type as considered by [PgSql.map].
+  /// The name of this type as considered by [Sql.named].
   ///
   /// To declare an explicit type for a substituted parameter in a query, this
   /// name can be used.

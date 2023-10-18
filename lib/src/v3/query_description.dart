@@ -1,7 +1,7 @@
 import '../../postgres.dart';
 import 'variable_tokenizer.dart';
 
-class InternalQueryDescription implements PgSql {
+class InternalQueryDescription implements Sql {
   /// The SQL to send to postgres.
   ///
   /// This is the [originalSql] statement after local processing ran to
@@ -36,7 +36,7 @@ class InternalQueryDescription implements PgSql {
           namedVariables,
         );
 
-  factory InternalQueryDescription.map(String sql,
+  factory InternalQueryDescription.named(String sql,
       {String substitution = '@'}) {
     final charCodes = substitution.codeUnits;
     if (charCodes.length != 1) {
@@ -105,7 +105,7 @@ class InternalQueryDescription implements PgSql {
       final unmatchedVariables = params.keys.toSet();
       if (byName == null) {
         throw ArgumentError.value(
-            params, 'parameters', 'Maps are only supported by `PgSql.map`');
+            params, 'parameters', 'Maps are only supported by `Sql.named`');
       }
 
       var variableIndex = 1;
