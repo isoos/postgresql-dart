@@ -1,4 +1,4 @@
-part of postgres.connection;
+part of 'connection.dart';
 
 typedef _TransactionQuerySignature = Future<dynamic> Function(
     PostgreSQLExecutionContext connection);

@@ -1,4 +1,4 @@
-part of postgres.connection;
+part of 'connection.dart';
 
 abstract class _PostgreSQLConnectionState {
   PostgreSQLConnection? connection;
