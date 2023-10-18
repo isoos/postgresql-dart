@@ -52,7 +52,7 @@ class InternalQueryDescription implements PgSql {
 
   factory InternalQueryDescription.wrap(Object query) {
     if (query is String) {
-      return InternalQueryDescription.map(query);
+      return InternalQueryDescription.direct(query);
     } else if (query is InternalQueryDescription) {
       return query;
     } else {
