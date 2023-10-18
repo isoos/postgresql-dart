@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:stream_channel/stream_channel.dart';
@@ -319,7 +318,6 @@ final class PgEndpoint {
   final String database;
   final String? username;
   final String? password;
-  final bool requireSsl;
   final bool isUnixSocket;
 
   PgEndpoint({
@@ -328,9 +326,23 @@ final class PgEndpoint {
     required this.database,
     this.username,
     this.password,
-    this.requireSsl = false,
     this.isUnixSocket = false,
   });
+}
+
+enum SslMode {
+  /// No SSL is used, implies that password may be sent as plaintext.
+  disable,
+
+  /// Always use SSL (but ignore verification errors).
+  require,
+
+  /// Always use SSL and verify certificates.
+  verifyFull,
+  ;
+
+  bool get ignoreCertificateIssues => this == SslMode.require;
+  bool get allowCleartextPassword => this == SslMode.disable;
 }
 
 final class PgSessionSettings {
@@ -341,13 +353,7 @@ final class PgSessionSettings {
 
   final Encoding? encoding;
 
-  /// Whether the client should send the password to the server in clear-text
-  /// for authentication.
-  ///
-  /// For security reasons, it is recommended to keep this disabled.
-  final bool? allowCleartextPassword;
-
-  final bool Function(X509Certificate)? onBadSslCertificate;
+  final SslMode? sslMode;
 
   /// An optional [StreamChannelTransformer] sitting behind the postgres client
   /// as implemented in the `posgres` package and the database server.
@@ -391,8 +397,7 @@ final class PgSessionSettings {
     this.connectTimeout,
     this.timeZone,
     this.encoding,
-    this.allowCleartextPassword,
-    this.onBadSslCertificate,
+    this.sslMode,
     this.transformer,
     this.replicationMode = ReplicationMode.none,
     this.queryMode = QueryMode.extended,

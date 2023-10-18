@@ -38,7 +38,7 @@ class _ResolvedSettings {
   final String timeZone;
   final Encoding encoding;
 
-  final bool allowCleartextPassword;
+  final SslMode sslMode;
   final ReplicationMode replicationMode;
   final QueryMode queryMode;
 
@@ -59,13 +59,9 @@ class _ResolvedSettings {
         transformer = settings?.transformer,
         replicationMode = settings?.replicationMode ?? ReplicationMode.none,
         queryMode = settings?.queryMode ?? QueryMode.extended,
-        allowCleartextPassword = settings?.allowCleartextPassword ?? false,
+        sslMode = settings?.sslMode ?? SslMode.require,
         allowSuperfluousParameters =
             settings?.allowSuperfluousParameters ?? false;
-
-  bool onBadSslCertificate(X509Certificate certificate) {
-    return settings?.onBadSslCertificate?.call(certificate) ?? false;
-  }
 }
 
 abstract class _PgSessionBase implements PgSession {
@@ -270,34 +266,35 @@ class PgConnectionImplementation extends _PgSessionBase
       onError: sslCompleter.completeError,
     );
 
-    // Query if SSL is possible by sending a SSLRequest message
-    final byteBuffer = ByteData(8);
-    byteBuffer.setUint32(0, 8);
-    byteBuffer.setUint32(4, 80877103);
-    socket.add(byteBuffer.buffer.asUint8List());
-
-    final byte = await sslCompleter.future.timeout(settings.connectTimeout);
-
     Stream<Uint8List> adaptedStream;
+    if (settings.sslMode != SslMode.disable) {
+      // Query if SSL is possible by sending a SSLRequest message
+      final byteBuffer = ByteData(8);
+      byteBuffer.setUint32(0, 8);
+      byteBuffer.setUint32(4, 80877103);
+      socket.add(byteBuffer.buffer.asUint8List());
 
-    if (byte == $S) {
-      // SSL is supported, upgrade!
-      subscription.pause();
+      final byte = await sslCompleter.future.timeout(settings.connectTimeout);
 
-      socket = await SecureSocket.secure(
-        socket,
-        onBadCertificate: settings.onBadSslCertificate,
-      ).timeout(settings.connectTimeout);
+      if (byte == $S) {
+        // SSL is supported, upgrade!
+        subscription.pause();
 
-      // We can listen to the secured socket again, the existing subscription is
-      // ignored.
-      adaptedStream = socket;
-    } else {
-      // This server does not support SSL
-      if (settings.endpoint.requireSsl) {
+        socket = await SecureSocket.secure(
+          socket,
+          onBadCertificate: settings.sslMode.ignoreCertificateIssues
+              ? (_) => true
+              : (c) => throw BadCertificateException(c),
+        ).timeout(settings.connectTimeout);
+
+        // We can listen to the secured socket again, the existing subscription is
+        // ignored.
+        adaptedStream = socket;
+      } else {
+        // This server does not support SSL
         throw PgException('Server does not support SSL, but it was required.');
       }
-
+    } else {
       // We've listened to the stream already and sockets are single-subscription
       // streams. Expose it as a new stream.
       adaptedStream = SubscriptionStream(subscription);
@@ -354,7 +351,7 @@ class PgConnectionImplementation extends _PgSessionBase
         replication: _settings.replicationMode,
       ));
 
-      return result._done.future;
+      return result._done.future.timeout(_settings.connectTimeout);
     });
   }
 
@@ -981,7 +978,7 @@ class _AuthenticationProcedure extends _PendingOperation {
           _initializeAuthenticate(message, AuthenticationScheme.md5);
           break;
         case AuthenticationMessage.KindClearTextPassword:
-          if (!connection._settings.allowCleartextPassword) {
+          if (!connection._settings.sslMode.allowCleartextPassword) {
             _done.completeError(
               PgServerException(
                   'Refused to send clear text password to server'),

@@ -69,39 +69,31 @@ class PostgresServer {
     }
   }
 
-  Future<PgEndpoint> endpoint({
-    bool requireSsl = false,
-  }) async =>
-      PgEndpoint(
+  Future<PgEndpoint> endpoint() async => PgEndpoint(
         host: 'localhost',
         database: 'postgres',
         username: _pgUser ?? 'postgres',
         password: _pgPassword ?? 'postgres',
         port: await port,
-        requireSsl: requireSsl,
       );
 
   Future<PgConnection> newConnection({
-    bool useSSL = false,
     ReplicationMode replicationMode = ReplicationMode.none,
   }) async {
     return PgConnection.open(
-      await endpoint(requireSsl: useSSL),
+      await endpoint(),
       sessionSettings: PgSessionSettings(
         replicationMode: replicationMode,
-        // We use self-signed certificates in tests
-        onBadSslCertificate: (_) => true,
         transformer: loggingTransformer('conn'),
       ),
     );
   }
 
   Future<PostgreSQLConnection> newPostgreSQLConnection({
-    bool useSSL = false,
-    bool allowClearTextPassword = false,
     ReplicationMode replicationMode = ReplicationMode.none,
     PgEndpoint? endpoint,
     Duration? connectTimeout,
+    SslMode? sslMode,
   }) async {
     final e = endpoint ?? await this.endpoint();
 
@@ -109,9 +101,8 @@ class PostgresServer {
       return LegacyPostgreSQLConnection(
         e,
         PgSessionSettings(
-          onBadSslCertificate: (_) => true,
+          sslMode: sslMode,
           replicationMode: replicationMode,
-          allowCleartextPassword: allowClearTextPassword,
           allowSuperfluousParameters: true,
           connectTimeout: connectTimeout,
         ),
@@ -125,9 +116,9 @@ class PostgresServer {
       e.database,
       username: e.username,
       password: e.password,
-      useSSL: useSSL,
+      useSSL: sslMode != SslMode.disable,
       replicationMode: replicationMode,
-      allowClearTextPassword: allowClearTextPassword,
+      allowClearTextPassword: sslMode == SslMode.disable,
       timeoutInSeconds: connectTimeout?.inSeconds ?? 30,
     );
   }
