@@ -12,7 +12,7 @@ void main() {
     late Pool pool;
 
     setUp(() async {
-      pool = Pool(
+      pool = Pool.withEndpoints(
         [await server.endpoint()],
         sessionSettings: _sessionSettings,
       );
@@ -80,7 +80,7 @@ void main() {
 
   withPostgresServer('limit pool connections', (server) {
     test('can limit concurrent connections', () async {
-      final pool = Pool(
+      final pool = Pool.withEndpoints(
         [await server.endpoint()],
         sessionSettings: _sessionSettings,
         poolSettings: const PoolSettings(maxConnectionCount: 2),
