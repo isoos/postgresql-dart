@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:async/async.dart';
 import 'package:charcode/ascii.dart';
 import 'package:collection/collection.dart';
-import 'package:pool/pool.dart';
+import 'package:pool/pool.dart' as pool;
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
@@ -73,7 +73,7 @@ abstract class _PgSessionBase implements PgSession {
   /// transaction,the [_operationLock] of the connection is held until the
   /// transaction completes. This ensures that no other statement can use the
   /// connection in the meantime.
-  final Pool _operationLock = Pool(1);
+  final _operationLock = pool.Pool(1);
 
   bool _sessionClosed = false;
 

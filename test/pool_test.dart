@@ -9,10 +9,10 @@ final _sessionSettings = PgSessionSettings();
 
 void main() {
   withPostgresServer('generic', (server) {
-    late PgPool pool;
+    late Pool pool;
 
     setUp(() async {
-      pool = PgPool(
+      pool = Pool(
         [await server.endpoint()],
         sessionSettings: _sessionSettings,
       );
@@ -80,10 +80,10 @@ void main() {
 
   withPostgresServer('limit pool connections', (server) {
     test('can limit concurrent connections', () async {
-      final pool = PgPool(
+      final pool = Pool(
         [await server.endpoint()],
         sessionSettings: _sessionSettings,
-        poolSettings: const PgPoolSettings(maxConnectionCount: 2),
+        poolSettings: const PoolSettings(maxConnectionCount: 2),
       );
       addTearDown(pool.close);
 

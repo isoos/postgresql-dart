@@ -7,32 +7,13 @@ import 'package:stream_channel/stream_channel.dart';
 import 'src/replication.dart';
 import 'src/types.dart';
 import 'src/v3/connection.dart';
-import 'src/v3/pool.dart';
 import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
 
 export 'src/exceptions.dart';
+export 'src/pool/pool_api.dart';
 export 'src/replication.dart';
 export 'src/types.dart';
-
-abstract class PgPool implements PgSession, PgSessionExecutor {
-  factory PgPool(
-    List<PgEndpoint> endpoints, {
-    PgSessionSettings? sessionSettings,
-    PgPoolSettings? poolSettings,
-  }) =>
-      PoolImplementation(endpoints, sessionSettings, poolSettings);
-
-  /// Acquires a connection from this pool, opening a new one if necessary, and
-  /// calls [fn] with it.
-  ///
-  /// The connection must not be used after [fn] returns as it could be used by
-  /// another [withConnection] call later.
-  Future<R> withConnection<R>(
-    Future<R> Function(PgConnection connection) fn, {
-    PgSessionSettings? sessionSettings,
-  });
-}
 
 /// A description of a SQL query as interpreted by this package.
 ///
@@ -402,14 +383,6 @@ final class PgSessionSettings {
     this.replicationMode = ReplicationMode.none,
     this.queryMode = QueryMode.extended,
     this.allowSuperfluousParameters,
-  });
-}
-
-final class PgPoolSettings {
-  final int? maxConnectionCount;
-
-  const PgPoolSettings({
-    this.maxConnectionCount,
   });
 }
 
