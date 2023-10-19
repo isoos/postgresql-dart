@@ -1,22 +1,22 @@
 import 'dart:async';
 
-import 'package:pool/pool.dart';
+import 'package:pool/pool.dart' as pool;
 
 import '../../postgres.dart';
-import 'connection.dart';
+import '../v3/connection.dart';
 
-class PoolImplementation implements PgPool {
+class PoolImplementation implements Pool {
   final List<PgEndpoint> endpoints;
   final PgSessionSettings? sessionSettings;
-  final PgPoolSettings? poolSettings;
+  final PoolSettings? poolSettings;
 
-  final Pool _pool;
+  final pool.Pool _pool;
   final List<_OpenedConnection> _openConnections = [];
 
   int _nextEndpointIndex = 0;
 
   PoolImplementation(this.endpoints, this.sessionSettings, this.poolSettings)
-      : _pool = Pool(
+      : _pool = pool.Pool(
           poolSettings?.maxConnectionCount ?? 1000,
         );
 
@@ -140,7 +140,7 @@ class PoolImplementation implements PgPool {
   }
 }
 
-/// An opened [PgConnection] we're able to use in [PgPool.withConnection].
+/// An opened [PgConnection] we're able to use in [Pool.withConnection].
 class _OpenedConnection {
   bool isInUse = false;
   final PgConnectionImplementation connection;
