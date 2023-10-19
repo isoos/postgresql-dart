@@ -1,5 +1,44 @@
 # Changelog
 
+## 3.0.0-alpha.1
+
+### BREAKING CHANGES
+
+The package had a partial rewrite affecting public client API and internal
+behaviour, keeping most of the wire protocol handling from the v2 version.
+
+**Clients must need to rewrite and test their application when upgrading.**
+
+Notable breaking behaviour changes:
+
+  - Query executions must be awaited one-by-one, cannot send multiple SQLs
+    unawaited.
+  - Table name OIDs are not fetched or cached, schema information is absent,
+    `mappedResultsQuery` does not work either (absent from the API).
+  - Queries are not cached implicitly, explicit prepared statements can be
+    used instead.
+
+### Legacy compatibility layer
+
+`package:postgres/legacy.dart` provides a compatibility API for legacy
+`PostgreSQLConnection` that is somewhat compatible with the new API. The above
+features are missing or throw `UnimplementedError` when called.
+
+### Migration
+
+  - Use the legacy compatibility layer to check if your code is using any of
+    the above mentioned feature, rewrite if needed.
+  - Start using the new API, incrementally, when possible.
+  - For most queries, you may use `Sql.named('SELECT ...')` to keep the default
+    name- and `Map`-based query `@variable`` substitution, or you may use the
+    raw `$1` version (with 1-based indexes).
+
+### Features
+
+  - Compact API names.
+  - Connection pool.
+  - Fresh implementation with multiple bugs fixed along the way.
+
 ## 2.6.3
 
 - Allow `encoding` to be specified for connections. The setting will be used for all connection-related string conversions.
