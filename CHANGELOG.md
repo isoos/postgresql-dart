@@ -20,9 +20,9 @@ Notable breaking behaviour changes:
 
 ### Legacy compatibility layer
 
-`package:postgres/legacy.dart` provides a compatibility API for legacy
-`PostgreSQLConnection` that is somewhat compatible with the new API. The above
-features are missing or throw `UnimplementedError` when called.
+`package:postgres/legacy.dart` provides a somewhat compatible API via
+`PostgreSQLConnection.withV3()`. The above features are missing or throw
+`UnimplementedError` when called.
 
 ### Migration
 

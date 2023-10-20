@@ -98,9 +98,9 @@ class PostgresServer {
     final e = endpoint ?? await this.endpoint();
 
     if (_useV3) {
-      return LegacyPostgreSQLConnection(
+      return PostgreSQLConnection.withV3(
         e,
-        PgSessionSettings(
+        sessionSettings: PgSessionSettings(
           sslMode: sslMode,
           replicationMode: replicationMode,
           allowSuperfluousParameters: true,

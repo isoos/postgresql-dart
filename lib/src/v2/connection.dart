@@ -8,8 +8,9 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
-import '../auth/auth.dart';
 
+import '../../postgres.dart' show PgEndpoint, PgSessionSettings;
+import '../auth/auth.dart';
 import '../client_messages.dart';
 import '../exceptions.dart';
 import '../message_window.dart';
@@ -21,6 +22,7 @@ import 'execution_context.dart';
 import 'query.dart';
 import 'query_cache.dart';
 import 'query_queue.dart';
+import 'v2_v3_delegate.dart';
 
 part 'connection_fsm.dart';
 
@@ -35,6 +37,16 @@ typedef PostgreSQLException = PgServerException;
 class PostgreSQLConnection extends Object
     with _PostgreSQLExecutionContextMixin
     implements PostgreSQLExecutionContext {
+  /// Returns a somewhat compatible version of [PostgreSQLConnection]
+  /// that is backed by the new v3 implementation.
+  static PostgreSQLConnection withV3(
+    PgEndpoint endpoint, {
+    PgSessionSettings? sessionSettings,
+  }) {
+    return WrappedPostgreSQLConnection(
+        endpoint, sessionSettings ?? PgSessionSettings());
+  }
+
   /// Creates an instance of [PostgreSQLConnection].
   ///
   /// [host] must be a hostname, e.g. "foobar.com" or IP address. Do not include scheme or port.

@@ -70,7 +70,7 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
   int get queueSize => throw UnimplementedError();
 }
 
-class LegacyPostgreSQLConnection
+class WrappedPostgreSQLConnection
     with _DelegatingContext
     implements PostgreSQLConnection {
   final PgEndpoint _endpoint;
@@ -78,7 +78,7 @@ class LegacyPostgreSQLConnection
   PgConnection? _connection;
   bool _hasConnectedPreviously = false;
 
-  LegacyPostgreSQLConnection(this._endpoint, this._sessionSettings);
+  WrappedPostgreSQLConnection(this._endpoint, this._sessionSettings);
 
   @override
   PgSession? get _session => _connection;
