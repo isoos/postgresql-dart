@@ -1,32 +1,32 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:pool/pool.dart' as pool;
 
 import '../../postgres.dart';
 import '../v3/connection.dart';
 
+EndpointSelector roundRobinSelector(List<PgEndpoint> endpoints) {
+  int nextIndex = 0;
+  return (EndpointSelectorContext context) {
+    final endpoint = endpoints[nextIndex];
+    nextIndex = (nextIndex + 1) % endpoints.length;
+    return EndpointSelectorResult(endpoint: endpoint);
+  };
+}
+
 class PoolImplementation implements Pool {
-  final List<PgEndpoint> endpoints;
+  final EndpointSelector _selector;
   final PgSessionSettings? sessionSettings;
   final PoolSettings? poolSettings;
 
   final pool.Pool _pool;
   final List<_OpenedConnection> _openConnections = [];
 
-  int _nextEndpointIndex = 0;
-
-  PoolImplementation(this.endpoints, this.sessionSettings, this.poolSettings)
+  PoolImplementation(this._selector, this.sessionSettings, this.poolSettings)
       : _pool = pool.Pool(
           poolSettings?.maxConnectionCount ?? 1000,
         );
-
-  /// Returns the next endpoint from [endpoints], cycling through them.
-  PgEndpoint get _nextEndpoint {
-    final endpoint = endpoints[_nextEndpointIndex];
-    _nextEndpointIndex = (_nextEndpointIndex + 1) % endpoints.length;
-
-    return endpoint;
-  }
 
   @override
   Future<void> close() async {
@@ -87,35 +87,51 @@ class PoolImplementation implements Pool {
   }
 
   @override
-  Future<R> run<R>(Future<R> Function(PgSession session) fn) {
-    return withConnection((connection) => connection.run(fn));
+  Future<R> run<R>(
+    Future<R> Function(PgSession session) fn, {
+    Locality? locality,
+  }) {
+    return withConnection(
+      (connection) => connection.run(fn),
+      locality: locality,
+    );
   }
 
   @override
-  Future<R> runTx<R>(Future<R> Function(PgSession session) fn) {
-    return withConnection((connection) => connection.runTx(fn));
+  Future<R> runTx<R>(
+    Future<R> Function(PgSession session) fn, {
+    Locality? locality,
+  }) {
+    return withConnection(
+      (connection) => connection.runTx(fn),
+      locality: locality,
+    );
   }
 
   @override
-  Future<R> withConnection<R>(Future<R> Function(PgConnection connection) fn,
-      {PgSessionSettings? sessionSettings}) async {
+  Future<R> withConnection<R>(
+    Future<R> Function(PgConnection connection) fn, {
+    PgSessionSettings? sessionSettings,
+    Locality? locality,
+  }) async {
     final resource = await _pool.request();
 
-    // Find an existing connection that is currently unused, or open another
-    // one.
     _OpenedConnection? connection;
-    for (final opened in _openConnections) {
-      if (!opened.isInUse) {
-        connection = opened;
-        break;
-      }
-    }
-
     try {
+      final context = EndpointSelectorContext(
+        locality: locality,
+      );
+      final selection = await _selector(context);
+
+      // Find an existing connection that is currently unused, or open another
+      // one.
+      connection = _openConnections.firstWhereOrNull(
+          (c) => !c.isInUse && c.endpoint == selection.endpoint);
       if (connection == null) {
         connection ??= _OpenedConnection(
+          selection.endpoint,
           await PgConnectionImplementation.connect(
-            _nextEndpoint,
+            selection.endpoint,
             sessionSettings: sessionSettings ?? this.sessionSettings,
           ),
         );
@@ -142,10 +158,11 @@ class PoolImplementation implements Pool {
 
 /// An opened [PgConnection] we're able to use in [Pool.withConnection].
 class _OpenedConnection {
-  bool isInUse = false;
+  final PgEndpoint endpoint;
   final PgConnectionImplementation connection;
+  bool isInUse = false;
 
-  _OpenedConnection(this.connection);
+  _OpenedConnection(this.endpoint, this.connection);
 }
 
 class _PoolConnection implements PgConnection {

@@ -324,6 +324,27 @@ final class PgEndpoint {
     this.password,
     this.isUnixSocket = false,
   });
+
+  @override
+  int get hashCode => Object.hash(
+        host,
+        port,
+        database,
+        username,
+        password,
+        isUnixSocket,
+      );
+
+  @override
+  bool operator ==(Object other) {
+    return other is PgEndpoint &&
+        host == other.host &&
+        port == other.port &&
+        database == other.database &&
+        username == other.username &&
+        password == other.password &&
+        isUnixSocket == other.isUnixSocket;
+  }
 }
 
 enum SslMode {
