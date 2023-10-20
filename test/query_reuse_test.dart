@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:mirrors';
 
 import 'package:postgres/legacy.dart';
+import 'package:postgres/postgres.dart';
 import 'package:postgres/src/v2/query_cache.dart';
 import 'package:test/test.dart';
 
