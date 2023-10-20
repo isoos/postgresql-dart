@@ -152,8 +152,8 @@ abstract class _PgSessionBase implements PgSession {
 
     if (isSimple || (ignoreRows && variables.isEmpty)) {
       // Great, we can just run a simple query.
-      final controller = StreamController<PgResultRow>();
-      final items = <PgResultRow>[];
+      final controller = StreamController<ResultRow>();
+      final items = <ResultRow>[];
 
       final querySubscription = _PgResultStreamSubscription.simpleQueryProtocol(
         description.transformedSql,
@@ -487,16 +487,16 @@ class _PreparedStatement extends PgStatement {
   }
 }
 
-class _BoundStatement extends Stream<PgResultRow> implements PgResultStream {
+class _BoundStatement extends Stream<ResultRow> implements PgResultStream {
   final _PreparedStatement statement;
   final List<TypedValue> parameters;
 
   _BoundStatement(this.statement, this.parameters);
 
   @override
-  PgResultStreamSubscription listen(void Function(PgResultRow event)? onData,
+  PgResultStreamSubscription listen(void Function(ResultRow event)? onData,
       {Function? onError, void Function()? onDone, bool? cancelOnError}) {
-    final controller = StreamController<PgResultRow>();
+    final controller = StreamController<ResultRow>();
 
     // ignore: cancel_subscriptions
     final subscription = controller.stream.listen(onData,
@@ -509,15 +509,15 @@ class _PgResultStreamSubscription
     implements PgResultStreamSubscription, _PendingOperation {
   @override
   final _PgSessionBase session;
-  final StreamController<PgResultRow> _controller;
-  final StreamSubscription<PgResultRow> _source;
+  final StreamController<ResultRow> _controller;
+  final StreamSubscription<ResultRow> _source;
   final bool ignoreRows;
 
   final Completer<int> _affectedRows = Completer();
   int _affectedRowsSoFar = 0;
-  final Completer<PgResultSchema> _schema = Completer();
+  final Completer<ResultSchema> _schema = Completer();
   final Completer<void> _done = Completer();
-  PgResultSchema? _resultSchema;
+  ResultSchema? _resultSchema;
 
   @override
   PgConnectionImplementation get connection => session._connection;
@@ -582,7 +582,7 @@ class _PgResultStreamSubscription
   Future<int> get affectedRows => _affectedRows.future;
 
   @override
-  Future<PgResultSchema> get schema => _schema.future;
+  Future<ResultSchema> get schema => _schema.future;
 
   Future<void> _completeQuery() async {
     _done.complete();
@@ -594,7 +594,7 @@ class _PgResultStreamSubscription
       _affectedRows.complete(_affectedRowsSoFar);
     }
     if (!_schema.isCompleted) {
-      _schema.complete(PgResultSchema(const []));
+      _schema.complete(ResultSchema(const []));
     }
     await _controller.close();
   }
@@ -620,14 +620,14 @@ class _PgResultStreamSubscription
         // Nothing to do!
         break;
       case RowDescriptionMessage():
-        final schema = _resultSchema = PgResultSchema([
+        final schema = _resultSchema = ResultSchema([
           for (final field in message.fieldDescriptions)
-            PgResultColumn(
+            ResultSchemaColumn(
               type: DataType.byTypeOid[field.typeOid] ?? DataType.byteArray,
               columnName: field.fieldName,
               columnOid: field.columnOid,
               tableOid: field.tableOid,
-              binaryEncoding: field.isBinaryEncoding,
+              isBinaryEncoding: field.isBinaryEncoding,
             ),
         ]);
         _schema.complete(schema);
@@ -641,7 +641,7 @@ class _PgResultStreamSubscription
 
             final type = field.type;
             late final dynamic value;
-            if (field.binaryEncoding) {
+            if (field.isBinaryEncoding) {
               value = PostgresBinaryDecoder(type)
                   .convert(message.values[i], session.encoding);
             } else {
@@ -691,7 +691,7 @@ class _PgResultStreamSubscription
   bool get isPaused => _source.isPaused;
 
   @override
-  void onData(void Function(PgResultRow data)? handleData) {
+  void onData(void Function(ResultRow data)? handleData) {
     _source.onData(handleData);
   }
 
@@ -827,8 +827,8 @@ class _TransactionSession extends _PgSessionBase {
   /// This prevents other pending operations on the transaction that haven't
   /// been awaited from running.
   Future<void> _sendAndMarkClosed(String command) async {
-    final controller = StreamController<PgResultRow>();
-    final items = <PgResultRow>[];
+    final controller = StreamController<ResultRow>();
+    final items = <ResultRow>[];
 
     final querySubscription = _PgResultStreamSubscription.simpleQueryProtocol(
       command,
@@ -868,9 +868,9 @@ abstract class _PendingOperation {
   Future<void> handleMessage(ServerMessage message);
 }
 
-class _ResultRow extends UnmodifiableListView<Object?> implements PgResultRow {
+class _ResultRow extends UnmodifiableListView<Object?> implements ResultRow {
   @override
-  final PgResultSchema schema;
+  final ResultSchema schema;
 
   _ResultRow(this.schema, super.source);
 

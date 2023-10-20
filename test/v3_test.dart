@@ -41,7 +41,7 @@ void main() {
 
       expect(result, isEmpty);
       expect(result.schema.columns, [
-        isA<PgResultColumn>()
+        isA<ResultSchemaColumn>()
             .having((e) => e.columnName, 'columnName', 'pg_notify')
             .having((e) => e.type, 'type', DataType.voidType)
       ]);
