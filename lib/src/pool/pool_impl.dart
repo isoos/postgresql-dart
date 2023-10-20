@@ -15,8 +15,8 @@ EndpointSelector roundRobinSelector(List<Endpoint> endpoints) {
   };
 }
 
-class PoolImplementation implements Pool {
-  final EndpointSelector _selector;
+class PoolImplementation<L> implements Pool<L> {
+  final EndpointSelector<L> _selector;
   final SessionSettings? sessionSettings;
   final PoolSettings? poolSettings;
 
@@ -89,7 +89,7 @@ class PoolImplementation implements Pool {
   @override
   Future<R> run<R>(
     Future<R> Function(Session session) fn, {
-    Locality? locality,
+    L? locality,
   }) {
     return withConnection(
       (connection) => connection.run(fn),
@@ -100,7 +100,7 @@ class PoolImplementation implements Pool {
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    Locality? locality,
+    L? locality,
   }) {
     return withConnection(
       (connection) => connection.runTx(fn),
@@ -112,7 +112,7 @@ class PoolImplementation implements Pool {
   Future<R> withConnection<R>(
     Future<R> Function(Connection connection) fn, {
     SessionSettings? sessionSettings,
-    Locality? locality,
+    L? locality,
   }) async {
     final resource = await _pool.request();
 
