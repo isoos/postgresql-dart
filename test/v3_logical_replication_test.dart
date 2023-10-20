@@ -39,10 +39,10 @@ void main() {
   withPostgresServer('test logical replication with pgoutput for decoding',
       initSqls: replicationSchemaInit, (server) {
     // use this for listening to messages
-    late final PgConnection replicationConn;
+    late final Connection replicationConn;
 
     // use this for sending queries
-    late final PgConnection changesConn;
+    late final Connection changesConn;
 
     // used to intercept server messages in the replication connection
     // the interceptor is used by tests to listen to replication stream
@@ -60,15 +60,15 @@ void main() {
 
       // replication connection setup
       // used for creating replication slot and listening to changes in the db
-      replicationConn = await PgConnection.open(
-        PgEndpoint(
+      replicationConn = await Connection.open(
+        Endpoint(
           host: 'localhost',
           database: 'postgres',
           username: 'replication',
           password: 'replication',
           port: await server.port,
         ),
-        sessionSettings: PgSessionSettings(
+        sessionSettings: SessionSettings(
             replicationMode: ReplicationMode.logical,
             transformer: serverMessagesInterceptor.transformer,
             queryMode: QueryMode.simple),
@@ -77,7 +77,7 @@ void main() {
       // changes connection setup
       // used to create changes in the db that are reflected in the replication
       // stream
-      changesConn = await PgConnection.open(
+      changesConn = await Connection.open(
         await server.endpoint(),
       );
 

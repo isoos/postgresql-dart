@@ -158,7 +158,7 @@ void main() {
 
     test('Connect with no auth required', () async {
       conn = await server.newPostgreSQLConnection(
-          endpoint: PgEndpoint(
+          endpoint: Endpoint(
             host: 'localhost',
             database: 'dart_test',
             port: await server.port,
@@ -171,7 +171,7 @@ void main() {
 
     test('Connect with no auth throws for non trusted users', () async {
       conn = await server.newPostgreSQLConnection(
-        endpoint: PgEndpoint(
+        endpoint: Endpoint(
           host: 'localhost',
           database: 'dart_test',
           port: await server.port,
@@ -194,7 +194,7 @@ void main() {
 
     test('SSL Connect with no auth required', () async {
       conn = conn = await server.newPostgreSQLConnection(
-        endpoint: PgEndpoint(
+        endpoint: Endpoint(
           host: 'localhost',
           database: 'dart_test',
           port: await server.port,
@@ -452,7 +452,7 @@ void main() {
 
       try {
         conn = await server.newPostgreSQLConnection(
-          endpoint: PgEndpoint(
+          endpoint: Endpoint(
             host: 'localhost',
             database: 'dart_test',
             port: await server.port,
@@ -475,7 +475,7 @@ void main() {
       late PostgreSQLConnection conn;
       try {
         conn = await server.newPostgreSQLConnection(
-          endpoint: PgEndpoint(
+          endpoint: Endpoint(
             host: 'localhost',
             database: 'dart_test',
             port: await server.port,
@@ -640,7 +640,7 @@ void main() {
       try {
         conn = await server.newPostgreSQLConnection(
           endpoint:
-              PgEndpoint(host: 'localhost', database: 'dart_test', port: port),
+              Endpoint(host: 'localhost', database: 'dart_test', port: port),
           sslMode: SslMode.disable,
         );
         await conn.open();
@@ -660,7 +660,7 @@ void main() {
 
       try {
         conn = await server.newPostgreSQLConnection(
-          endpoint: PgEndpoint(
+          endpoint: Endpoint(
             host: 'localhost',
             database: 'dart_test',
             port: port,
@@ -691,7 +691,7 @@ void main() {
       late PostgreSQLConnection conn;
       try {
         conn = await server.newPostgreSQLConnection(
-          endpoint: PgEndpoint(
+          endpoint: Endpoint(
             host: 'localhost',
             port: port,
             database: 'dart_test',
@@ -723,7 +723,7 @@ void main() {
       late PostgreSQLConnection conn;
       try {
         conn = await server.newPostgreSQLConnection(
-          endpoint: PgEndpoint(
+          endpoint: Endpoint(
             host: 'localhost',
             port: port,
             database: 'dart_test',

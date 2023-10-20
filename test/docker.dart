@@ -69,7 +69,7 @@ class PostgresServer {
     }
   }
 
-  Future<PgEndpoint> endpoint() async => PgEndpoint(
+  Future<Endpoint> endpoint() async => Endpoint(
         host: 'localhost',
         database: 'postgres',
         username: _pgUser ?? 'postgres',
@@ -77,12 +77,12 @@ class PostgresServer {
         port: await port,
       );
 
-  Future<PgConnection> newConnection({
+  Future<Connection> newConnection({
     ReplicationMode replicationMode = ReplicationMode.none,
   }) async {
-    return PgConnection.open(
+    return Connection.open(
       await endpoint(),
-      sessionSettings: PgSessionSettings(
+      sessionSettings: SessionSettings(
         replicationMode: replicationMode,
         transformer: loggingTransformer('conn'),
       ),
@@ -91,7 +91,7 @@ class PostgresServer {
 
   Future<PostgreSQLConnection> newPostgreSQLConnection({
     ReplicationMode replicationMode = ReplicationMode.none,
-    PgEndpoint? endpoint,
+    Endpoint? endpoint,
     Duration? connectTimeout,
     SslMode? sslMode,
   }) async {
@@ -100,7 +100,7 @@ class PostgresServer {
     if (_useV3) {
       return PostgreSQLConnection.withV3(
         e,
-        sessionSettings: PgSessionSettings(
+        sessionSettings: SessionSettings(
           sslMode: sslMode,
           replicationMode: replicationMode,
           allowSuperfluousParameters: true,

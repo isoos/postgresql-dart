@@ -21,12 +21,12 @@ export 'src/types.dart';
 /// for parameters, if any.
 ///
 /// Queries can be sent to postgres as-is. To do that, pass a string to
-/// [PgSession.prepare] or [PgSession.execute] or use the default [Sql]
+/// [Session.prepare] or [Session.execute] or use the default [Sql]
 /// constructor. These queries are not intepreted or altered by this package in
 /// any way. If you're using parameter in those queries, you either have to
 /// specify their types in the [Sql] constructor, or exclusively use
-/// [TypedValue] instances in [PgSession.execute], [PgStatement.bind] and
-/// [PgStatement.run].
+/// [TypedValue] instances in [Session.execute], [Statement.bind] and
+/// [Statement.run].
 ///
 /// Alternatively, you can use named variables that will be desugared by this
 /// package with the [Sql.named] factory.
@@ -85,7 +85,7 @@ class Sql {
       InternalQueryDescription.named;
 }
 
-abstract class PgSession {
+abstract class Session {
   /// Prepares a reusable statement from a [query].
   ///
   /// [query] must either be a [String] or a [Sql] object with types for
@@ -97,8 +97,8 @@ abstract class PgSession {
   /// statements.
   ///
   /// When the returned future completes, the statement must eventually be freed
-  /// using [PgStatement.dispose] to avoid resource leaks.
-  Future<PgStatement> prepare(Object /* String | Sql */ query);
+  /// using [Statement.dispose] to avoid resource leaks.
+  Future<Statement> prepare(Object /* String | Sql */ query);
 
   /// Executes the [query] with the given [parameters].
   ///
@@ -113,14 +113,14 @@ abstract class PgSession {
   /// When [ignoreRows] is set to true, the implementation may internally
   /// optimize the execution to ignore rows returned by the query. Whether this
   /// optimization can be applied also depends on the parameters chosen, so
-  /// there is no guarantee that the [PgResult] from a [ignoreRows] excution has
+  /// there is no guarantee that the [Result] from a [ignoreRows] excution has
   /// no rows.
   ///
   /// [queryMode] is optional to override the default query execution mode that
-  /// is defined in [PgSessionSettings]. Unless necessary, always prefer using
+  /// is defined in [SessionSettings]. Unless necessary, always prefer using
   /// [QueryMode.extended] which is the default value. For more information,
-  /// see [PgSessionSettings.queryMode]
-  Future<PgResult> execute(
+  /// see [SessionSettings.queryMode]
+  Future<Result> execute(
     Object /* String | Sql */ query, {
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
         parameters,
@@ -130,32 +130,32 @@ abstract class PgSession {
   });
 }
 
-abstract class PgSessionExecutor {
-  /// Obtains a [PgSession] capable of running statements and calls [fn] with
+abstract class SessionExecutor {
+  /// Obtains a [Session] capable of running statements and calls [fn] with
   /// it.
   ///
   /// Returns the result (either the value or an error) of invoking [fn]. No
   /// updates will be reverted in the event of an error.
-  Future<R> run<R>(Future<R> Function(PgSession session) fn);
+  Future<R> run<R>(Future<R> Function(Session session) fn);
 
-  /// Obtains a [PgSession] running in a transaction and calls [fn] with it.
+  /// Obtains a [Session] running in a transaction and calls [fn] with it.
   ///
   /// Returns the result of invoking [fn] (either the value or an error). In
   /// case of [fn] throwing, the transaction will be reverted.
   ///
-  /// Note that other invocations on a [PgConnection] are blocked while a
+  /// Note that other invocations on a [Connection] are blocked while a
   /// transaction is active.
-  Future<R> runTx<R>(Future<R> Function(PgSession session) fn);
+  Future<R> runTx<R>(Future<R> Function(Session session) fn);
 
   /// Closes this session, cleaning up resources and forbiding further calls to
   /// [prepare] and [execute].
   Future<void> close();
 }
 
-abstract class PgConnection implements PgSession, PgSessionExecutor {
-  static Future<PgConnection> open(
-    PgEndpoint endpoint, {
-    PgSessionSettings? sessionSettings,
+abstract class Connection implements Session, SessionExecutor {
+  static Future<Connection> open(
+    Endpoint endpoint, {
+    SessionSettings? sessionSettings,
   }) {
     return PgConnectionImplementation.connect(endpoint,
         sessionSettings: sessionSettings);
@@ -164,24 +164,28 @@ abstract class PgConnection implements PgSession, PgSessionExecutor {
   Channels get channels;
 }
 
-abstract class PgResultStream implements Stream<ResultRow> {
+abstract class ResultStream implements Stream<ResultRow> {
   @override
-  PgResultStreamSubscription listen(void Function(ResultRow event)? onData,
-      {Function? onError, void Function()? onDone, bool? cancelOnError});
+  ResultStreamSubscription listen(
+    void Function(ResultRow event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  });
 }
 
-abstract class PgResultStreamSubscription
+abstract class ResultStreamSubscription
     implements StreamSubscription<ResultRow> {
   Future<int> get affectedRows;
   Future<ResultSchema> get schema;
 }
 
-abstract class PgStatement {
-  PgResultStream bind(
+abstract class Statement {
+  ResultStream bind(
       Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
           parameters);
 
-  Future<PgResult> run(
+  Future<Result> run(
     Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
         parameters, {
     Duration? timeout,
@@ -191,45 +195,49 @@ abstract class PgStatement {
     await subscription.asFuture().optionalTimeout(timeout);
     await subscription.cancel();
 
-    return PgResult(
-        items, await subscription.affectedRows, await subscription.schema);
+    return Result(
+      rows: items,
+      affectedRows: await subscription.affectedRows,
+      schema: await subscription.schema,
+    );
   }
 
   Future<void> dispose();
 }
 
-abstract class PgResult implements List<ResultRow> {
-  int get affectedRows;
-  ResultSchema get schema;
-
-  factory PgResult(
-      List<ResultRow> rows, int affectedRows, ResultSchema schema) = _PgResult;
-}
-
-class _PgResult extends DelegatingList<ResultRow> implements PgResult {
-  @override
+class Result extends UnmodifiableListView<ResultRow> {
   final int affectedRows;
-
-  @override
   final ResultSchema schema;
 
-  final List<ResultRow> rows;
-
-  _PgResult(this.rows, this.affectedRows, this.schema) : super(rows);
-
-  @override
-  String toString() {
-    return 'PgResult(schema = $schema, affectedRows = $affectedRows, rows = $rows)';
-  }
+  Result({
+    required List<ResultRow> rows,
+    required this.affectedRows,
+    required this.schema,
+  }) : super(rows);
 }
 
-abstract class ResultRow implements List<Object?> {
-  ResultSchema get schema;
+class ResultRow extends UnmodifiableListView<Object?> {
+  final ResultSchema schema;
 
-  /// Returns a single-level map that maps the column name (or its alias) to the
-  /// value returned on that position. Multiple column with the same name may
-  /// override the previous values with the same column name.
-  Map<String, dynamic> toColumnMap();
+  ResultRow({
+    required List<Object?> values,
+    required this.schema,
+  }) : super(values);
+
+  /// Returns a single-level map that maps the column name to the value
+  /// returned on that position. When multiple columns have the same name,
+  /// the later may override the previous values.
+  Map<String, dynamic> toColumnMap() {
+    final map = <String, dynamic>{};
+    for (final (i, col) in schema.columns.indexed) {
+      if (col.columnName case final String name) {
+        map[name] = this[i];
+      } else {
+        map['[$i]'] = this[i];
+      }
+    }
+    return map;
+  }
 }
 
 final class ResultSchema {
@@ -308,7 +316,7 @@ class Notification {
   });
 }
 
-final class PgEndpoint {
+final class Endpoint {
   final String host;
   final int port;
   final String database;
@@ -316,7 +324,7 @@ final class PgEndpoint {
   final String? password;
   final bool isUnixSocket;
 
-  PgEndpoint({
+  Endpoint({
     required this.host,
     this.port = 5432,
     required this.database,
@@ -337,7 +345,7 @@ final class PgEndpoint {
 
   @override
   bool operator ==(Object other) {
-    return other is PgEndpoint &&
+    return other is Endpoint &&
         host == other.host &&
         port == other.port &&
         database == other.database &&
@@ -362,7 +370,7 @@ enum SslMode {
   bool get allowCleartextPassword => this == SslMode.disable;
 }
 
-final class PgSessionSettings {
+final class SessionSettings {
   // Duration(seconds: 15)
   final Duration? connectTimeout;
   // Duration(minutes: 5)
@@ -410,7 +418,7 @@ final class PgSessionSettings {
   /// Override the default query map check if superfluous parameters are found.
   final bool? allowSuperfluousParameters;
 
-  PgSessionSettings({
+  SessionSettings({
     this.connectTimeout,
     this.timeZone,
     this.encoding,

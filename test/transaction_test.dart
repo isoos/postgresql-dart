@@ -8,7 +8,7 @@ import 'docker.dart';
 
 void main() {
   withPostgresServer('Transaction behavior', (server) {
-    late PgConnection conn;
+    late Connection conn;
 
     setUp(() async {
       conn = await server.newConnection();
@@ -244,7 +244,7 @@ void main() {
       final errs = [];
 
       await expectLater(conn.runTx((ctx) async {
-        PgResult errsAdd(e) {
+        Result errsAdd(e) {
           errs.add(e);
           return rs;
         }
@@ -314,7 +314,7 @@ void main() {
   // After a transaction fails, the changes must be rolled back, it should continue with pending queries, pending transactions, later queries, later transactions
 
   withPostgresServer('Transaction:Query recovery', (server) {
-    late PgConnection conn;
+    late Connection conn;
 
     setUp(() async {
       conn = await server.newConnection();
@@ -413,7 +413,7 @@ void main() {
   });
 
   withPostgresServer('Transaction:Exception recovery', (server) {
-    late PgConnection conn;
+    late Connection conn;
 
     setUp(() async {
       conn = await server.newConnection();
@@ -551,7 +551,7 @@ void main() {
   });
 
   withPostgresServer('Transaction:Rollback recovery', (server) {
-    late PgConnection conn;
+    late Connection conn;
 
     setUp(() async {
       conn = await server.newConnection();
@@ -635,7 +635,7 @@ void main() {
   });
 
   withPostgresServer('exception inside transaction', (server) {
-    late PgConnection conn;
+    late Connection conn;
 
     setUp(() async {
       conn = await server.newConnection();

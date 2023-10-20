@@ -1,13 +1,13 @@
 import 'package:postgres/postgres.dart';
 
 void main() async {
-  final endpoint = PgEndpoint(
+  final endpoint = Endpoint(
     host: 'localhost',
     database: 'postgres',
     username: 'user',
     password: 'pass',
   );
-  final conn = await PgConnection.open(endpoint);
+  final conn = await Connection.open(endpoint);
   print('has connection!');
 
   // simple query

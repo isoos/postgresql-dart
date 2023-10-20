@@ -9,7 +9,7 @@ import 'package:buffer/buffer.dart';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
-import '../../postgres.dart' show PgEndpoint, Notification, PgSessionSettings;
+import '../../postgres.dart' show Endpoint, Notification, SessionSettings;
 import '../auth/auth.dart';
 import '../client_messages.dart';
 import '../exceptions.dart';
@@ -40,11 +40,11 @@ class PostgreSQLConnection extends Object
   /// Returns a somewhat compatible version of [PostgreSQLConnection]
   /// that is backed by the new v3 implementation.
   static PostgreSQLConnection withV3(
-    PgEndpoint endpoint, {
-    PgSessionSettings? sessionSettings,
+    Endpoint endpoint, {
+    SessionSettings? sessionSettings,
   }) {
     return WrappedPostgreSQLConnection(
-        endpoint, sessionSettings ?? PgSessionSettings());
+        endpoint, sessionSettings ?? SessionSettings());
   }
 
   /// Creates an instance of [PostgreSQLConnection].
