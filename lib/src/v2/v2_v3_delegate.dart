@@ -9,11 +9,11 @@ import 'connection.dart';
 import 'execution_context.dart';
 
 mixin _DelegatingContext implements PostgreSQLExecutionContext {
-  PgSession? get _session;
+  Session? get _session;
 
   @override
   void cancelTransaction({String? reason}) {
-    if (_session is PgConnection) {
+    if (_session is Connection) {
       return;
     }
     throw _CancelTx();
@@ -22,7 +22,7 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
   @override
   Future<int> execute(String fmtString,
       {Map<String, dynamic>? substitutionValues, int? timeoutInSeconds}) async {
-    if (_session case final PgSession session) {
+    if (_session case final Session session) {
       final rs = await session.execute(
         Sql.named(fmtString),
         parameters: substitutionValues,
@@ -50,7 +50,7 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
       bool? allowReuse,
       int? timeoutInSeconds,
       bool? useSimpleQueryProtocol}) async {
-    if (_session case final PgSession session) {
+    if (_session case final Session session) {
       final rs = await session.execute(
         Sql.named(fmtString),
         parameters: substitutionValues,
@@ -73,15 +73,15 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
 class WrappedPostgreSQLConnection
     with _DelegatingContext
     implements PostgreSQLConnection {
-  final PgEndpoint _endpoint;
-  final PgSessionSettings _sessionSettings;
-  PgConnection? _connection;
+  final Endpoint _endpoint;
+  final SessionSettings _sessionSettings;
+  Connection? _connection;
   bool _hasConnectedPreviously = false;
 
   WrappedPostgreSQLConnection(this._endpoint, this._sessionSettings);
 
   @override
-  PgSession? get _session => _connection;
+  Session? get _session => _connection;
 
   @override
   void addMessage(ClientMessage message) {
@@ -126,7 +126,7 @@ class WrappedPostgreSQLConnection
     }
 
     _hasConnectedPreviously = true;
-    _connection = await PgConnection.open(
+    _connection = await Connection.open(
       _endpoint,
       sessionSettings: _sessionSettings,
     );
@@ -167,7 +167,7 @@ class WrappedPostgreSQLConnection
     Future Function(PostgreSQLExecutionContext connection) queryBlock, {
     int? commitTimeoutInSeconds,
   }) async {
-    if (_connection case final PgConnection conn) {
+    if (_connection case final Connection conn) {
       try {
         return await conn.runTx((session) async {
           return await queryBlock(_PostgreSQLExecutionContext(session));
@@ -192,7 +192,7 @@ class _CancelTx implements Exception {}
 
 class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
     implements PostgreSQLResult {
-  final PgResult _result;
+  final Result _result;
   _PostgreSQLResult(this._result, super.source);
 
   @override
@@ -233,7 +233,7 @@ class _PostgreSQLExecutionContext
     with _DelegatingContext
     implements PostgreSQLExecutionContext {
   @override
-  final PgSession _session;
+  final Session _session;
 
   _PostgreSQLExecutionContext(this._session);
 }

@@ -5,18 +5,18 @@ import 'docker.dart';
 
 void main() {
   withPostgresServer('v3 close', (server) {
-    late PgConnection conn1;
-    late PgConnection conn2;
+    late Connection conn1;
+    late Connection conn2;
 
     setUp(() async {
-      conn1 = await PgConnection.open(
+      conn1 = await Connection.open(
         await server.endpoint(),
-        sessionSettings: PgSessionSettings(
+        sessionSettings: SessionSettings(
             //transformer: _loggingTransformer('c1'),
             ),
       );
 
-      conn2 = await PgConnection.open(
+      conn2 = await Connection.open(
         await server.endpoint(),
       );
     });

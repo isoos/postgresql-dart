@@ -13,10 +13,10 @@ final class PoolSettings {
   });
 }
 
-abstract class Pool implements PgSession, PgSessionExecutor {
+abstract class Pool implements Session, SessionExecutor {
   factory Pool.withSelector(
     EndpointSelector selector, {
-    PgSessionSettings? sessionSettings,
+    SessionSettings? sessionSettings,
     PoolSettings? poolSettings,
   }) =>
       PoolImplementation(
@@ -27,8 +27,8 @@ abstract class Pool implements PgSession, PgSessionExecutor {
 
   /// Creates a connection pool from a fixed list of endpoints.
   factory Pool.withEndpoints(
-    List<PgEndpoint> endpoints, {
-    PgSessionSettings? sessionSettings,
+    List<Endpoint> endpoints, {
+    SessionSettings? sessionSettings,
     PoolSettings? poolSettings,
   }) =>
       PoolImplementation(
@@ -43,20 +43,20 @@ abstract class Pool implements PgSession, PgSessionExecutor {
   /// The connection must not be used after [fn] returns as it could be used by
   /// another [withConnection] call later.
   Future<R> withConnection<R>(
-    Future<R> Function(PgConnection connection) fn, {
-    PgSessionSettings? sessionSettings,
+    Future<R> Function(Connection connection) fn, {
+    SessionSettings? sessionSettings,
     Locality? locality,
   });
 
   @override
   Future<R> run<R>(
-    Future<R> Function(PgSession session) fn, {
+    Future<R> Function(Session session) fn, {
     Locality? locality,
   });
 
   @override
   Future<R> runTx<R>(
-    Future<R> Function(PgSession session) fn, {
+    Future<R> Function(Session session) fn, {
     Locality? locality,
   });
 
@@ -102,7 +102,7 @@ final class EndpointSelectorContext {
 }
 
 class EndpointSelectorResult {
-  final PgEndpoint endpoint;
+  final Endpoint endpoint;
   // TODO: add optional SessionSettings + merge with defaults
 
   EndpointSelectorResult({

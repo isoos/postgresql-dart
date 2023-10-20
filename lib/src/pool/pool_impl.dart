@@ -6,7 +6,7 @@ import 'package:pool/pool.dart' as pool;
 import '../../postgres.dart';
 import '../v3/connection.dart';
 
-EndpointSelector roundRobinSelector(List<PgEndpoint> endpoints) {
+EndpointSelector roundRobinSelector(List<Endpoint> endpoints) {
   int nextIndex = 0;
   return (EndpointSelectorContext context) {
     final endpoint = endpoints[nextIndex];
@@ -17,7 +17,7 @@ EndpointSelector roundRobinSelector(List<PgEndpoint> endpoints) {
 
 class PoolImplementation implements Pool {
   final EndpointSelector _selector;
-  final PgSessionSettings? sessionSettings;
+  final SessionSettings? sessionSettings;
   final PoolSettings? poolSettings;
 
   final pool.Pool _pool;
@@ -42,7 +42,7 @@ class PoolImplementation implements Pool {
   }
 
   @override
-  Future<PgResult> execute(
+  Future<Result> execute(
     Object query, {
     Object? parameters,
     bool ignoreRows = false,
@@ -59,8 +59,8 @@ class PoolImplementation implements Pool {
   }
 
   @override
-  Future<PgStatement> prepare(Object query) async {
-    final statementCompleter = Completer<PgStatement>.sync();
+  Future<Statement> prepare(Object query) async {
+    final statementCompleter = Completer<Statement>.sync();
 
     unawaited(withConnection((connection) async {
       _PoolStatement? poolStatement;
@@ -88,7 +88,7 @@ class PoolImplementation implements Pool {
 
   @override
   Future<R> run<R>(
-    Future<R> Function(PgSession session) fn, {
+    Future<R> Function(Session session) fn, {
     Locality? locality,
   }) {
     return withConnection(
@@ -99,7 +99,7 @@ class PoolImplementation implements Pool {
 
   @override
   Future<R> runTx<R>(
-    Future<R> Function(PgSession session) fn, {
+    Future<R> Function(Session session) fn, {
     Locality? locality,
   }) {
     return withConnection(
@@ -110,8 +110,8 @@ class PoolImplementation implements Pool {
 
   @override
   Future<R> withConnection<R>(
-    Future<R> Function(PgConnection connection) fn, {
-    PgSessionSettings? sessionSettings,
+    Future<R> Function(Connection connection) fn, {
+    SessionSettings? sessionSettings,
     Locality? locality,
   }) async {
     final resource = await _pool.request();
@@ -156,16 +156,16 @@ class PoolImplementation implements Pool {
   }
 }
 
-/// An opened [PgConnection] we're able to use in [Pool.withConnection].
+/// An opened [Connection] we're able to use in [Pool.withConnection].
 class _OpenedConnection {
-  final PgEndpoint endpoint;
+  final Endpoint endpoint;
   final PgConnectionImplementation connection;
   bool isInUse = false;
 
   _OpenedConnection(this.endpoint, this.connection);
 }
 
-class _PoolConnection implements PgConnection {
+class _PoolConnection implements Connection {
   final PgConnectionImplementation _connection;
 
   _PoolConnection(this._connection);
@@ -185,7 +185,7 @@ class _PoolConnection implements PgConnection {
   }
 
   @override
-  Future<PgResult> execute(
+  Future<Result> execute(
     Object query, {
     Object? parameters,
     bool ignoreRows = false,
@@ -202,29 +202,29 @@ class _PoolConnection implements PgConnection {
   }
 
   @override
-  Future<PgStatement> prepare(Object query) {
+  Future<Statement> prepare(Object query) {
     return _connection.prepare(query);
   }
 
   @override
-  Future<R> run<R>(Future<R> Function(PgSession session) fn) {
+  Future<R> run<R>(Future<R> Function(Session session) fn) {
     return _connection.run(fn);
   }
 
   @override
-  Future<R> runTx<R>(Future<R> Function(PgSession session) fn) {
+  Future<R> runTx<R>(Future<R> Function(Session session) fn) {
     return _connection.runTx(fn);
   }
 }
 
-class _PoolStatement implements PgStatement {
+class _PoolStatement implements Statement {
   final Completer<void> _disposed = Completer();
-  final PgStatement _underlying;
+  final Statement _underlying;
 
   _PoolStatement(this._underlying);
 
   @override
-  PgResultStream bind(Object? parameters) => _underlying.bind(parameters);
+  ResultStream bind(Object? parameters) => _underlying.bind(parameters);
 
   @override
   Future<void> dispose() async {
@@ -233,7 +233,7 @@ class _PoolStatement implements PgStatement {
   }
 
   @override
-  Future<PgResult> run(
+  Future<Result> run(
     Object? parameters, {
     Duration? timeout,
   }) {

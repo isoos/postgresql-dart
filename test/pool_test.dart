@@ -5,7 +5,7 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-final _sessionSettings = PgSessionSettings();
+final _sessionSettings = SessionSettings();
 
 void main() {
   withPostgresServer('generic', (server) {

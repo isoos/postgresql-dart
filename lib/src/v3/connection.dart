@@ -3,9 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:async/async.dart';
+import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
-import 'package:collection/collection.dart';
 import 'package:pool/pool.dart' as pool;
 import 'package:stream_channel/stream_channel.dart';
 
@@ -27,8 +26,8 @@ String identifier(String source) {
 }
 
 class _ResolvedSettings {
-  final PgEndpoint endpoint;
-  final PgSessionSettings? settings;
+  final Endpoint endpoint;
+  final SessionSettings? settings;
 
   final String username;
   final String password;
@@ -64,7 +63,7 @@ class _ResolvedSettings {
             settings?.allowSuperfluousParameters ?? false;
 }
 
-abstract class _PgSessionBase implements PgSession {
+abstract class _PgSessionBase implements Session {
   /// The lock to guard operations that must run sequentially, like sending
   /// RPC messages to the postgres server and waiting for them to complete.
   ///
@@ -117,7 +116,7 @@ abstract class _PgSessionBase implements PgSession {
 
       return wait.doneWithOperation.future.then((value) {
         final effectiveResult = wait.result ??
-            Result.error(StateError('Operation did not complete'), trace);
+            async.Result.error(StateError('Operation did not complete'), trace);
 
         return effectiveResult.asFuture;
       });
@@ -125,7 +124,7 @@ abstract class _PgSessionBase implements PgSession {
   }
 
   @override
-  Future<PgResult> execute(
+  Future<Result> execute(
     Object query, {
     Object? parameters,
     bool ignoreRows = false,
@@ -164,8 +163,11 @@ abstract class _PgSessionBase implements PgSession {
       );
       try {
         await querySubscription.asFuture().optionalTimeout(timeout);
-        return PgResult(items, await querySubscription.affectedRows,
-            await querySubscription.schema);
+        return Result(
+          rows: items,
+          affectedRows: await querySubscription.affectedRows,
+          schema: await querySubscription.schema,
+        );
       } finally {
         await querySubscription.cancel();
       }
@@ -182,7 +184,7 @@ abstract class _PgSessionBase implements PgSession {
   }
 
   @override
-  Future<PgStatement> prepare(Object query) async => await _prepare(query);
+  Future<Statement> prepare(Object query) async => await _prepare(query);
 
   Future<_PreparedStatement> _prepare(
     Object query, {
@@ -202,11 +204,10 @@ abstract class _PgSessionBase implements PgSession {
   }
 }
 
-class PgConnectionImplementation extends _PgSessionBase
-    implements PgConnection {
+class PgConnectionImplementation extends _PgSessionBase implements Connection {
   static Future<PgConnectionImplementation> connect(
-    PgEndpoint endpoint, {
-    PgSessionSettings? sessionSettings,
+    Endpoint endpoint, {
+    SessionSettings? sessionSettings,
   }) async {
     final settings = _ResolvedSettings(endpoint, sessionSettings);
     var channel = await _connect(settings);
@@ -219,7 +220,7 @@ class PgConnectionImplementation extends _PgSessionBase
             sink.add(msg);
           },
         ),
-        StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
+        async.StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
           print('[out] $msg');
           sink.add(msg);
         }),
@@ -297,11 +298,12 @@ class PgConnectionImplementation extends _PgSessionBase
     } else {
       // We've listened to the stream already and sockets are single-subscription
       // streams. Expose it as a new stream.
-      adaptedStream = SubscriptionStream(subscription);
+      adaptedStream = async.SubscriptionStream(subscription);
     }
 
-    final outgoingSocket = StreamSinkExtensions(socket).transform<Uint8List>(
-        StreamSinkTransformer.fromHandlers(handleDone: (out) {
+    final outgoingSocket = async.StreamSinkExtensions(socket)
+        .transform<Uint8List>(
+            async.StreamSinkTransformer.fromHandlers(handleDone: (out) {
       // As per the stream channel's guarantees, closing the sink should close
       // the channel in both directions.
       socket.destroy();
@@ -387,7 +389,7 @@ class PgConnectionImplementation extends _PgSessionBase
   }
 
   @override
-  Future<R> run<R>(Future<R> Function(PgSession session) fn) {
+  Future<R> run<R>(Future<R> Function(Session session) fn) {
     // Unlike runTx, this doesn't need any locks. An active transaction changes
     // the state of the connection, this method does not. If methods requiring
     // locks are called by [fn], these methods will aquire locks as needed.
@@ -395,7 +397,7 @@ class PgConnectionImplementation extends _PgSessionBase
   }
 
   @override
-  Future<R> runTx<R>(Future<R> Function(PgSession session) fn) {
+  Future<R> runTx<R>(Future<R> Function(Session session) fn) {
     // Keep this database is locked while the transaction is active. We do that
     // because on a protocol level, the entire connection is in a transaction.
     // From a Dart point of view, methods called outside of the transaction
@@ -459,7 +461,7 @@ class PgConnectionImplementation extends _PgSessionBase
   }
 }
 
-class _PreparedStatement extends PgStatement {
+class _PreparedStatement extends Statement {
   final InternalQueryDescription _description;
   final String _name;
   final _PgSessionBase _session;
@@ -467,7 +469,7 @@ class _PreparedStatement extends PgStatement {
   _PreparedStatement(this._description, this._name, this._session);
 
   @override
-  PgResultStream bind(Object? parameters) {
+  ResultStream bind(Object? parameters) {
     return _BoundStatement(
         this,
         _description.bindParameters(
@@ -487,14 +489,14 @@ class _PreparedStatement extends PgStatement {
   }
 }
 
-class _BoundStatement extends Stream<ResultRow> implements PgResultStream {
+class _BoundStatement extends Stream<ResultRow> implements ResultStream {
   final _PreparedStatement statement;
   final List<TypedValue> parameters;
 
   _BoundStatement(this.statement, this.parameters);
 
   @override
-  PgResultStreamSubscription listen(void Function(ResultRow event)? onData,
+  ResultStreamSubscription listen(void Function(ResultRow event)? onData,
       {Function? onError, void Function()? onDone, bool? cancelOnError}) {
     final controller = StreamController<ResultRow>();
 
@@ -506,7 +508,7 @@ class _BoundStatement extends Stream<ResultRow> implements PgResultStream {
 }
 
 class _PgResultStreamSubscription
-    implements PgResultStreamSubscription, _PendingOperation {
+    implements ResultStreamSubscription, _PendingOperation {
   @override
   final _PgSessionBase session;
   final StreamController<ResultRow> _controller;
@@ -652,7 +654,7 @@ class _PgResultStreamSubscription
             columnValues.add(value);
           }
 
-          final row = _ResultRow(schema, columnValues);
+          final row = ResultRow(schema: schema, values: columnValues);
           _controller.add(row);
         }
       case CommandCompleteMessage():
@@ -724,7 +726,7 @@ class _Channels implements Channels {
 
   // We are using the pg_notify function in a prepared select statement to
   // efficiently implement [notify].
-  Completer<PgStatement>? _notifyStatement;
+  Completer<Statement>? _notifyStatement;
 
   _Channels(this._connection);
 
@@ -868,36 +870,16 @@ abstract class _PendingOperation {
   Future<void> handleMessage(ServerMessage message);
 }
 
-class _ResultRow extends UnmodifiableListView<Object?> implements ResultRow {
-  @override
-  final ResultSchema schema;
-
-  _ResultRow(this.schema, super.source);
-
-  @override
-  Map<String, dynamic> toColumnMap() {
-    final map = <String, dynamic>{};
-    for (final (i, col) in schema.columns.indexed) {
-      if (col.columnName case final String name) {
-        map[name] = this[i];
-      } else {
-        map['[$i]'] = this[i];
-      }
-    }
-    return map;
-  }
-}
-
 class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
   final StackTrace trace;
   final doneWithOperation = Completer<void>.sync();
-  Result<T>? result;
+  async.Result<T>? result;
 
   _WaitForMessage(super.session, this.trace);
 
   @override
   void handleConnectionClosed(PgException? dueToException) {
-    result = Result.error(
+    result = async.Result.error(
       dueToException ??
           PgException('Connection closed while waiting for message'),
       trace,
@@ -907,7 +889,7 @@ class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
 
   @override
   void handleError(PgException exception) {
-    result = Result.error(exception, trace);
+    result = async.Result.error(exception, trace);
     // We're not done yet! Exceptions delivered through handleError aren't
     // fatal, so we'll continue waiting for a ReadyForQuery message.
   }
@@ -915,14 +897,15 @@ class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
   @override
   Future<void> handleMessage(ServerMessage message) async {
     if (message is T) {
-      result = Result.value(message);
+      result = async.Result.value(message);
       // Don't complete, we're still waiting for a ready for query message.
     } else if (message is ReadyForQueryMessage) {
       // This is the message we've been waiting for, the server is signalling
       // that it's ready for another message - so we can release the lock.
       doneWithOperation.complete();
     } else {
-      result = Result.error(StateError('Unexpected message $message'), trace);
+      result =
+          async.Result.error(StateError('Unexpected message $message'), trace);
 
       // If we get here, we clearly have a misunderstanding about the
       // protocol or something is very seriously broken. Treat this as a
