@@ -116,10 +116,7 @@ class WrappedPostgreSQLConnection
   Stream<ServerMessage> get messages => throw UnimplementedError();
 
   @override
-  Stream<Notification> get notifications =>
-      _connection!.channels.all.map((event) {
-        return Notification(event.processId, event.channel, event.payload);
-      });
+  Stream<Notification> get notifications => _connection!.channels.all;
 
   @override
   Future open() async {

@@ -161,7 +161,7 @@ abstract class PgConnection implements PgSession, PgSessionExecutor {
         sessionSettings: sessionSettings);
   }
 
-  PgChannels get channels;
+  Channels get channels;
 }
 
 abstract class PgResultStream implements Stream<PgResultRow> {
@@ -278,20 +278,36 @@ final class PgResultColumn {
   }
 }
 
-abstract class PgChannels {
+abstract class Channels {
   /// A stream of all notifications delivered from the server.
   ///
   /// This stream can be used to listen to notifications manually subscribed to.
-  /// The `[]` operator on [PgChannels] can be used to register subscriptions to
+  /// The `[]` operator on [Channels] can be used to register subscriptions to
   /// notifications only when a stream is being listened to.
-  Stream<PgNotification> get all;
+  Stream<Notification> get all;
 
   Stream<String> operator [](String channel);
   Future<void> notify(String channel, [String? payload]);
   Future<void> cancelAll();
 }
 
-typedef PgNotification = ({int processId, String channel, String payload});
+/// Represents a notification from the Postgresql server.
+class Notification {
+  /// The Postgresql process ID from which the notification was generated.
+  final int processId;
+
+  /// The name of the channel that this notification occurred on.
+  final String channel;
+
+  /// An optional data payload accompanying this notification.
+  final String payload;
+
+  Notification({
+    required this.processId,
+    required this.channel,
+    required this.payload,
+  });
+}
 
 final class PgEndpoint {
   final String host;

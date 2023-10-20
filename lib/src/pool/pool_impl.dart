@@ -154,7 +154,7 @@ class _PoolConnection implements PgConnection {
   _PoolConnection(this._connection);
 
   @override
-  PgChannels get channels {
+  Channels get channels {
     throw UnsupportedError(
       'Channels are not supported in pools because they would require keeping '
       'the connection open even after `withConnection` has returned.',

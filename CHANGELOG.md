@@ -17,6 +17,8 @@ Notable breaking behaviour changes:
     `mappedResultsQuery` does not work either (absent from the API).
   - Queries are not cached implicitly, explicit prepared statements can be
     used instead.
+  - Some types are used by both v2 and v3 implementation and fields may have
+    been renamed.
 
 ### Legacy compatibility layer
 

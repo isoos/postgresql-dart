@@ -189,11 +189,11 @@ class DataRowMessage extends ServerMessage {
 }
 
 class NotificationResponseMessage extends ServerMessage {
-  final int processID;
+  final int processId;
   final String channel;
   final String payload;
 
-  NotificationResponseMessage._(this.processID, this.channel, this.payload);
+  NotificationResponseMessage._(this.processId, this.channel, this.payload);
 
   @internal
   factory NotificationResponseMessage.parse(PgByteDataReader reader) {

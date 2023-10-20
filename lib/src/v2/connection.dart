@@ -9,7 +9,7 @@ import 'package:buffer/buffer.dart';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
-import '../../postgres.dart' show PgEndpoint, PgSessionSettings;
+import '../../postgres.dart' show PgEndpoint, Notification, PgSessionSettings;
 import '../auth/auth.dart';
 import '../client_messages.dart';
 import '../exceptions.dart';
@@ -140,7 +140,7 @@ class PostgreSQLConnection extends Object
   /// Listen to this [Stream] to receive events from PostgreSQL NOTIFY commands.
   ///
   /// To determine whether or not the NOTIFY came from this instance, compare [processID]
-  /// to [Notification.processID].
+  /// to [Notification.processId].
   Stream<Notification> get notifications => _notifications.stream;
 
   /// Stream of server messages
@@ -349,8 +349,10 @@ class PostgreSQLConnection extends Object
         if (msg is ErrorResponseMessage) {
           _transitionToState(_connectionState.onErrorResponse(msg));
         } else if (msg is NotificationResponseMessage) {
-          _notifications
-              .add(Notification(msg.processID, msg.channel, msg.payload));
+          _notifications.add(Notification(
+              processId: msg.processId,
+              channel: msg.channel,
+              payload: msg.payload));
         } else {
           _transitionToState(_connectionState.onMessage(msg));
         }
@@ -401,23 +403,6 @@ class _TransactionRollbackException implements Exception {
   _TransactionRollbackException(this.reason);
 
   String reason;
-}
-
-/// Represents a notification from PostgreSQL.
-///
-/// Instances of this type are created and sent via [PostgreSQLConnection.notifications].
-class Notification {
-  /// Creates an instance of this type.
-  Notification(this.processID, this.channel, this.payload);
-
-  /// The backend ID from which the notification was generated.
-  final int processID;
-
-  /// The name of the PostgreSQL channel that this notification occurred on.
-  final String channel;
-
-  /// An optional data payload accompanying this notification.
-  final String payload;
 }
 
 class _OidCache {

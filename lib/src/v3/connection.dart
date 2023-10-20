@@ -331,7 +331,7 @@ class PgConnectionImplementation extends _PgSessionBase
   late final _Channels _channels = _Channels(this);
 
   @override
-  PgChannels get channels => _channels;
+  Channels get channels => _channels;
 
   @override
   PgConnectionImplementation get _connection => this;
@@ -716,11 +716,11 @@ class _PgResultStreamSubscription
   }
 }
 
-class _Channels implements PgChannels {
+class _Channels implements Channels {
   final PgConnectionImplementation _connection;
 
-  final Map<String, List<MultiStreamController<String>>> _activeListeners = {};
-  final StreamController<PgNotification> _all = StreamController.broadcast();
+  final _activeListeners = <String, List<MultiStreamController<String>>>{};
+  final _all = StreamController<Notification>.broadcast();
 
   // We are using the pg_notify function in a prepared select statement to
   // efficiently implement [notify].
@@ -729,7 +729,7 @@ class _Channels implements PgChannels {
   _Channels(this._connection);
 
   @override
-  Stream<PgNotification> get all => _all.stream;
+  Stream<Notification> get all => _all.stream;
 
   @override
   Stream<String> operator [](String channel) {
@@ -777,8 +777,11 @@ class _Channels implements PgChannels {
   }
 
   void deliverNotification(NotificationResponseMessage msg) {
-    _all.add(
-        (processId: msg.processID, channel: msg.channel, payload: msg.payload));
+    _all.add(Notification(
+      processId: msg.processId,
+      channel: msg.channel,
+      payload: msg.payload,
+    ));
     final listeners = _activeListeners[msg.channel] ?? const [];
 
     for (final listener in listeners) {
