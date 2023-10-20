@@ -13,9 +13,21 @@ final class PoolSettings {
   });
 }
 
-abstract class Pool implements Session, SessionExecutor {
+/// A connection pool that may select endpoints based on the requested locality
+/// [L] of the data.
+///
+/// A data locality can be an arbitrary value that the pool's [EndpointSelector]
+/// understands, and may return a connection based on, e.g:
+/// - an action, which applies to different database or user,
+/// - a tenant, which may be specified for multi-tenant applications,
+/// - a table and key, which may be specified for distributed databases
+///   (e.g. CockroachDB) for selecting the node that is the leader for the
+///   specified data range.
+/// - a primary/replica status, whic may be specified for cases where stale or
+///   read-only data is acceptable
+abstract class Pool<L> implements Session, SessionExecutor {
   factory Pool.withSelector(
-    EndpointSelector selector, {
+    EndpointSelector<L> selector, {
     SessionSettings? sessionSettings,
     PoolSettings? poolSettings,
   }) =>
@@ -45,53 +57,29 @@ abstract class Pool implements Session, SessionExecutor {
   Future<R> withConnection<R>(
     Future<R> Function(Connection connection) fn, {
     SessionSettings? sessionSettings,
-    Locality? locality,
+    L? locality,
   });
 
   @override
   Future<R> run<R>(
     Future<R> Function(Session session) fn, {
-    Locality? locality,
+    L? locality,
   });
 
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    Locality? locality,
+    L? locality,
   });
 
-  // TODO: decide on PgSession.execute and prepare methods, whether to extend those too.
+  // TODO: decide whether PgSession.execute and prepare methods should also take locality parameter
 }
 
-/// A data locality request from the caller that may guide the [Pool] to select
-/// the appropriate endpoint. For example:
-/// - [action] may be specified for custom routing
-/// - [tenant] may be specified for multi-tenant applications
-/// - [table] and [key] may be specified for distributed databases (e.g. CockroachDB)
-///   for selecting the node that is the leader for the specified data range.
-/// - TBD: primary/replica status may be specified for cases where stale or
-///   read-only data is acceptable
-class Locality {
-  // TODO/TBD: add primary/replica type selection, eg. acceptReadOnly or enum
+typedef EndpointSelector<L> = FutureOr<EndpointSelectorResult> Function(
+    EndpointSelectorContext<L> context);
 
-  final String? action;
-  final Object? tenant;
-  final String? table;
-  final Object? key;
-
-  Locality({
-    this.action,
-    this.tenant,
-    this.table,
-    this.key,
-  });
-}
-
-typedef EndpointSelector = FutureOr<EndpointSelectorResult> Function(
-    EndpointSelectorContext context);
-
-final class EndpointSelectorContext {
-  final Locality? locality;
+final class EndpointSelectorContext<L> {
+  final L? locality;
   // TODO: expose currently open/idle connections/endpoints
   // TODO: expose usage and latency information about endpoints
 
