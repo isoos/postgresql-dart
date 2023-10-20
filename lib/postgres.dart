@@ -164,16 +164,16 @@ abstract class PgConnection implements PgSession, PgSessionExecutor {
   Channels get channels;
 }
 
-abstract class PgResultStream implements Stream<PgResultRow> {
+abstract class PgResultStream implements Stream<ResultRow> {
   @override
-  PgResultStreamSubscription listen(void Function(PgResultRow event)? onData,
+  PgResultStreamSubscription listen(void Function(ResultRow event)? onData,
       {Function? onError, void Function()? onDone, bool? cancelOnError});
 }
 
 abstract class PgResultStreamSubscription
-    implements StreamSubscription<PgResultRow> {
+    implements StreamSubscription<ResultRow> {
   Future<int> get affectedRows;
-  Future<PgResultSchema> get schema;
+  Future<ResultSchema> get schema;
 }
 
 abstract class PgStatement {
@@ -186,7 +186,7 @@ abstract class PgStatement {
         parameters, {
     Duration? timeout,
   }) async {
-    final items = <PgResultRow>[];
+    final items = <ResultRow>[];
     final subscription = bind(parameters).listen(items.add);
     await subscription.asFuture().optionalTimeout(timeout);
     await subscription.cancel();
@@ -198,23 +198,22 @@ abstract class PgStatement {
   Future<void> dispose();
 }
 
-abstract class PgResult implements List<PgResultRow> {
+abstract class PgResult implements List<ResultRow> {
   int get affectedRows;
-  PgResultSchema get schema;
+  ResultSchema get schema;
 
   factory PgResult(
-          List<PgResultRow> rows, int affectedRows, PgResultSchema schema) =
-      _PgResult;
+      List<ResultRow> rows, int affectedRows, ResultSchema schema) = _PgResult;
 }
 
-class _PgResult extends DelegatingList<PgResultRow> implements PgResult {
+class _PgResult extends DelegatingList<ResultRow> implements PgResult {
   @override
   final int affectedRows;
 
   @override
-  final PgResultSchema schema;
+  final ResultSchema schema;
 
-  final List<PgResultRow> rows;
+  final List<ResultRow> rows;
 
   _PgResult(this.rows, this.affectedRows, this.schema) : super(rows);
 
@@ -224,39 +223,39 @@ class _PgResult extends DelegatingList<PgResultRow> implements PgResult {
   }
 }
 
-abstract class PgResultRow implements List<Object?> {
-  PgResultSchema get schema;
+abstract class ResultRow implements List<Object?> {
+  ResultSchema get schema;
 
   /// Returns a single-level map that maps the column name (or its alias) to the
   /// value returned on that position. Multiple column with the same name may
-  /// override the previous values.
+  /// override the previous values with the same column name.
   Map<String, dynamic> toColumnMap();
 }
 
-final class PgResultSchema {
-  final List<PgResultColumn> columns;
+final class ResultSchema {
+  final List<ResultSchemaColumn> columns;
 
-  PgResultSchema(this.columns);
+  ResultSchema(this.columns);
 
   @override
   String toString() {
-    return 'PgResultSchema(${columns.join(', ')})';
+    return 'ResultSchema(${columns.join(', ')})';
   }
 }
 
-final class PgResultColumn {
+final class ResultSchemaColumn {
   final DataType type;
   final int? tableOid;
   final String? columnName;
   final int? columnOid;
-  final bool binaryEncoding;
+  final bool isBinaryEncoding;
 
-  PgResultColumn({
+  ResultSchemaColumn({
     required this.type,
     this.tableOid,
     this.columnName,
     this.columnOid,
-    this.binaryEncoding = false,
+    this.isBinaryEncoding = false,
   });
 
   @override

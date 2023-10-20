@@ -209,7 +209,7 @@ class _PostgreSQLResult extends UnmodifiableListView<PostgreSQLResultRow>
 
 class _PostgreSQLResultRow extends UnmodifiableListView
     implements PostgreSQLResultRow {
-  final PgResultRow _row;
+  final ResultRow _row;
   _PostgreSQLResultRow(this._row, super.source);
 
   @override
