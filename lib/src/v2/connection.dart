@@ -28,7 +28,7 @@ part 'connection_fsm.dart';
 
 part 'transaction_proxy.dart';
 
-typedef PostgreSQLException = PgServerException;
+typedef PostgreSQLException = ServerException;
 
 /// Instances of this class connect to and communicate with a PostgreSQL database.
 ///

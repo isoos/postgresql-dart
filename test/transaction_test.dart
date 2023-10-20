@@ -685,7 +685,7 @@ void main() {
             // ignore
           }
         }),
-        throwsA(isA<PgServerException>()),
+        throwsA(isA<ServerException>()),
       );
     }, skip: !server.useV3);
   });

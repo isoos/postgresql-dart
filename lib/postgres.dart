@@ -49,7 +49,7 @@ class Sql {
   /// ```dart
   /// final sql = Sql.named('SELECT * FROM users WHERE id = @id');
   /// final stmt = await connection.prepare(sql);
-  /// final vars = {'id': PgTypedParameter(PgDataType.integer, 3)};
+  /// final vars = {'id': TypedValue(Type.integer, 3)};
   /// await for (final row in stmt.bind(vars)) {
   ///   // Got user with id 3
   /// }
@@ -122,7 +122,7 @@ abstract class Session {
   /// see [SessionSettings.queryMode]
   Future<Result> execute(
     Object /* String | Sql */ query, {
-    Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
+    Object? /* List<Object?|TypedValue> | Map<String, Object?|TypedValue> */
         parameters,
     bool ignoreRows = false,
     QueryMode? queryMode,
@@ -182,11 +182,11 @@ abstract class ResultStreamSubscription
 
 abstract class Statement {
   ResultStream bind(
-      Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
+      Object? /* List<Object?|TypedValue> | Map<String, Object?|TypedValue> */
           parameters);
 
   Future<Result> run(
-    Object? /* List<Object?|PgTypedParameter> | Map<String, Object?|PgTypedParameter> */
+    Object? /* List<Object?|TypedValue> | Map<String, Object?|TypedValue> */
         parameters, {
     Duration? timeout,
   }) async {

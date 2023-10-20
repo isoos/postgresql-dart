@@ -32,7 +32,7 @@ class BadCertificateException extends PgException {
 }
 
 /// Exception thrown by the server.
-class PgServerException extends PgException {
+class ServerException extends PgException {
   /// An index into an executed query string where an error occurred, if by provided by the database.
   final int? position;
 
@@ -63,7 +63,7 @@ class PgServerException extends PgException {
   final String? fileName;
   final String? routineName;
 
-  PgServerException._(
+  ServerException._(
     super.message, {
     required super.severity,
     this.position,
@@ -84,7 +84,7 @@ class PgServerException extends PgException {
   });
 
   @internal
-  PgServerException(
+  ServerException(
     String message, {
     Severity? severity,
   }) : this._(
@@ -93,7 +93,7 @@ class PgServerException extends PgException {
         );
 
   @internal
-  factory PgServerException.fromFields(List<ErrorField> errorFields) {
+  factory ServerException.fromFields(List<ErrorField> errorFields) {
     String? findString(int identifier) => errorFields
         .firstWhereOrNull((ErrorField e) => e.identificationToken == identifier)
         ?.text;
@@ -103,7 +103,7 @@ class PgServerException extends PgException {
       return i == null ? null : int.parse(i);
     }
 
-    return PgServerException._(
+    return ServerException._(
       findString(ErrorField.MessageIdentifier) ?? 'Server error.',
       severity: ErrorField.severityFromString(
         findString(ErrorField.SeverityIdentifier),

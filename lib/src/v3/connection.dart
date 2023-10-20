@@ -369,7 +369,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       } else if (message is NotificationResponseMessage) {
         _channels.deliverNotification(message);
       } else if (message is ErrorResponseMessage) {
-        final exception = PgServerException.fromFields(message.fields);
+        final exception = ServerException.fromFields(message.fields);
 
         // Close the connection in response to fatal errors or if we get them
         // out of nowhere.
@@ -955,7 +955,7 @@ class _AuthenticationProcedure extends _PendingOperation {
   @override
   Future<void> handleMessage(ServerMessage message) async {
     if (message is ErrorResponseMessage) {
-      _done.completeError(PgServerException.fromFields(message.fields), _trace);
+      _done.completeError(ServerException.fromFields(message.fields), _trace);
     } else if (message is AuthenticationMessage) {
       switch (message.type) {
         case AuthenticationMessage.KindOK:
@@ -966,8 +966,7 @@ class _AuthenticationProcedure extends _PendingOperation {
         case AuthenticationMessage.KindClearTextPassword:
           if (!connection._settings.sslMode.allowCleartextPassword) {
             _done.completeError(
-              PgServerException(
-                  'Refused to send clear text password to server'),
+              ServerException('Refused to send clear text password to server'),
               _trace,
             );
             return;
