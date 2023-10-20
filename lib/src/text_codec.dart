@@ -218,7 +218,7 @@ class PostgresTextEncoder extends Converter<Object, String> {
 }
 
 class PostgresTextDecoder<T extends Object> {
-  final DataType<T> _dataType;
+  final Type<T> _dataType;
 
   const PostgresTextDecoder(this._dataType);
 
@@ -228,19 +228,19 @@ class PostgresTextDecoder<T extends Object> {
     final asText = encoding.decode(input);
 
     // ignore: unnecessary_cast
-    switch (_dataType as DataType<Object>) {
-      case DataType.text:
+    switch (_dataType as Type<Object>) {
+      case Type.text:
         return asText as T;
-      case DataType.integer:
-      case DataType.smallInteger:
-      case DataType.bigInteger:
-      case DataType.serial:
-      case DataType.bigSerial:
+      case Type.integer:
+      case Type.smallInteger:
+      case Type.bigInteger:
+      case Type.serial:
+      case Type.bigSerial:
         return int.parse(asText) as T;
-      case DataType.real:
-      case DataType.double:
+      case Type.real:
+      case Type.double:
         return num.parse(asText) as T;
-      case DataType.boolean:
+      case Type.boolean:
         // In text data format when using simple query protocol, "true" & "false"
         // are represented as `t` and `f`,  respectively.
         // we will check for both just in case
@@ -248,7 +248,7 @@ class PostgresTextDecoder<T extends Object> {
         // and `yes`)?
         return (asText == 't' || asText == 'true') as T;
 
-      case DataType.voidType:
+      case Type.voidType:
         // TODO: is returning `null` here is the appripriate thing to do?
         return null;
 

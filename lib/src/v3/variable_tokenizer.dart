@@ -13,7 +13,7 @@ import 'query_description.dart';
 /// assume `@`, the default, here). Then, a variable can be used with `@varname`.
 /// Variable names can consist of alphanumeric characters and underscores.
 /// As part of a variable, the type can also be declared (e.g. `@x:int8`). Valid
-/// type names are given by [DataType.nameForSubstitution].
+/// type names are given by [Type.nameForSubstitution].
 ///
 /// Just like postgres, we ignore variables inside string literals, identifiers
 /// or comments.
@@ -24,7 +24,7 @@ class VariableTokenizer {
 
   /// The type of variables (by their index), resolved by looking at type
   /// annotations following a variable name.
-  final Map<int, DataType> _variableTypes = {};
+  final Map<int, Type> _variableTypes = {};
 
   /// The transformed SQL, replacing named variables with positional variables.
   final StringBuffer _rewrittenSql = StringBuffer();
@@ -356,13 +356,13 @@ class VariableTokenizer {
 
     if (consumedColonForType) {
       final typeName = typeBuffer.toString();
-      final type = DataType.bySubstitutionName[typeName];
+      final type = Type.bySubstitutionName[typeName];
       if (type == null) {
         error('Unknown type: $typeName');
       }
 
       _variableTypes[actualVariableIndex] = type;
-      if (type == DataType.varCharArray && _peek() == $openParenthesis) {
+      if (type == Type.varCharArray && _peek() == $openParenthesis) {
         // read through `([0-9]+)`
         final closeOffset = _codeUnits.indexOf($closeParenthesis, _index);
         if (closeOffset == -1) {

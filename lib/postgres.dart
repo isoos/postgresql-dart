@@ -37,7 +37,7 @@ class Sql {
   /// The [types] parameter can optionally be used to pass the types of
   /// parameters in the query. If they're not set, only [TypedValue]
   /// instances can be used when binding values later.
-  factory Sql(String sql, {List<DataType>? types}) =
+  factory Sql(String sql, {List<Type>? types}) =
       InternalQueryDescription.direct;
 
   /// Looks for named parameters in [sql] and desugars them.
@@ -252,7 +252,7 @@ final class ResultSchema {
 }
 
 final class ResultSchemaColumn {
-  final DataType type;
+  final Type type;
   final int? tableOid;
   final String? columnName;
   final int? columnOid;

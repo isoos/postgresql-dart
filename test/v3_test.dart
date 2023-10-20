@@ -43,7 +43,7 @@ void main() {
       expect(result.schema.columns, [
         isA<ResultSchemaColumn>()
             .having((e) => e.columnName, 'columnName', 'pg_notify')
-            .having((e) => e.type, 'type', DataType.voidType)
+            .having((e) => e.type, 'type', Type.voidType)
       ]);
     });
 
@@ -67,8 +67,7 @@ void main() {
     });
 
     group('binary encoding and decoding', () {
-      Future<void> shouldPassthrough<T extends Object>(
-          DataType<T> type, T? value,
+      Future<void> shouldPassthrough<T extends Object>(Type<T> type, T? value,
           {dynamic matcher}) async {
         final rowFromExplicitType = await connection.execute(
           Sql(r'SELECT $1', types: [type]),
@@ -90,36 +89,33 @@ void main() {
       }
 
       test('string', () async {
-        await shouldPassthrough<String>(DataType.text, null);
-        await shouldPassthrough<String>(DataType.text, 'hello world');
+        await shouldPassthrough<String>(Type.text, null);
+        await shouldPassthrough<String>(Type.text, 'hello world');
       });
 
       test('int', () async {
-        await shouldPassthrough<int>(DataType.smallInteger, null);
-        await shouldPassthrough<int>(DataType.smallInteger, 42);
-        await shouldPassthrough<int>(DataType.integer, 1024);
-        await shouldPassthrough<int>(DataType.bigInteger, 999999999999);
+        await shouldPassthrough<int>(Type.smallInteger, null);
+        await shouldPassthrough<int>(Type.smallInteger, 42);
+        await shouldPassthrough<int>(Type.integer, 1024);
+        await shouldPassthrough<int>(Type.bigInteger, 999999999999);
       });
 
       test('real', () async {
-        await shouldPassthrough<double>(DataType.double, 1.25);
-        await shouldPassthrough<double>(DataType.double, double.nan,
+        await shouldPassthrough<double>(Type.double, 1.25);
+        await shouldPassthrough<double>(Type.double, double.nan,
             matcher: isNaN);
-        await shouldPassthrough<double>(
-            DataType.double, double.negativeInfinity);
+        await shouldPassthrough<double>(Type.double, double.negativeInfinity);
       });
 
       test('numeric', () async {
-        await shouldPassthrough<Object>(DataType.numeric, 1.25,
-            matcher: '1.25');
-        await shouldPassthrough<Object>(DataType.numeric, 17, matcher: '17');
-        await shouldPassthrough<Object>(DataType.numeric, double.nan,
+        await shouldPassthrough<Object>(Type.numeric, 1.25, matcher: '1.25');
+        await shouldPassthrough<Object>(Type.numeric, 17, matcher: '17');
+        await shouldPassthrough<Object>(Type.numeric, double.nan,
             matcher: 'NaN');
       });
 
       test('regtype', () async {
-        await shouldPassthrough<DataType>(
-            DataType.regtype, DataType.bigInteger);
+        await shouldPassthrough<Type>(Type.regtype, Type.bigInteger);
       });
     });
 
@@ -134,8 +130,8 @@ void main() {
     });
 
     test('can use same variable multiple times', () async {
-      final stmt = await connection.prepare(
-          Sql(r'SELECT $1 AS a, $1 + 2 AS b', types: [DataType.integer]));
+      final stmt = await connection
+          .prepare(Sql(r'SELECT $1 AS a, $1 + 2 AS b', types: [Type.integer]));
       final rows = await stmt.run([10]);
 
       expect(rows, [
@@ -193,7 +189,7 @@ void main() {
         await expectLater(
           () => connection.execute(
             Sql(r'INSERT INTO foo VALUES ($1);'),
-            parameters: [TypedValue(DataType.integer, 1)],
+            parameters: [TypedValue(Type.integer, 1)],
           ),
           _throwsPostgresException,
         );
@@ -204,7 +200,7 @@ void main() {
 
       test('for duplicate in prepared statement', () async {
         final stmt = await connection.prepare(
-          Sql(r'INSERT INTO foo VALUES ($1);', types: [DataType.integer]),
+          Sql(r'INSERT INTO foo VALUES ($1);', types: [Type.integer]),
         );
         final stream = stmt.bind([1]);
         await expectLater(stream, emitsError(_isPostgresException));
@@ -244,7 +240,7 @@ void main() {
         final outValue = await connection.runTx((ctx) async {
           return await ctx.execute(
             Sql(r'SELECT * FROM t WHERE id = $1 LIMIT 1'),
-            parameters: [TypedValue(DataType.integer, 1)],
+            parameters: [TypedValue(Type.integer, 1)],
           );
         });
 
@@ -390,7 +386,7 @@ void main() {
         await expectLater(
           () => connection.execute(
             Sql('SELECT 1'),
-            parameters: [TypedValue(DataType.integer, 1)],
+            parameters: [TypedValue(Type.integer, 1)],
             queryMode: QueryMode.simple,
           ),
           _throwsPostgresException,

@@ -31,7 +31,7 @@ void main() {
     test('UTF16 strings in value', () async {
       var result = await connection.query(
           'INSERT INTO t (t) values '
-          "(${PostgreSQLFormat.id("t", type: DataType.text)})"
+          "(${PostgreSQLFormat.id("t", type: Type.text)})"
           'returning t',
           substitutionValues: {
             't': '°∆',
@@ -66,7 +66,7 @@ void main() {
     test('UTF16 strings in value with escape characters', () async {
       await connection.execute(
           'INSERT INTO t (t) values '
-          '(${PostgreSQLFormat.id('t', type: DataType.text)})',
+          '(${PostgreSQLFormat.id('t', type: Type.text)})',
           substitutionValues: {
             't': "'©™®'",
           });
@@ -80,7 +80,7 @@ void main() {
     test('UTF16 strings in value with backslash', () async {
       await connection.execute(
           'INSERT INTO t (t) values '
-          '(${PostgreSQLFormat.id('t', type: DataType.text)})',
+          '(${PostgreSQLFormat.id('t', type: Type.text)})',
           substitutionValues: {
             't': r"°\'©™®'",
           });
@@ -102,7 +102,7 @@ void main() {
 
     test('Really long raw substitution value', () async {
       final result = await connection.query(
-          "INSERT INTO t (t) VALUES (${PostgreSQLFormat.id("t", type: DataType.text)}) returning t;",
+          "INSERT INTO t (t) VALUES (${PostgreSQLFormat.id("t", type: Type.text)}) returning t;",
           substitutionValues: {'t': lorumIpsum});
       expect(result, [
         [lorumIpsum]
@@ -218,28 +218,28 @@ void main() {
     test('Query by specifying all types', () async {
       var result = await connection.query(
           'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
-          '(${PostgreSQLFormat.id('i', type: DataType.integer)},'
-          '${PostgreSQLFormat.id('bi', type: DataType.bigInteger)},'
-          '${PostgreSQLFormat.id('bl', type: DataType.boolean)},'
-          '${PostgreSQLFormat.id('si', type: DataType.smallInteger)},'
-          '${PostgreSQLFormat.id('t', type: DataType.text)},'
-          '${PostgreSQLFormat.id('f', type: DataType.real)},'
-          '${PostgreSQLFormat.id('d', type: DataType.double)},'
-          '${PostgreSQLFormat.id('dt', type: DataType.date)},'
-          '${PostgreSQLFormat.id('ts', type: DataType.timestampWithoutTimezone)},'
-          '${PostgreSQLFormat.id('tsz', type: DataType.timestampWithTimezone)},'
-          '${PostgreSQLFormat.id('j', type: DataType.jsonb)},'
-          '${PostgreSQLFormat.id('u', type: DataType.uuid)},'
-          '${PostgreSQLFormat.id('v', type: DataType.varChar)},'
-          '${PostgreSQLFormat.id('p', type: DataType.point)},'
-          '${PostgreSQLFormat.id('jj', type: DataType.json)},'
-          '${PostgreSQLFormat.id('ia', type: DataType.integerArray)},'
-          '${PostgreSQLFormat.id('bia', type: DataType.bigIntegerArray)},'
-          '${PostgreSQLFormat.id('ta', type: DataType.textArray)},'
-          '${PostgreSQLFormat.id('da', type: DataType.doubleArray)},'
-          '${PostgreSQLFormat.id('ja', type: DataType.jsonbArray)},'
-          '${PostgreSQLFormat.id('va', type: DataType.varCharArray)},'
-          '${PostgreSQLFormat.id('ba', type: DataType.booleanArray)}'
+          '(${PostgreSQLFormat.id('i', type: Type.integer)},'
+          '${PostgreSQLFormat.id('bi', type: Type.bigInteger)},'
+          '${PostgreSQLFormat.id('bl', type: Type.boolean)},'
+          '${PostgreSQLFormat.id('si', type: Type.smallInteger)},'
+          '${PostgreSQLFormat.id('t', type: Type.text)},'
+          '${PostgreSQLFormat.id('f', type: Type.real)},'
+          '${PostgreSQLFormat.id('d', type: Type.double)},'
+          '${PostgreSQLFormat.id('dt', type: Type.date)},'
+          '${PostgreSQLFormat.id('ts', type: Type.timestampWithoutTimezone)},'
+          '${PostgreSQLFormat.id('tsz', type: Type.timestampWithTimezone)},'
+          '${PostgreSQLFormat.id('j', type: Type.jsonb)},'
+          '${PostgreSQLFormat.id('u', type: Type.uuid)},'
+          '${PostgreSQLFormat.id('v', type: Type.varChar)},'
+          '${PostgreSQLFormat.id('p', type: Type.point)},'
+          '${PostgreSQLFormat.id('jj', type: Type.json)},'
+          '${PostgreSQLFormat.id('ia', type: Type.integerArray)},'
+          '${PostgreSQLFormat.id('bia', type: Type.bigIntegerArray)},'
+          '${PostgreSQLFormat.id('ta', type: Type.textArray)},'
+          '${PostgreSQLFormat.id('da', type: Type.doubleArray)},'
+          '${PostgreSQLFormat.id('ja', type: Type.jsonbArray)},'
+          '${PostgreSQLFormat.id('va', type: Type.varCharArray)},'
+          '${PostgreSQLFormat.id('ba', type: Type.booleanArray)}'
           ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba',
           substitutionValues: {
             'i': 1,
@@ -311,15 +311,15 @@ void main() {
       var result = await connection.query(
           'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) values '
           '(${PostgreSQLFormat.id('i')},'
-          '${PostgreSQLFormat.id('bi', type: DataType.bigInteger)},'
+          '${PostgreSQLFormat.id('bi', type: Type.bigInteger)},'
           '${PostgreSQLFormat.id('bl')},'
-          '${PostgreSQLFormat.id('si', type: DataType.smallInteger)},'
+          '${PostgreSQLFormat.id('si', type: Type.smallInteger)},'
           '${PostgreSQLFormat.id('t')},'
-          '${PostgreSQLFormat.id('f', type: DataType.real)},'
+          '${PostgreSQLFormat.id('f', type: Type.real)},'
           '${PostgreSQLFormat.id('d')},'
-          '${PostgreSQLFormat.id('dt', type: DataType.date)},'
+          '${PostgreSQLFormat.id('dt', type: Type.date)},'
           '${PostgreSQLFormat.id('ts')},'
-          '${PostgreSQLFormat.id('tsz', type: DataType.timestampWithTimezone)}) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz',
+          '${PostgreSQLFormat.id('tsz', type: Type.timestampWithTimezone)}) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz',
           substitutionValues: {
             'i': 1,
             'bi': 2,

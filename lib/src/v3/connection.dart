@@ -625,7 +625,7 @@ class _PgResultStreamSubscription
         final schema = _resultSchema = ResultSchema([
           for (final field in message.fieldDescriptions)
             ResultSchemaColumn(
-              type: DataType.byTypeOid[field.typeOid] ?? DataType.byteArray,
+              type: Type.byTypeOid[field.typeOid] ?? Type.byteArray,
               columnName: field.fieldName,
               columnOid: field.columnOid,
               tableOid: field.tableOid,
@@ -806,8 +806,8 @@ class _Channels implements Channels {
   Future<void> notify(String channel, [String? payload]) async {
     final statementCompleter = _notifyStatement ??= Completer()
       ..complete(Future(() async {
-        return _connection.prepare(Sql(r'SELECT pg_notify($1, $2)',
-            types: [DataType.text, DataType.text]));
+        return _connection.prepare(
+            Sql(r'SELECT pg_notify($1, $2)', types: [Type.text, Type.text]));
       }));
     final statement = await statementCompleter.future;
 

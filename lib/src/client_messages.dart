@@ -129,10 +129,10 @@ class QueryMessage extends ClientMessage {
 class ParseMessage extends ClientMessage {
   final String _statementName;
   final String _statement;
-  final List<DataType?> _types;
+  final List<Type?> _types;
 
   ParseMessage(String statement,
-      {String statementName = '', List<DataType?>? types})
+      {String statementName = '', List<Type?>? types})
       : _statement = statement,
         _statementName = statementName,
         _types = types ?? const [];
@@ -188,7 +188,7 @@ class DescribeMessage extends ClientMessage {
 }
 
 extension on TypedValue {
-  bool get _hasKnownType => type != DataType.unspecified;
+  bool get _hasKnownType => type != Type.unspecified;
 
   Uint8List? encodeAsBytes(Encoding encoding) {
     if (_hasKnownType) {

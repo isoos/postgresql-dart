@@ -41,6 +41,10 @@ Notable breaking behaviour changes:
   - Connection pool.
   - Fresh implementation with multiple bugs fixed along the way.
 
+Big thanks to many contributions (including code, comments or criticism) on the
+new direction and design, especially to [simolus3](https://github.com/simolus3)
+and [osaxma](https://github.com/osaxma), who helped to push forward in many occassions.
+
 ## 2.6.3
 
 - Allow `encoding` to be specified for connections. The setting will be used for all connection-related string conversions.

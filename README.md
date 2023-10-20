@@ -8,53 +8,52 @@ This driver uses the more efficient and secure extended query format of the Post
 
 ## Usage
 
-Create `PostgreSQLConnection`s and `open` them:
+Create a `Connection`:
 
 ```dart
-  final endpoint = PgEndpoint(
+  final conn = await Connection.open(Endpoint(
     host: 'localhost',
     database: 'postgres',
     username: 'user',
     password: 'pass',
+  ));
+```
+
+Execute queries with `execute`:
+
+```dart
+  final result = await conn.execute("SELECT 'foo'");
+  print(result[0][0]); // first row and first field
+```
+
+Named parameters, returning rows as map of column names:
+
+```dart
+  final result = await conn.execute(
+    Sql.named('SELECT * FROM a_table WHERE id=@id'),
+    parameters: {'id': 'xyz'},
   );
-  final conn = await PgConnection.open(endpoint);
-```
-
-Execute queries with `query`:
-
-```dart
-final results = await conn.execute('SELECT a, b FROM table WHERE a = @aValue', parameters: {
-    "aValue" : 3
-});
-
-for (final row in results) {
-  final col1 = row[0];
-  final col2 = row[1];
-}
-```
-
-Return rows as maps containing column names:
-
-```dart
-final results = await conn.execute('SELECT t.id, t.name, u.name FROM t');
-
-for (final row in results) {
-  print(row.toColumnMap());
-}
+  print(result.first.toColumnMap());
 ```
 
 Execute queries in a transaction:
 
 ```dart
-await connection.transaction((ctx) async {
-    var result = await ctx.query("SELECT id FROM table");
-    await ctx.query("INSERT INTO table (id) VALUES (@a:int4)", substitutionValues: {
-        "a" : result.last[0] + 1
-    });
-});
+  await conn.runTx((s) async {
+    final rs = await s.execute('SELECT count(*) FROM foo');
+    await s.execute(
+      r'UPDATE a_table SET totals=$1 WHERE id=$2',
+      parameters: [rs[0][0], 'xyz'],
+    );
+  });
 ```
 
 See the API documentation: https://pub.dev/documentation/postgres/latest/
+
+## Connection pooling
+
+The library supports connection pooling (and masking the connection pool as
+regular session executor).
 
 ## Additional Capabilities
 
@@ -63,12 +62,13 @@ See [PostgreSQLConnection][] documentation for more info.
 An example can also be found at the following repository: [postgresql-dart-replication-example][]
 
 [Streaming Replication Protocol]: https://www.postgresql.org/docs/13/protocol-replication.html
-[PostgreSQLConnection]: https://pub.dev/documentation/postgres/latest/postgres/PostgreSQLConnection/PostgreSQLConnection.html
+[PostgreSQLConnection]: https://pub.dev/documentation/postgres/latest/postgres/Connection/Connection.html
 [postgresql-dart-replication-example]: https://github.com/osaxma/postgresql-dart-replication-example
 
 ## Features and bugs
 
-This library is a fork of [StableKernel's postgres library](https://github.com/stablekernel/postgresql-dart).
+This library originally started as [StableKernel's postgres library](https://github.com/stablekernel/postgresql-dart),
+but got a full API overhaul and partial rewrite of the internals.
 
 Please file feature requests and bugs at the [issue tracker][tracker].
 

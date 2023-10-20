@@ -78,7 +78,7 @@ class Point {
 }
 
 /// Supported data types.
-enum DataType<T extends Object> {
+enum Type<T extends Object> {
   /// Used to represent a type not yet understood by this package.
   unknownType<Object>(null),
 
@@ -184,8 +184,8 @@ enum DataType<T extends Object> {
   /// Must be a [List] of encodable objects
   jsonbArray<List>(3807, nameForSubstitution: '_jsonb'),
 
-  /// Must be a [DataType].
-  regtype<DataType>(2206, nameForSubstitution: 'regtype'),
+  /// Must be a [Type].
+  regtype<Type>(2206, nameForSubstitution: 'regtype'),
 
   /// Impossible to bind to, always null when read.
   voidType<Object>(2278),
@@ -200,18 +200,18 @@ enum DataType<T extends Object> {
   /// name can be used.
   final String? nameForSubstitution;
 
-  const DataType(this.oid, {this.nameForSubstitution});
+  const Type(this.oid, {this.nameForSubstitution});
 
   TypedValue value(T value) => TypedValue(this, value);
 
   @internal
-  static final Map<int, DataType> byTypeOid = Map.unmodifiable({
+  static final Map<int, Type> byTypeOid = Map.unmodifiable({
     for (final type in values)
       if (type.oid != null) type.oid: type,
   });
 
   @internal
-  static final Map<String, DataType> bySubstitutionName = Map.unmodifiable({
+  static final Map<String, Type> bySubstitutionName = Map.unmodifiable({
     for (final type in values)
       // We don't index serial and bigSerial types here because they're using
       // the same names as int4 and int8, respectively.
@@ -282,7 +282,7 @@ enum Severity {
 }
 
 class TypedValue {
-  final DataType type;
+  final Type type;
   final Object? value;
 
   TypedValue(this.type, this.value);

@@ -11,7 +11,7 @@ class InternalQueryDescription implements Sql {
   /// The SQL query as supplied by the user.
   final String originalSql;
 
-  final List<DataType?>? parameterTypes;
+  final List<Type?>? parameterTypes;
   final Map<String, int>? namedVariables;
 
   InternalQueryDescription._(
@@ -21,13 +21,13 @@ class InternalQueryDescription implements Sql {
     this.namedVariables,
   );
 
-  InternalQueryDescription.direct(String sql, {List<DataType>? types})
+  InternalQueryDescription.direct(String sql, {List<Type>? types})
       : this._(sql, sql, types, null);
 
   InternalQueryDescription.transformed(
     String original,
     String transformed,
-    List<DataType?> parameterTypes,
+    List<Type?> parameterTypes,
     Map<String, int> namedVariables,
   ) : this._(
           transformed,
@@ -63,7 +63,7 @@ class InternalQueryDescription implements Sql {
 
   TypedValue _toParameter(
     Object? value,
-    DataType? knownType, {
+    Type? knownType, {
     String? name,
   }) {
     if (value is TypedValue) {
@@ -71,7 +71,7 @@ class InternalQueryDescription implements Sql {
     } else if (knownType != null) {
       return TypedValue(knownType, value);
     } else {
-      return TypedValue(DataType.unspecified, value);
+      return TypedValue(Type.unspecified, value);
     }
   }
 

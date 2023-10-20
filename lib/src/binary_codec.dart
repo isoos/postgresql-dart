@@ -44,7 +44,7 @@ Codec<Object?, List<int>> _jsonFusedEncoding(Encoding encoding) {
 }
 
 class PostgresBinaryEncoder<T extends Object> {
-  final DataType<T> _dataType;
+  final Type<T> _dataType;
 
   const PostgresBinaryEncoder(this._dataType);
 
@@ -54,12 +54,12 @@ class PostgresBinaryEncoder<T extends Object> {
     }
 
     // ignore: unnecessary_cast
-    switch (_dataType as DataType<Object>) {
-      case DataType.unknownType:
-      case DataType.unspecified:
-      case DataType.voidType:
+    switch (_dataType as Type<Object>) {
+      case Type.unknownType:
+      case Type.unspecified:
+      case Type.voidType:
         throw ArgumentError('Cannot encode into ${_dataType.name}.');
-      case DataType.boolean:
+      case Type.boolean:
         {
           if (input is bool) {
             return input ? _bool1 : _bool0;
@@ -67,8 +67,8 @@ class PostgresBinaryEncoder<T extends Object> {
           throw FormatException(
               'Invalid type for parameter value. Expected: bool Got: ${input.runtimeType}');
         }
-      case DataType.bigSerial:
-      case DataType.bigInteger:
+      case Type.bigSerial:
+      case Type.bigInteger:
         {
           if (input is int) {
             final bd = ByteData(8);
@@ -78,8 +78,8 @@ class PostgresBinaryEncoder<T extends Object> {
           throw FormatException(
               'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}');
         }
-      case DataType.serial:
-      case DataType.integer:
+      case Type.serial:
+      case Type.integer:
         {
           if (input is int) {
             final bd = ByteData(4);
@@ -89,7 +89,7 @@ class PostgresBinaryEncoder<T extends Object> {
           throw FormatException(
               'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}');
         }
-      case DataType.smallInteger:
+      case Type.smallInteger:
         {
           if (input is int) {
             final bd = ByteData(2);
@@ -99,9 +99,9 @@ class PostgresBinaryEncoder<T extends Object> {
           throw FormatException(
               'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}');
         }
-      case DataType.name:
-      case DataType.text:
-      case DataType.varChar:
+      case Type.name:
+      case Type.text:
+      case Type.varChar:
         {
           if (input is String) {
             return castBytes(encoding.encode(input));
@@ -109,7 +109,7 @@ class PostgresBinaryEncoder<T extends Object> {
           throw FormatException(
               'Invalid type for parameter value. Expected: String Got: ${input.runtimeType}');
         }
-      case DataType.real:
+      case Type.real:
         {
           if (input is double) {
             final bd = ByteData(4);
@@ -119,7 +119,7 @@ class PostgresBinaryEncoder<T extends Object> {
           throw FormatException(
               'Invalid type for parameter value. Expected: double Got: ${input.runtimeType}');
         }
-      case DataType.double:
+      case Type.double:
         {
           if (input is double) {
             final bd = ByteData(8);
@@ -129,7 +129,7 @@ class PostgresBinaryEncoder<T extends Object> {
           throw FormatException(
               'Invalid type for parameter value. Expected: double Got: ${input.runtimeType}');
         }
-      case DataType.date:
+      case Type.date:
         {
           if (input is DateTime) {
             final bd = ByteData(4);
@@ -140,7 +140,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}');
         }
 
-      case DataType.timestampWithoutTimezone:
+      case Type.timestampWithoutTimezone:
         {
           if (input is DateTime) {
             final bd = ByteData(8);
@@ -152,7 +152,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}');
         }
 
-      case DataType.timestampWithTimezone:
+      case Type.timestampWithTimezone:
         {
           if (input is DateTime) {
             final bd = ByteData(8);
@@ -164,7 +164,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}');
         }
 
-      case DataType.interval:
+      case Type.interval:
         {
           if (input is Duration) {
             final bd = ByteData(16);
@@ -176,7 +176,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: Duration Got: ${input.runtimeType}');
         }
 
-      case DataType.numeric:
+      case Type.numeric:
         {
           Object source = input;
 
@@ -190,7 +190,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: String|double|int Got: ${input.runtimeType}');
         }
 
-      case DataType.jsonb:
+      case Type.jsonb:
         {
           final jsonBytes = _jsonFusedEncoding(encoding).encode(input);
           final writer = PgByteDataWriter(
@@ -200,10 +200,10 @@ class PostgresBinaryEncoder<T extends Object> {
           return writer.toBytes();
         }
 
-      case DataType.json:
+      case Type.json:
         return castBytes(_jsonFusedEncoding(encoding).encode(input));
 
-      case DataType.byteArray:
+      case Type.byteArray:
         {
           if (input is List<int>) {
             return castBytes(input);
@@ -212,7 +212,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
         }
 
-      case DataType.uuid:
+      case Type.uuid:
         {
           if (input is! String) {
             throw FormatException(
@@ -250,7 +250,7 @@ class PostgresBinaryEncoder<T extends Object> {
           return outBuffer;
         }
 
-      case DataType.point:
+      case Type.point:
         {
           if (input is Point) {
             final bd = ByteData(16);
@@ -261,8 +261,8 @@ class PostgresBinaryEncoder<T extends Object> {
           throw FormatException(
               'Invalid type for parameter value. Expected: PgPoint Got: ${input.runtimeType}');
         }
-      case DataType.regtype:
-        final oid = input is DataType ? input.oid : null;
+      case Type.regtype:
+        final oid = input is Type ? input.oid : null;
         if (oid == null) {
           throw FormatException(
               'Invalid type for parameter value, expected a data type an oid, got $input');
@@ -271,7 +271,7 @@ class PostgresBinaryEncoder<T extends Object> {
         final outBuffer = Uint8List(4);
         outBuffer.buffer.asByteData().setInt32(0, oid);
         return outBuffer;
-      case DataType.booleanArray:
+      case Type.booleanArray:
         {
           if (input is List) {
             return _writeListBytes<bool>(
@@ -286,7 +286,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: List<bool> Got: ${input.runtimeType}');
         }
 
-      case DataType.integerArray:
+      case Type.integerArray:
         {
           if (input is List) {
             return _writeListBytes<int>(
@@ -301,7 +301,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
         }
 
-      case DataType.bigIntegerArray:
+      case Type.bigIntegerArray:
         {
           if (input is List) {
             return _writeListBytes<int>(
@@ -316,7 +316,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
         }
 
-      case DataType.varCharArray:
+      case Type.varCharArray:
         {
           if (input is List) {
             final bytesArray =
@@ -333,7 +333,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
         }
 
-      case DataType.textArray:
+      case Type.textArray:
         {
           if (input is List) {
             final bytesArray =
@@ -350,7 +350,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
         }
 
-      case DataType.doubleArray:
+      case Type.doubleArray:
         {
           if (input is List) {
             return _writeListBytes<double>(
@@ -365,7 +365,7 @@ class PostgresBinaryEncoder<T extends Object> {
               'Invalid type for parameter value. Expected: List<double> Got: ${input.runtimeType}');
         }
 
-      case DataType.jsonbArray:
+      case Type.jsonbArray:
         {
           if (input is List<Object>) {
             final objectsArray = input.map(_jsonFusedEncoding(encoding).encode);
@@ -503,7 +503,7 @@ class PostgresBinaryEncoder<T extends Object> {
 class PostgresBinaryDecoder<T> {
   PostgresBinaryDecoder(this.type);
 
-  final DataType type;
+  final Type type;
 
   T? convert(Uint8List? input, Encoding encoding) {
     if (input == null) {
@@ -514,42 +514,42 @@ class PostgresBinaryDecoder<T> {
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
 
     switch (type) {
-      case DataType.name:
-      case DataType.text:
-      case DataType.varChar:
+      case Type.name:
+      case Type.text:
+      case Type.varChar:
         return encoding.decode(input) as T;
-      case DataType.boolean:
+      case Type.boolean:
         return (buffer.getInt8(0) != 0) as T;
-      case DataType.smallInteger:
+      case Type.smallInteger:
         return buffer.getInt16(0) as T;
-      case DataType.serial:
-      case DataType.integer:
+      case Type.serial:
+      case Type.integer:
         return buffer.getInt32(0) as T;
-      case DataType.bigSerial:
-      case DataType.bigInteger:
+      case Type.bigSerial:
+      case Type.bigInteger:
         return buffer.getInt64(0) as T;
-      case DataType.real:
+      case Type.real:
         return buffer.getFloat32(0) as T;
-      case DataType.double:
+      case Type.double:
         return buffer.getFloat64(0) as T;
-      case DataType.timestampWithoutTimezone:
-      case DataType.timestampWithTimezone:
+      case Type.timestampWithoutTimezone:
+      case Type.timestampWithTimezone:
         return DateTime.utc(2000)
             .add(Duration(microseconds: buffer.getInt64(0))) as T;
 
-      case DataType.interval:
+      case Type.interval:
         {
           if (buffer.getInt64(8) != 0) throw UnimplementedError();
           return Duration(microseconds: buffer.getInt64(0)) as T;
         }
 
-      case DataType.numeric:
+      case Type.numeric:
         return _decodeNumeric(input) as T;
 
-      case DataType.date:
+      case Type.date:
         return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0))) as T;
 
-      case DataType.jsonb:
+      case Type.jsonb:
         {
           // Removes version which is first character and currently always '1'
           final bytes = input.buffer
@@ -557,13 +557,13 @@ class PostgresBinaryDecoder<T> {
           return _jsonFusedEncoding(encoding).decode(bytes) as T;
         }
 
-      case DataType.json:
+      case Type.json:
         return _jsonFusedEncoding(encoding).decode(input) as T;
 
-      case DataType.byteArray:
+      case Type.byteArray:
         return input as T;
 
-      case DataType.uuid:
+      case Type.uuid:
         {
           final buf = StringBuffer();
           for (var i = 0; i < buffer.lengthInBytes; i++) {
@@ -582,46 +582,46 @@ class PostgresBinaryDecoder<T> {
 
           return buf.toString() as T;
         }
-      case DataType.regtype:
+      case Type.regtype:
         final data = input.buffer.asByteData(input.offsetInBytes, input.length);
         final oid = data.getInt32(0);
-        return (DataType.byTypeOid[oid] ?? DataType.unknownType) as T;
-      case DataType.voidType:
+        return (Type.byTypeOid[oid] ?? Type.unknownType) as T;
+      case Type.voidType:
         return null;
 
-      case DataType.point:
+      case Type.point:
         return Point(buffer.getFloat64(0), buffer.getFloat64(8)) as T;
 
-      case DataType.booleanArray:
+      case Type.booleanArray:
         return readListBytes<bool>(
             input, (reader, _) => reader.readUint8() != 0) as T;
 
-      case DataType.integerArray:
+      case Type.integerArray:
         return readListBytes<int>(input, (reader, _) => reader.readInt32())
             as T;
-      case DataType.bigIntegerArray:
+      case Type.bigIntegerArray:
         return readListBytes<int>(input, (reader, _) => reader.readInt64())
             as T;
 
-      case DataType.varCharArray:
-      case DataType.textArray:
+      case Type.varCharArray:
+      case Type.textArray:
         return readListBytes<String>(input, (reader, length) {
           return encoding.decode(length > 0 ? reader.read(length) : []);
         }) as T;
 
-      case DataType.doubleArray:
+      case Type.doubleArray:
         return readListBytes<double>(input, (reader, _) => reader.readFloat64())
             as T;
 
-      case DataType.jsonbArray:
+      case Type.jsonbArray:
         return readListBytes<dynamic>(input, (reader, length) {
           reader.read(1);
           final bytes = reader.read(length - 1);
           return _jsonFusedEncoding(encoding).decode(bytes);
         }) as T;
 
-      case DataType.unknownType:
-      case DataType.unspecified:
+      case Type.unknownType:
+      case Type.unspecified:
         {
           // We'll try and decode this as a utf8 string and return that
           // for many internal types, this is valid. If it fails,
@@ -659,7 +659,7 @@ class PostgresBinaryDecoder<T> {
   }
 
   /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
-  static final Map<int, DataType> typeMap = DataType.byTypeOid;
+  static final Map<int, Type> typeMap = Type.byTypeOid;
 
   /// Decode numeric / decimal to String without loosing precision.
   /// See encoding: https://github.com/postgres/postgres/blob/0e39a608ed5545cc6b9d538ac937c3c1ee8cdc36/src/backend/utils/adt/numeric.c#L305

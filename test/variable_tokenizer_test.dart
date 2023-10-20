@@ -13,43 +13,42 @@ void main() {
       {'x': 1, 'y': 2, 'z': 3},
     );
     expect(desc.parameterTypes, [
-      DataType.bigInteger, // x
-      DataType.boolean, // y
+      Type.bigInteger, // x
+      Type.boolean, // y
       null, // z, didn't have a specified type
     ]);
 
     expect(() => desc.bindParameters(null), throwsArgumentError);
 
     expect(
-      desc.bindParameters(
-          {'x': 4, 'y': true, 'z': TypedValue(DataType.text, 'z')}),
+      desc.bindParameters({'x': 4, 'y': true, 'z': TypedValue(Type.text, 'z')}),
       [
-        TypedValue(DataType.bigInteger, 4),
-        TypedValue(DataType.boolean, true),
-        TypedValue(DataType.text, 'z'),
+        TypedValue(Type.bigInteger, 4),
+        TypedValue(Type.boolean, true),
+        TypedValue(Type.text, 'z'),
       ],
     );
     expect(desc.bindParameters({'x': 4, 'y': true, 'z': 'z'}), [
-      TypedValue(DataType.bigInteger, 4),
-      TypedValue(DataType.boolean, true),
-      TypedValue(DataType.unspecified, 'z'),
+      TypedValue(Type.bigInteger, 4),
+      TypedValue(Type.boolean, true),
+      TypedValue(Type.unspecified, 'z'),
     ]);
 
     // Make sure we can still bind by index
     expect(
-      desc.bindParameters([1, true, TypedValue(DataType.text, 'z')]),
+      desc.bindParameters([1, true, TypedValue(Type.text, 'z')]),
       [
-        TypedValue(DataType.bigInteger, 1),
-        TypedValue(DataType.boolean, true),
-        TypedValue(DataType.text, 'z'),
+        TypedValue(Type.bigInteger, 1),
+        TypedValue(Type.boolean, true),
+        TypedValue(Type.text, 'z'),
       ],
     );
     expect(
       desc.bindParameters([1, true, 3]),
       [
-        TypedValue(DataType.bigInteger, 1),
-        TypedValue(DataType.boolean, true),
-        TypedValue(DataType.unspecified, 3),
+        TypedValue(Type.bigInteger, 1),
+        TypedValue(Type.boolean, true),
+        TypedValue(Type.unspecified, 3),
       ],
     );
   });
@@ -68,7 +67,7 @@ void main() {
         substitution: ':');
     expect(desc.transformedSql, r'SELECT * FROM foo WHERE a = $1');
     expect(desc.namedVariables?.keys, ['x']);
-    expect(desc.parameterTypes, [DataType.bigInteger]);
+    expect(desc.parameterTypes, [Type.bigInteger]);
   });
 
   test('finds correct end for string literal', () {
@@ -82,7 +81,7 @@ void main() {
       final desc = InternalQueryDescription.named('SELECT @x:_varchar(10), 0');
       expect(desc.transformedSql, r'SELECT $1, 0');
       expect(desc.namedVariables, {'x': 1});
-      expect(desc.parameterTypes, [DataType.varCharArray]);
+      expect(desc.parameterTypes, [Type.varCharArray]);
     });
 
     test('throws', () {
