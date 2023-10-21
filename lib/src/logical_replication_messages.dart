@@ -112,7 +112,7 @@ enum LogicalReplicationMessageTypes {
   final String id;
   const LogicalReplicationMessageTypes(this.id);
 
-  static LogicalReplicationMessageTypes fromID(String id) {
+  static LogicalReplicationMessageTypes fromId(String id) {
     return LogicalReplicationMessageTypes.values.firstWhere(
       (element) => element.id == id,
       orElse: () => LogicalReplicationMessageTypes.unsupported,
@@ -120,7 +120,7 @@ enum LogicalReplicationMessageTypes {
   }
 
   static LogicalReplicationMessageTypes fromByte(int byte) {
-    return fromID(String.fromCharCode(byte));
+    return fromId(String.fromCharCode(byte));
   }
 }
 
@@ -253,7 +253,7 @@ class RelationMessageColumn {
 class RelationMessage implements LogicalReplicationMessage {
   /// The message type
   late final baseMessage = LogicalReplicationMessageTypes.relation;
-  late final int relationID;
+  late final int relationId;
   late final String nameSpace;
   late final String relationName;
   late final int replicaIdentity;
@@ -262,7 +262,7 @@ class RelationMessage implements LogicalReplicationMessage {
 
   RelationMessage._parse(PgByteDataReader reader) {
     // reading order matters
-    relationID = reader.readUint32();
+    relationId = reader.readUint32();
     nameSpace = reader.readNullTerminatedString();
     relationName = reader.readNullTerminatedString();
     replicaIdentity = reader.readUint8();
@@ -287,7 +287,7 @@ class RelationMessage implements LogicalReplicationMessage {
 
   @override
   String toString() {
-    return 'RelationMessage(relationID: $relationID, nameSpace: $nameSpace, relationName: $relationName, replicaIdentity: $replicaIdentity, columnNum: $columnNum, columns: $columns)';
+    return 'RelationMessage(relationId: $relationId, nameSpace: $nameSpace, relationName: $relationName, replicaIdentity: $replicaIdentity, columnNum: $columnNum, columns: $columns)';
   }
 }
 
@@ -296,7 +296,6 @@ class TypeMessage implements LogicalReplicationMessage {
   late final baseMessage = LogicalReplicationMessageTypes.type;
 
   /// This is the type OID
-  // TODO: create a getter for the type as a string
   late final int typeOid;
 
   late final String nameSpace;
@@ -316,10 +315,10 @@ class TypeMessage implements LogicalReplicationMessage {
 }
 
 enum TupleDataType {
-  nullType('n'),
-  toastType('u'),
-  textType('t'),
-  binaryType('b');
+  null_('n'),
+  toast('u'),
+  text('t'),
+  binary('b');
 
   final String id;
   const TupleDataType(this.id);
@@ -341,18 +340,18 @@ class TupleDataColumn {
   ///	 Byte1('t') Identifies the data as text formatted value.
   ///	 Or
   ///	 Byte1('b') Identifies the data as binary value.
-  final int typeOid;
+  final int typeId;
   final int length;
 
   String get typeName =>
-      PostgresBinaryDecoder.typeMap[typeOid]?.name ?? typeOid.toString();
+      PostgresBinaryDecoder.typeMap[typeId]?.name ?? typeId.toString();
 
   /// Data is the value of the column, in text format.
   /// n is the above length.
   final String data;
 
   TupleDataColumn({
-    required this.typeOid,
+    required this.typeId,
     required this.length,
     required this.data,
   });
@@ -381,20 +380,20 @@ class TupleData {
       late final int length;
       late final String data;
       switch (tupleDataType) {
-        case TupleDataType.textType:
-        case TupleDataType.binaryType:
+        case TupleDataType.text:
+        case TupleDataType.binary:
           length = reader.readUint32();
           data = reader.encoding.decode(reader.read(length));
           break;
-        case TupleDataType.nullType:
-        case TupleDataType.toastType:
+        case TupleDataType.null_:
+        case TupleDataType.toast:
           length = 0;
           data = '';
           break;
       }
       columns.add(
         TupleDataColumn(
-          typeOid: typeId,
+          typeId: typeId,
           length: length,
           data: data,
         ),
@@ -424,7 +423,7 @@ class InsertMessage implements LogicalReplicationMessage {
   }
 
   @override
-  String toString() => 'InsertMessage(relationID: $relationId, tuple: $tuple)';
+  String toString() => 'InsertMessage(relationId: $relationId, tuple: $tuple)';
 }
 
 enum UpdateMessageTuple {
@@ -435,7 +434,7 @@ enum UpdateMessageTuple {
 
   final String id;
   const UpdateMessageTuple(this.id);
-  static UpdateMessageTuple fromID(String id) {
+  static UpdateMessageTuple fromId(String id) {
     return UpdateMessageTuple.values
         .firstWhere((element) => element.id == id, orElse: () => noneType);
   }
@@ -444,7 +443,7 @@ enum UpdateMessageTuple {
     if (byte == 0) {
       return noneType;
     }
-    return fromID(String.fromCharCode(byte));
+    return fromId(String.fromCharCode(byte));
   }
 }
 
@@ -498,7 +497,7 @@ class UpdateMessage implements LogicalReplicationMessage {
 
   @override
   String toString() {
-    return 'UpdateMessage(relationID: $relationId, oldTupleType: $oldTupleType, oldTuple: $oldTuple, newTuple: $newTuple)';
+    return 'UpdateMessage(relationId: $relationId, oldTupleType: $oldTupleType, oldTuple: $oldTuple, newTuple: $newTuple)';
   }
 }
 
@@ -509,7 +508,7 @@ enum DeleteMessageTuple {
 
   final String id;
   const DeleteMessageTuple(this.id);
-  static DeleteMessageTuple fromID(String id) {
+  static DeleteMessageTuple fromId(String id) {
     return DeleteMessageTuple.values.firstWhere(
       (element) => element.id == id,
       orElse: () => unknown,
@@ -517,7 +516,7 @@ enum DeleteMessageTuple {
   }
 
   static DeleteMessageTuple fromByte(int byte) {
-    return fromID(String.fromCharCode(byte));
+    return fromId(String.fromCharCode(byte));
   }
 }
 
@@ -562,7 +561,7 @@ class DeleteMessage implements LogicalReplicationMessage {
 
   @override
   String toString() =>
-      'DeleteMessage(relationID: $relationId, oldTupleType: $oldTupleType, oldTuple: $oldTuple)';
+      'DeleteMessage(relationId: $relationId, oldTupleType: $oldTupleType, oldTuple: $oldTuple)';
 }
 
 // see https://www.postgresql.org/docs/current/protocol-logicalrep-message-formats.html
