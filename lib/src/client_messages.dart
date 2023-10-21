@@ -44,16 +44,6 @@ abstract class ClientMessage extends Message {
     applyToBuffer(buffer);
     return buffer.toBytes();
   }
-
-  @internal
-  static Uint8List aggregateBytes(List<ClientMessage> messages,
-      {required Encoding encoding}) {
-    final buffer = PgByteDataWriter(encoding: encoding);
-    for (final cm in messages) {
-      cm.applyToBuffer(buffer);
-    }
-    return buffer.toBytes();
-  }
 }
 
 class StartupMessage extends ClientMessage {

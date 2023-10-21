@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+
+import 'package:postgres/src/buffer.dart';
 
 import '../binary_codec.dart';
 import '../client_messages.dart';
@@ -96,8 +99,8 @@ class Query<T> {
       cache = CachedQuery(statementIdentifier, formatIdentifiers);
     }
 
-    socket.add(
-        ClientMessage.aggregateBytes(messages, encoding: connection.encoding));
+    socket
+        .add(_aggregateClientMessages(messages, encoding: connection.encoding));
   }
 
   void sendCachedQuery(Socket socket, CachedQuery cacheQuery,
@@ -108,7 +111,7 @@ class Query<T> {
             _resolveParameterValue(identifier, substitutionValues))
         .toList();
 
-    final bytes = ClientMessage.aggregateBytes(
+    final bytes = _aggregateClientMessages(
       [
         BindMessage(parameterList, statementName: statementName!),
         ExecuteMessage(),
@@ -285,4 +288,13 @@ class PostgreSQLFormatIdentifier {
   final String name;
   final Type? type;
   final String? typeCast;
+}
+
+Uint8List _aggregateClientMessages(List<ClientMessage> messages,
+    {required Encoding encoding}) {
+  final buffer = PgByteDataWriter(encoding: encoding);
+  for (final cm in messages) {
+    cm.applyToBuffer(buffer);
+  }
+  return buffer.toBytes();
 }
