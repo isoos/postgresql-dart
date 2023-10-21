@@ -18,7 +18,7 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
   void onMessage(AuthenticationMessage message) {
     ClientMessage msg;
     switch (message.type) {
-      case AuthenticationMessage.KindSASL:
+      case AuthenticationMessageType.sasl:
         final bytesToSend = authenticator.handleMessage(
             SaslMessageType.AuthenticationSASL, message.bytes);
         if (bytesToSend == null) {
@@ -26,7 +26,7 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
         }
         msg = SaslClientFirstMessage(bytesToSend, authenticator.mechanism.name);
         break;
-      case AuthenticationMessage.KindSASLContinue:
+      case AuthenticationMessageType.saslContinue:
         final bytesToSend = authenticator.handleMessage(
             SaslMessageType.AuthenticationSASLContinue, message.bytes);
         if (bytesToSend == null) {
@@ -34,7 +34,7 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
         }
         msg = SaslClientLastMessage(bytesToSend);
         break;
-      case AuthenticationMessage.KindSASLFinal:
+      case AuthenticationMessageType.saslFinal:
         authenticator.handleMessage(
             SaslMessageType.AuthenticationSASLFinal, message.bytes);
         return;
@@ -54,7 +54,7 @@ class SaslClientFirstMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.PasswordIdentifier);
+    buffer.writeUint8(ClientMessage.passwordIdentifier);
 
     final encodedMechanismName = buffer.encodeString(mechanismName);
     final msgLength = bytesToSendToServer.length;
@@ -77,7 +77,7 @@ class SaslClientLastMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.PasswordIdentifier);
+    buffer.writeUint8(ClientMessage.passwordIdentifier);
 
     // No Identifier bit + 4 byte counts (for msg length) + msg bytes
     final length = 4 + bytesToSendToServer.length;

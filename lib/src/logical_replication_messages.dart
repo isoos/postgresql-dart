@@ -53,34 +53,34 @@ LogicalReplicationMessage? tryParseLogicalReplicationMessage(
   final firstByte = reader.readUint8();
   final msgType = LogicalReplicationMessageTypes.fromByte(firstByte);
   switch (msgType) {
-    case LogicalReplicationMessageTypes.Begin:
+    case LogicalReplicationMessageTypes.begin:
       return BeginMessage._parse(reader);
 
-    case LogicalReplicationMessageTypes.Commit:
+    case LogicalReplicationMessageTypes.commit:
       return CommitMessage._parse(reader);
 
-    case LogicalReplicationMessageTypes.Origin:
+    case LogicalReplicationMessageTypes.origin:
       return OriginMessage._parse(reader);
 
-    case LogicalReplicationMessageTypes.Relation:
+    case LogicalReplicationMessageTypes.relation:
       return RelationMessage._parse(reader);
 
-    case LogicalReplicationMessageTypes.Type:
+    case LogicalReplicationMessageTypes.type:
       return TypeMessage._parse(reader);
 
-    case LogicalReplicationMessageTypes.Insert:
+    case LogicalReplicationMessageTypes.insert:
       return InsertMessage._parse(reader);
 
-    case LogicalReplicationMessageTypes.Update:
+    case LogicalReplicationMessageTypes.update:
       return UpdateMessage._parse(reader);
 
-    case LogicalReplicationMessageTypes.Delete:
+    case LogicalReplicationMessageTypes.delete:
       return DeleteMessage._parse(reader);
 
-    case LogicalReplicationMessageTypes.Truncate:
+    case LogicalReplicationMessageTypes.truncate:
       return TruncateMessage._parse(reader);
 
-    case LogicalReplicationMessageTypes.Unsupported:
+    case LogicalReplicationMessageTypes.unsupported:
       // wal2json messages starts with `{` as the first byte
       if (firstByte == '{'.codeUnits.single) {
         // note this needs the full set of bytes unlike other cases
@@ -98,16 +98,16 @@ LogicalReplicationMessage? tryParseLogicalReplicationMessage(
 }
 
 enum LogicalReplicationMessageTypes {
-  Begin('B'),
-  Commit('C'),
-  Origin('O'),
-  Relation('R'),
-  Type('Y'),
-  Insert('I'),
-  Update('U'),
-  Delete('D'),
-  Truncate('T'),
-  Unsupported('');
+  begin('B'),
+  commit('C'),
+  origin('O'),
+  relation('R'),
+  type('Y'),
+  insert('I'),
+  update('U'),
+  delete('D'),
+  truncate('T'),
+  unsupported('');
 
   final String id;
   const LogicalReplicationMessageTypes(this.id);
@@ -115,7 +115,7 @@ enum LogicalReplicationMessageTypes {
   static LogicalReplicationMessageTypes fromID(String id) {
     return LogicalReplicationMessageTypes.values.firstWhere(
       (element) => element.id == id,
-      orElse: () => LogicalReplicationMessageTypes.Unsupported,
+      orElse: () => LogicalReplicationMessageTypes.unsupported,
     );
   }
 
@@ -151,7 +151,7 @@ class UnknownLogicalReplicationMessage implements LogicalReplicationMessage {
 
 class BeginMessage implements LogicalReplicationMessage {
   /// The message type
-  late final baseMessage = LogicalReplicationMessageTypes.Begin;
+  late final baseMessage = LogicalReplicationMessageTypes.begin;
 
   /// The final LSN of the transaction.
   late final LSN finalLSN;
@@ -177,7 +177,7 @@ class BeginMessage implements LogicalReplicationMessage {
 // CommitMessage is a commit message.
 class CommitMessage implements LogicalReplicationMessage {
   /// The message type
-  late final baseMessage = LogicalReplicationMessageTypes.Commit;
+  late final baseMessage = LogicalReplicationMessageTypes.commit;
 
   // Flags currently unused (must be 0).
   late final int flags;
@@ -207,7 +207,7 @@ class CommitMessage implements LogicalReplicationMessage {
 
 class OriginMessage implements LogicalReplicationMessage {
   /// The message type
-  late final baseMessage = LogicalReplicationMessageTypes.Origin;
+  late final baseMessage = LogicalReplicationMessageTypes.origin;
 
   /// The LSN of the commit on the origin server.
   late final LSN commitLSN;
@@ -232,7 +232,7 @@ class RelationMessageColumn {
   final String name;
 
   /// The ID of the column's data type.
-  final int dataType;
+  final int typeOid;
 
   /// type modifier of the column (atttypmod).
   final int typeModifier;
@@ -240,19 +240,19 @@ class RelationMessageColumn {
   RelationMessageColumn({
     required this.flags,
     required this.name,
-    required this.dataType,
+    required this.typeOid,
     required this.typeModifier,
   });
 
   @override
   String toString() {
-    return 'RelationMessageColumn(flags: $flags, name: $name, dataType: $dataType, typeModifier: $typeModifier)';
+    return 'RelationMessageColumn(flags: $flags, name: $name, typeOid: $typeOid, typeModifier: $typeModifier)';
   }
 }
 
 class RelationMessage implements LogicalReplicationMessage {
   /// The message type
-  late final baseMessage = LogicalReplicationMessageTypes.Relation;
+  late final baseMessage = LogicalReplicationMessageTypes.relation;
   late final int relationID;
   late final String nameSpace;
   late final String relationName;
@@ -272,13 +272,13 @@ class RelationMessage implements LogicalReplicationMessage {
       // reading order matters
       final flags = reader.readUint8();
       final name = reader.readNullTerminatedString();
-      final dataType = reader.readUint32();
+      final typeOid = reader.readUint32();
       final typeModifier = reader.readUint32();
       columns.add(
         RelationMessageColumn(
           flags: flags,
           name: name,
-          dataType: dataType,
+          typeOid: typeOid,
           typeModifier: typeModifier,
         ),
       );
@@ -293,11 +293,11 @@ class RelationMessage implements LogicalReplicationMessage {
 
 class TypeMessage implements LogicalReplicationMessage {
   /// The message type
-  late final baseMessage = LogicalReplicationMessageTypes.Type;
+  late final baseMessage = LogicalReplicationMessageTypes.type;
 
   /// This is the type OID
   // TODO: create a getter for the type as a string
-  late final int dataType;
+  late final int typeOid;
 
   late final String nameSpace;
 
@@ -305,14 +305,14 @@ class TypeMessage implements LogicalReplicationMessage {
 
   TypeMessage._parse(PgByteDataReader reader) {
     // reading order matters
-    dataType = reader.readUint32();
+    typeOid = reader.readUint32();
     nameSpace = reader.readNullTerminatedString();
     name = reader.readNullTerminatedString();
   }
 
   @override
   String toString() =>
-      'TypeMessage(dataType: $dataType, nameSpace: $nameSpace, name: $name)';
+      'TypeMessage(typeOid: $typeOid, nameSpace: $nameSpace, name: $name)';
 }
 
 enum TupleDataType {
@@ -323,12 +323,12 @@ enum TupleDataType {
 
   final String id;
   const TupleDataType(this.id);
-  static TupleDataType fromID(String id) {
+  static TupleDataType fromId(String id) {
     return TupleDataType.values.firstWhere((element) => element.id == id);
   }
 
   static TupleDataType fromByte(int byte) {
-    return fromID(String.fromCharCode(byte));
+    return fromId(String.fromCharCode(byte));
   }
 }
 
@@ -341,43 +341,43 @@ class TupleDataColumn {
   ///	 Byte1('t') Identifies the data as text formatted value.
   ///	 Or
   ///	 Byte1('b') Identifies the data as binary value.
-  final int dataType;
+  final int typeOid;
   final int length;
 
-  String get dataTypeName =>
-      PostgresBinaryDecoder.typeMap[dataType]?.name ?? dataType.toString();
+  String get typeName =>
+      PostgresBinaryDecoder.typeMap[typeOid]?.name ?? typeOid.toString();
 
   /// Data is the value of the column, in text format.
   /// n is the above length.
   final String data;
 
   TupleDataColumn({
-    required this.dataType,
+    required this.typeOid,
     required this.length,
     required this.data,
   });
 
   @override
   String toString() =>
-      'TupleDataColumn(dataType: $dataTypeName, length: $length, data: $data)';
+      'TupleDataColumn(typeName: $typeName, length: $length, data: $data)';
 }
 
 class TupleData {
   /// The message type
   // late final ReplicationMessageTypes baseMessage;
 
-  late final int columnNum;
+  late final int columnCount;
   late final columns = <TupleDataColumn>[];
 
   /// TupleData does not consume the entire bytes
   ///
   /// It'll read until the types are generated.
   TupleData(PgByteDataReader reader) {
-    columnNum = reader.readUint16();
-    for (var i = 0; i < columnNum; i++) {
+    columnCount = reader.readUint16();
+    for (var i = 0; i < columnCount; i++) {
       // reading order matters
-      final dataType = reader.readUint8();
-      final tupleDataType = TupleDataType.fromByte(dataType);
+      final typeId = reader.readUint8();
+      final tupleDataType = TupleDataType.fromByte(typeId);
       late final int length;
       late final String data;
       switch (tupleDataType) {
@@ -394,7 +394,7 @@ class TupleData {
       }
       columns.add(
         TupleDataColumn(
-          dataType: dataType,
+          typeOid: typeId,
           length: length,
           data: data,
         ),
@@ -403,19 +403,19 @@ class TupleData {
   }
 
   @override
-  String toString() => 'TupleData(columnNum: $columnNum, columns: $columns)';
+  String toString() => 'TupleData(columnNum: $columnCount, columns: $columns)';
 }
 
 class InsertMessage implements LogicalReplicationMessage {
   /// The message type
-  late final baseMessage = LogicalReplicationMessageTypes.Insert;
+  late final baseMessage = LogicalReplicationMessageTypes.insert;
 
   /// The ID of the relation corresponding to the ID in the relation message.
-  late final int relationID;
+  late final int relationId;
   late final TupleData tuple;
 
   InsertMessage._parse(PgByteDataReader reader) {
-    relationID = reader.readUint32();
+    relationId = reader.readUint32();
     final tupleType = reader.readUint8();
     if (tupleType != 'N'.codeUnitAt(0)) {
       throw Exception("InsertMessage must have 'N' tuple type");
@@ -424,7 +424,7 @@ class InsertMessage implements LogicalReplicationMessage {
   }
 
   @override
-  String toString() => 'InsertMessage(relationID: $relationID, tuple: $tuple)';
+  String toString() => 'InsertMessage(relationID: $relationId, tuple: $tuple)';
 }
 
 enum UpdateMessageTuple {
@@ -450,9 +450,9 @@ enum UpdateMessageTuple {
 
 class UpdateMessage implements LogicalReplicationMessage {
   /// The message type
-  late final baseMessage = LogicalReplicationMessageTypes.Update;
+  late final baseMessage = LogicalReplicationMessageTypes.update;
 
-  late final int relationID;
+  late final int relationId;
 
   /// OldTupleType
   ///   Byte1('K'):
@@ -476,7 +476,7 @@ class UpdateMessage implements LogicalReplicationMessage {
 
   UpdateMessage._parse(PgByteDataReader reader) {
     // reading order matters
-    relationID = reader.readUint32();
+    relationId = reader.readUint32();
     var tupleType = UpdateMessageTuple.fromByte(reader.readUint8());
 
     if (tupleType == UpdateMessageTuple.oldType ||
@@ -498,7 +498,7 @@ class UpdateMessage implements LogicalReplicationMessage {
 
   @override
   String toString() {
-    return 'UpdateMessage(relationID: $relationID, oldTupleType: $oldTupleType, oldTuple: $oldTuple, newTuple: $newTuple)';
+    return 'UpdateMessage(relationID: $relationId, oldTupleType: $oldTupleType, oldTuple: $oldTuple, newTuple: $newTuple)';
   }
 }
 
@@ -523,9 +523,9 @@ enum DeleteMessageTuple {
 
 class DeleteMessage implements LogicalReplicationMessage {
   /// The message type
-  late final baseMessage = LogicalReplicationMessageTypes.Delete;
+  late final baseMessage = LogicalReplicationMessageTypes.delete;
 
-  late final int relationID;
+  late final int relationId;
 
   /// OldTupleType
   ///   Byte1('K'):
@@ -547,7 +547,7 @@ class DeleteMessage implements LogicalReplicationMessage {
   late final TupleData oldTuple;
 
   DeleteMessage._parse(PgByteDataReader reader) {
-    relationID = reader.readUint32();
+    relationId = reader.readUint32();
     oldTupleType = DeleteMessageTuple.fromByte(reader.readUint8());
 
     switch (oldTupleType) {
@@ -562,7 +562,7 @@ class DeleteMessage implements LogicalReplicationMessage {
 
   @override
   String toString() =>
-      'DeleteMessage(relationID: $relationID, oldTupleType: $oldTupleType, oldTuple: $oldTuple)';
+      'DeleteMessage(relationID: $relationId, oldTupleType: $oldTupleType, oldTuple: $oldTuple)';
 }
 
 // see https://www.postgresql.org/docs/current/protocol-logicalrep-message-formats.html
@@ -582,7 +582,7 @@ enum TruncateOptions {
 
 class TruncateMessage implements LogicalReplicationMessage {
   /// The message type
-  late final baseMessage = LogicalReplicationMessageTypes.Truncate;
+  late final baseMessage = LogicalReplicationMessageTypes.truncate;
 
   late final int relationNum;
 

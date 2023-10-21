@@ -6,8 +6,8 @@ import 'package:test/test.dart';
 void main() {
   test('UnknownMessage equality', () {
     final a = UnknownMessage(1, Uint8List.fromList([0]));
-    final b = UnknownMessage(1, null);
-    final c = UnknownMessage(null, Uint8List.fromList([0]));
+    final b = UnknownMessage(1, Uint8List.fromList([]));
+    final c = UnknownMessage(0, Uint8List.fromList([0]));
     final d = UnknownMessage(1, Uint8List.fromList([0]));
     // == needs to null check the data field
     expect(a != b, isTrue);

@@ -38,7 +38,7 @@ class AuthMD5Message extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.PasswordIdentifier);
+    buffer.writeUint8(ClientMessage.passwordIdentifier);
     buffer.writeLengthEncodedString(_hashedAuthString);
   }
 }

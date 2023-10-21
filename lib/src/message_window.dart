@@ -71,7 +71,7 @@ class MessageFramer {
       if (_hasReadHeader && _isComplete) {
         final msgMaker = _messageTypeMap[_type];
         if (msgMaker == null) {
-          _addMsg(UnknownMessage(_type, _reader.read(_expectedLength)));
+          _addMsg(UnknownMessage(_type!, _reader.read(_expectedLength)));
           continue;
         }
 

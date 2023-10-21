@@ -32,19 +32,21 @@ class ErrorResponseMessage extends ErrorOrNoticeMessage {
   ErrorResponseMessage.parse(super.reader, super.length) : super._parse();
 }
 
-class AuthenticationMessage implements ServerMessage {
-  static const int KindOK = 0;
-  static const int KindKerberosV5 = 2;
-  static const int KindClearTextPassword = 3;
-  static const int KindMD5Password = 5;
-  static const int KindSCMCredential = 6;
-  static const int KindGSS = 7;
-  static const int KindGSSContinue = 8;
-  static const int KindSSPI = 9;
-  static const int KindSASL = 10;
-  static const int KindSASLContinue = 11;
-  static const int KindSASLFinal = 12;
+abstract class AuthenticationMessageType {
+  static const int ok = 0;
+  static const int kerberosV5 = 2;
+  static const int clearTextPassword = 3;
+  static const int md5Password = 5;
+  static const int scmCredential = 6;
+  static const int gss = 7;
+  static const int gssContinue = 8;
+  static const int sspi = 9;
+  static const int sasl = 10;
+  static const int saslContinue = 11;
+  static const int saslFinal = 12;
+}
 
+class AuthenticationMessage implements ServerMessage {
   final int type;
   late final Uint8List bytes;
 
@@ -71,11 +73,13 @@ class ParameterStatusMessage extends ServerMessage {
   }
 }
 
-class ReadyForQueryMessage extends ServerMessage {
-  static const String StateIdle = 'I';
-  static const String StateTransaction = 'T';
-  static const String StateTransactionError = 'E';
+abstract class ReadyForQueryMessageState {
+  static const String idle = 'I';
+  static const String transaction = 'T';
+  static const String error = 'E';
+}
 
+class ReadyForQueryMessage extends ServerMessage {
   final String state;
 
   @internal
@@ -89,16 +93,16 @@ class ReadyForQueryMessage extends ServerMessage {
 }
 
 class BackendKeyMessage extends ServerMessage {
-  final int processID;
+  final int processId;
   final int secretKey;
 
-  BackendKeyMessage._(this.processID, this.secretKey);
+  BackendKeyMessage._(this.processId, this.secretKey);
 
   @internal
   factory BackendKeyMessage.parse(PgByteDataReader reader) {
-    final processID = reader.readUint32();
+    final processId = reader.readUint32();
     final secretKey = reader.readUint32();
-    return BackendKeyMessage._(processID, secretKey);
+    return BackendKeyMessage._(processId, secretKey);
   }
 }
 
@@ -197,10 +201,10 @@ class NotificationResponseMessage extends ServerMessage {
 
   @internal
   factory NotificationResponseMessage.parse(PgByteDataReader reader) {
-    final processID = reader.readUint32();
+    final processId = reader.readUint32();
     final channel = reader.readNullTerminatedString();
     final payload = reader.readNullTerminatedString();
-    return NotificationResponseMessage._(processID, channel, payload);
+    return NotificationResponseMessage._(processId, channel, payload);
   }
 }
 
@@ -267,13 +271,13 @@ class CloseCompleteMessage extends ServerMessage {
 }
 
 class ParameterDescriptionMessage extends ServerMessage {
-  final parameterTypeIDs = <int>[];
+  final typeOids = <int>[];
 
   @internal
   ParameterDescriptionMessage.parse(PgByteDataReader reader) {
     final count = reader.readUint16();
     for (var i = 0; i < count; i++) {
-      parameterTypeIDs.add(reader.readUint32());
+      typeOids.add(reader.readUint32());
     }
   }
 }
@@ -394,8 +398,8 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
 }
 
 class UnknownMessage extends ServerMessage {
-  final int? code;
-  final Uint8List? bytes;
+  final int code;
+  final Uint8List bytes;
 
   UnknownMessage(this.code, this.bytes);
 
@@ -409,48 +413,42 @@ class UnknownMessage extends ServerMessage {
     if (other is! UnknownMessage) {
       return false;
     }
-    if (bytes != null) {
-      if (bytes!.length != other.bytes?.length) {
-        return false;
-      }
-      for (var i = 0; i < bytes!.length; i++) {
-        if (bytes![i] != other.bytes?[i]) {
-          return false;
-        }
-      }
-    } else {
-      if (other.bytes != null) {
+    if (code != other.code) return false;
+    if (bytes.length != other.bytes.length) {
+      return false;
+    }
+    for (var i = 0; i < bytes.length; i++) {
+      if (bytes[i] != other.bytes[i]) {
         return false;
       }
     }
-    return code == other.code;
+    return true;
   }
 }
 
+abstract class ErrorFieldId {
+  static const int severity = 83;
+  static const int code = 67;
+  static const int message = 77;
+  static const int detail = 68;
+  static const int hint = 72;
+  static const int position = 80;
+  static const int internalPosition = 112;
+  static const int internalQuery = 113;
+  static const int where = 87;
+  static const int schema = 115;
+  static const int table = 116;
+  static const int column = 99;
+  static const int dataType = 100;
+  static const int constraint = 110;
+  static const int file = 70;
+  static const int line = 76;
+  static const int routine = 82;
+}
+
 class ErrorField {
-  static const int SeverityIdentifier = 83;
-  static const int CodeIdentifier = 67;
-  static const int MessageIdentifier = 77;
-  static const int DetailIdentifier = 68;
-  static const int HintIdentifier = 72;
-  static const int PositionIdentifier = 80;
-  static const int InternalPositionIdentifier = 112;
-  static const int InternalQueryIdentifier = 113;
-  static const int WhereIdentifier = 87;
-  static const int SchemaIdentifier = 115;
-  static const int TableIdentifier = 116;
-  static const int ColumnIdentifier = 99;
-  static const int DataTypeIdentifier = 100;
-  static const int ConstraintIdentifier = 110;
-  static const int FileIdentifier = 70;
-  static const int LineIdentifier = 76;
-  static const int RoutineIdentifier = 82;
+  final int id;
+  final String text;
 
-  static Severity severityFromString(String? str) =>
-      Severity.parseServerString(str);
-
-  final int? identificationToken;
-  final String? text;
-
-  ErrorField(this.identificationToken, this.text);
+  ErrorField(this.id, this.text);
 }
