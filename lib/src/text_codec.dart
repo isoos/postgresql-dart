@@ -218,9 +218,9 @@ class PostgresTextEncoder extends Converter<Object, String> {
 }
 
 class PostgresTextDecoder<T extends Object> {
-  final Type<T> _dataType;
+  final Type<T> _type;
 
-  const PostgresTextDecoder(this._dataType);
+  const PostgresTextDecoder(this._type);
 
   T? convert(Uint8List? input, Encoding encoding) {
     if (input == null) return null;
@@ -228,7 +228,7 @@ class PostgresTextDecoder<T extends Object> {
     final asText = encoding.decode(input);
 
     // ignore: unnecessary_cast
-    switch (_dataType as Type<Object>) {
+    switch (_type as Type<Object>) {
       case Type.text:
         return asText as T;
       case Type.integer:
@@ -259,7 +259,7 @@ class PostgresTextDecoder<T extends Object> {
         if (asText is T) {
           return asText as T;
         }
-        throw UnimplementedError('Text decoding for $_dataType');
+        throw UnimplementedError('Text decoding for $_type');
     }
   }
 }

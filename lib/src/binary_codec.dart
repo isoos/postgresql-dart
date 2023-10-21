@@ -44,9 +44,9 @@ Codec<Object?, List<int>> _jsonFusedEncoding(Encoding encoding) {
 }
 
 class PostgresBinaryEncoder<T extends Object> {
-  final Type<T> _dataType;
+  final Type<T> _type;
 
-  const PostgresBinaryEncoder(this._dataType);
+  const PostgresBinaryEncoder(this._type);
 
   Uint8List? convert(Object? input, Encoding encoding) {
     if (input == null) {
@@ -54,11 +54,11 @@ class PostgresBinaryEncoder<T extends Object> {
     }
 
     // ignore: unnecessary_cast
-    switch (_dataType as Type<Object>) {
+    switch (_type as Type<Object>) {
       case Type.unknownType:
       case Type.unspecified:
       case Type.voidType:
-        throw ArgumentError('Cannot encode into ${_dataType.name}.');
+        throw ArgumentError('Cannot encode into ${_type.name}.');
       case Type.boolean:
         {
           if (input is bool) {

@@ -181,7 +181,7 @@ void main() {
     // min length
     final length = [0, 0, 0, 4]; // min length (4 bytes) as 32-bit
     final bytes = Uint8List.fromList([
-      SharedMessages.copyDoneIdentifier,
+      SharedMessageId.copyDone,
       ...length,
     ]);
     framer.addBytes(bytes);
@@ -194,7 +194,7 @@ void main() {
   test('Identify CopyDoneMessage when length larger than size length', () {
     final length = (ByteData(4)..setUint32(0, 42)).buffer.asUint8List();
     final bytes = Uint8List.fromList([
-      SharedMessages.copyDoneIdentifier,
+      SharedMessageId.copyDone,
       ...length,
     ]);
     framer.addBytes(bytes);
@@ -211,7 +211,7 @@ void main() {
 
     /// This represent a raw [XLogDataMessage]
     final xlogDataMessage = <int>[
-      ReplicationMessage.xLogDataIdentifier,
+      ReplicationMessageId.xLogData,
       ...bits64, // walStart (64bit)
       ...bits64, // walEnd (64bit)
       ...bits64, // time (64bit)
@@ -222,7 +222,7 @@ void main() {
     // this represents the [CopyDataMessage] which is a wrapper for [XLogDataMessage]
     // and such
     final copyDataBytes = <int>[
-      SharedMessages.copyDataIdentifier,
+      SharedMessageId.copyData,
       ...length.buffer.asUint8List(),
       ...xlogDataMessage,
     ];
@@ -242,7 +242,7 @@ void main() {
 
     /// This represent a raw [XLogDataMessage]
     final xlogDataMessage = <int>[
-      ReplicationMessage.xLogDataIdentifier,
+      ReplicationMessageId.xLogData,
       ...bits64, // walStart (64bit)
       ...bits64, // walEnd (64bit)
       ...bits64, // time (64bit)
@@ -254,7 +254,7 @@ void main() {
     /// this represents the [CopyDataMessage] in which [XLogDataMessage]
     /// is delivered per protocol
     final copyDataMessage = <int>[
-      SharedMessages.copyDataIdentifier,
+      SharedMessageId.copyData,
       ...length.buffer.asUint8List(),
       ...xlogDataMessage,
     ];
@@ -270,7 +270,7 @@ void main() {
 
     /// This represent a raw [PrimaryKeepAliveMessage]
     final xlogDataMessage = <int>[
-      ReplicationMessage.primaryKeepAliveIdentifier,
+      ReplicationMessageId.primaryKeepAlive,
       ...bits64, // walEnd (64bits)
       ...bits64, // time (64bits)
       0, // mustReply (1bit)
@@ -280,7 +280,7 @@ void main() {
     /// This represents the [CopyDataMessage] in which [PrimaryKeepAliveMessage]
     /// is delivered per protocol
     final copyDataMessage = <int>[
-      SharedMessages.copyDataIdentifier,
+      SharedMessageId.copyData,
       ...length.buffer.asUint8List(),
       ...xlogDataMessage,
     ];
@@ -300,7 +300,7 @@ void main() {
     /// This represents the [CopyDataMessage] in which data  is delivered per protocol
     /// typically contains [XLogData] and such but this tests unknown content
     final copyDataMessage = <int>[
-      SharedMessages.copyDataIdentifier,
+      SharedMessageId.copyData,
       ...length.buffer.asUint8List(),
       ...xlogDataBytes,
     ];

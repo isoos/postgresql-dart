@@ -95,7 +95,7 @@ class ServerException extends PgException {
   @internal
   factory ServerException.fromFields(List<ErrorField> errorFields) {
     String? findString(int identifier) => errorFields
-        .firstWhereOrNull((ErrorField e) => e.identificationToken == identifier)
+        .firstWhereOrNull((ErrorField e) => e.id == identifier)
         ?.text;
 
     int? findInt(int identifier) {
@@ -104,25 +104,25 @@ class ServerException extends PgException {
     }
 
     return ServerException._(
-      findString(ErrorField.MessageIdentifier) ?? 'Server error.',
-      severity: ErrorField.severityFromString(
-        findString(ErrorField.SeverityIdentifier),
+      findString(ErrorFieldId.message) ?? 'Server error.',
+      severity: Severity.parseServerString(
+        findString(ErrorFieldId.severity),
       ),
-      position: findInt(ErrorField.PositionIdentifier),
-      internalPosition: findInt(ErrorField.InternalPositionIdentifier),
-      lineNumber: findInt(ErrorField.LineIdentifier),
-      code: findString(ErrorField.CodeIdentifier),
-      detail: findString(ErrorField.DetailIdentifier),
-      hint: findString(ErrorField.HintIdentifier),
-      internalQuery: findString(ErrorField.InternalQueryIdentifier),
-      trace: findString(ErrorField.WhereIdentifier),
-      schemaName: findString(ErrorField.SchemaIdentifier),
-      tableName: findString(ErrorField.TableIdentifier),
-      columnName: findString(ErrorField.ColumnIdentifier),
-      dataTypeName: findString(ErrorField.DataTypeIdentifier),
-      constraintName: findString(ErrorField.ConstraintIdentifier),
-      fileName: findString(ErrorField.FileIdentifier),
-      routineName: findString(ErrorField.RoutineIdentifier),
+      position: findInt(ErrorFieldId.position),
+      internalPosition: findInt(ErrorFieldId.internalPosition),
+      lineNumber: findInt(ErrorFieldId.line),
+      code: findString(ErrorFieldId.code),
+      detail: findString(ErrorFieldId.detail),
+      hint: findString(ErrorFieldId.hint),
+      internalQuery: findString(ErrorFieldId.internalQuery),
+      trace: findString(ErrorFieldId.where),
+      schemaName: findString(ErrorFieldId.schema),
+      tableName: findString(ErrorFieldId.table),
+      columnName: findString(ErrorFieldId.column),
+      dataTypeName: findString(ErrorFieldId.dataType),
+      constraintName: findString(ErrorFieldId.constraint),
+      fileName: findString(ErrorFieldId.file),
+      routineName: findString(ErrorFieldId.routine),
     );
   }
 

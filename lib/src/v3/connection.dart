@@ -347,8 +347,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       final result = _pending = _AuthenticationProcedure(this);
 
       _channel.sink.add(StartupMessage(
-        _settings.endpoint.database,
-        _settings.timeZone,
+        database: _settings.endpoint.database,
+        timeZone: _settings.timeZone,
         username: _settings.username,
         replication: _settings.replicationMode,
       ));
@@ -958,12 +958,12 @@ class _AuthenticationProcedure extends _PendingOperation {
       _done.completeError(ServerException.fromFields(message.fields), _trace);
     } else if (message is AuthenticationMessage) {
       switch (message.type) {
-        case AuthenticationMessage.KindOK:
+        case AuthenticationMessageType.ok:
           break;
-        case AuthenticationMessage.KindMD5Password:
+        case AuthenticationMessageType.md5Password:
           _initializeAuthenticate(message, AuthenticationScheme.md5);
           break;
-        case AuthenticationMessage.KindClearTextPassword:
+        case AuthenticationMessageType.clearTextPassword:
           if (!connection._settings.sslMode.allowCleartextPassword) {
             _done.completeError(
               ServerException('Refused to send clear text password to server'),
@@ -974,11 +974,11 @@ class _AuthenticationProcedure extends _PendingOperation {
 
           _initializeAuthenticate(message, AuthenticationScheme.clear);
           break;
-        case AuthenticationMessage.KindSASL:
+        case AuthenticationMessageType.sasl:
           _initializeAuthenticate(message, AuthenticationScheme.scramSha256);
           break;
-        case AuthenticationMessage.KindSASLContinue:
-        case AuthenticationMessage.KindSASLFinal:
+        case AuthenticationMessageType.saslContinue:
+        case AuthenticationMessageType.saslFinal:
           _authenticator.onMessage(message);
           break;
         default:

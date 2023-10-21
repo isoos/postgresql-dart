@@ -48,9 +48,11 @@ class _PostgreSQLConnectionStateSocketConnected
   @override
   _PostgreSQLConnectionState onEnter() {
     final startupMessage = StartupMessage(
-        connection!.databaseName, connection!.timeZone,
-        username: connection!.username,
-        replication: connection!.replicationMode);
+      database: connection!.databaseName,
+      timeZone: connection!.timeZone,
+      username: connection!.username,
+      replication: connection!.replicationMode,
+    );
 
     connection!._socket!
         .add(startupMessage.asBytes(encoding: connection!.encoding));
@@ -116,9 +118,9 @@ class _PostgreSQLConnectionStateAuthenticating
     if (message is AuthenticationMessage) {
       // Pass on the pending op to subsequent stages
       switch (message.type) {
-        case AuthenticationMessage.KindOK:
+        case AuthenticationMessageType.ok:
           return _PostgreSQLConnectionStateAuthenticated(completer);
-        case AuthenticationMessage.KindMD5Password:
+        case AuthenticationMessageType.md5Password:
           // this means the server is requesting an md5 challenge
           // so the password must not be null
           if (connection!.password == null) {
@@ -130,7 +132,7 @@ class _PostgreSQLConnectionStateAuthenticating
           _authenticator =
               createAuthenticator(_authConnection(), AuthenticationScheme.md5);
           continue authMsg;
-        case AuthenticationMessage.KindClearTextPassword:
+        case AuthenticationMessageType.clearTextPassword:
           if (connection!.allowClearTextPassword) {
             _authenticator = createAuthenticator(
                 _authConnection(), AuthenticationScheme.clear);
@@ -140,7 +142,7 @@ class _PostgreSQLConnectionStateAuthenticating
                 'type ${message.type} connections disabled. Set AllowClearTextPassword flag on PostgreSQLConnection to enable this feature.'));
             break;
           }
-        case AuthenticationMessage.KindSASL:
+        case AuthenticationMessageType.sasl:
           // this means the server is requesting a scram-sha-256 challenge
           // so the password must not be null
           if (connection!.password == null) {
@@ -153,8 +155,8 @@ class _PostgreSQLConnectionStateAuthenticating
               _authConnection(), AuthenticationScheme.scramSha256);
           continue authMsg;
         authMsg:
-        case AuthenticationMessage.KindSASLContinue:
-        case AuthenticationMessage.KindSASLFinal:
+        case AuthenticationMessageType.saslContinue:
+        case AuthenticationMessageType.saslFinal:
           try {
             _authenticator.onMessage(message);
             return this;
@@ -171,10 +173,10 @@ class _PostgreSQLConnectionStateAuthenticating
     } else if (message is ParameterStatusMessage) {
       connection!.settings[message.name] = message.value;
     } else if (message is BackendKeyMessage) {
-      connection!._processID = message.processID;
+      connection!._processID = message.processId;
       connection!._secretKey = message.secretKey;
     } else if (message is ReadyForQueryMessage) {
-      if (message.state == ReadyForQueryMessage.StateIdle) {
+      if (message.state == ReadyForQueryMessageState.idle) {
         return _PostgreSQLConnectionStateIdle(openCompleter: completer);
       }
     }
@@ -207,10 +209,10 @@ class _PostgreSQLConnectionStateAuthenticated
     if (message is ParameterStatusMessage) {
       connection!.settings[message.name] = message.value;
     } else if (message is BackendKeyMessage) {
-      connection!._processID = message.processID;
+      connection!._processID = message.processId;
       connection!._secretKey = message.secretKey;
     } else if (message is ReadyForQueryMessage) {
-      if (message.state == ReadyForQueryMessage.StateIdle) {
+      if (message.state == ReadyForQueryMessageState.idle) {
         return _PostgreSQLConnectionStateIdle(openCompleter: completer);
       }
     }
@@ -307,7 +309,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     // print("(${query.statement}) -> $message");
 
     if (message is ReadyForQueryMessage) {
-      if (message.state == ReadyForQueryMessage.StateTransactionError) {
+      if (message.state == ReadyForQueryMessageState.error) {
         query.completeError(returningException!);
         return _PostgreSQLConnectionStateReadyInTransaction(
             query.transaction as _PostgreSQLExecutionContextMixin);
@@ -318,7 +320,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
         query.complete(rowsAffected);
       }
 
-      if (message.state == ReadyForQueryMessage.StateTransaction) {
+      if (message.state == ReadyForQueryMessageState.transaction) {
         return _PostgreSQLConnectionStateReadyInTransaction(
             query.transaction as _PostgreSQLExecutionContextMixin);
       }
@@ -331,8 +333,7 @@ class _PostgreSQLConnectionStateBusy extends _PostgreSQLConnectionState {
     } else if (message is DataRowMessage) {
       query.addRow(message.values);
     } else if (message is ParameterDescriptionMessage) {
-      final validationException =
-          query.validateParameters(message.parameterTypeIDs);
+      final validationException = query.validateParameters(message.typeOids);
       if (validationException != null) {
         query.cache = null;
       }
