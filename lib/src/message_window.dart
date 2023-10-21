@@ -60,7 +60,7 @@ class MessageFramer {
       }
 
       // special case
-      if (_type == SharedMessages.copyDoneIdentifier) {
+      if (_type == SharedMessageId.copyDone) {
         // unlike other messages, CopyDoneMessage only takes the length as an
         // argument (must be the full length including the length bytes)
         final msg = CopyDoneMessage(_expectedLength + 4);
@@ -113,9 +113,9 @@ class MessageFramer {
 /// Otherwise, it'll just return the provided bytes as [CopyDataMessage].
 ServerMessage _parseCopyDataMessage(PgByteDataReader reader, int length) {
   final code = reader.readUint8();
-  if (code == ReplicationMessage.primaryKeepAliveIdentifier) {
+  if (code == ReplicationMessageId.primaryKeepAlive) {
     return PrimaryKeepAliveMessage.parse(reader);
-  } else if (code == ReplicationMessage.xLogDataIdentifier) {
+  } else if (code == ReplicationMessageId.xLogData) {
     return XLogDataMessage.parse(reader.read(length - 1), reader.encoding);
   } else {
     final bb = BytesBuffer();

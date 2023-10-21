@@ -54,7 +54,7 @@ class SaslClientFirstMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.passwordIdentifier);
+    buffer.writeUint8(ClientMessageId.password);
 
     final encodedMechanismName = buffer.encodeString(mechanismName);
     final msgLength = bytesToSendToServer.length;
@@ -77,7 +77,7 @@ class SaslClientLastMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.passwordIdentifier);
+    buffer.writeUint8(ClientMessageId.password);
 
     // No Identifier bit + 4 byte counts (for msg length) + msg bytes
     final length = 4 + bytesToSendToServer.length;

@@ -14,20 +14,24 @@ import 'text_codec.dart';
 import 'time_converters.dart';
 import 'types.dart';
 
+abstract class ClientMessageFormat {
+  static const int text = 0;
+  static const int binary = 1;
+}
+
+abstract class ClientMessageId {
+  static const int bind = 66; // B
+  static const int describe = 68; // D
+  static const int execute = 69; // E
+  static const int parse = 80; //P
+  static const int query = 81; // Q
+  static const int sync = 83; // S
+  static const int password = 112; //p
+  static const int close = $C;
+}
+
 abstract class ClientMessage extends Message {
-  static const int formatText = 0;
-  static const int formatBinary = 1;
-
   static const int protocolVersion = 196608;
-
-  static const int bindIdentifier = 66; // B
-  static const int describeIdentifier = 68; // D
-  static const int executeIdentifier = 69; // E
-  static const int parseIdentifier = 80; //P
-  static const int queryIdentifier = 81; // Q
-  static const int syncIdentifier = 83; // S
-  static const int passwordIdentifier = 112; //p
-  static const int closeIdentifier = $C;
 
   const ClientMessage();
 
@@ -120,7 +124,7 @@ class QueryMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.queryIdentifier);
+    buffer.writeUint8(ClientMessageId.query);
     buffer.writeLengthEncodedString(_queryString);
   }
 
@@ -145,7 +149,7 @@ class ParseMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.parseIdentifier);
+    buffer.writeUint8(ClientMessageId.parse);
     final statement = buffer.encodeString(_statement);
     final statementName = buffer.encodeString(_statementName);
     final length = 8 +
@@ -184,7 +188,7 @@ class DescribeMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.describeIdentifier);
+    buffer.writeUint8(ClientMessageId.describe);
     final name = buffer.encodeString(_name);
     final length = 6 + name.bytesLength;
     buffer.writeUint32(length);
@@ -224,7 +228,7 @@ class BindMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.bindIdentifier);
+    buffer.writeUint8(ClientMessageId.bind);
     final portalName = buffer.encodeString(_portalName);
     final statementName = buffer.encodeString(_statementName);
 
@@ -255,18 +259,18 @@ class BindMessage extends ClientMessage {
     if (typeSpecCount == _parameters.length) {
       buffer.writeUint16(1);
       // Apply following format code for all parameters by indicating 1
-      buffer.writeUint16(ClientMessage.formatBinary);
+      buffer.writeUint16(ClientMessageFormat.binary);
     } else if (typeSpecCount == 0) {
       buffer.writeUint16(1);
       // Apply following format code for all parameters by indicating 1
-      buffer.writeUint16(ClientMessage.formatText);
+      buffer.writeUint16(ClientMessageFormat.text);
     } else {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.writeUint16(_parameters.length);
       for (final p in _parameters) {
         buffer.writeUint16(p._hasKnownType
-            ? ClientMessage.formatBinary
-            : ClientMessage.formatText);
+            ? ClientMessageFormat.binary
+            : ClientMessageFormat.text);
       }
     }
 
@@ -294,7 +298,7 @@ class ExecuteMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.executeIdentifier);
+    buffer.writeUint8(ClientMessageId.execute);
     final portalName = buffer.encodeString(_portalName);
     buffer.writeUint32(9 + portalName.bytesLength);
     buffer.writeEncodedString(portalName);
@@ -320,7 +324,7 @@ class CloseMessage extends ClientMessage {
     final length = 6 + name.bytesLength;
 
     buffer
-      ..writeUint8(ClientMessage.closeIdentifier)
+      ..writeUint8(ClientMessageId.close)
       ..writeInt32(length)
       ..writeUint8(_isForPortal ? $P : $S);
     buffer.writeEncodedString(name);
@@ -332,7 +336,7 @@ class SyncMessage extends ClientMessage {
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ClientMessage.syncIdentifier);
+    buffer.writeUint8(ClientMessageId.sync);
     buffer.writeUint32(4);
   }
 }
@@ -386,7 +390,7 @@ class StandbyStatusUpdateMessage extends ClientMessage
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ReplicationMessage.standbyStatusUpdateIdentifier);
+    buffer.writeUint8(ReplicationMessageId.standbyStatusUpdate);
     buffer.writeUint64(walWritePosition.value);
     buffer.writeUint64(walFlushPosition.value);
     buffer.writeUint64(walApplyPosition.value);
@@ -427,7 +431,7 @@ class HotStandbyFeedbackMessage extends ClientMessage
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    buffer.writeUint8(ReplicationMessage.hotStandbyFeedbackIdentifier);
+    buffer.writeUint8(ReplicationMessageId.hotStandbyFeedback);
     buffer.writeUint64(dateTimeToMicrosecondsSinceY2k(clientTime));
     buffer.writeUint32(currentGlobalXmin);
     buffer.writeUint32(epochGlobalXminXid);
