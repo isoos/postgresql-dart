@@ -2,48 +2,57 @@
 
 ## 3.0.0-alpha.1
 
+New features:
+
+- New API (better names and consistency).
+- New SQL parsing and configurable substitutions.
+- Integrated connection pooling.
+- A somewhat-compatible legacy API support to help migrations.
+
 ### BREAKING CHANGES
 
 The package had a partial rewrite affecting public client API and internal
-behaviour, keeping most of the wire protocol handling from the v2 version.
+behaviour, keeping most of the wire protocol handling from the old version.
 
 **Clients must need to rewrite and test their application when upgrading.**
 
 Notable breaking behaviour changes:
 
-  - Query executions must be awaited one-by-one, cannot send multiple SQLs
-    unawaited.
-  - Table name OIDs are not fetched or cached, schema information is absent,
-    `mappedResultsQuery` does not work either (absent from the API).
+  - Query executions must be awaited one-by-one, cannot send multiple SQL
+    queries unawaited.
+  - Table name OIDs are not fetched or cached, this information from the
+    reesult schema is absent, also causing `mappedResultsQuery` to be
+    removed from the new API.
   - Queries are not cached implicitly, explicit prepared statements can be
     used instead.
-  - Some types are used by both v2 and v3 implementation and fields may have
-    been renamed.
+  - Types, fields and parameter names may have been renamed to be more
+    consistent or more aligned with the Dart naming guides.
 
 ### Legacy compatibility layer
 
-`package:postgres/legacy.dart` provides a somewhat compatible API via
-`PostgreSQLConnection.withV3()`. The above features are missing or throw
-`UnimplementedError` when called.
+`package:postgres/legacy.dart` provides a somewhat backwards-compatible API
+via the `PostgreSQLConnection.withV3()` constructor. Many features, including
+the ones mentioned above are missing and/or throw `UnimplementedError` when called.
 
 ### Migration
 
-  - Use the legacy compatibility layer to check if your code is using any of
-    the above mentioned feature, rewrite if needed.
+  - You may use the legacy compatibility layer to check if your code relies on
+    any of the above mentioned feature, rewrite if needed.
   - Start using the new API, incrementally, when possible.
   - For most queries, you may use `Sql.named('SELECT ...')` to keep the default
     name- and `Map`-based query `@variable`` substitution, or you may use the
     raw `$1` version (with 1-based indexes).
+  - Always write tests.
 
-### Features
+If you have any issues with migration or with the new behavior, please open an
+issue on the package's GitHub issue tracker or discussions.
 
-  - Compact API names.
-  - Connection pool.
-  - Fresh implementation with multiple bugs fixed along the way.
+### Thanks
 
-Big thanks to many contributions (including code, comments or criticism) on the
-new direction and design, especially to [simolus3](https://github.com/simolus3)
-and [osaxma](https://github.com/osaxma), who helped to push forward in many occassions.
+The rewrite happened because of many contributions (including code, comments or
+criticism) on the new direction and design. I'd like to call out especially to
+[simolus3](https://github.com/simolus3) and [osaxma](https://github.com/osaxma),
+who helped to push forward.
 
 ## 2.6.3
 
