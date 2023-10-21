@@ -11,7 +11,7 @@ EndpointSelector roundRobinSelector(List<Endpoint> endpoints) {
   return (EndpointSelectorContext context) {
     final endpoint = endpoints[nextIndex];
     nextIndex = (nextIndex + 1) % endpoints.length;
-    return EndpointSelectorResult(endpoint: endpoint);
+    return EndpointSelection(endpoint: endpoint);
   };
 }
 

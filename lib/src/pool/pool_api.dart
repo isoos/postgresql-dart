@@ -75,7 +75,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
   // TODO: decide whether PgSession.execute and prepare methods should also take locality parameter
 }
 
-typedef EndpointSelector<L> = FutureOr<EndpointSelectorResult> Function(
+typedef EndpointSelector<L> = FutureOr<EndpointSelection> Function(
     EndpointSelectorContext<L> context);
 
 final class EndpointSelectorContext<L> {
@@ -89,11 +89,11 @@ final class EndpointSelectorContext<L> {
   });
 }
 
-class EndpointSelectorResult {
+class EndpointSelection {
   final Endpoint endpoint;
   // TODO: add optional SessionSettings + merge with defaults
 
-  EndpointSelectorResult({
+  EndpointSelection({
     required this.endpoint,
   });
 }
