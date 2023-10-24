@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:meta/meta.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/replication.dart';
@@ -448,12 +447,12 @@ enum QueryMode {
 enum IsolationLevel {
   /// A statement can only see rows committed before it began.
   /// This is the default.
-  readCommitted('READ COMMITTED'),
+  readCommitted._('READ COMMITTED'),
 
   /// All statements of the current transaction can only see rows committed
   /// before the first query or data-modification statement was executed in
   /// this transaction.
-  repeatableRead('REPEATABLE READ'),
+  repeatableRead._('REPEATABLE READ'),
 
   /// All statements of the current transaction can only see rows committed
   /// before the first query or data-modification statement was executed in
@@ -461,25 +460,25 @@ enum IsolationLevel {
   /// serializable transactions would create a situation which could not have
   /// occurred for any serial (one-at-a-time) execution of those transactions,
   /// one of them will be rolled back with a serialization_failure error.
-  serializable('SERIALIZABLE'),
+  serializable._('SERIALIZABLE'),
 
   /// One transaction may see uncommitted changes made by some other transaction.
   /// In PostgreSQL READ UNCOMMITTED is treated as READ COMMITTED.
-  readUncommitted('READ UNCOMMITTED'),
+  readUncommitted._('READ UNCOMMITTED'),
   ;
 
-  /// The SQL identifier of the isolation level including "ISOLATION LEVEL" prefix.
-  final String _sqlName;
+  /// The SQL identifier of the isolation level including "ISOLATION LEVEL" prefix
+  /// and leading space.
+  final String sqlPart;
 
-  const IsolationLevel(String identifier)
-      : _sqlName = 'ISOLATION LEVEL $identifier';
+  const IsolationLevel._(String value) : sqlPart = ' ISOLATION LEVEL $value';
 }
 
 /// The transaction access mode determines whether the transaction is read/write
 /// or read-only.
 enum AccessMode {
   /// Read/write is the default.
-  readWrite('READ WRITE'),
+  readWrite._('READ WRITE'),
 
   /// When a transaction is read-only, the following SQL commands are disallowed:
   /// INSERT, UPDATE, DELETE, MERGE, and COPY FROM if the table they would write
@@ -487,12 +486,13 @@ enum AccessMode {
   /// GRANT, REVOKE, TRUNCATE; and EXPLAIN ANALYZE and EXECUTE if the command
   /// they would execute is among those listed. This is a high-level notion of
   /// read-only that does not prevent all writes to disk.
-  readOnly('READ ONLY'),
+  readOnly._('READ ONLY'),
   ;
 
-  final String _sqlName;
+  /// The SQL identifier of the access mode including leading space.
+  final String sqlPart;
 
-  const AccessMode(this._sqlName);
+  const AccessMode._(String value) : sqlPart = ' $value';
 }
 
 /// The characteristics of the current transaction.
@@ -519,25 +519,4 @@ class TransactionMode {
     this.accessMode,
     this.deferrable,
   });
-
-  late final isEmpty =
-      isolationLevel == null && accessMode == null && deferrable == null;
-  late final isNotEmpty = !isEmpty;
-
-  // ignore: invalid_internal_annotation
-  @internal
-  void appendToStringBuffer(StringBuffer sb) {
-    if (isolationLevel != null) {
-      sb.write(' ');
-      sb.write(isolationLevel!._sqlName);
-    }
-    if (accessMode != null) {
-      sb.write(' ');
-      sb.write(accessMode!._sqlName);
-    }
-    if (deferrable != null) {
-      if (!deferrable!) sb.write(' NOT');
-      sb.write(' DEFERRABLE');
-    }
-  }
 }

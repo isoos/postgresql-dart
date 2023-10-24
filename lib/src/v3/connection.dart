@@ -1021,3 +1021,23 @@ extension FutureExt<R> on Future<R> {
     return timeout(duration);
   }
 }
+
+extension on TransactionMode {
+  bool get isEmpty =>
+      isolationLevel == null && accessMode == null && deferrable == null;
+
+  bool get isNotEmpty => !isEmpty;
+
+  void appendToStringBuffer(StringBuffer sb) {
+    if (isolationLevel != null) {
+      sb.write(isolationLevel!.sqlPart);
+    }
+    if (accessMode != null) {
+      sb.write(accessMode!.sqlPart);
+    }
+    if (deferrable != null) {
+      if (!deferrable!) sb.write(' NOT');
+      sb.write(' DEFERRABLE');
+    }
+  }
+}
