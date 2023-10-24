@@ -66,6 +66,16 @@ void main() {
       expect(res.affectedRows, 2);
     });
 
+    test('queue multiple queries concurrently, execute sequentially', () async {
+      final sw = Stopwatch()..start();
+      await Future.wait([
+        connection.execute('SELECT 1, pg_sleep(1)'),
+        connection.execute('SELECT 1, pg_sleep(2)'),
+        connection.execute('SELECT 1, pg_sleep(3)'),
+      ]);
+      expect(sw.elapsed.inSeconds >= 6, isTrue);
+    });
+
     group('binary encoding and decoding', () {
       Future<void> shouldPassthrough<T extends Object>(Type<T> type, T? value,
           {dynamic matcher}) async {
