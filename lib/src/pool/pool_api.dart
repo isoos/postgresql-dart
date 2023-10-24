@@ -69,6 +69,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
+    TransactionMode? transactionMode,
     L? locality,
   });
 

@@ -397,7 +397,10 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   }
 
   @override
-  Future<R> runTx<R>(Future<R> Function(Session session) fn) {
+  Future<R> runTx<R>(
+    Future<R> Function(Session session) fn, {
+    TransactionMode? transactionMode,
+  }) {
     // Keep this database is locked while the transaction is active. We do that
     // because on a protocol level, the entire connection is in a transaction.
     // From a Dart point of view, methods called outside of the transaction
@@ -409,7 +412,21 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       // only it) can be used to run statements while it's active.
       final transaction =
           _connection._activeTransaction = _TransactionSession(this);
-      await transaction.execute(Sql('BEGIN;'), queryMode: QueryMode.simple);
+
+      late String beginQuery;
+      if (transactionMode != null && transactionMode.isNotEmpty) {
+        final sb = StringBuffer('BEGIN');
+        transactionMode.appendToStringBuffer(sb);
+        sb.write(';');
+        beginQuery = sb.toString();
+      } else {
+        beginQuery = 'BEGIN;';
+      }
+
+      await transaction.execute(
+        Sql(beginQuery),
+        queryMode: QueryMode.simple,
+      );
 
       try {
         final result = await fn(transaction);

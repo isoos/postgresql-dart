@@ -100,10 +100,14 @@ class PoolImplementation<L> implements Pool<L> {
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
+    TransactionMode? transactionMode,
     L? locality,
   }) {
     return withConnection(
-      (connection) => connection.runTx(fn),
+      (connection) => connection.runTx(
+        fn,
+        transactionMode: transactionMode,
+      ),
       locality: locality,
     );
   }
@@ -212,8 +216,14 @@ class _PoolConnection implements Connection {
   }
 
   @override
-  Future<R> runTx<R>(Future<R> Function(Session session) fn) {
-    return _connection.runTx(fn);
+  Future<R> runTx<R>(
+    Future<R> Function(Session session) fn, {
+    TransactionMode? transactionMode,
+  }) {
+    return _connection.runTx(
+      fn,
+      transactionMode: transactionMode,
+    );
   }
 }
 

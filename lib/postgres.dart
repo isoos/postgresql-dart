@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/replication.dart';
@@ -145,7 +146,10 @@ abstract class SessionExecutor {
   ///
   /// Note that other invocations on a [Connection] are blocked while a
   /// transaction is active.
-  Future<R> runTx<R>(Future<R> Function(Session session) fn);
+  Future<R> runTx<R>(
+    Future<R> Function(Session session) fn, {
+    TransactionMode? transactionMode,
+  });
 
   /// Closes this session, cleaning up resources and forbiding further calls to
   /// [prepare] and [execute].
@@ -437,4 +441,103 @@ enum QueryMode {
 
   /// Simple Query Protocol
   simple,
+}
+
+/// The isolation level of a transaction determines what data the transaction
+/// can see when other transactions are running concurrently.
+enum IsolationLevel {
+  /// A statement can only see rows committed before it began.
+  /// This is the default.
+  readCommitted('READ COMMITTED'),
+
+  /// All statements of the current transaction can only see rows committed
+  /// before the first query or data-modification statement was executed in
+  /// this transaction.
+  repeatableRead('REPEATABLE READ'),
+
+  /// All statements of the current transaction can only see rows committed
+  /// before the first query or data-modification statement was executed in
+  /// this transaction. If a pattern of reads and writes among concurrent
+  /// serializable transactions would create a situation which could not have
+  /// occurred for any serial (one-at-a-time) execution of those transactions,
+  /// one of them will be rolled back with a serialization_failure error.
+  serializable('SERIALIZABLE'),
+
+  /// One transaction may see uncommitted changes made by some other transaction.
+  /// In PostgreSQL READ UNCOMMITTED is treated as READ COMMITTED.
+  readUncommitted('READ UNCOMMITTED'),
+  ;
+
+  /// The SQL identifier of the isolation level including "ISOLATION LEVEL" prefix.
+  final String _sqlName;
+
+  const IsolationLevel(String identifier)
+      : _sqlName = 'ISOLATION LEVEL $identifier';
+}
+
+/// The transaction access mode determines whether the transaction is read/write
+/// or read-only.
+enum AccessMode {
+  /// Read/write is the default.
+  readWrite('READ WRITE'),
+
+  /// When a transaction is read-only, the following SQL commands are disallowed:
+  /// INSERT, UPDATE, DELETE, MERGE, and COPY FROM if the table they would write
+  /// to is not a temporary table; all CREATE, ALTER, and DROP commands; COMMENT,
+  /// GRANT, REVOKE, TRUNCATE; and EXPLAIN ANALYZE and EXECUTE if the command
+  /// they would execute is among those listed. This is a high-level notion of
+  /// read-only that does not prevent all writes to disk.
+  readOnly('READ ONLY'),
+  ;
+
+  final String _sqlName;
+
+  const AccessMode(this._sqlName);
+}
+
+/// The characteristics of the current transaction.
+class TransactionMode {
+  /// The isolation level of a transaction determines what data the transaction
+  /// can see when other transactions are running concurrently.
+  final IsolationLevel? isolationLevel;
+
+  /// The transaction access mode determines whether the transaction is read/write
+  /// or read-only.
+  final AccessMode? accessMode;
+
+  /// The DEFERRABLE transaction property has no effect unless the transaction
+  /// is also SERIALIZABLE and READ ONLY. When all three of these properties
+  /// are selected for a transaction, the transaction may block when first
+  /// acquiring its snapshot, after which it is able to run without the normal
+  /// overhead of a SERIALIZABLE transaction and without any risk of contributing
+  /// to or being canceled by a serialization failure. This mode is well suited
+  /// for long-running reports or backups.
+  final bool? deferrable;
+
+  TransactionMode({
+    this.isolationLevel,
+    this.accessMode,
+    this.deferrable,
+  });
+
+  late final isEmpty =
+      isolationLevel == null && accessMode == null && deferrable == null;
+  late final isNotEmpty = !isEmpty;
+
+  // ignore: invalid_internal_annotation
+  @internal
+  void appendToStringBuffer(StringBuffer sb) {
+    if (isolationLevel != null) {
+      sb.write(' ');
+      sb.write(isolationLevel!._sqlName);
+    }
+    if (accessMode != null) {
+      sb.write(' ');
+      sb.write(accessMode!._sqlName);
+    }
+    if (deferrable != null) {
+      if (!deferrable!) sb.write(' NOT');
+      sb.write(' DEFERRABLE');
+    }
+  }
 }
