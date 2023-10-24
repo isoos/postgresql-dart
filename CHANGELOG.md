@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.0-alpha.1
+## 3.0.0-alpha.2
 
 New features:
 
@@ -18,8 +18,9 @@ behaviour, keeping most of the wire protocol handling from the old version.
 
 Notable breaking behaviour changes:
 
-  - Query executions must be awaited one-by-one, cannot send multiple SQL
-    queries unawaited.
+  - Simple query protocol allows sending queries to the server without
+    awaiting on the result. The new implementation queues these request
+    on the client instead.
   - Table name OIDs are not fetched or cached, this information from the
     reesult schema is absent, also causing `mappedResultsQuery` to be
     removed from the new API.
@@ -53,6 +54,10 @@ The rewrite happened because of many contributions (including code, comments or
 criticism) on the new direction and design. I'd like to call out especially to
 [simolus3](https://github.com/simolus3) and [osaxma](https://github.com/osaxma),
 who helped to push forward.
+
+## 3.0.0-alpha.1
+
+*see the latest 3.0.0 (pre)release*
 
 ## 2.6.3
 
