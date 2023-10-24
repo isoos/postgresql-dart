@@ -202,7 +202,7 @@ enum Type<T extends Object> {
 
   const Type(this.oid, {this.nameForSubstitution});
 
-  TypedValue value(T value) => TypedValue(this, value);
+  TypedValue<T> value(T value) => TypedValue<T>(this, value);
 
   @internal
   static final Map<int, Type> byTypeOid = Map.unmodifiable({
@@ -281,9 +281,9 @@ enum Severity {
   }
 }
 
-class TypedValue {
-  final Type type;
-  final Object? value;
+class TypedValue<T extends Object> {
+  final Type<T> type;
+  final T? value;
 
   TypedValue(this.type, this.value);
 
