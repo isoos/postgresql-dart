@@ -364,6 +364,8 @@ enum SslMode {
 }
 
 final class SessionSettings {
+  final String? applicationName;
+
   // Duration(seconds: 15)
   final Duration? connectTimeout;
   // Duration(minutes: 5)
@@ -414,6 +416,7 @@ final class SessionSettings {
   final bool? allowSuperfluousParameters;
 
   SessionSettings({
+    this.applicationName,
     this.connectTimeout,
     this.queryTimeout,
     this.timeZone,

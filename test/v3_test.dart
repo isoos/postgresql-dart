@@ -10,6 +10,7 @@ import 'docker.dart';
 
 final _sessionSettings = SessionSettings(
   transformer: loggingTransformer('conn'),
+  applicationName: 'test_app',
 );
 
 void main() {
@@ -31,6 +32,10 @@ void main() {
         ['dart', 42, null]
       ]);
       expect(rs.single.toColumnMap(), {'?column?': null});
+
+      final appRs = await connection
+          .execute("SELECT current_setting('application_name');");
+      expect(appRs.single.single, 'test_app');
     });
 
     test('statement without rows', () async {
