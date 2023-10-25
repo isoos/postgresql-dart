@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/replication.dart';
@@ -469,9 +470,10 @@ enum IsolationLevel {
 
   /// The SQL identifier of the isolation level including "ISOLATION LEVEL" prefix
   /// and leading space.
-  final String sqlPart;
+  @internal
+  final String queryPart;
 
-  const IsolationLevel._(String value) : sqlPart = ' ISOLATION LEVEL $value';
+  const IsolationLevel._(String value) : queryPart = ' ISOLATION LEVEL $value';
 }
 
 /// The transaction access mode determines whether the transaction is read/write
@@ -490,9 +492,10 @@ enum AccessMode {
   ;
 
   /// The SQL identifier of the access mode including leading space.
-  final String sqlPart;
+  @internal
+  final String queryPart;
 
-  const AccessMode._(String value) : sqlPart = ' $value';
+  const AccessMode._(String value) : queryPart = ' $value';
 }
 
 /// The deferrable mode of the transaction.
@@ -511,9 +514,10 @@ enum DeferrableMode {
   ;
 
   /// The SQL identifier of the deferrable mode including leading space.
-  final String sqlPart;
+  @internal
+  final String queryPart;
 
-  const DeferrableMode._(String value) : sqlPart = ' $value';
+  const DeferrableMode._(String value) : queryPart = ' $value';
 }
 
 /// The characteristics of the current transaction.

@@ -1030,13 +1030,13 @@ extension on TransactionMode {
 
   void appendToStringBuffer(StringBuffer sb) {
     if (isolationLevel != null) {
-      sb.write(isolationLevel!.sqlPart);
+      sb.write(isolationLevel!.queryPart);
     }
     if (accessMode != null) {
-      sb.write(accessMode!.sqlPart);
+      sb.write(accessMode!.queryPart);
     }
     if (deferrable != null) {
-      sb.write(deferrable!.sqlPart);
+      sb.write(deferrable!.queryPart);
     }
   }
 }
