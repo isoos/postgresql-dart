@@ -27,7 +27,7 @@ String identifier(String source) {
 
 class _ResolvedSettings {
   final Endpoint endpoint;
-  final SessionSettings? settings;
+  final ConnectionSettings? settings;
 
   final String username;
   final String password;
@@ -207,9 +207,9 @@ abstract class _PgSessionBase implements Session {
 class PgConnectionImplementation extends _PgSessionBase implements Connection {
   static Future<PgConnectionImplementation> connect(
     Endpoint endpoint, {
-    SessionSettings? sessionSettings,
+    ConnectionSettings? connectionSettings,
   }) async {
-    final settings = _ResolvedSettings(endpoint, sessionSettings);
+    final settings = _ResolvedSettings(endpoint, connectionSettings);
     var channel = await _connect(settings);
 
     if (_debugLog) {

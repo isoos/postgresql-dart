@@ -46,24 +46,24 @@ final class PoolSettings {
 abstract class Pool<L> implements Session, SessionExecutor {
   factory Pool.withSelector(
     EndpointSelector<L> selector, {
-    SessionSettings? sessionSettings,
+    ConnectionSettings? connectionSettings,
     PoolSettings? poolSettings,
   }) =>
       PoolImplementation(
         selector,
-        sessionSettings,
+        connectionSettings,
         poolSettings,
       );
 
   /// Creates a connection pool from a fixed list of endpoints.
   factory Pool.withEndpoints(
     List<Endpoint> endpoints, {
-    SessionSettings? sessionSettings,
+    ConnectionSettings? connectionSettings,
     PoolSettings? poolSettings,
   }) =>
       PoolImplementation(
         roundRobinSelector(endpoints),
-        sessionSettings,
+        connectionSettings,
         poolSettings,
       );
 
@@ -74,7 +74,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
   /// another [withConnection] call later.
   Future<R> withConnection<R>(
     Future<R> Function(Connection connection) fn, {
-    SessionSettings? sessionSettings,
+    ConnectionSettings? connectionSettings,
     L? locality,
   });
 

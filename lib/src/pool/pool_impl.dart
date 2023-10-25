@@ -17,17 +17,18 @@ EndpointSelector roundRobinSelector(List<Endpoint> endpoints) {
 
 class PoolImplementation<L> implements Pool<L> {
   final EndpointSelector<L> _selector;
-  final SessionSettings? sessionSettings;
+  final ConnectionSettings? connectionSettings;
   final PoolSettings? poolSettings;
 
   final _connections = <_PoolConnection>[];
   late final _maxConnectionCount = poolSettings?.maxConnectionCount ?? 1;
   late final _semaphore = pool.Pool(
     _maxConnectionCount,
-    timeout: sessionSettings?.connectTimeout ?? const Duration(seconds: 15),
+    timeout: connectionSettings?.connectTimeout ?? const Duration(seconds: 15),
   );
 
-  PoolImplementation(this._selector, this.sessionSettings, this.poolSettings);
+  PoolImplementation(
+      this._selector, this.connectionSettings, this.poolSettings);
 
   @override
   Future<void> close() async {
@@ -116,7 +117,7 @@ class PoolImplementation<L> implements Pool<L> {
   @override
   Future<R> withConnection<R>(
     Future<R> Function(Connection connection) fn, {
-    SessionSettings? sessionSettings,
+    ConnectionSettings? connectionSettings,
     L? locality,
   }) async {
     final resource = await _semaphore.request();
@@ -140,7 +141,7 @@ class PoolImplementation<L> implements Pool<L> {
           selection.endpoint,
           await PgConnectionImplementation.connect(
             selection.endpoint,
-            sessionSettings: sessionSettings ?? this.sessionSettings,
+            connectionSettings: connectionSettings ?? this.connectionSettings,
           ),
         );
         _connections.add(connection);

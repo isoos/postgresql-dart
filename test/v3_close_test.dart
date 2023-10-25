@@ -11,7 +11,7 @@ void main() {
     setUp(() async {
       conn1 = await Connection.open(
         await server.endpoint(),
-        sessionSettings: SessionSettings(
+        connectionSettings: ConnectionSettings(
             //transformer: _loggingTransformer('c1'),
             ),
       );

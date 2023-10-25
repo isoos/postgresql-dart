@@ -137,7 +137,10 @@ abstract class SessionExecutor {
   ///
   /// Returns the result (either the value or an error) of invoking [fn]. No
   /// updates will be reverted in the event of an error.
-  Future<R> run<R>(Future<R> Function(Session session) fn);
+  Future<R> run<R>(
+    Future<R> Function(Session session) fn,
+    // {SessionSettings? sessionSettings,}
+  );
 
   /// Obtains a [Session] running in a transaction and calls [fn] with it.
   ///
@@ -149,6 +152,7 @@ abstract class SessionExecutor {
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
     TransactionMode? transactionMode,
+    // SessionSettings? sessionSettings,
   });
 
   /// Closes this session, cleaning up resources and forbiding further calls to
@@ -159,10 +163,10 @@ abstract class SessionExecutor {
 abstract class Connection implements Session, SessionExecutor {
   static Future<Connection> open(
     Endpoint endpoint, {
-    SessionSettings? sessionSettings,
+    ConnectionSettings? connectionSettings,
   }) {
     return PgConnectionImplementation.connect(endpoint,
-        sessionSettings: sessionSettings);
+        connectionSettings: connectionSettings);
   }
 
   Channels get channels;
@@ -363,18 +367,10 @@ enum SslMode {
   bool get allowCleartextPassword => this == SslMode.disable;
 }
 
-final class SessionSettings {
+final class ConnectionSettings extends SessionSettings {
   final String? applicationName;
-
-  // Duration(seconds: 15)
-  final Duration? connectTimeout;
-  // Duration(minutes: 5)
-  final Duration? queryTimeout;
-
   final String? timeZone;
-
   final Encoding? encoding;
-
   final SslMode? sslMode;
 
   /// An optional [StreamChannelTransformer] sitting behind the postgres client
@@ -401,7 +397,28 @@ final class SessionSettings {
   /// For more info, see [Streaming Replication Protocol]
   ///
   /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
-  final ReplicationMode replicationMode;
+  final ReplicationMode? replicationMode;
+
+  ConnectionSettings({
+    this.applicationName,
+    this.timeZone,
+    this.encoding,
+    this.sslMode,
+    this.transformer,
+    this.replicationMode,
+    super.connectTimeout,
+    super.queryTimeout,
+    super.queryMode,
+    super.allowSuperfluousParameters,
+  });
+}
+
+final class SessionSettings {
+  // Duration(seconds: 15)
+  final Duration? connectTimeout;
+
+  // Duration(minutes: 5)
+  final Duration? queryTimeout;
 
   /// The Query Execution Mode
   ///
@@ -410,21 +427,15 @@ final class SessionSettings {
   /// (e.g. in replication mode or with proxies such as PGBouncer), hence the
   /// the Simple one would be the only viable option. Unless necessary, always
   /// prefer using [QueryMode.extended].
-  final QueryMode queryMode;
+  final QueryMode? queryMode;
 
   /// Override the default query map check if superfluous parameters are found.
   final bool? allowSuperfluousParameters;
 
   SessionSettings({
-    this.applicationName,
     this.connectTimeout,
     this.queryTimeout,
-    this.timeZone,
-    this.encoding,
-    this.sslMode,
-    this.transformer,
-    this.replicationMode = ReplicationMode.none,
-    this.queryMode = QueryMode.extended,
+    this.queryMode,
     this.allowSuperfluousParameters,
   });
 }

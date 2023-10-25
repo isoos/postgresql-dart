@@ -74,11 +74,11 @@ class WrappedPostgreSQLConnection
     with _DelegatingContext
     implements PostgreSQLConnection {
   final Endpoint _endpoint;
-  final SessionSettings _sessionSettings;
+  final ConnectionSettings _connectionSettings;
   Connection? _connection;
   bool _hasConnectedPreviously = false;
 
-  WrappedPostgreSQLConnection(this._endpoint, this._sessionSettings);
+  WrappedPostgreSQLConnection(this._endpoint, this._connectionSettings);
 
   @override
   Session? get _session => _connection;
@@ -128,7 +128,7 @@ class WrappedPostgreSQLConnection
     _hasConnectedPreviously = true;
     _connection = await Connection.open(
       _endpoint,
-      sessionSettings: _sessionSettings,
+      connectionSettings: _connectionSettings,
     );
   }
 

@@ -5,7 +5,7 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-final _sessionSettings = SessionSettings();
+final _connectionSettings = ConnectionSettings();
 
 void main() {
   withPostgresServer('generic', (server) {
@@ -14,7 +14,7 @@ void main() {
     setUp(() async {
       pool = Pool.withEndpoints(
         [await server.endpoint()],
-        sessionSettings: _sessionSettings,
+        connectionSettings: _connectionSettings,
         poolSettings: PoolSettings(maxConnectionCount: 8),
       );
 
@@ -83,7 +83,7 @@ void main() {
     test('can limit concurrent connections', () async {
       final pool = Pool.withEndpoints(
         [await server.endpoint()],
-        sessionSettings: _sessionSettings,
+        connectionSettings: _connectionSettings,
         poolSettings: const PoolSettings(maxConnectionCount: 2),
       );
       addTearDown(pool.close);

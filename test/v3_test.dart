@@ -8,7 +8,7 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-final _sessionSettings = SessionSettings(
+final _connectionSettings = ConnectionSettings(
   transformer: loggingTransformer('conn'),
   applicationName: 'test_app',
 );
@@ -20,7 +20,7 @@ void main() {
     setUp(() async {
       connection = await Connection.open(
         await server.endpoint(),
-        sessionSettings: _sessionSettings,
+        connectionSettings: _connectionSettings,
       );
     });
 
@@ -428,7 +428,7 @@ void main() {
 
       final connection = await Connection.open(
         await server.endpoint(),
-        sessionSettings: SessionSettings(
+        connectionSettings: ConnectionSettings(
           transformer: transformer,
         ),
       );
@@ -447,14 +447,14 @@ void main() {
     setUp(() async {
       conn1 = await Connection.open(
         await server.endpoint(),
-        sessionSettings: SessionSettings(
+        connectionSettings: ConnectionSettings(
           transformer: loggingTransformer('c1'),
         ),
       );
 
       conn2 = await Connection.open(
         await server.endpoint(),
-        sessionSettings: SessionSettings(
+        connectionSettings: ConnectionSettings(
           transformer: loggingTransformer('c2'),
         ),
       );
