@@ -495,6 +495,27 @@ enum AccessMode {
   const AccessMode._(String value) : sqlPart = ' $value';
 }
 
+/// The deferrable mode of the transaction.
+enum DeferrableMode {
+  /// The DEFERRABLE transaction property has no effect unless the transaction
+  /// is also SERIALIZABLE and READ ONLY. When all three of these properties
+  /// are selected for a transaction, the transaction may block when first
+  /// acquiring its snapshot, after which it is able to run without the normal
+  /// overhead of a SERIALIZABLE transaction and without any risk of contributing
+  /// to or being canceled by a serialization failure. This mode is well suited
+  /// for long-running reports or backups.
+  deferrable._('DEFERRABLE'),
+
+  /// The default mode.
+  notDeferrable._('NOT DEFERRABLE'),
+  ;
+
+  /// The SQL identifier of the deferrable mode including leading space.
+  final String sqlPart;
+
+  const DeferrableMode._(String value) : sqlPart = ' $value';
+}
+
 /// The characteristics of the current transaction.
 class TransactionMode {
   /// The isolation level of a transaction determines what data the transaction
@@ -512,7 +533,7 @@ class TransactionMode {
   /// overhead of a SERIALIZABLE transaction and without any risk of contributing
   /// to or being canceled by a serialization failure. This mode is well suited
   /// for long-running reports or backups.
-  final bool? deferrable;
+  final DeferrableMode? deferrable;
 
   TransactionMode({
     this.isolationLevel,

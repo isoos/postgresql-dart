@@ -1036,8 +1036,7 @@ extension on TransactionMode {
       sb.write(accessMode!.sqlPart);
     }
     if (deferrable != null) {
-      if (!deferrable!) sb.write(' NOT');
-      sb.write(' DEFERRABLE');
+      sb.write(deferrable!.sqlPart);
     }
   }
 }
