@@ -83,6 +83,8 @@ class PostgresServer {
     return Connection.open(
       await endpoint(),
       sessionSettings: SessionSettings(
+        connectTimeout: Duration(seconds: 3),
+        queryTimeout: Duration(seconds: 3),
         replicationMode: replicationMode,
         transformer: loggingTransformer('conn'),
       ),

@@ -33,7 +33,7 @@ class _ResolvedSettings {
   final String password;
 
   final Duration connectTimeout;
-  //final Duration queryTimeout;
+  final Duration queryTimeout;
   final String timeZone;
   final Encoding encoding;
 
@@ -52,7 +52,7 @@ class _ResolvedSettings {
         password = endpoint.password ?? 'postgres',
         connectTimeout =
             settings?.connectTimeout ?? const Duration(seconds: 15),
-        //queryTimeout = settings?.connectTimeout ?? const Duration(minutes: 5),
+        queryTimeout = settings?.queryTimeout ?? const Duration(minutes: 5),
         timeZone = settings?.timeZone ?? 'UTC',
         encoding = settings?.encoding ?? utf8,
         transformer = settings?.transformer,
@@ -494,6 +494,27 @@ class _PreparedStatement extends Statement {
           allowSuperfluous:
               _session._connection._settings.allowSuperfluousParameters,
         ));
+  }
+
+  @override
+  Future<Result> run(
+    Object? parameters, {
+    Duration? timeout,
+  }) async {
+    timeout ??= _session._connection._settings.queryTimeout;
+    final items = <ResultRow>[];
+    final subscription = bind(parameters).listen(items.add);
+    try {
+      await subscription.asFuture().optionalTimeout(timeout);
+    } finally {
+      await subscription.cancel();
+    }
+
+    return Result(
+      rows: items,
+      affectedRows: await subscription.affectedRows,
+      schema: await subscription.schema,
+    );
   }
 
   @override

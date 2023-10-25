@@ -193,18 +193,7 @@ abstract class Statement {
     Object? /* List<Object?|TypedValue> | Map<String, Object?|TypedValue> */
         parameters, {
     Duration? timeout,
-  }) async {
-    final items = <ResultRow>[];
-    final subscription = bind(parameters).listen(items.add);
-    await subscription.asFuture().optionalTimeout(timeout);
-    await subscription.cancel();
-
-    return Result(
-      rows: items,
-      affectedRows: await subscription.affectedRows,
-      schema: await subscription.schema,
-    );
-  }
+  });
 
   Future<void> dispose();
 }
@@ -378,6 +367,8 @@ final class SessionSettings {
   // Duration(seconds: 15)
   final Duration? connectTimeout;
   // Duration(minutes: 5)
+  final Duration? queryTimeout;
+
   final String? timeZone;
 
   final Encoding? encoding;
@@ -424,6 +415,7 @@ final class SessionSettings {
 
   SessionSettings({
     this.connectTimeout,
+    this.queryTimeout,
     this.timeZone,
     this.encoding,
     this.sslMode,
