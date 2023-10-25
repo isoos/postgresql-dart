@@ -351,6 +351,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         timeZone: _settings.timeZone,
         username: _settings.username,
         replication: _settings.replicationMode,
+        applicationName: _settings.settings?.applicationName,
       ));
 
       return result._done.future.timeout(_settings.connectTimeout);

@@ -7,7 +7,6 @@ import 'package:meta/meta.dart';
 
 import 'binary_codec.dart';
 import 'buffer.dart';
-import 'constants.dart';
 import 'replication.dart';
 import 'shared_messages.dart';
 import 'text_codec.dart';
@@ -31,8 +30,6 @@ abstract class ClientMessageId {
 }
 
 abstract class ClientMessage extends Message {
-  static const int protocolVersion = 196608;
-
   const ClientMessage();
 
   @internal
@@ -46,62 +43,55 @@ abstract class ClientMessage extends Message {
   }
 }
 
+typedef _EncodedKeyPair = (EncodedString key, EncodedString value);
+
 class StartupMessage extends ClientMessage {
   final String? _username;
   final String _databaseName;
   final String _timeZone;
   final String _replication;
+  final String? _applicationName;
 
   StartupMessage({
     required String database,
     required String timeZone,
     String? username,
+    String? applicationName,
     ReplicationMode replication = ReplicationMode.none,
   })  : _databaseName = database,
         _timeZone = timeZone,
         _username = username,
+        _applicationName = applicationName,
         _replication = replication.value;
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
-    final databaseName = buffer.encodeString(_databaseName);
-    final timeZone = buffer.encodeString(_timeZone);
-    final username = _username == null ? null : buffer.encodeString(_username!);
-    final replication = buffer.encodeString(_replication);
-    var fixedLength = 44 + buffer.encodingName.bytesLength;
-    var variableLength = databaseName.bytesLength + timeZone.bytesLength + 2;
+    final e = buffer.encodeString;
+    final properties = <_EncodedKeyPair>[
+      (e('client_encoding'), buffer.encodingName),
+      (e('database'), e(_databaseName)),
+      (e('TimeZone'), e(_timeZone)),
+      if (_username != null) (e('user'), e(_username!)),
+      if (_replication != ReplicationMode.none.value)
+        (e('replication'), e(_replication)),
+      if (_applicationName != null)
+        (e('application_name'), e(_applicationName!)),
+    ];
 
-    if (username != null) {
-      fixedLength += 5;
-      variableLength += username.bytesLength + 1;
+    final propertiesLength = properties
+        .map((e) => e.$1.bytesLength + e.$2.bytesLength + 2)
+        .fold<int>(0, (sum, x) => sum + x);
+
+    // 4 bytes length, 4 bytes protocol version, 1 extra zero at the end
+    buffer.writeInt32(propertiesLength + 4 + 4 + 1);
+    // protocol version
+    buffer.writeInt16(3);
+    buffer.writeInt16(0);
+
+    for (final e in properties) {
+      buffer.writeEncodedString(e.$1);
+      buffer.writeEncodedString(e.$2);
     }
-
-    if (_replication != ReplicationMode.none.value) {
-      fixedLength += UTF8ByteConstants.replication.length;
-      variableLength += replication.bytesLength + 1;
-    }
-
-    buffer.writeInt32(fixedLength + variableLength);
-    buffer.writeInt32(ClientMessage.protocolVersion);
-
-    if (username != null) {
-      buffer.write(UTF8ByteConstants.user);
-      buffer.writeEncodedString(username);
-    }
-
-    if (_replication != ReplicationMode.none.value) {
-      buffer.write(UTF8ByteConstants.replication);
-      buffer.writeEncodedString(replication);
-    }
-
-    buffer.write(UTF8ByteConstants.database);
-    buffer.writeEncodedString(databaseName);
-
-    buffer.write(UTF8ByteConstants.clientEncoding);
-    buffer.writeEncodedString(buffer.encodingName);
-
-    buffer.write(UTF8ByteConstants.timeZone);
-    buffer.writeEncodedString(timeZone);
 
     buffer.writeInt8(0);
   }
