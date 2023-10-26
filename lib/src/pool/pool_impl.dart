@@ -20,15 +20,14 @@ class PoolImplementation<L> implements Pool<L> {
   final SessionSettings? sessionSettings;
   final PoolSettings? poolSettings;
 
-  final pool.Pool _semaphore;
   final _connections = <_PoolConnection>[];
+  late final _maxConnectionCount = poolSettings?.maxConnectionCount ?? 1;
+  late final _semaphore = pool.Pool(
+    _maxConnectionCount,
+    timeout: sessionSettings?.connectTimeout ?? const Duration(seconds: 15),
+  );
 
-  PoolImplementation(this._selector, this.sessionSettings, this.poolSettings)
-      : _semaphore = pool.Pool(
-          poolSettings?.maxConnectionCount ?? 1,
-          timeout:
-              sessionSettings?.connectTimeout ?? const Duration(seconds: 15),
-        );
+  PoolImplementation(this._selector, this.sessionSettings, this.poolSettings);
 
   @override
   Future<void> close() async {
@@ -124,6 +123,7 @@ class PoolImplementation<L> implements Pool<L> {
 
     _PoolConnection? connection;
     bool reuse = true;
+    final sw = Stopwatch();
     try {
       final context = EndpointSelectorContext(
         locality: locality,
@@ -147,6 +147,7 @@ class PoolImplementation<L> implements Pool<L> {
       }
 
       connection._isInUse = true;
+      sw.start();
       try {
         return await fn(connection);
       } catch (_) {
@@ -155,6 +156,8 @@ class PoolImplementation<L> implements Pool<L> {
       }
     } finally {
       resource.release();
+      sw.stop();
+      connection?._elapsedInUse += sw.elapsed;
 
       // If the pool has been closed, this connection needs to be closed as
       // well.
@@ -170,19 +173,40 @@ class PoolImplementation<L> implements Pool<L> {
 
 /// An opened [Connection] we're able to use in [Pool.withConnection].
 class _PoolConnection implements Connection {
+  final _opened = DateTime.now();
   final PoolImplementation _pool;
   final Endpoint _endpoint;
   final PgConnectionImplementation _connection;
+  Duration _elapsedInUse = Duration.zero;
   bool _isInUse = false;
+  int _queryCount = 0;
 
   _PoolConnection(this._pool, this._endpoint, this._connection);
 
   bool _mayReuse({
     required Endpoint endpoint,
   }) {
-    if (_isInUse) return false;
-    if (endpoint != _endpoint) return false;
+    if (_isInUse || endpoint != _endpoint || _isExpired()) {
+      return false;
+    }
     return true;
+  }
+
+  bool _isExpired() {
+    final maxConnectionAge = _pool.poolSettings?.maxConnectionAge;
+    if (maxConnectionAge != null &&
+        DateTime.now().difference(_opened) > maxConnectionAge) {
+      return true;
+    }
+    final maxSessionUse = _pool.poolSettings?.maxSessionUse;
+    if (maxSessionUse != null && _elapsedInUse > maxSessionUse) {
+      return true;
+    }
+    final maxQueryCount = _pool.poolSettings?.maxQueryCount;
+    if (maxQueryCount != null && _queryCount > maxQueryCount) {
+      return true;
+    }
+    return false;
   }
 
   Future<void> _dispose() async {
@@ -212,6 +236,7 @@ class _PoolConnection implements Connection {
     QueryMode? queryMode,
     Duration? timeout,
   }) {
+    _queryCount++;
     return _connection.execute(
       query,
       parameters: parameters,
@@ -223,11 +248,13 @@ class _PoolConnection implements Connection {
 
   @override
   Future<Statement> prepare(Object query) {
+    // TODO: increment query count on statement runs
     return _connection.prepare(query);
   }
 
   @override
   Future<R> run<R>(Future<R> Function(Session session) fn) {
+    // TODO: increment query count on session callbacks
     return _connection.run(fn);
   }
 
@@ -236,6 +263,7 @@ class _PoolConnection implements Connection {
     Future<R> Function(Session session) fn, {
     TransactionMode? transactionMode,
   }) {
+    // TODO: increment query count on session callbacks
     return _connection.runTx(
       fn,
       transactionMode: transactionMode,
