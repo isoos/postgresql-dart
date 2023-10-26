@@ -15,6 +15,7 @@ void main() {
       pool = Pool.withEndpoints(
         [await server.endpoint()],
         sessionSettings: _sessionSettings,
+        poolSettings: PoolSettings(maxConnectionCount: 8),
       );
 
       // We can't write to the public schema by default in postgres 15, so
