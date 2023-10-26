@@ -20,23 +20,25 @@ class PoolImplementation<L> implements Pool<L> {
   final SessionSettings? sessionSettings;
   final PoolSettings? poolSettings;
 
-  final pool.Pool _pool;
-  final _openConnections = <_PoolConnection>[];
+  final pool.Pool _semaphore;
+  final _connections = <_PoolConnection>[];
 
   PoolImplementation(this._selector, this.sessionSettings, this.poolSettings)
-      : _pool = pool.Pool(
-          poolSettings?.maxConnectionCount ?? 1000,
+      : _semaphore = pool.Pool(
+          poolSettings?.maxConnectionCount ?? 1,
+          timeout:
+              sessionSettings?.connectTimeout ?? const Duration(seconds: 15),
         );
 
   @override
   Future<void> close() async {
-    await _pool.close();
+    await _semaphore.close();
 
     // Connections are closed when they are returned to the pool if it's closed.
     // We still need to close statements that are currently unused.
-    for (final connection in _openConnections) {
+    for (final connection in [..._connections]) {
       if (!connection._isInUse) {
-        await connection._connection.close();
+        await connection._dispose();
       }
     }
   }
@@ -118,9 +120,10 @@ class PoolImplementation<L> implements Pool<L> {
     SessionSettings? sessionSettings,
     L? locality,
   }) async {
-    final resource = await _pool.request();
+    final resource = await _semaphore.request();
 
     _PoolConnection? connection;
+    bool reuse = true;
     try {
       final context = EndpointSelectorContext(
         locality: locality,
@@ -129,28 +132,34 @@ class PoolImplementation<L> implements Pool<L> {
 
       // Find an existing connection that is currently unused, or open another
       // one.
-      connection = _openConnections.firstWhereOrNull(
-          (c) => !c._isInUse && c._endpoint == selection.endpoint);
+      connection = _connections
+          .firstWhereOrNull((c) => c._mayReuse(endpoint: selection.endpoint));
       if (connection == null) {
         connection ??= _PoolConnection(
+          this,
           selection.endpoint,
           await PgConnectionImplementation.connect(
             selection.endpoint,
             sessionSettings: sessionSettings ?? this.sessionSettings,
           ),
         );
-        _openConnections.add(connection);
+        _connections.add(connection);
       }
 
       connection._isInUse = true;
-      return await fn(connection);
+      try {
+        return await fn(connection);
+      } catch (_) {
+        reuse = false;
+        rethrow;
+      }
     } finally {
       resource.release();
 
       // If the pool has been closed, this connection needs to be closed as
       // well.
-      if (_pool.isClosed) {
-        await connection?._connection.close();
+      if (_semaphore.isClosed || !reuse) {
+        await connection?._dispose();
       } else {
         // Allow the connection to be re-used later.
         connection?._isInUse = false;
@@ -161,11 +170,25 @@ class PoolImplementation<L> implements Pool<L> {
 
 /// An opened [Connection] we're able to use in [Pool.withConnection].
 class _PoolConnection implements Connection {
+  final PoolImplementation _pool;
   final Endpoint _endpoint;
   final PgConnectionImplementation _connection;
   bool _isInUse = false;
 
-  _PoolConnection(this._endpoint, this._connection);
+  _PoolConnection(this._pool, this._endpoint, this._connection);
+
+  bool _mayReuse({
+    required Endpoint endpoint,
+  }) {
+    if (_isInUse) return false;
+    if (endpoint != _endpoint) return false;
+    return true;
+  }
+
+  Future<void> _dispose() async {
+    _pool._connections.remove(this);
+    await _connection.close();
+  }
 
   @override
   Channels get channels {
