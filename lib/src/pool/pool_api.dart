@@ -6,10 +6,28 @@ import '../../postgres.dart';
 import 'pool_impl.dart';
 
 final class PoolSettings {
+  /// The maximum number of concurrent sessions.
   final int? maxConnectionCount;
+
+  /// The maximum duration a connection is kept open.
+  /// New sessions won't be scheduled after this limit is reached.
+  final Duration? maxConnectionAge;
+
+  /// The maximum duration a connection is used by sessions.
+  /// New sessions won't be scheduled after this limit is reached.
+  final Duration? maxSessionUse;
+
+  /// The maximum number of queries to be run on a connection.
+  /// New sessions won't be scheduled after this limit is reached.
+  ///
+  /// NOTE: not yet implemented
+  final int? maxQueryCount;
 
   const PoolSettings({
     this.maxConnectionCount,
+    this.maxConnectionAge,
+    this.maxSessionUse,
+    this.maxQueryCount,
   });
 }
 
