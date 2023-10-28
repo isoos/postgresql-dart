@@ -151,8 +151,7 @@ abstract class SessionExecutor {
   /// transaction is active.
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    TransactionMode? transactionMode,
-    // SessionSettings? sessionSettings,
+    TransactionSettings? settings,
   });
 
   /// Closes this session, cleaning up resources and forbiding further calls to
@@ -163,10 +162,10 @@ abstract class SessionExecutor {
 abstract class Connection implements Session, SessionExecutor {
   static Future<Connection> open(
     Endpoint endpoint, {
-    ConnectionSettings? connectionSettings,
+    ConnectionSettings? settings,
   }) {
     return PgConnectionImplementation.connect(endpoint,
-        connectionSettings: connectionSettings);
+        connectionSettings: settings);
   }
 
   Channels get channels;
@@ -367,7 +366,7 @@ enum SslMode {
   bool get allowCleartextPassword => this == SslMode.disable;
 }
 
-final class ConnectionSettings extends SessionSettings {
+class ConnectionSettings extends SessionSettings {
   final String? applicationName;
   final String? timeZone;
   final Encoding? encoding;
@@ -413,7 +412,7 @@ final class ConnectionSettings extends SessionSettings {
   });
 }
 
-final class SessionSettings {
+class SessionSettings {
   // Duration(seconds: 15)
   final Duration? connectTimeout;
 
@@ -527,7 +526,7 @@ enum DeferrableMode {
 }
 
 /// The characteristics of the current transaction.
-class TransactionMode {
+class TransactionSettings extends SessionSettings {
   /// The isolation level of a transaction determines what data the transaction
   /// can see when other transactions are running concurrently.
   final IsolationLevel? isolationLevel;
@@ -545,9 +544,13 @@ class TransactionMode {
   /// for long-running reports or backups.
   final DeferrableMode? deferrable;
 
-  TransactionMode({
+  TransactionSettings({
     this.isolationLevel,
     this.accessMode,
     this.deferrable,
+    super.connectTimeout,
+    super.queryTimeout,
+    super.queryMode,
+    super.allowSuperfluousParameters,
   });
 }

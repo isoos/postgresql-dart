@@ -5,7 +5,7 @@ import 'package:meta/meta.dart';
 import '../../postgres.dart';
 import 'pool_impl.dart';
 
-final class PoolSettings {
+class PoolSettings extends ConnectionSettings {
   /// The maximum number of concurrent sessions.
   final int? maxConnectionCount;
 
@@ -23,11 +23,21 @@ final class PoolSettings {
   /// NOTE: not yet implemented
   final int? maxQueryCount;
 
-  const PoolSettings({
+  PoolSettings({
     this.maxConnectionCount,
     this.maxConnectionAge,
     this.maxSessionUse,
     this.maxQueryCount,
+    super.applicationName,
+    super.connectTimeout,
+    super.sslMode,
+    super.encoding,
+    super.timeZone,
+    super.replicationMode,
+    super.transformer,
+    super.queryTimeout,
+    super.queryMode,
+    super.allowSuperfluousParameters,
   });
 }
 
@@ -46,26 +56,16 @@ final class PoolSettings {
 abstract class Pool<L> implements Session, SessionExecutor {
   factory Pool.withSelector(
     EndpointSelector<L> selector, {
-    ConnectionSettings? connectionSettings,
-    PoolSettings? poolSettings,
+    PoolSettings? settings,
   }) =>
-      PoolImplementation(
-        selector,
-        connectionSettings,
-        poolSettings,
-      );
+      PoolImplementation(selector, settings);
 
   /// Creates a connection pool from a fixed list of endpoints.
   factory Pool.withEndpoints(
     List<Endpoint> endpoints, {
-    ConnectionSettings? connectionSettings,
-    PoolSettings? poolSettings,
+    PoolSettings? settings,
   }) =>
-      PoolImplementation(
-        roundRobinSelector(endpoints),
-        connectionSettings,
-        poolSettings,
-      );
+      PoolImplementation(roundRobinSelector(endpoints), settings);
 
   /// Acquires a connection from this pool, opening a new one if necessary, and
   /// calls [fn] with it.
@@ -87,7 +87,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    TransactionMode? transactionMode,
+    TransactionSettings? settings,
     L? locality,
   });
 

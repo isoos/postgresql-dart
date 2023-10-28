@@ -713,7 +713,7 @@ void main() {
       final c3 = Completer();
       final f1 = Future.microtask(
         () => conn1.runTx(
-          transactionMode: TransactionMode(
+          settings: TransactionSettings(
             isolationLevel: IsolationLevel.readCommitted,
           ),
           (session) async {
@@ -727,7 +727,7 @@ void main() {
       );
       final f2 = Future.microtask(
         () => conn2.runTx(
-          transactionMode: TransactionMode(
+          settings: TransactionSettings(
             isolationLevel: IsolationLevel.readCommitted,
           ),
           (session) async {
@@ -750,7 +750,7 @@ void main() {
       final c3 = Completer();
       final f1 = Future.microtask(
         () => conn1.runTx(
-          transactionMode: TransactionMode(
+          settings: TransactionSettings(
             isolationLevel: IsolationLevel.serializable,
           ),
           (session) async {
@@ -764,7 +764,7 @@ void main() {
       );
       final f2 = Future.microtask(
         () => conn2.runTx(
-          transactionMode: TransactionMode(
+          settings: TransactionSettings(
             isolationLevel: IsolationLevel.serializable,
           ),
           (session) async {

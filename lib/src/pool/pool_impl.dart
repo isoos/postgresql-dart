@@ -17,18 +17,16 @@ EndpointSelector roundRobinSelector(List<Endpoint> endpoints) {
 
 class PoolImplementation<L> implements Pool<L> {
   final EndpointSelector<L> _selector;
-  final ConnectionSettings? connectionSettings;
-  final PoolSettings? poolSettings;
+  final PoolSettings? settings;
 
   final _connections = <_PoolConnection>[];
-  late final _maxConnectionCount = poolSettings?.maxConnectionCount ?? 1;
+  late final _maxConnectionCount = settings?.maxConnectionCount ?? 1;
   late final _semaphore = pool.Pool(
     _maxConnectionCount,
-    timeout: connectionSettings?.connectTimeout ?? const Duration(seconds: 15),
+    timeout: settings?.connectTimeout ?? const Duration(seconds: 15),
   );
 
-  PoolImplementation(
-      this._selector, this.connectionSettings, this.poolSettings);
+  PoolImplementation(this._selector, this.settings);
 
   @override
   Future<void> close() async {
@@ -102,13 +100,13 @@ class PoolImplementation<L> implements Pool<L> {
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    TransactionMode? transactionMode,
+    TransactionSettings? settings,
     L? locality,
   }) {
     return withConnection(
       (connection) => connection.runTx(
         fn,
-        transactionMode: transactionMode,
+        settings: settings,
       ),
       locality: locality,
     );
@@ -141,7 +139,7 @@ class PoolImplementation<L> implements Pool<L> {
           selection.endpoint,
           await PgConnectionImplementation.connect(
             selection.endpoint,
-            connectionSettings: connectionSettings ?? this.connectionSettings,
+            connectionSettings: connectionSettings ?? this.settings,
           ),
         );
         _connections.add(connection);
@@ -194,16 +192,16 @@ class _PoolConnection implements Connection {
   }
 
   bool _isExpired() {
-    final maxConnectionAge = _pool.poolSettings?.maxConnectionAge;
+    final maxConnectionAge = _pool.settings?.maxConnectionAge;
     if (maxConnectionAge != null &&
         DateTime.now().difference(_opened) > maxConnectionAge) {
       return true;
     }
-    final maxSessionUse = _pool.poolSettings?.maxSessionUse;
+    final maxSessionUse = _pool.settings?.maxSessionUse;
     if (maxSessionUse != null && _elapsedInUse > maxSessionUse) {
       return true;
     }
-    final maxQueryCount = _pool.poolSettings?.maxQueryCount;
+    final maxQueryCount = _pool.settings?.maxQueryCount;
     if (maxQueryCount != null && _queryCount > maxQueryCount) {
       return true;
     }
@@ -262,12 +260,12 @@ class _PoolConnection implements Connection {
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    TransactionMode? transactionMode,
+    TransactionSettings? settings,
   }) {
     // TODO: increment query count on session callbacks
     return _connection.runTx(
       fn,
-      transactionMode: transactionMode,
+      settings: settings,
     );
   }
 }

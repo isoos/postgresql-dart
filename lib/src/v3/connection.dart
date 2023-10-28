@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
 import 'package:pool/pool.dart' as pool;
+import 'package:postgres/src/v3/resolved_settings.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
@@ -25,42 +26,19 @@ String identifier(String source) {
   return '"$escaped"';
 }
 
-class _ResolvedSettings {
+class _ResolvedSettings extends ResolvedConnectionSettings {
   final Endpoint endpoint;
   final ConnectionSettings? settings;
 
   final String username;
   final String password;
 
-  final Duration connectTimeout;
-  final Duration queryTimeout;
-  final String timeZone;
-  final Encoding encoding;
-
-  final SslMode sslMode;
-  final ReplicationMode replicationMode;
-  final QueryMode queryMode;
-
-  final StreamChannelTransformer<Message, Message>? transformer;
-
-  final bool allowSuperfluousParameters;
-
   _ResolvedSettings(
     this.endpoint,
     this.settings,
   )   : username = endpoint.username ?? 'postgres',
         password = endpoint.password ?? 'postgres',
-        connectTimeout =
-            settings?.connectTimeout ?? const Duration(seconds: 15),
-        queryTimeout = settings?.queryTimeout ?? const Duration(minutes: 5),
-        timeZone = settings?.timeZone ?? 'UTC',
-        encoding = settings?.encoding ?? utf8,
-        transformer = settings?.transformer,
-        replicationMode = settings?.replicationMode ?? ReplicationMode.none,
-        queryMode = settings?.queryMode ?? QueryMode.extended,
-        sslMode = settings?.sslMode ?? SslMode.require,
-        allowSuperfluousParameters =
-            settings?.allowSuperfluousParameters ?? false;
+        super(settings);
 }
 
 abstract class _PgSessionBase implements Session {
@@ -400,7 +378,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    TransactionMode? transactionMode,
+    TransactionSettings? settings,
   }) {
     // Keep this database is locked while the transaction is active. We do that
     // because on a protocol level, the entire connection is in a transaction.
@@ -415,9 +393,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
           _connection._activeTransaction = _TransactionSession(this);
 
       late String beginQuery;
-      if (transactionMode != null && transactionMode.isNotEmpty) {
+      if (settings != null && settings.isNotEmpty) {
         final sb = StringBuffer('BEGIN');
-        transactionMode.appendToStringBuffer(sb);
+        settings.appendToStringBuffer(sb);
         sb.write(';');
         beginQuery = sb.toString();
       } else {
@@ -1044,7 +1022,7 @@ extension FutureExt<R> on Future<R> {
   }
 }
 
-extension on TransactionMode {
+extension on TransactionSettings {
   bool get isEmpty =>
       isolationLevel == null && accessMode == null && deferrable == null;
 

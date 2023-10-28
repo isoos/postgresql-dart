@@ -20,7 +20,7 @@ void main() {
     setUp(() async {
       connection = await Connection.open(
         await server.endpoint(),
-        connectionSettings: _connectionSettings,
+        settings: _connectionSettings,
       );
     });
 
@@ -428,7 +428,7 @@ void main() {
 
       final connection = await Connection.open(
         await server.endpoint(),
-        connectionSettings: ConnectionSettings(
+        settings: ConnectionSettings(
           transformer: transformer,
         ),
       );
@@ -447,14 +447,14 @@ void main() {
     setUp(() async {
       conn1 = await Connection.open(
         await server.endpoint(),
-        connectionSettings: ConnectionSettings(
+        settings: ConnectionSettings(
           transformer: loggingTransformer('c1'),
         ),
       );
 
       conn2 = await Connection.open(
         await server.endpoint(),
-        connectionSettings: ConnectionSettings(
+        settings: ConnectionSettings(
           transformer: loggingTransformer('c2'),
         ),
       );

@@ -128,7 +128,7 @@ class WrappedPostgreSQLConnection
     _hasConnectedPreviously = true;
     _connection = await Connection.open(
       _endpoint,
-      connectionSettings: _connectionSettings,
+      settings: _connectionSettings,
     );
   }
 

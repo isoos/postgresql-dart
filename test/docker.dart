@@ -82,7 +82,7 @@ class PostgresServer {
   }) async {
     return Connection.open(
       await endpoint(),
-      connectionSettings: ConnectionSettings(
+      settings: ConnectionSettings(
         connectTimeout: Duration(seconds: 3),
         queryTimeout: Duration(seconds: 3),
         replicationMode: replicationMode,
