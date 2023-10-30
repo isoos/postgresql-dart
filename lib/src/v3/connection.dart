@@ -40,6 +40,7 @@ abstract class _PgSessionBase implements Session {
   bool _sessionClosed = false;
 
   PgConnectionImplementation get _connection;
+  ResolvedSessionSettings get _settings;
   Encoding get encoding => _connection._settings.encoding;
 
   void _checkActive() {
@@ -97,15 +98,11 @@ abstract class _PgSessionBase implements Session {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(
       parameters,
-      allowSuperfluous: _connection._settings.allowSuperfluousParameters,
+      allowSuperfluous: _settings.allowSuperfluousParameters,
     );
 
-    late final bool isSimple;
-    if (queryMode != null) {
-      isSimple = queryMode == QueryMode.simple;
-    } else {
-      isSimple = _connection._settings.queryMode == QueryMode.simple;
-    }
+    queryMode ??= _settings.queryMode;
+    final isSimple = queryMode == QueryMode.simple;
 
     if (isSimple && variables.isNotEmpty) {
       throw PgException('Parameterized queries are not supported when '
@@ -282,6 +279,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   }
 
   final Endpoint _endpoint;
+  @override
   final ResolvedConnectionSettings _settings;
   final StreamChannel<Message> _channel;
   late final StreamSubscription<Message> _serverMessages;
@@ -369,6 +367,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     Future<R> Function(Session session) fn, {
     TransactionSettings? settings,
   }) {
+    final rsettings = ResolvedTransactionSettings(settings, _settings);
     // Keep this database is locked while the transaction is active. We do that
     // because on a protocol level, the entire connection is in a transaction.
     // From a Dart point of view, methods called outside of the transaction
@@ -379,12 +378,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       // The transaction has its own _operationLock, which means that it (and
       // only it) can be used to run statements while it's active.
       final transaction =
-          _connection._activeTransaction = _TransactionSession(this);
+          _connection._activeTransaction = _TransactionSession(this, rsettings);
 
       late String beginQuery;
-      if (settings != null && settings.isNotEmpty) {
+      if (rsettings.shouldExpandBegin) {
         final sb = StringBuffer('BEGIN');
-        settings.appendToStringBuffer(sb);
+        rsettings.expandBegin(sb);
         sb.write(';');
         beginQuery = sb.toString();
       } else {
@@ -459,8 +458,7 @@ class _PreparedStatement extends Statement {
         this,
         _description.bindParameters(
           parameters,
-          allowSuperfluous:
-              _session._connection._settings.allowSuperfluousParameters,
+          allowSuperfluous: _session._settings.allowSuperfluousParameters,
         ));
   }
 
@@ -469,7 +467,7 @@ class _PreparedStatement extends Statement {
     Object? parameters, {
     Duration? timeout,
   }) async {
-    timeout ??= _session._connection._settings.queryTimeout;
+    timeout ??= _session._settings.queryTimeout;
     final items = <ResultRow>[];
     final subscription = bind(parameters).listen(items.add);
     try {
@@ -824,10 +822,12 @@ class _Channels implements Channels {
 class _TransactionSession extends _PgSessionBase {
   @override
   final PgConnectionImplementation _connection;
+  @override
+  final ResolvedTransactionSettings _settings;
 
   PgException? _transactionException;
 
-  _TransactionSession(this._connection);
+  _TransactionSession(this._connection, this._settings);
 
   /// Sends the [command] and, before releasing the internal connection lock,
   /// marks the session as closed.
@@ -1012,12 +1012,10 @@ extension FutureExt<R> on Future<R> {
 }
 
 extension on TransactionSettings {
-  bool get isEmpty =>
-      isolationLevel == null && accessMode == null && deferrable == null;
+  bool get shouldExpandBegin =>
+      isolationLevel != null || accessMode != null || deferrable != null;
 
-  bool get isNotEmpty => !isEmpty;
-
-  void appendToStringBuffer(StringBuffer sb) {
+  void expandBegin(StringBuffer sb) {
     if (isolationLevel != null) {
       sb.write(isolationLevel!.queryPart);
     }

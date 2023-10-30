@@ -18,16 +18,17 @@ EndpointSelector roundRobinSelector(List<Endpoint> endpoints) {
 
 class PoolImplementation<L> implements Pool<L> {
   final EndpointSelector<L> _selector;
-  final PoolSettings? settings;
+  final ResolvedPoolSettings settings;
 
   final _connections = <_PoolConnection>[];
-  late final _maxConnectionCount = settings?.maxConnectionCount ?? 1;
+  late final _maxConnectionCount = settings.maxConnectionCount;
   late final _semaphore = pool.Pool(
     _maxConnectionCount,
-    timeout: settings?.connectTimeout ?? const Duration(seconds: 15),
+    timeout: settings.connectTimeout,
   );
 
-  PoolImplementation(this._selector, this.settings);
+  PoolImplementation(this._selector, PoolSettings? settings)
+      : settings = ResolvedPoolSettings(settings);
 
   @override
   Future<void> close() async {
@@ -194,17 +195,14 @@ class _PoolConnection implements Connection {
   }
 
   bool _isExpired() {
-    final maxConnectionAge = _pool.settings?.maxConnectionAge;
-    if (maxConnectionAge != null &&
-        DateTime.now().difference(_opened) > maxConnectionAge) {
+    final age = DateTime.now().difference(_opened);
+    if (age > _pool.settings.maxConnectionAge) {
       return true;
     }
-    final maxSessionUse = _pool.settings?.maxSessionUse;
-    if (maxSessionUse != null && _elapsedInUse > maxSessionUse) {
+    if (_elapsedInUse > _pool.settings.maxSessionUse) {
       return true;
     }
-    final maxQueryCount = _pool.settings?.maxQueryCount;
-    if (maxQueryCount != null && _queryCount > maxQueryCount) {
+    if (_queryCount > _pool.settings.maxQueryCount) {
       return true;
     }
     return false;
