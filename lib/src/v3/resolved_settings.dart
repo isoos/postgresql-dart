@@ -64,3 +64,18 @@ class ResolvedPoolSettings extends ResolvedConnectionSettings
         maxSessionUse = settings?.maxSessionUse ?? Duration(hours: 4),
         maxQueryCount = settings?.maxQueryCount ?? 100000;
 }
+
+class ResolvedTransactionSettings extends ResolvedSessionSettings
+    implements TransactionSettings {
+  @override
+  final IsolationLevel? isolationLevel;
+  @override
+  final AccessMode? accessMode;
+  @override
+  final DeferrableMode? deferrable;
+
+  ResolvedTransactionSettings(TransactionSettings? super.settings)
+      : isolationLevel = settings?.isolationLevel,
+        accessMode = settings?.accessMode,
+        deferrable = settings?.deferrable;
+}
