@@ -74,7 +74,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
   /// another [withConnection] call later.
   Future<R> withConnection<R>(
     Future<R> Function(Connection connection) fn, {
-    ConnectionSettings? connectionSettings,
+    ConnectionSettings? settings,
     L? locality,
   });
 
