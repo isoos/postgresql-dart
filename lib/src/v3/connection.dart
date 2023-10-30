@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
 import 'package:pool/pool.dart' as pool;
+import 'package:postgres/src/v3/resolved_settings.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
@@ -25,44 +26,6 @@ String identifier(String source) {
   return '"$escaped"';
 }
 
-class _ResolvedSettings {
-  final Endpoint endpoint;
-  final SessionSettings? settings;
-
-  final String username;
-  final String password;
-
-  final Duration connectTimeout;
-  final Duration queryTimeout;
-  final String timeZone;
-  final Encoding encoding;
-
-  final SslMode sslMode;
-  final ReplicationMode replicationMode;
-  final QueryMode queryMode;
-
-  final StreamChannelTransformer<Message, Message>? transformer;
-
-  final bool allowSuperfluousParameters;
-
-  _ResolvedSettings(
-    this.endpoint,
-    this.settings,
-  )   : username = endpoint.username ?? 'postgres',
-        password = endpoint.password ?? 'postgres',
-        connectTimeout =
-            settings?.connectTimeout ?? const Duration(seconds: 15),
-        queryTimeout = settings?.queryTimeout ?? const Duration(minutes: 5),
-        timeZone = settings?.timeZone ?? 'UTC',
-        encoding = settings?.encoding ?? utf8,
-        transformer = settings?.transformer,
-        replicationMode = settings?.replicationMode ?? ReplicationMode.none,
-        queryMode = settings?.queryMode ?? QueryMode.extended,
-        sslMode = settings?.sslMode ?? SslMode.require,
-        allowSuperfluousParameters =
-            settings?.allowSuperfluousParameters ?? false;
-}
-
 abstract class _PgSessionBase implements Session {
   /// The lock to guard operations that must run sequentially, like sending
   /// RPC messages to the postgres server and waiting for them to complete.
@@ -77,6 +40,7 @@ abstract class _PgSessionBase implements Session {
   bool _sessionClosed = false;
 
   PgConnectionImplementation get _connection;
+  ResolvedSessionSettings get _settings;
   Encoding get encoding => _connection._settings.encoding;
 
   void _checkActive() {
@@ -134,15 +98,11 @@ abstract class _PgSessionBase implements Session {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(
       parameters,
-      allowSuperfluous: _connection._settings.allowSuperfluousParameters,
+      allowSuperfluous: _settings.allowSuperfluousParameters,
     );
 
-    late final bool isSimple;
-    if (queryMode != null) {
-      isSimple = queryMode == QueryMode.simple;
-    } else {
-      isSimple = _connection._settings.queryMode == QueryMode.simple;
-    }
+    queryMode ??= _settings.queryMode;
+    final isSimple = queryMode == QueryMode.simple;
 
     if (isSimple && variables.isNotEmpty) {
       throw PgException('Parameterized queries are not supported when '
@@ -207,10 +167,12 @@ abstract class _PgSessionBase implements Session {
 class PgConnectionImplementation extends _PgSessionBase implements Connection {
   static Future<PgConnectionImplementation> connect(
     Endpoint endpoint, {
-    SessionSettings? sessionSettings,
+    ConnectionSettings? connectionSettings,
   }) async {
-    final settings = _ResolvedSettings(endpoint, sessionSettings);
-    var channel = await _connect(settings);
+    final settings = connectionSettings is ResolvedConnectionSettings
+        ? connectionSettings
+        : ResolvedConnectionSettings(connectionSettings, null);
+    var channel = await _connect(endpoint, settings);
 
     if (_debugLog) {
       channel = channel.transform(StreamChannelTransformer(
@@ -231,19 +193,21 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       channel = channel.transform(settings.transformer!);
     }
 
-    final connection = PgConnectionImplementation._(channel, settings);
+    final connection =
+        PgConnectionImplementation._(endpoint, settings, channel);
     await connection._startup();
     return connection;
   }
 
   static Future<StreamChannel<Message>> _connect(
-    _ResolvedSettings settings,
+    Endpoint endpoint,
+    ResolvedConnectionSettings settings,
   ) async {
-    final host = settings.endpoint.host;
-    final port = settings.endpoint.port;
+    final host = endpoint.host;
+    final port = endpoint.port;
 
     var socket = await Socket.connect(
-      settings.endpoint.isUnixSocket
+      endpoint.isUnixSocket
           ? InternetAddress(host, type: InternetAddressType.unix)
           : host,
       port,
@@ -314,11 +278,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         .transform(messageTransformer(settings.encoding));
   }
 
+  final Endpoint _endpoint;
+  @override
+  final ResolvedConnectionSettings _settings;
   final StreamChannel<Message> _channel;
   late final StreamSubscription<Message> _serverMessages;
   bool _isClosing = false;
-
-  final _ResolvedSettings _settings;
 
   _PendingOperation? _pending;
   // Errors happening while a transaction is active will roll back the
@@ -338,7 +303,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   @override
   PgConnectionImplementation get _connection => this;
 
-  PgConnectionImplementation._(this._channel, this._settings) {
+  PgConnectionImplementation._(this._endpoint, this._settings, this._channel) {
     _serverMessages = _channel.stream.listen(_handleMessage);
   }
 
@@ -347,11 +312,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       final result = _pending = _AuthenticationProcedure(this);
 
       _channel.sink.add(StartupMessage(
-        database: _settings.endpoint.database,
+        database: _endpoint.database,
         timeZone: _settings.timeZone,
-        username: _settings.username,
+        username: _endpoint.username,
         replication: _settings.replicationMode,
-        applicationName: _settings.settings?.applicationName,
+        applicationName: _settings.applicationName,
       ));
 
       return result._done.future.timeout(_settings.connectTimeout);
@@ -390,18 +355,24 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   }
 
   @override
-  Future<R> run<R>(Future<R> Function(Session session) fn) {
+  Future<R> run<R>(
+    Future<R> Function(Session session) fn, {
+    SessionSettings? settings,
+  }) {
+    final session =
+        _RegularSession(this, ResolvedSessionSettings(settings, _settings));
     // Unlike runTx, this doesn't need any locks. An active transaction changes
     // the state of the connection, this method does not. If methods requiring
     // locks are called by [fn], these methods will aquire locks as needed.
-    return Future.sync(() => fn(this));
+    return Future.sync(() => fn(session));
   }
 
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    TransactionMode? transactionMode,
+    TransactionSettings? settings,
   }) {
+    final rsettings = ResolvedTransactionSettings(settings, _settings);
     // Keep this database is locked while the transaction is active. We do that
     // because on a protocol level, the entire connection is in a transaction.
     // From a Dart point of view, methods called outside of the transaction
@@ -412,12 +383,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       // The transaction has its own _operationLock, which means that it (and
       // only it) can be used to run statements while it's active.
       final transaction =
-          _connection._activeTransaction = _TransactionSession(this);
+          _connection._activeTransaction = _TransactionSession(this, rsettings);
 
       late String beginQuery;
-      if (transactionMode != null && transactionMode.isNotEmpty) {
+      if (rsettings.shouldExpandBegin) {
         final sb = StringBuffer('BEGIN');
-        transactionMode.appendToStringBuffer(sb);
+        rsettings.expandBegin(sb);
         sb.write(';');
         beginQuery = sb.toString();
       } else {
@@ -492,8 +463,7 @@ class _PreparedStatement extends Statement {
         this,
         _description.bindParameters(
           parameters,
-          allowSuperfluous:
-              _session._connection._settings.allowSuperfluousParameters,
+          allowSuperfluous: _session._settings.allowSuperfluousParameters,
         ));
   }
 
@@ -502,7 +472,7 @@ class _PreparedStatement extends Statement {
     Object? parameters, {
     Duration? timeout,
   }) async {
-    timeout ??= _session._connection._settings.queryTimeout;
+    timeout ??= _session._settings.queryTimeout;
     final items = <ResultRow>[];
     final subscription = bind(parameters).listen(items.add);
     try {
@@ -854,13 +824,24 @@ class _Channels implements Channels {
   }
 }
 
+class _RegularSession extends _PgSessionBase {
+  @override
+  final PgConnectionImplementation _connection;
+  @override
+  final ResolvedSessionSettings _settings;
+
+  _RegularSession(this._connection, this._settings);
+}
+
 class _TransactionSession extends _PgSessionBase {
   @override
   final PgConnectionImplementation _connection;
+  @override
+  final ResolvedTransactionSettings _settings;
 
   PgException? _transactionException;
 
-  _TransactionSession(this._connection);
+  _TransactionSession(this._connection, this._settings);
 
   /// Sends the [command] and, before releasing the internal connection lock,
   /// marks the session as closed.
@@ -965,8 +946,8 @@ class _AuthenticationProcedure extends _PendingOperation {
   void _initializeAuthenticate(
       AuthenticationMessage message, AuthenticationScheme scheme) {
     final authConnection = PostgresAuthConnection(
-      connection._settings.username,
-      connection._settings.password,
+      connection._endpoint.username ?? '',
+      connection._endpoint.password ?? '',
       connection._channel.sink.add,
     );
 
@@ -1044,13 +1025,11 @@ extension FutureExt<R> on Future<R> {
   }
 }
 
-extension on TransactionMode {
-  bool get isEmpty =>
-      isolationLevel == null && accessMode == null && deferrable == null;
+extension on TransactionSettings {
+  bool get shouldExpandBegin =>
+      isolationLevel != null || accessMode != null || deferrable != null;
 
-  bool get isNotEmpty => !isEmpty;
-
-  void appendToStringBuffer(StringBuffer sb) {
+  void expandBegin(StringBuffer sb) {
     if (isolationLevel != null) {
       sb.write(isolationLevel!.queryPart);
     }

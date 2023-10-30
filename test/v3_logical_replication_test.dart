@@ -68,7 +68,7 @@ void main() {
           password: 'replication',
           port: await server.port,
         ),
-        sessionSettings: SessionSettings(
+        settings: ConnectionSettings(
             replicationMode: ReplicationMode.logical,
             transformer: serverMessagesInterceptor.transformer,
             queryMode: QueryMode.simple),

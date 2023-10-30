@@ -82,7 +82,7 @@ class PostgresServer {
   }) async {
     return Connection.open(
       await endpoint(),
-      sessionSettings: SessionSettings(
+      settings: ConnectionSettings(
         connectTimeout: Duration(seconds: 3),
         queryTimeout: Duration(seconds: 3),
         replicationMode: replicationMode,
@@ -102,7 +102,7 @@ class PostgresServer {
     if (_useV3) {
       return PostgreSQLConnection.withV3(
         e,
-        sessionSettings: SessionSettings(
+        connectionSettings: ConnectionSettings(
           sslMode: sslMode,
           replicationMode: replicationMode,
           allowSuperfluousParameters: true,

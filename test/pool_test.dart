@@ -5,8 +5,6 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-final _sessionSettings = SessionSettings();
-
 void main() {
   withPostgresServer('generic', (server) {
     late Pool pool;
@@ -14,8 +12,7 @@ void main() {
     setUp(() async {
       pool = Pool.withEndpoints(
         [await server.endpoint()],
-        sessionSettings: _sessionSettings,
-        poolSettings: PoolSettings(maxConnectionCount: 8),
+        settings: PoolSettings(maxConnectionCount: 8),
       );
 
       // We can't write to the public schema by default in postgres 15, so
@@ -83,8 +80,7 @@ void main() {
     test('can limit concurrent connections', () async {
       final pool = Pool.withEndpoints(
         [await server.endpoint()],
-        sessionSettings: _sessionSettings,
-        poolSettings: const PoolSettings(maxConnectionCount: 2),
+        settings: PoolSettings(maxConnectionCount: 2),
       );
       addTearDown(pool.close);
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart' as pool;
+import 'package:postgres/src/v3/resolved_settings.dart';
 
 import '../../postgres.dart';
 import '../v3/connection.dart';
@@ -17,17 +18,17 @@ EndpointSelector roundRobinSelector(List<Endpoint> endpoints) {
 
 class PoolImplementation<L> implements Pool<L> {
   final EndpointSelector<L> _selector;
-  final SessionSettings? sessionSettings;
-  final PoolSettings? poolSettings;
+  final ResolvedPoolSettings settings;
 
   final _connections = <_PoolConnection>[];
-  late final _maxConnectionCount = poolSettings?.maxConnectionCount ?? 1;
+  late final _maxConnectionCount = settings.maxConnectionCount;
   late final _semaphore = pool.Pool(
     _maxConnectionCount,
-    timeout: sessionSettings?.connectTimeout ?? const Duration(seconds: 15),
+    timeout: settings.connectTimeout,
   );
 
-  PoolImplementation(this._selector, this.sessionSettings, this.poolSettings);
+  PoolImplementation(this._selector, PoolSettings? settings)
+      : settings = ResolvedPoolSettings(settings);
 
   @override
   Future<void> close() async {
@@ -90,10 +91,11 @@ class PoolImplementation<L> implements Pool<L> {
   @override
   Future<R> run<R>(
     Future<R> Function(Session session) fn, {
+    SessionSettings? settings,
     L? locality,
   }) {
     return withConnection(
-      (connection) => connection.run(fn),
+      (connection) => connection.run(fn, settings: settings),
       locality: locality,
     );
   }
@@ -101,13 +103,13 @@ class PoolImplementation<L> implements Pool<L> {
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    TransactionMode? transactionMode,
+    TransactionSettings? settings,
     L? locality,
   }) {
     return withConnection(
       (connection) => connection.runTx(
         fn,
-        transactionMode: transactionMode,
+        settings: settings,
       ),
       locality: locality,
     );
@@ -116,7 +118,7 @@ class PoolImplementation<L> implements Pool<L> {
   @override
   Future<R> withConnection<R>(
     Future<R> Function(Connection connection) fn, {
-    SessionSettings? sessionSettings,
+    ConnectionSettings? connectionSettings,
     L? locality,
   }) async {
     final resource = await _semaphore.request();
@@ -140,7 +142,8 @@ class PoolImplementation<L> implements Pool<L> {
           selection.endpoint,
           await PgConnectionImplementation.connect(
             selection.endpoint,
-            sessionSettings: sessionSettings ?? this.sessionSettings,
+            connectionSettings:
+                ResolvedConnectionSettings(connectionSettings, this.settings),
           ),
         );
         _connections.add(connection);
@@ -193,17 +196,14 @@ class _PoolConnection implements Connection {
   }
 
   bool _isExpired() {
-    final maxConnectionAge = _pool.poolSettings?.maxConnectionAge;
-    if (maxConnectionAge != null &&
-        DateTime.now().difference(_opened) > maxConnectionAge) {
+    final age = DateTime.now().difference(_opened);
+    if (age > _pool.settings.maxConnectionAge) {
       return true;
     }
-    final maxSessionUse = _pool.poolSettings?.maxSessionUse;
-    if (maxSessionUse != null && _elapsedInUse > maxSessionUse) {
+    if (_elapsedInUse > _pool.settings.maxSessionUse) {
       return true;
     }
-    final maxQueryCount = _pool.poolSettings?.maxQueryCount;
-    if (maxQueryCount != null && _queryCount > maxQueryCount) {
+    if (_queryCount > _pool.settings.maxQueryCount) {
       return true;
     }
     return false;
@@ -253,20 +253,23 @@ class _PoolConnection implements Connection {
   }
 
   @override
-  Future<R> run<R>(Future<R> Function(Session session) fn) {
+  Future<R> run<R>(
+    Future<R> Function(Session session) fn, {
+    SessionSettings? settings,
+  }) {
     // TODO: increment query count on session callbacks
-    return _connection.run(fn);
+    return _connection.run(fn, settings: settings);
   }
 
   @override
   Future<R> runTx<R>(
     Future<R> Function(Session session) fn, {
-    TransactionMode? transactionMode,
+    TransactionSettings? settings,
   }) {
     // TODO: increment query count on session callbacks
     return _connection.runTx(
       fn,
-      transactionMode: transactionMode,
+      settings: settings,
     );
   }
 }
