@@ -214,7 +214,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       timeout: settings.connectTimeout,
     );
 
-    final sslCompleter = Completer<int>.sync();
+    final sslCompleter = Completer<int>();
     // ignore: cancel_subscriptions
     final subscription = socket.listen(
       (data) {
@@ -524,10 +524,10 @@ class _PgResultStreamSubscription
   final StreamSubscription<ResultRow> _source;
   final bool ignoreRows;
 
-  final Completer<int> _affectedRows = Completer();
+  final _affectedRows = Completer<int>();
   int _affectedRowsSoFar = 0;
-  final Completer<ResultSchema> _schema = Completer();
-  final Completer<void> _done = Completer();
+  final _schema = Completer<ResultSchema>();
+  final _done = Completer<void>();
   ResultSchema? _resultSchema;
 
   @override
@@ -813,7 +813,7 @@ class _Channels implements Channels {
 
   @override
   Future<void> notify(String channel, [String? payload]) async {
-    final statementCompleter = _notifyStatement ??= Completer()
+    final statementCompleter = _notifyStatement ??= Completer<Statement>()
       ..complete(Future(() async {
         return _connection.prepare(
             Sql(r'SELECT pg_notify($1, $2)', types: [Type.text, Type.text]));
@@ -892,7 +892,7 @@ abstract class _PendingOperation {
 
 class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
   final StackTrace trace;
-  final doneWithOperation = Completer<void>.sync();
+  final doneWithOperation = Completer<void>();
   async.Result<T>? result;
 
   _WaitForMessage(super.session, this.trace);
@@ -937,7 +937,7 @@ class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
 
 class _AuthenticationProcedure extends _PendingOperation {
   final StackTrace _trace;
-  final Completer<void> _done = Completer();
+  final _done = Completer<void>();
 
   late PostgresAuthenticator _authenticator;
 

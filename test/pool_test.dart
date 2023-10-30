@@ -46,7 +46,7 @@ void main() {
 
       final completeTransaction = Completer();
       final transaction = pool.runTx((session) async {
-        await pool
+        await session
             .execute('INSERT INTO test.transactions VALUES (1), (2), (3);');
         await completeTransaction.future;
       });
