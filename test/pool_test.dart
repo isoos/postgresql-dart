@@ -104,4 +104,26 @@ void main() {
       await didInvokeThird.future;
     });
   });
+
+  withPostgresServer('closes old connections', (server) {
+    test('when new connection required it', () async {
+      final pool = Pool.withEndpoints(
+        [await server.endpoint()],
+        settings: PoolSettings(maxConnectionCount: 1),
+      );
+      addTearDown(pool.close);
+
+      final results = <int>{};
+      final futures = <Future>{};
+      for (var i = 0; i < 10; i++) {
+        final f = pool.withConnection((c) async {
+          await c.execute('SELECT $i');
+          results.add(i);
+        }, settings: PoolSettings(applicationName: 'x$i'));
+        futures.add(f);
+      }
+      await Future.wait(futures);
+      expect(results, hasLength(10));
+    });
+  });
 }

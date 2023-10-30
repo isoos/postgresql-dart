@@ -157,6 +157,7 @@ class PoolImplementation<L> implements Pool<L> {
       } else {
         // Allow the connection to be re-used later.
         connection?._isInUse = false;
+        connection?._lastReturned = DateTime.now();
       }
     }
   }
@@ -170,6 +171,17 @@ class PoolImplementation<L> implements Pool<L> {
       //       race conditions may create conflicts.
       oldc._isInUse = true;
       return oldc;
+    }
+
+    while (_connections.length == _maxConnectionCount) {
+      final candidates =
+          _connections.where((c) => c._isInUse == false).toList();
+      if (candidates.isEmpty) {
+        throw StateError('The pool should not be in this state.');
+      }
+      final selected = candidates
+          .reduce((a, b) => a._lastReturned.isBefore(b._lastReturned) ? a : b);
+      await selected._dispose();
     }
 
     final newc = _PoolConnection(
@@ -186,6 +198,7 @@ class PoolImplementation<L> implements Pool<L> {
     //       flag is set, otherwise race conditions may create conflicts or
     //       pool close may miss the connection.
     _connections.add(newc);
+    print(_connections.length);
     return newc;
   }
 }
@@ -198,6 +211,7 @@ class _PoolConnection implements Connection {
   final ResolvedConnectionSettings _connectionSettings;
   final PgConnectionImplementation _connection;
   Duration _elapsedInUse = Duration.zero;
+  DateTime _lastReturned = DateTime.now();
   bool _isInUse = false;
   int _queryCount = 0;
 
