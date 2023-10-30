@@ -26,21 +26,6 @@ String identifier(String source) {
   return '"$escaped"';
 }
 
-class _ResolvedSettings extends ResolvedConnectionSettings {
-  final Endpoint endpoint;
-  final ConnectionSettings? settings;
-
-  final String username;
-  final String password;
-
-  _ResolvedSettings(
-    this.endpoint,
-    this.settings,
-  )   : username = endpoint.username ?? 'postgres',
-        password = endpoint.password ?? 'postgres',
-        super(settings);
-}
-
 abstract class _PgSessionBase implements Session {
   /// The lock to guard operations that must run sequentially, like sending
   /// RPC messages to the postgres server and waiting for them to complete.
@@ -187,8 +172,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     Endpoint endpoint, {
     ConnectionSettings? connectionSettings,
   }) async {
-    final settings = _ResolvedSettings(endpoint, connectionSettings);
-    var channel = await _connect(settings);
+    final settings = ResolvedConnectionSettings(connectionSettings);
+    var channel = await _connect(endpoint, settings);
 
     if (_debugLog) {
       channel = channel.transform(StreamChannelTransformer(
@@ -209,19 +194,21 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       channel = channel.transform(settings.transformer!);
     }
 
-    final connection = PgConnectionImplementation._(channel, settings);
+    final connection =
+        PgConnectionImplementation._(endpoint, settings, channel);
     await connection._startup();
     return connection;
   }
 
   static Future<StreamChannel<Message>> _connect(
-    _ResolvedSettings settings,
+    Endpoint endpoint,
+    ResolvedConnectionSettings settings,
   ) async {
-    final host = settings.endpoint.host;
-    final port = settings.endpoint.port;
+    final host = endpoint.host;
+    final port = endpoint.port;
 
     var socket = await Socket.connect(
-      settings.endpoint.isUnixSocket
+      endpoint.isUnixSocket
           ? InternetAddress(host, type: InternetAddressType.unix)
           : host,
       port,
@@ -292,11 +279,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         .transform(messageTransformer(settings.encoding));
   }
 
+  final Endpoint _endpoint;
+  final ResolvedConnectionSettings _settings;
   final StreamChannel<Message> _channel;
   late final StreamSubscription<Message> _serverMessages;
   bool _isClosing = false;
-
-  final _ResolvedSettings _settings;
 
   _PendingOperation? _pending;
   // Errors happening while a transaction is active will roll back the
@@ -316,7 +303,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   @override
   PgConnectionImplementation get _connection => this;
 
-  PgConnectionImplementation._(this._channel, this._settings) {
+  PgConnectionImplementation._(this._endpoint, this._settings, this._channel) {
     _serverMessages = _channel.stream.listen(_handleMessage);
   }
 
@@ -325,11 +312,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       final result = _pending = _AuthenticationProcedure(this);
 
       _channel.sink.add(StartupMessage(
-        database: _settings.endpoint.database,
+        database: _endpoint.database,
         timeZone: _settings.timeZone,
-        username: _settings.username,
+        username: _endpoint.username,
         replication: _settings.replicationMode,
-        applicationName: _settings.settings?.applicationName,
+        applicationName: _settings.applicationName,
       ));
 
       return result._done.future.timeout(_settings.connectTimeout);
@@ -943,8 +930,8 @@ class _AuthenticationProcedure extends _PendingOperation {
   void _initializeAuthenticate(
       AuthenticationMessage message, AuthenticationScheme scheme) {
     final authConnection = PostgresAuthConnection(
-      connection._settings.username,
-      connection._settings.password,
+      connection._endpoint.username ?? '',
+      connection._endpoint.password ?? '',
       connection._channel.sink.add,
     );
 
