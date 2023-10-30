@@ -62,7 +62,7 @@ class PoolImplementation<L> implements Pool<L> {
 
   @override
   Future<Statement> prepare(Object query) async {
-    final statementCompleter = Completer<Statement>.sync();
+    final statementCompleter = Completer<Statement>();
 
     unawaited(withConnection((connection) async {
       _PoolStatement? poolStatement;
@@ -122,7 +122,6 @@ class PoolImplementation<L> implements Pool<L> {
     L? locality,
   }) async {
     final resource = await _semaphore.request();
-
     _PoolConnection? connection;
     bool reuse = true;
     final sw = Stopwatch();
@@ -134,22 +133,11 @@ class PoolImplementation<L> implements Pool<L> {
 
       // Find an existing connection that is currently unused, or open another
       // one.
-      connection = _connections
-          .firstWhereOrNull((c) => c._mayReuse(endpoint: selection.endpoint));
-      if (connection == null) {
-        connection ??= _PoolConnection(
-          this,
-          selection.endpoint,
-          await PgConnectionImplementation.connect(
-            selection.endpoint,
-            connectionSettings:
-                ResolvedConnectionSettings(settings, this._settings),
-          ),
-        );
-        _connections.add(connection);
-      }
+      connection = await _selectOrCreate(
+        selection.endpoint,
+        ResolvedConnectionSettings(settings, this._settings),
+      );
 
-      connection._isInUse = true;
       sw.start();
       try {
         return await fn(connection);
@@ -172,6 +160,34 @@ class PoolImplementation<L> implements Pool<L> {
       }
     }
   }
+
+  Future<_PoolConnection> _selectOrCreate(
+      Endpoint endpoint, ResolvedConnectionSettings settings) async {
+    final oldc =
+        _connections.firstWhereOrNull((c) => c._mayReuse(endpoint, settings));
+    if (oldc != null) {
+      // NOTE: It is important to update the _isInUse flag here, otherwise
+      //       race conditions may create conflicts.
+      oldc._isInUse = true;
+      return oldc;
+    }
+
+    final newc = _PoolConnection(
+      this,
+      endpoint,
+      settings,
+      await PgConnectionImplementation.connect(
+        endpoint,
+        connectionSettings: settings,
+      ),
+    );
+    newc._isInUse = true;
+    // NOTE: It is important to update _connections list after the isInUse
+    //       flag is set, otherwise race conditions may create conflicts or
+    //       pool close may miss the connection.
+    _connections.add(newc);
+    return newc;
+  }
 }
 
 /// An opened [Connection] we're able to use in [Pool.withConnection].
@@ -179,17 +195,20 @@ class _PoolConnection implements Connection {
   final _opened = DateTime.now();
   final PoolImplementation _pool;
   final Endpoint _endpoint;
+  final ResolvedConnectionSettings _connectionSettings;
   final PgConnectionImplementation _connection;
   Duration _elapsedInUse = Duration.zero;
   bool _isInUse = false;
   int _queryCount = 0;
 
-  _PoolConnection(this._pool, this._endpoint, this._connection);
+  _PoolConnection(
+      this._pool, this._endpoint, this._connectionSettings, this._connection);
 
-  bool _mayReuse({
-    required Endpoint endpoint,
-  }) {
+  bool _mayReuse(Endpoint endpoint, ResolvedConnectionSettings settings) {
     if (_isInUse || endpoint != _endpoint || _isExpired()) {
+      return false;
+    }
+    if (!_connectionSettings.isMatchingConnection(settings)) {
       return false;
     }
     return true;
@@ -275,7 +294,7 @@ class _PoolConnection implements Connection {
 }
 
 class _PoolStatement implements Statement {
-  final Completer<void> _disposed = Completer();
+  final _disposed = Completer<void>();
   final Statement _underlying;
 
   _PoolStatement(this._underlying);

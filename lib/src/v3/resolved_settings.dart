@@ -27,6 +27,13 @@ class ResolvedSessionSettings implements SessionSettings {
         allowSuperfluousParameters = settings?.allowSuperfluousParameters ??
             fallback?.allowSuperfluousParameters ??
             false;
+
+  bool isMatchingSession(ResolvedSessionSettings other) {
+    return connectTimeout == other.connectTimeout &&
+        queryTimeout == other.queryTimeout &&
+        queryMode == other.queryMode &&
+        allowSuperfluousParameters == other.allowSuperfluousParameters;
+  }
 }
 
 class ResolvedConnectionSettings extends ResolvedSessionSettings
@@ -56,6 +63,16 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
         replicationMode = settings?.replicationMode ??
             fallback?.replicationMode ??
             ReplicationMode.none;
+
+  bool isMatchingConnection(ResolvedConnectionSettings other) {
+    return isMatchingSession(other) &&
+        applicationName == other.applicationName &&
+        timeZone == other.timeZone &&
+        encoding == other.encoding &&
+        sslMode == other.sslMode &&
+        transformer == other.transformer &&
+        replicationMode == other.replicationMode;
+  }
 }
 
 class ResolvedPoolSettings extends ResolvedConnectionSettings
