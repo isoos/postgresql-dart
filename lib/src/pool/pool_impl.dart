@@ -91,10 +91,11 @@ class PoolImplementation<L> implements Pool<L> {
   @override
   Future<R> run<R>(
     Future<R> Function(Session session) fn, {
+    SessionSettings? settings,
     L? locality,
   }) {
     return withConnection(
-      (connection) => connection.run(fn),
+      (connection) => connection.run(fn, settings: settings),
       locality: locality,
     );
   }
@@ -252,9 +253,12 @@ class _PoolConnection implements Connection {
   }
 
   @override
-  Future<R> run<R>(Future<R> Function(Session session) fn) {
+  Future<R> run<R>(
+    Future<R> Function(Session session) fn, {
+    SessionSettings? settings,
+  }) {
     // TODO: increment query count on session callbacks
-    return _connection.run(fn);
+    return _connection.run(fn, settings: settings);
   }
 
   @override

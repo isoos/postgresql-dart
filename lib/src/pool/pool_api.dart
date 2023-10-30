@@ -81,6 +81,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
   @override
   Future<R> run<R>(
     Future<R> Function(Session session) fn, {
+    SessionSettings? settings,
     L? locality,
   });
 

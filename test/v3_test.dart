@@ -227,8 +227,6 @@ void main() {
 
       await expectLater(
         connection.run(expectAsync1((session) async {
-          expect(identical(connection, session), isTrue);
-
           await session
               .execute('CREATE TEMPORARY TABLE foo (id INTEGER PRIMARY KEY);');
           await session.execute('INSERT INTO foo VALUES (3);');
@@ -242,6 +240,18 @@ void main() {
       expect(rows, [
         [3]
       ]);
+    });
+
+    test('run with bad query mode', () async {
+      await expectLater(
+          connection.run(settings: SessionSettings(queryMode: QueryMode.simple),
+              (session) async {
+            await session.execute(
+              r'SELECT * FROM foo WHERE where id = $1',
+              parameters: ['id#1'],
+            );
+          }),
+          throwsA(isA<PgException>()));
     });
 
     group('runTx', () {

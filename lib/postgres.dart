@@ -138,9 +138,9 @@ abstract class SessionExecutor {
   /// Returns the result (either the value or an error) of invoking [fn]. No
   /// updates will be reverted in the event of an error.
   Future<R> run<R>(
-    Future<R> Function(Session session) fn,
-    // {SessionSettings? sessionSettings,}
-  );
+    Future<R> Function(Session session) fn, {
+    SessionSettings? settings,
+  });
 
   /// Obtains a [Session] running in a transaction and calls [fn] with it.
   ///

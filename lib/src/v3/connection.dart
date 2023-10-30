@@ -355,11 +355,16 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   }
 
   @override
-  Future<R> run<R>(Future<R> Function(Session session) fn) {
+  Future<R> run<R>(
+    Future<R> Function(Session session) fn, {
+    SessionSettings? settings,
+  }) {
+    final session =
+        _RegularSession(this, ResolvedSessionSettings(settings, _settings));
     // Unlike runTx, this doesn't need any locks. An active transaction changes
     // the state of the connection, this method does not. If methods requiring
     // locks are called by [fn], these methods will aquire locks as needed.
-    return Future.sync(() => fn(this));
+    return Future.sync(() => fn(session));
   }
 
   @override
@@ -817,6 +822,15 @@ class _Channels implements Channels {
 
     await statement.run([channel, payload]);
   }
+}
+
+class _RegularSession extends _PgSessionBase {
+  @override
+  final PgConnectionImplementation _connection;
+  @override
+  final ResolvedSessionSettings _settings;
+
+  _RegularSession(this._connection, this._settings);
 }
 
 class _TransactionSession extends _PgSessionBase {
