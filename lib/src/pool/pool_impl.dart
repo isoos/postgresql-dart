@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart' as pool;
+import 'package:postgres/src/v3/resolved_settings.dart';
 
 import '../../postgres.dart';
 import '../v3/connection.dart';
@@ -139,7 +140,8 @@ class PoolImplementation<L> implements Pool<L> {
           selection.endpoint,
           await PgConnectionImplementation.connect(
             selection.endpoint,
-            connectionSettings: connectionSettings ?? this.settings,
+            connectionSettings:
+                ResolvedConnectionSettings(connectionSettings, this.settings),
           ),
         );
         _connections.add(connection);

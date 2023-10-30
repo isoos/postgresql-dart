@@ -172,7 +172,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     Endpoint endpoint, {
     ConnectionSettings? connectionSettings,
   }) async {
-    final settings = ResolvedConnectionSettings(connectionSettings);
+    final settings = connectionSettings is ResolvedConnectionSettings
+        ? connectionSettings
+        : ResolvedConnectionSettings(connectionSettings, null);
     var channel = await _connect(endpoint, settings);
 
     if (_debugLog) {

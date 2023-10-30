@@ -15,12 +15,18 @@ class ResolvedSessionSettings implements SessionSettings {
   @override
   final bool allowSuperfluousParameters;
 
-  ResolvedSessionSettings(SessionSettings? settings)
-      : connectTimeout = settings?.connectTimeout ?? Duration(seconds: 15),
-        queryTimeout = settings?.queryTimeout ?? Duration(minutes: 5),
-        queryMode = settings?.queryMode ?? QueryMode.extended,
-        allowSuperfluousParameters =
-            settings?.allowSuperfluousParameters ?? false;
+  ResolvedSessionSettings(SessionSettings? settings, SessionSettings? fallback)
+      : connectTimeout = settings?.connectTimeout ??
+            fallback?.connectTimeout ??
+            Duration(seconds: 15),
+        queryTimeout = settings?.queryTimeout ??
+            fallback?.queryTimeout ??
+            Duration(minutes: 5),
+        queryMode =
+            settings?.queryMode ?? fallback?.queryMode ?? QueryMode.extended,
+        allowSuperfluousParameters = settings?.allowSuperfluousParameters ??
+            fallback?.allowSuperfluousParameters ??
+            false;
 }
 
 class ResolvedConnectionSettings extends ResolvedSessionSettings
@@ -38,13 +44,18 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
   @override
   final ReplicationMode replicationMode;
 
-  ResolvedConnectionSettings(ConnectionSettings? super.settings)
-      : applicationName = settings?.applicationName,
-        timeZone = settings?.timeZone ?? 'UTC',
-        encoding = settings?.encoding ?? utf8,
-        sslMode = settings?.sslMode ?? SslMode.require,
-        transformer = settings?.transformer,
-        replicationMode = settings?.replicationMode ?? ReplicationMode.none;
+  ResolvedConnectionSettings(
+      ConnectionSettings? super.settings, ConnectionSettings? super.fallback)
+      : applicationName =
+            settings?.applicationName ?? fallback?.applicationName,
+        timeZone = settings?.timeZone ?? fallback?.timeZone ?? 'UTC',
+        encoding = settings?.encoding ?? fallback?.encoding ?? utf8,
+        sslMode = settings?.sslMode ?? fallback?.sslMode ?? SslMode.require,
+        // TODO: consider merging the transformers
+        transformer = settings?.transformer ?? fallback?.transformer,
+        replicationMode = settings?.replicationMode ??
+            fallback?.replicationMode ??
+            ReplicationMode.none;
 }
 
 class ResolvedPoolSettings extends ResolvedConnectionSettings
@@ -58,11 +69,12 @@ class ResolvedPoolSettings extends ResolvedConnectionSettings
   @override
   final int maxQueryCount;
 
-  ResolvedPoolSettings(PoolSettings? super.settings)
+  ResolvedPoolSettings(PoolSettings? settings)
       : maxConnectionCount = settings?.maxConnectionCount ?? 1,
         maxConnectionAge = settings?.maxConnectionAge ?? Duration(hours: 12),
         maxSessionUse = settings?.maxSessionUse ?? Duration(hours: 4),
-        maxQueryCount = settings?.maxQueryCount ?? 100000;
+        maxQueryCount = settings?.maxQueryCount ?? 100000,
+        super(settings, null);
 }
 
 class ResolvedTransactionSettings extends ResolvedSessionSettings
@@ -74,7 +86,8 @@ class ResolvedTransactionSettings extends ResolvedSessionSettings
   @override
   final DeferrableMode? deferrable;
 
-  ResolvedTransactionSettings(TransactionSettings? super.settings)
+  ResolvedTransactionSettings(
+      TransactionSettings? super.settings, super.fallback)
       : isolationLevel = settings?.isolationLevel,
         accessMode = settings?.accessMode,
         deferrable = settings?.deferrable;
