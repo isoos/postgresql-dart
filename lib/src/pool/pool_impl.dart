@@ -18,17 +18,17 @@ EndpointSelector roundRobinSelector(List<Endpoint> endpoints) {
 
 class PoolImplementation<L> implements Pool<L> {
   final EndpointSelector<L> _selector;
-  final ResolvedPoolSettings settings;
+  final ResolvedPoolSettings _settings;
 
   final _connections = <_PoolConnection>[];
-  late final _maxConnectionCount = settings.maxConnectionCount;
+  late final _maxConnectionCount = _settings.maxConnectionCount;
   late final _semaphore = pool.Pool(
     _maxConnectionCount,
-    timeout: settings.connectTimeout,
+    timeout: _settings.connectTimeout,
   );
 
   PoolImplementation(this._selector, PoolSettings? settings)
-      : settings = ResolvedPoolSettings(settings);
+      : _settings = ResolvedPoolSettings(settings);
 
   @override
   Future<void> close() async {
@@ -118,7 +118,7 @@ class PoolImplementation<L> implements Pool<L> {
   @override
   Future<R> withConnection<R>(
     Future<R> Function(Connection connection) fn, {
-    ConnectionSettings? connectionSettings,
+    ConnectionSettings? settings,
     L? locality,
   }) async {
     final resource = await _semaphore.request();
@@ -143,7 +143,7 @@ class PoolImplementation<L> implements Pool<L> {
           await PgConnectionImplementation.connect(
             selection.endpoint,
             connectionSettings:
-                ResolvedConnectionSettings(connectionSettings, this.settings),
+                ResolvedConnectionSettings(settings, this._settings),
           ),
         );
         _connections.add(connection);
@@ -197,13 +197,13 @@ class _PoolConnection implements Connection {
 
   bool _isExpired() {
     final age = DateTime.now().difference(_opened);
-    if (age > _pool.settings.maxConnectionAge) {
+    if (age > _pool._settings.maxConnectionAge) {
       return true;
     }
-    if (_elapsedInUse > _pool.settings.maxSessionUse) {
+    if (_elapsedInUse > _pool._settings.maxSessionUse) {
       return true;
     }
-    if (_queryCount > _pool.settings.maxQueryCount) {
+    if (_queryCount > _pool._settings.maxQueryCount) {
       return true;
     }
     return false;
