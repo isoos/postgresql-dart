@@ -5,8 +5,8 @@ import 'dart:typed_data';
 
 import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
+import 'package:meta/meta.dart';
 import 'package:pool/pool.dart' as pool;
-import 'package:postgres/src/v3/resolved_settings.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
@@ -15,10 +15,11 @@ import '../binary_codec.dart';
 import '../text_codec.dart';
 import 'protocol.dart';
 import 'query_description.dart';
+import 'resolved_settings.dart';
 
 const _debugLog = false;
 
-String identifier(String source) {
+String _identifier(String source) {
   // To avoid complex ambiguity rules, we always wrap identifier in double
   // quotes. That means the only character we need to escape are double quotes
   // in the source.
@@ -110,6 +111,7 @@ abstract class _PgSessionBase implements Session {
     }
 
     if (isSimple || (ignoreRows && variables.isEmpty)) {
+      _connection._queryCount++;
       // Great, we can just run a simple query.
       final controller = StreamController<ResultRow>();
       final items = <ResultRow>[];
@@ -294,8 +296,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   var _statementCounter = 0;
   var _portalCounter = 0;
+  var _queryCount = 0;
 
   late final _channels = _Channels(this);
+
+  @internal
+  int get queryCount => _queryCount;
 
   @override
   Channels get channels => _channels;
@@ -472,6 +478,7 @@ class _PreparedStatement extends Statement {
     Object? parameters, {
     Duration? timeout,
   }) async {
+    _session._connection._queryCount++;
     timeout ??= _session._settings.queryTimeout;
     final items = <ResultRow>[];
     final subscription = bind(parameters).listen(items.add);
@@ -763,7 +770,7 @@ class _Channels implements Channels {
 
   void _subscribe(String channel, MultiStreamController firstListener) {
     Future(() async {
-      await _connection.execute(Sql('LISTEN ${identifier(channel)}'),
+      await _connection.execute(Sql('LISTEN ${_identifier(channel)}'),
           ignoreRows: true);
     }).onError<Object>((error, stackTrace) {
       _activeListeners[channel]?.remove(firstListener);
@@ -782,7 +789,7 @@ class _Channels implements Channels {
       _activeListeners.remove(channel);
 
       // Send unlisten command
-      await _connection.execute(Sql('UNLISTEN ${identifier(channel)}'),
+      await _connection.execute(Sql('UNLISTEN ${_identifier(channel)}'),
           ignoreRows: true);
     }
   }
