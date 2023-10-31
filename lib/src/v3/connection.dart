@@ -290,12 +290,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   // transaction and should be reporte to the user.
   _TransactionSession? _activeTransaction;
 
-  final Map<String, String> _parameters = {};
+  final _parameters = <String, String>{};
 
   var _statementCounter = 0;
   var _portalCounter = 0;
 
-  late final _Channels _channels = _Channels(this);
+  late final _channels = _Channels(this);
 
   @override
   Channels get channels => _channels;
@@ -364,7 +364,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     // Unlike runTx, this doesn't need any locks. An active transaction changes
     // the state of the connection, this method does not. If methods requiring
     // locks are called by [fn], these methods will aquire locks as needed.
-    return Future.sync(() => fn(session));
+    return Future<R>(() => fn(session));
   }
 
   @override

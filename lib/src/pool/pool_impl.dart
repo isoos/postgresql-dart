@@ -198,7 +198,6 @@ class PoolImplementation<L> implements Pool<L> {
     //       flag is set, otherwise race conditions may create conflicts or
     //       pool close may miss the connection.
     _connections.add(newc);
-    print(_connections.length);
     return newc;
   }
 }
@@ -230,13 +229,13 @@ class _PoolConnection implements Connection {
 
   bool _isExpired() {
     final age = DateTime.now().difference(_opened);
-    if (age > _pool._settings.maxConnectionAge) {
+    if (age >= _pool._settings.maxConnectionAge) {
       return true;
     }
-    if (_elapsedInUse > _pool._settings.maxSessionUse) {
+    if (_elapsedInUse >= _pool._settings.maxSessionUse) {
       return true;
     }
-    if (_queryCount > _pool._settings.maxQueryCount) {
+    if (_queryCount >= _pool._settings.maxQueryCount) {
       return true;
     }
     return false;
