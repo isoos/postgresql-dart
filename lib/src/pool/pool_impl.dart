@@ -212,7 +212,6 @@ class _PoolConnection implements Connection {
   Duration _elapsedInUse = Duration.zero;
   DateTime _lastReturned = DateTime.now();
   bool _isInUse = false;
-  int _queryCount = 0;
 
   _PoolConnection(
       this._pool, this._endpoint, this._connectionSettings, this._connection);
@@ -235,7 +234,7 @@ class _PoolConnection implements Connection {
     if (_elapsedInUse >= _pool._settings.maxSessionUse) {
       return true;
     }
-    if (_queryCount >= _pool._settings.maxQueryCount) {
+    if (_connection.queryCount >= _pool._settings.maxQueryCount) {
       return true;
     }
     return false;
@@ -268,7 +267,6 @@ class _PoolConnection implements Connection {
     QueryMode? queryMode,
     Duration? timeout,
   }) {
-    _queryCount++;
     return _connection.execute(
       query,
       parameters: parameters,
