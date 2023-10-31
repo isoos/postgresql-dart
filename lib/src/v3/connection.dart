@@ -98,7 +98,7 @@ abstract class _PgSessionBase implements Session {
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(
       parameters,
-      allowSuperfluous: _settings.allowSuperfluousParameters,
+      ignoreSuperfluous: _settings.ignoreSuperfluousParameters,
     );
 
     queryMode ??= _settings.queryMode;
@@ -463,7 +463,7 @@ class _PreparedStatement extends Statement {
         this,
         _description.bindParameters(
           parameters,
-          allowSuperfluous: _session._settings.allowSuperfluousParameters,
+          ignoreSuperfluous: _session._settings.ignoreSuperfluousParameters,
         ));
   }
 

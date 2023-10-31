@@ -408,7 +408,7 @@ class ConnectionSettings extends SessionSettings {
     super.connectTimeout,
     super.queryTimeout,
     super.queryMode,
-    super.allowSuperfluousParameters,
+    super.ignoreSuperfluousParameters,
   });
 }
 
@@ -428,14 +428,15 @@ class SessionSettings {
   /// prefer using [QueryMode.extended].
   final QueryMode? queryMode;
 
-  /// Override the default query map check if superfluous parameters are found.
-  final bool? allowSuperfluousParameters;
+  /// When set, the default query map will not throw exception when superfluous
+  /// parameters are found.
+  final bool? ignoreSuperfluousParameters;
 
   SessionSettings({
     this.connectTimeout,
     this.queryTimeout,
     this.queryMode,
-    this.allowSuperfluousParameters,
+    this.ignoreSuperfluousParameters,
   });
 }
 
@@ -551,6 +552,6 @@ class TransactionSettings extends SessionSettings {
     super.connectTimeout,
     super.queryTimeout,
     super.queryMode,
-    super.allowSuperfluousParameters,
+    super.ignoreSuperfluousParameters,
   });
 }

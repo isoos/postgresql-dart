@@ -37,7 +37,7 @@ class PoolSettings extends ConnectionSettings {
     super.transformer,
     super.queryTimeout,
     super.queryMode,
-    super.allowSuperfluousParameters,
+    super.ignoreSuperfluousParameters,
   });
 }
 
