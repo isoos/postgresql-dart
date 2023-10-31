@@ -1,10 +1,8 @@
-# postgres
+# PostgreSQL client
 
 [![CI](https://github.com/isoos/postgresql-dart/actions/workflows/dart.yml/badge.svg)](https://github.com/isoos/postgresql-dart/actions/workflows/dart.yml)
 
-A library for connecting to and querying PostgreSQL databases (see [Postgres Protocol](https://www.postgresql.org/docs/13/protocol-overview.html)).
-
-This driver uses the more efficient and secure extended query format of the PostgreSQL protocol.
+A library for connecting to and querying PostgreSQL databases (see [Postgres Protocol](https://www.postgresql.org/docs/13/protocol-overview.html)). This driver uses the more efficient and secure extended query format of the PostgreSQL protocol.
 
 ## Usage
 
