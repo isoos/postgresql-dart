@@ -278,7 +278,6 @@ class _PoolConnection implements Connection {
 
   @override
   Future<Statement> prepare(Object query) {
-    // TODO: increment query count on statement runs
     return _connection.prepare(query);
   }
 
@@ -287,7 +286,6 @@ class _PoolConnection implements Connection {
     Future<R> Function(Session session) fn, {
     SessionSettings? settings,
   }) {
-    // TODO: increment query count on session callbacks
     return _connection.run(fn, settings: settings);
   }
 
@@ -296,7 +294,6 @@ class _PoolConnection implements Connection {
     Future<R> Function(Session session) fn, {
     TransactionSettings? settings,
   }) {
-    // TODO: increment query count on session callbacks
     return _connection.runTx(
       fn,
       settings: settings,
