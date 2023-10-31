@@ -13,7 +13,7 @@ class ResolvedSessionSettings implements SessionSettings {
   @override
   final QueryMode queryMode;
   @override
-  final bool allowSuperfluousParameters;
+  final bool ignoreSuperfluousParameters;
 
   ResolvedSessionSettings(SessionSettings? settings, SessionSettings? fallback)
       : connectTimeout = settings?.connectTimeout ??
@@ -24,15 +24,15 @@ class ResolvedSessionSettings implements SessionSettings {
             Duration(minutes: 5),
         queryMode =
             settings?.queryMode ?? fallback?.queryMode ?? QueryMode.extended,
-        allowSuperfluousParameters = settings?.allowSuperfluousParameters ??
-            fallback?.allowSuperfluousParameters ??
+        ignoreSuperfluousParameters = settings?.ignoreSuperfluousParameters ??
+            fallback?.ignoreSuperfluousParameters ??
             false;
 
   bool isMatchingSession(ResolvedSessionSettings other) {
     return connectTimeout == other.connectTimeout &&
         queryTimeout == other.queryTimeout &&
         queryMode == other.queryMode &&
-        allowSuperfluousParameters == other.allowSuperfluousParameters;
+        ignoreSuperfluousParameters == other.ignoreSuperfluousParameters;
   }
 }
 

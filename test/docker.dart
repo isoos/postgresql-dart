@@ -105,7 +105,7 @@ class PostgresServer {
         connectionSettings: ConnectionSettings(
           sslMode: sslMode,
           replicationMode: replicationMode,
-          allowSuperfluousParameters: true,
+          ignoreSuperfluousParameters: true,
           connectTimeout: connectTimeout,
         ),
       );

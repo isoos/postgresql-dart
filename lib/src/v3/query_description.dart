@@ -77,7 +77,7 @@ class InternalQueryDescription implements Sql {
 
   List<TypedValue> bindParameters(
     Object? params, {
-    bool allowSuperfluous = false,
+    bool ignoreSuperfluous = false,
   }) {
     final knownTypes = parameterTypes;
     final parameters = <TypedValue>[];
@@ -127,7 +127,7 @@ class InternalQueryDescription implements Sql {
         variableIndex++;
       }
 
-      if (unmatchedVariables.isNotEmpty && !allowSuperfluous) {
+      if (unmatchedVariables.isNotEmpty && !ignoreSuperfluous) {
         throw ArgumentError.value(params, 'parameters',
             'Contains superfluous variables: ${unmatchedVariables.join(', ')}');
       }
