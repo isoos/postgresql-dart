@@ -184,19 +184,15 @@ void main() {
     });
 
     test('interval', () async {
-      await expectInverse(Duration(minutes: 15), Type.interval);
-      await expectInverse(Duration(days: 1, minutes: 15), Type.interval);
-      await expectInverse(-Duration(days: 1, seconds: 5), Type.interval);
-      await expectInverse(
-          Duration(days: 365 * 100000, microseconds: 1), Type.interval);
-      await expectInverse(
-          -Duration(days: 365 * 100000, microseconds: 1), Type.interval);
+      await expectInverse(Interval(microseconds: 12345678), Type.interval);
+      await expectInverse(Interval(days: 1, microseconds: 15), Type.interval);
+      await expectInverse(Interval(days: -1, months: 5), Type.interval);
       try {
         await conn.query('INSERT INTO t (v) VALUES (@v:interval)',
             substitutionValues: {'v': 'not-interval'});
         fail('unreachable');
       } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: Duration'));
+        expect(e.toString(), contains('Expected: Interval'));
       }
     });
 

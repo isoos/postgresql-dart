@@ -258,4 +258,26 @@ void main() {
       });
     });
   });
+
+  withPostgresServer('interval', (server) {
+    test('decode interval', () async {
+      final connection = await server.newConnection();
+
+      await connection.execute(
+        '''
+      CREATE TABLE IF NOT EXISTS users
+      (id SERIAL PRIMARY KEY, name TEXT NOT NULL, max_age INTERVAL DEFAULT ('1000000 day'::interval) NOT NULL)
+    ''',
+      );
+
+      await connection.execute("INSERT INTO users (name) VALUES ('Alice')");
+
+      final rs = await connection.execute('SELECT * FROM users');
+      expect(rs.single.toColumnMap(), {
+        'id': 1,
+        'name': 'Alice',
+        'max_age': Interval(days: 1000000),
+      });
+    });
+  });
 }

@@ -166,6 +166,13 @@ class PostgresBinaryEncoder<T extends Object> {
 
       case Type.interval:
         {
+          if (input is Interval) {
+            final bd = ByteData(16);
+            bd.setInt64(0, input.microseconds);
+            bd.setInt32(8, input.days);
+            bd.setInt32(12, input.months);
+            return bd.buffer.asUint8List();
+          }
           if (input is Duration) {
             final bd = ByteData(16);
             bd.setInt64(0, input.inMicroseconds);
@@ -173,7 +180,7 @@ class PostgresBinaryEncoder<T extends Object> {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: Duration Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: Interval Got: ${input.runtimeType}');
         }
 
       case Type.numeric:
@@ -538,10 +545,11 @@ class PostgresBinaryDecoder<T> {
             .add(Duration(microseconds: buffer.getInt64(0))) as T;
 
       case Type.interval:
-        {
-          if (buffer.getInt64(8) != 0) throw UnimplementedError();
-          return Duration(microseconds: buffer.getInt64(0)) as T;
-        }
+        return Interval(
+          microseconds: buffer.getInt64(0),
+          days: buffer.getInt32(8),
+          months: buffer.getInt32(12),
+        ) as T;
 
       case Type.numeric:
         return _decodeNumeric(input) as T;
