@@ -3,11 +3,11 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
-import 'buffer.dart';
+import '../buffer.dart';
+import '../time_converters.dart';
+import '../types.dart';
 import 'logical_replication_messages.dart';
 import 'shared_messages.dart';
-import 'time_converters.dart';
-import 'types.dart';
 
 abstract class ServerMessage extends Message {}
 

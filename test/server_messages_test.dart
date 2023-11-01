@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:postgres/src/server_messages.dart';
+import 'package:postgres/src/messages/server_messages.dart';
 import 'package:test/test.dart';
 
 void main() {

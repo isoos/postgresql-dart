@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/logical_replication_messages.dart';
 import 'package:postgres/src/message_window.dart';
-import 'package:postgres/src/server_messages.dart';
-import 'package:postgres/src/shared_messages.dart';
+import 'package:postgres/src/messages/logical_replication_messages.dart';
+import 'package:postgres/src/messages/server_messages.dart';
+import 'package:postgres/src/messages/shared_messages.dart';
 import 'package:test/test.dart';
 
 void main() {

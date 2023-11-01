@@ -4,13 +4,13 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
 
-import 'binary_codec.dart';
-import 'buffer.dart';
-import 'replication.dart';
+import '../binary_codec.dart';
+import '../buffer.dart';
+import '../replication.dart';
+import '../text_codec.dart';
+import '../time_converters.dart';
+import '../types.dart';
 import 'shared_messages.dart';
-import 'text_codec.dart';
-import 'time_converters.dart';
-import 'types.dart';
 
 abstract class ClientMessageFormat {
   static const int text = 0;

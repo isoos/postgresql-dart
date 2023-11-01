@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'buffer.dart';
+import '../buffer.dart';
 import 'client_messages.dart';
 import 'server_messages.dart';
 
