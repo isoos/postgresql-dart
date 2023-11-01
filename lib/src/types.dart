@@ -5,6 +5,50 @@ import 'package:meta/meta.dart';
 
 import 'exceptions.dart' show PgException;
 
+/// In Postgresql `interval` values are stored as [months], [days], and [microseconds].
+/// This is done because the number of days in a month varies, and a day can
+/// have 23 or 25 hours if a daylight savings time adjustment is involved.
+///
+/// Value from one field is never automatically translated to value of
+/// another field, so <60*60*24 seconds> != <1 days> and so on.
+@immutable
+class Interval {
+  final int months;
+  final int days;
+  final int microseconds;
+
+  Interval({
+    this.months = 0,
+    this.days = 0,
+    this.microseconds = 0,
+  });
+
+  factory Interval.duration(Duration value) =>
+      Interval(microseconds: value.inMicroseconds);
+
+  late final _asStringParts = [
+    if (months != 0) '$months months',
+    if (days != 0) '$days days',
+    if (microseconds != 0) '$microseconds microseconds',
+  ];
+  late final _asString =
+      _asStringParts.isEmpty ? '0 microseconds' : _asStringParts.join(' ');
+
+  @override
+  String toString() => _asString;
+
+  @override
+  int get hashCode => Object.hashAll([months, days, microseconds]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Interval &&
+        other.months == months &&
+        other.days == days &&
+        other.microseconds == microseconds;
+  }
+}
+
 /// LSN is a PostgreSQL Log Sequence Number.
 ///
 /// For more details, see: https://www.postgresql.org/docs/current/datatype-pg-lsn.html
@@ -118,8 +162,8 @@ enum Type<T extends Object> {
   /// Must be a [DateTime] (microsecond date and time precision)
   timestampWithTimezone<DateTime>(1184, nameForSubstitution: 'timestamptz'),
 
-  /// Must be a [Duration]
-  interval<Duration>(1186, nameForSubstitution: 'interval'),
+  /// Must be a [Interval]
+  interval<Interval>(1186, nameForSubstitution: 'interval'),
 
   /// An arbitrary-precision number.
   ///

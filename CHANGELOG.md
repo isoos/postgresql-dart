@@ -26,6 +26,7 @@ Notable breaking behaviour changes:
     removed from the new API.
   - Queries are not cached implicitly, explicit prepared statements can be
     used instead.
+  - `interval` values are returned as `Interval` type instead of `Duration`.
   - Types, fields and parameter names may have been renamed to be more
     consistent or more aligned with the Dart naming guides.
 
