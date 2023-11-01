@@ -35,6 +35,12 @@ class PoolImplementation<L> implements Pool<L> {
       : _settings = ResolvedPoolSettings(settings);
 
   @override
+  bool get isOpen => !_semaphore.isClosed;
+
+  @override
+  Future<void> get closed => _semaphore.done;
+
+  @override
   Future<void> close() async {
     await _semaphore.close();
 
@@ -250,6 +256,12 @@ class _PoolConnection implements Connection {
     _pool._connections.remove(this);
     await _connection.close();
   }
+
+  @override
+  bool get isOpen => _connection.isOpen;
+
+  @override
+  Future<void> get closed => _connection.closed;
 
   @override
   Channels get channels {

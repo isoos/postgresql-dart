@@ -74,6 +74,22 @@ void main() {
       expect(await stmt.run([]), hasLength(3));
       await stmt.dispose();
     });
+
+    test('disables close()', () async {
+      late Connection leakedConnection;
+
+      await pool.withConnection((connection) async {
+        expect(connection.isOpen, isTrue);
+        await connection.close();
+        expect(connection.isOpen, isTrue);
+
+        leakedConnection = connection;
+      });
+
+      await pool.close();
+      expect(pool.isOpen, isFalse);
+      expect(leakedConnection.isOpen, isFalse);
+    });
   });
 
   withPostgresServer('limit pool connections', (server) {

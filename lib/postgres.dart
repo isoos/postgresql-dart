@@ -87,6 +87,20 @@ class Sql {
 }
 
 abstract class Session {
+  /// Whether this connection is currently open.
+  ///
+  /// A [Connection] is open until it's closed (either by an explicit
+  /// [Connection.close] call or due to an unrecoverable error from the server).
+  /// Other sessions, such as transactions or connections borrowed from a pool,
+  /// may have a shorter lifetime.
+  ///
+  /// The [closed] future can be awaited to get notified when this session is
+  /// closing.
+  bool get isOpen;
+
+  /// A future that completes when [isOpen] turns false.
+  Future<void> get closed;
+
   /// Prepares a reusable statement from a [query].
   ///
   /// [query] must either be a [String] or a [Sql] object with types for
