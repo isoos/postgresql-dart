@@ -387,7 +387,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     // Unlike runTx, this doesn't need any locks. An active transaction changes
     // the state of the connection, this method does not. If methods requiring
     // locks are called by [fn], these methods will aquire locks as needed.
-    return Future<R>(() => fn(session));
+    return Future<R>(() => fn(session)).whenComplete(session._closeSession);
   }
 
   @override

@@ -224,9 +224,13 @@ void main() {
 
     test('run', () async {
       const returnValue = 'returned from run()';
+      late Session leakedSession;
 
       await expectLater(
         connection.run(expectAsync1((session) async {
+          expect(session.isOpen, isTrue);
+          leakedSession = session;
+
           await session
               .execute('CREATE TEMPORARY TABLE foo (id INTEGER PRIMARY KEY);');
           await session.execute('INSERT INTO foo VALUES (3);');
@@ -235,6 +239,8 @@ void main() {
         })),
         completion(returnValue),
       );
+
+      expect(leakedSession.isOpen, isFalse);
 
       final rows = await connection.execute('SELECT * FROM foo');
       expect(rows, [
