@@ -6,9 +6,9 @@ import 'dart:typed_data';
 import 'package:postgres/src/buffer.dart';
 
 import '../binary_codec.dart';
-import '../client_messages.dart';
 import '../exceptions.dart';
-import '../server_messages.dart';
+import '../messages/client_messages.dart';
+import '../messages/server_messages.dart';
 import '../types.dart';
 import 'connection.dart';
 import 'execution_context.dart';

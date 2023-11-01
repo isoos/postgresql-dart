@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
-import 'server_messages.dart';
+import 'messages/server_messages.dart';
 import 'types.dart';
 
 /// Exception thrown by the package (client or server side).

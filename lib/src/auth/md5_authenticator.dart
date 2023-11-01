@@ -2,8 +2,8 @@ import 'package:buffer/buffer.dart';
 import 'package:crypto/crypto.dart';
 
 import '../buffer.dart';
-import '../client_messages.dart';
-import '../server_messages.dart';
+import '../messages/client_messages.dart';
+import '../messages/server_messages.dart';
 import 'auth.dart';
 
 class MD5Authenticator extends PostgresAuthenticator {

@@ -11,13 +11,12 @@ import 'package:meta/meta.dart';
 
 import '../../postgres.dart' show ConnectionSettings, Endpoint, Notification;
 import '../auth/auth.dart';
-import '../client_messages.dart';
 import '../exceptions.dart';
 import '../message_window.dart';
+import '../messages/client_messages.dart';
+import '../messages/server_messages.dart';
 import '../replication.dart';
-import '../server_messages.dart';
 import '../types.dart' show Severity;
-
 import 'execution_context.dart';
 import 'query.dart';
 import 'query_cache.dart';
@@ -25,7 +24,6 @@ import 'query_queue.dart';
 import 'v2_v3_delegate.dart';
 
 part 'connection_fsm.dart';
-
 part 'transaction_proxy.dart';
 
 typedef PostgreSQLException = ServerException;

@@ -6,8 +6,8 @@ import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
 
 import 'buffer.dart';
-import 'server_messages.dart';
-import 'shared_messages.dart';
+import 'messages/server_messages.dart';
+import 'messages/shared_messages.dart';
 
 const int _headerByteSize = 5;
 

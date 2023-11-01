@@ -6,14 +6,14 @@ import 'package:async/async.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../buffer.dart';
-import '../client_messages.dart';
 import '../message_window.dart';
-import '../server_messages.dart';
-import '../shared_messages.dart';
+import '../messages/client_messages.dart';
+import '../messages/server_messages.dart';
+import '../messages/shared_messages.dart';
 
-export '../client_messages.dart';
-export '../server_messages.dart';
-export '../shared_messages.dart';
+export '../messages/client_messages.dart';
+export '../messages/server_messages.dart';
+export '../messages/shared_messages.dart';
 
 class AggregatedClientMessage extends ClientMessage {
   final List<ClientMessage> messages;
