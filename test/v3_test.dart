@@ -448,6 +448,21 @@ void main() {
       expect(incoming, contains(isA<DataRowMessage>()));
       expect(outgoing, contains(isA<QueryMessage>()));
     });
+
+    test('can close connection', () async {
+      expect(connection.isOpen, isTrue);
+      await connection.execute('SELECT 1');
+
+      var didFinishClose = false;
+      expect(
+          connection.closed.then((_) => didFinishClose), completion(isFalse));
+      await connection.close();
+      didFinishClose = true;
+
+      expect(connection.isOpen, isFalse);
+      expect(
+          () => connection.execute('SELECT 1'), throwsA(_isPostgresException));
+    });
   });
 
   withPostgresServer('can close connection after error conditions', (server) {

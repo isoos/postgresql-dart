@@ -308,6 +308,23 @@ void main() {
       final total = await conn.execute('SELECT id FROM t');
       expect(total, []);
     });
+
+    test('isOpen and closed', () async {
+      late Session leakedTransaction;
+      var afterTransaction = false;
+
+      await conn.runTx(expectAsync1((session) async {
+        leakedTransaction = session;
+        expect(session.isOpen, isTrue);
+
+        // .closed should complete before the runTx future
+        expectLater(
+            session.closed.then((_) => afterTransaction), completion(isFalse));
+      }));
+      afterTransaction = true;
+
+      expect(leakedTransaction.isOpen, isFalse);
+    });
   });
 
   // A transaction can fail for three reasons: query error, exception in code, or a rollback.

@@ -38,11 +38,19 @@ abstract class _PgSessionBase implements Session {
   /// connection in the meantime.
   final _operationLock = pool.Pool(1);
 
-  bool _sessionClosed = false;
+  final Completer<void> _sessionClosedCompleter = Completer();
+
+  bool get _sessionClosed => _sessionClosedCompleter.isCompleted;
 
   PgConnectionImplementation get _connection;
   ResolvedSessionSettings get _settings;
   Encoding get encoding => _connection._settings.encoding;
+
+  void _closeSession() {
+    if (!_sessionClosed) {
+      _sessionClosedCompleter.complete();
+    }
+  }
 
   void _checkActive() {
     if (_sessionClosed) {
@@ -87,6 +95,12 @@ abstract class _PgSessionBase implements Session {
       });
     });
   }
+
+  @override
+  bool get isOpen => !_sessionClosed && !_connection._isClosing;
+
+  @override
+  Future<void> get closed => _sessionClosedCompleter.future;
 
   @override
   Future<Result> execute(
@@ -359,6 +373,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       _serverMessages.resume();
     }
   }
+
+  @override
+  Future<void> get closed => _channel.sink.done;
 
   @override
   Future<R> run<R>(
@@ -866,7 +883,7 @@ class _TransactionSession extends _PgSessionBase {
       controller.stream.listen(items.add),
       true,
       cleanup: () {
-        _sessionClosed = true;
+        _closeSession();
         _connection._activeTransaction = null;
       },
     );
