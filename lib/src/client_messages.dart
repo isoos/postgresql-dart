@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
-import 'package:meta/meta.dart';
 
 import 'binary_codec.dart';
 import 'buffer.dart';
@@ -32,10 +31,8 @@ abstract class ClientMessageId {
 abstract class ClientMessage extends Message {
   const ClientMessage();
 
-  @internal
   void applyToBuffer(PgByteDataWriter buffer);
 
-  @internal
   Uint8List asBytes({required Encoding encoding}) {
     final buffer = PgByteDataWriter(encoding: encoding);
     applyToBuffer(buffer);
