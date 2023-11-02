@@ -262,6 +262,7 @@ final class ResultSchema {
 }
 
 final class ResultSchemaColumn {
+  final int typeOid;
   final Type type;
   final int? tableOid;
   final String? columnName;
@@ -269,6 +270,7 @@ final class ResultSchemaColumn {
   final bool isBinaryEncoding;
 
   ResultSchemaColumn({
+    required this.typeOid,
     required this.type,
     this.tableOid,
     this.columnName,
