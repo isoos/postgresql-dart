@@ -11,8 +11,6 @@ import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
 import '../auth/auth.dart';
-import '../binary_codec.dart';
-import '../text_codec.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 import 'resolved_settings.dart';
@@ -45,6 +43,7 @@ abstract class _PgSessionBase implements Session {
   PgConnectionImplementation get _connection;
   ResolvedSessionSettings get _settings;
   Encoding get encoding => _connection._settings.encoding;
+  Codec get _codec => _connection._codec;
 
   void _closeSession() {
     if (!_sessionClosed) {
@@ -291,7 +290,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     }));
 
     return StreamChannel<List<int>>(adaptedStream, outgoingSocket)
-        .transform(messageTransformer(settings.encoding));
+        .transform(messageTransformer(settings.codec));
   }
 
   final Endpoint _endpoint;
@@ -658,7 +657,8 @@ class _PgResultStreamSubscription
         final schema = _resultSchema = ResultSchema([
           for (final field in message.fieldDescriptions)
             ResultSchemaColumn(
-              type: Type.byTypeOid[field.typeOid] ?? Type.byteArray,
+              typeOid: field.typeOid,
+              type: Type.byTypeOid[field.typeOid] ?? Type.unknownType,
               columnName: field.fieldName,
               columnOid: field.columnOid,
               tableOid: field.tableOid,
@@ -673,17 +673,11 @@ class _PgResultStreamSubscription
           final columnValues = <Object?>[];
           for (var i = 0; i < message.values.length; i++) {
             final field = schema.columns[i];
-
-            final type = field.type;
-            late final dynamic value;
-            if (field.isBinaryEncoding) {
-              value = PostgresBinaryDecoder(type)
-                  .convert(message.values[i], session.encoding);
-            } else {
-              value = PostgresTextDecoder(type)
-                  .convert(message.values[i], session.encoding);
-            }
-
+            final value = session._codec.decode(DecodeInput(
+              typeOid: field.typeOid,
+              bytes: message.values[i],
+              isBinaryEncoding: field.isBinaryEncoding,
+            ));
             columnValues.add(value);
           }
 

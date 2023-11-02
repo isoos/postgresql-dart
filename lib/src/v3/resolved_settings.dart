@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:postgres/messages.dart';
 import 'package:stream_channel/stream_channel.dart';
 
+import '../../messages.dart';
 import '../../postgres.dart';
 
 class ResolvedSessionSettings implements SessionSettings {
@@ -50,6 +50,13 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
   final StreamChannelTransformer<Message, Message>? transformer;
   @override
   final ReplicationMode replicationMode;
+  @override
+  final List<CustomCodec>? customCodecs;
+
+  late final codec = TypeCodec(
+    encoding: encoding,
+    customCodecs: customCodecs,
+  );
 
   ResolvedConnectionSettings(
       ConnectionSettings? super.settings, ConnectionSettings? super.fallback)
@@ -60,6 +67,8 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
         sslMode = settings?.sslMode ?? fallback?.sslMode ?? SslMode.require,
         // TODO: consider merging the transformers
         transformer = settings?.transformer ?? fallback?.transformer,
+        // TODO: consider merging or throwing an exception on potential overrides
+        customCodecs = settings?.customCodecs ?? fallback?.customCodecs,
         replicationMode = settings?.replicationMode ??
             fallback?.replicationMode ??
             ReplicationMode.none;

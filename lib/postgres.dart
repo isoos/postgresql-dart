@@ -5,12 +5,14 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:stream_channel/stream_channel.dart';
 
+import 'src/codec/codec.dart';
 import 'src/replication.dart';
 import 'src/types.dart';
 import 'src/v3/connection.dart';
 import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
 
+export 'src/codec/codec.dart';
 export 'src/exceptions.dart';
 export 'src/pool/pool_api.dart';
 export 'src/replication.dart';
@@ -262,6 +264,7 @@ final class ResultSchema {
 }
 
 final class ResultSchemaColumn {
+  final int typeOid;
   final Type type;
   final int? tableOid;
   final String? columnName;
@@ -269,6 +272,7 @@ final class ResultSchemaColumn {
   final bool isBinaryEncoding;
 
   ResultSchemaColumn({
+    required this.typeOid,
     required this.type,
     this.tableOid,
     this.columnName,
@@ -412,6 +416,8 @@ class ConnectionSettings extends SessionSettings {
   /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
   final ReplicationMode? replicationMode;
 
+  final List<CustomCodec>? customCodecs;
+
   ConnectionSettings({
     this.applicationName,
     this.timeZone,
@@ -419,6 +425,7 @@ class ConnectionSettings extends SessionSettings {
     this.sslMode,
     this.transformer,
     this.replicationMode,
+    this.customCodecs,
     super.connectTimeout,
     super.queryTimeout,
     super.queryMode,

@@ -6,6 +6,7 @@ import 'package:async/async.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../buffer.dart';
+import '../codec/codec.dart';
 import '../message_window.dart';
 import '../messages/client_messages.dart';
 import '../messages/server_messages.dart';
@@ -34,9 +35,9 @@ class AggregatedClientMessage extends ClientMessage {
 }
 
 StreamChannelTransformer<Message, List<int>> messageTransformer(
-    Encoding encoding) {
+    TypeCodec codec) {
   return StreamChannelTransformer(
-    _readMessages(encoding),
+    _readMessages(codec.encoding),
     StreamSinkTransformer.fromHandlers(
       handleData: (message, out) {
         if (message is! ClientMessage) {
@@ -47,7 +48,7 @@ StreamChannelTransformer<Message, List<int>> messageTransformer(
           return;
         }
 
-        out.add(message.asBytes(encoding: encoding));
+        out.add(message.asBytesWithCodec(codec: codec));
       },
     ),
   );

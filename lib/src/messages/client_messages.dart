@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
+import 'package:postgres/src/codec/codec.dart';
 
-import '../binary_codec.dart';
 import '../buffer.dart';
 import '../replication.dart';
-import '../text_codec.dart';
 import '../time_converters.dart';
 import '../types.dart';
 import 'shared_messages.dart';
@@ -35,6 +33,15 @@ abstract class ClientMessage extends Message {
 
   Uint8List asBytes({required Encoding encoding}) {
     final buffer = PgByteDataWriter(encoding: encoding);
+    applyToBuffer(buffer);
+    return buffer.toBytes();
+  }
+
+  Uint8List asBytesWithCodec({required TypeCodec codec}) {
+    final buffer = PgByteDataWriter(
+      encoding: codec.encoding,
+      codec: codec,
+    );
     applyToBuffer(buffer);
     return buffer.toBytes();
   }
@@ -176,19 +183,6 @@ class DescribeMessage extends ClientMessage {
 
 extension on TypedValue {
   bool get _hasKnownType => type != Type.unspecified;
-
-  Uint8List? encodeAsBytes(Encoding encoding) {
-    if (_hasKnownType) {
-      final encoder = PostgresBinaryEncoder(type);
-      return encoder.convert(value, encoding);
-    }
-    if (value != null) {
-      const converter = PostgresTextEncoder();
-      return castBytes(
-          encoding.encode(converter.convert(value, escapeStrings: false)));
-    }
-    return null;
-  }
 }
 
 class BindMessage extends ClientMessage {
@@ -209,8 +203,7 @@ class BindMessage extends ClientMessage {
     final portalName = buffer.encodeString(_portalName);
     final statementName = buffer.encodeString(_statementName);
 
-    final parameterBytes =
-        _parameters.map((p) => p.encodeAsBytes(buffer.encoding)).toList();
+    final parameterBytes = _parameters.map(buffer.encodeTypedValue).toList();
     final typeSpecCount = _parameters.where((p) => p._hasKnownType).length;
     var inputParameterElementCount = _parameters.length;
     if (typeSpecCount == _parameters.length || typeSpecCount == 0) {

@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import '../postgres.dart';
 
 /// This class doesn't add much over using `List<int>` instead, however,
 /// it creates a nice explicit type difference from both `String` and `List<int>`,
@@ -14,11 +16,13 @@ class EncodedString {
 
 class PgByteDataWriter extends ByteDataWriter {
   final Encoding encoding;
+  final TypeCodec _codec;
 
   PgByteDataWriter({
     super.bufferLength,
     required this.encoding,
-  });
+    TypeCodec? codec,
+  }) : _codec = codec ?? TypeCodec(encoding: encoding);
 
   late final encodingName = encodeString(encoding.name);
 
@@ -36,6 +40,10 @@ class PgByteDataWriter extends ByteDataWriter {
     writeUint32(5 + encoded.bytesLength);
     write(encoded._bytes);
     writeInt8(0);
+  }
+
+  Uint8List? encodeTypedValue(TypedValue value) {
+    return _codec.encode(value.type, value.value);
   }
 }
 
