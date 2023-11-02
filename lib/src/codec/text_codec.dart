@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'exceptions.dart';
-import 'types.dart';
+import '../exceptions.dart';
+import '../types.dart';
 
 class PostgresTextEncoder extends Converter<Object, String> {
   const PostgresTextEncoder();

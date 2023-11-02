@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:postgres/src/buffer.dart';
 
-import '../binary_codec.dart';
+import '../codec/binary_codec.dart';
 import '../exceptions.dart';
 import '../messages/client_messages.dart';
 import '../messages/server_messages.dart';

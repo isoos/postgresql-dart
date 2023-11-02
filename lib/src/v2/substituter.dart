@@ -1,4 +1,4 @@
-import '../text_codec.dart';
+import '../codec/text_codec.dart';
 import '../types.dart';
 import 'query.dart';
 

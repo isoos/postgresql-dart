@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-import '../binary_codec.dart';
 import '../buffer.dart';
+import '../codec/binary_codec.dart';
 import '../time_converters.dart';
 import '../types.dart';
 import 'server_messages.dart';

@@ -3,9 +3,9 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-import '../binary_codec.dart';
-import '../text_codec.dart';
 import '../types.dart';
+import 'binary_codec.dart';
+import 'text_codec.dart';
 
 abstract class CustomCodec {
   bool canDecode(DecodeInput input);
