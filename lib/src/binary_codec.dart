@@ -374,7 +374,7 @@ class PostgresBinaryEncoder<T extends Object> {
 
       case Type.jsonbArray:
         {
-          if (input is List<Object>) {
+          if (input is List) {
             final objectsArray = input.map(_jsonFusedEncoding(encoding).encode);
             return _writeListBytes<List<int>>(
               objectsArray,
@@ -388,7 +388,7 @@ class PostgresBinaryEncoder<T extends Object> {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<Object> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
         }
     }
   }
