@@ -658,7 +658,8 @@ class _PgResultStreamSubscription
         final schema = _resultSchema = ResultSchema([
           for (final field in message.fieldDescriptions)
             ResultSchemaColumn(
-              type: Type.byTypeOid[field.typeOid] ?? Type.byteArray,
+              typeOid: field.typeOid,
+              type: Type.byTypeOid[field.typeOid] ?? Type.unknownType,
               columnName: field.fieldName,
               columnOid: field.columnOid,
               tableOid: field.tableOid,
