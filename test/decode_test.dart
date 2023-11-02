@@ -259,7 +259,7 @@ void main() {
     });
   });
 
-  withPostgresServer('interval', (server) {
+  withPostgresServer('decoding types', (server) {
     test('decode interval', () async {
       final connection = await server.newConnection();
 
@@ -278,6 +278,12 @@ void main() {
         'name': 'Alice',
         'max_age': Interval(days: 1000000),
       });
+    });
+
+    test('decode numeric', () async {
+      final connection = await server.newConnection();
+      final rs = await connection.execute('SELECT 3.222::numeric(2,1);');
+      expect(rs.single, ['3.2']);
     });
   });
 }
