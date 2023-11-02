@@ -43,7 +43,7 @@ abstract class _PgSessionBase implements Session {
   PgConnectionImplementation get _connection;
   ResolvedSessionSettings get _settings;
   Encoding get encoding => _connection._settings.encoding;
-  Codec get _codec => _connection._codec;
+  TypeCodec get _codec => _connection._settings.codec;
 
   void _closeSession() {
     if (!_sessionClosed) {
