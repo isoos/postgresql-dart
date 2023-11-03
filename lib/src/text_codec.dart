@@ -4,10 +4,9 @@ import 'dart:typed_data';
 import 'exceptions.dart';
 import 'types.dart';
 
-class PostgresTextEncoder extends Converter<Object, String> {
+class PostgresTextEncoder {
   const PostgresTextEncoder();
 
-  @override
   String convert(dynamic input, {bool escapeStrings = true}) {
     if (input == null) {
       return 'null';
