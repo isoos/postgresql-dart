@@ -55,21 +55,23 @@ class Interval {
 @immutable
 class Unknown {
   final Uint8List bytes;
-  final Encoding encoding;
+  final Encoding _encoding;
 
   Unknown({
     required this.bytes,
-    required this.encoding,
-  });
+    required Encoding encoding,
+  }) : _encoding = encoding;
 
+  /// Returns the [bytes] decoded as [String] using the connection's encoding.
+  ///
+  /// Returns `null` when the bytes cannot be decoded as valid [String].
   late final asString = () {
     try {
-      return encoding.decode(bytes);
+      return _encoding.decode(bytes);
     } catch (_) {
       return null;
     }
   }();
-  late final isString = asString != null;
 }
 
 /// LSN is a PostgreSQL Log Sequence Number.
