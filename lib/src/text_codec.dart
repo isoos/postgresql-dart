@@ -217,49 +217,66 @@ class PostgresTextEncoder extends Converter<Object, String> {
   }
 }
 
-class PostgresTextDecoder<T extends Object> {
-  final Type<T> _type;
+class PostgresTextDecoder {
+  final Type _type;
 
   const PostgresTextDecoder(this._type);
 
-  T? convert(Uint8List? input, Encoding encoding) {
+  Object? convert(Uint8List? input, Encoding encoding) {
     if (input == null) return null;
 
-    final asText = encoding.decode(input);
+    late final asText = encoding.decode(input);
 
     // ignore: unnecessary_cast
     switch (_type as Type<Object>) {
+      case Type.name:
       case Type.text:
-        return asText as T;
+      case Type.varChar:
+        return asText;
       case Type.integer:
       case Type.smallInteger:
       case Type.bigInteger:
       case Type.serial:
       case Type.bigSerial:
-        return int.parse(asText) as T;
+        return int.parse(asText);
       case Type.real:
       case Type.double:
-        return num.parse(asText) as T;
+        return num.parse(asText);
       case Type.boolean:
         // In text data format when using simple query protocol, "true" & "false"
         // are represented as `t` and `f`,  respectively.
         // we will check for both just in case
         // TODO: should we check for other representations (e.g. `1`, `on`, `y`,
         // and `yes`)?
-        return (asText == 't' || asText == 'true') as T;
+        return asText == 't' || asText == 'true';
 
       case Type.voidType:
         // TODO: is returning `null` here is the appripriate thing to do?
         return null;
 
-      // We could list out all cases, but it's about 20 lines of code.
-      // TODO: implement the rest of the types
-      // ignore: no_default_cases
-      default:
-        if (asText is T) {
-          return asText as T;
-        }
-        throw UnimplementedError('Text decoding for $_type');
+      case Type.timestampWithTimezone:
+      case Type.timestampWithoutTimezone:
+      case Type.interval:
+      case Type.numeric:
+      case Type.byteArray:
+      case Type.date:
+      case Type.json:
+      case Type.jsonb:
+      case Type.uuid:
+      case Type.point:
+      case Type.booleanArray:
+      case Type.integerArray:
+      case Type.bigIntegerArray:
+      case Type.textArray:
+      case Type.doubleArray:
+      case Type.varCharArray:
+      case Type.jsonbArray:
+      case Type.regtype:
+        // TODO: implement proper decoding of the above
+        return Unknown(bytes: input, encoding: encoding);
+      case Type.unspecified:
+      case Type.unknownType:
+        return Unknown(bytes: input, encoding: encoding);
     }
   }
 }

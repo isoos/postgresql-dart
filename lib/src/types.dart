@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:core';
 import 'dart:core' as core;
+import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
@@ -47,6 +49,27 @@ class Interval {
         other.days == days &&
         other.microseconds == microseconds;
   }
+}
+
+/// Describes a returned value that the package was unable to decode.
+@immutable
+class Unknown {
+  final Uint8List bytes;
+  final Encoding encoding;
+
+  Unknown({
+    required this.bytes,
+    required this.encoding,
+  });
+
+  late final asString = () {
+    try {
+      return encoding.decode(bytes);
+    } catch (_) {
+      return null;
+    }
+  }();
+  late final isString = asString != null;
 }
 
 /// LSN is a PostgreSQL Log Sequence Number.
