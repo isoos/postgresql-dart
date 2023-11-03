@@ -53,12 +53,19 @@ class PostgresBinaryEncoder {
       return null;
     }
 
-    // ignore: unnecessary_cast
     switch (_type) {
       case Type.unknownType:
       case Type.unspecified:
+        {
+          // Pass-through of Uint8List instances allows client with custom types to
+          // encode their types for efficient binary transport.
+          if (input is Uint8List) {
+            return input;
+          }
+          throw ArgumentError('Cannot encode `$input` into ${_type.name}.');
+        }
       case Type.voidType:
-        throw ArgumentError('Cannot encode into ${_type.name}.');
+        throw ArgumentError('Cannot encode `$input` into ${_type.name}.');
       case Type.boolean:
         {
           if (input is bool) {
