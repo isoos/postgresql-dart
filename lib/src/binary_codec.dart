@@ -515,9 +515,10 @@ class PostgresBinaryEncoder {
 }
 
 class PostgresBinaryDecoder {
-  PostgresBinaryDecoder(this.type);
-
+  final int typeOid;
   final Type type;
+
+  PostgresBinaryDecoder(this.typeOid, this.type);
 
   Object? convert(Uint8List? input, Encoding encoding) {
     if (input == null) {
@@ -635,7 +636,7 @@ class PostgresBinaryDecoder {
 
       case Type.unknownType:
       case Type.unspecified:
-        return Unknown(bytes: input, encoding: encoding);
+        return TypedBytes(typeOid: typeOid, bytes: input);
     }
   }
 

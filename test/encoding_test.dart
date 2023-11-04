@@ -667,7 +667,7 @@ Future expectInverse(dynamic value, Type dataType) async {
     dataType = Type.bigInteger;
   }
 
-  final decoder = PostgresBinaryDecoder(dataType);
+  final decoder = PostgresBinaryDecoder(dataType.oid!, dataType);
   final decodedValue = decoder.convert(encodedValue, utf8);
 
   expect(decodedValue, value);

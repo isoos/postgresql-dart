@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:core';
 import 'dart:core' as core;
 import 'dart:typed_data';
@@ -51,27 +50,16 @@ class Interval {
   }
 }
 
-/// Describes a returned value that the package was unable to decode.
+/// Describes a generic bytes string value..
 @immutable
-class Unknown {
+class TypedBytes {
+  final int typeOid;
   final Uint8List bytes;
-  final Encoding _encoding;
 
-  Unknown({
+  TypedBytes({
+    required this.typeOid,
     required this.bytes,
-    required Encoding encoding,
-  }) : _encoding = encoding;
-
-  /// Returns the [bytes] decoded as [String] using the connection's encoding.
-  ///
-  /// Returns `null` when the bytes cannot be decoded as valid [String].
-  late final asString = () {
-    try {
-      return _encoding.decode(bytes);
-    } catch (_) {
-      return null;
-    }
-  }();
+  });
 }
 
 /// LSN is a PostgreSQL Log Sequence Number.

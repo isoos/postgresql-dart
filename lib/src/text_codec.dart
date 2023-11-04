@@ -217,9 +217,10 @@ class PostgresTextEncoder {
 }
 
 class PostgresTextDecoder {
+  final int _typeOid;
   final Type _type;
 
-  const PostgresTextDecoder(this._type);
+  const PostgresTextDecoder(this._typeOid, this._type);
 
   Object? convert(Uint8List? input, Encoding encoding) {
     if (input == null) return null;
@@ -272,10 +273,10 @@ class PostgresTextDecoder {
       case Type.jsonbArray:
       case Type.regtype:
         // TODO: implement proper decoding of the above
-        return Unknown(bytes: input, encoding: encoding);
+        return TypedBytes(typeOid: _typeOid, bytes: input);
       case Type.unspecified:
       case Type.unknownType:
-        return Unknown(bytes: input, encoding: encoding);
+        return TypedBytes(typeOid: _typeOid, bytes: input);
     }
   }
 }
