@@ -1,5 +1,6 @@
 import 'dart:core';
 import 'dart:core' as core;
+import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
@@ -47,6 +48,18 @@ class Interval {
         other.days == days &&
         other.microseconds == microseconds;
   }
+}
+
+/// Describes a generic bytes string value..
+@immutable
+class TypedBytes {
+  final int typeOid;
+  final Uint8List bytes;
+
+  TypedBytes({
+    required this.typeOid,
+    required this.bytes,
+  });
 }
 
 /// LSN is a PostgreSQL Log Sequence Number.

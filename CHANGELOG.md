@@ -27,6 +27,10 @@ Notable breaking behaviour changes:
   - Queries are not cached implicitly, explicit prepared statements can be
     used instead.
   - `interval` values are returned as `Interval` type instead of `Duration`.
+  - A newly added `TypedBytes` instances are returned when the package does
+    not know or has not implemented the appropriate type decoding yet.
+    Previously these values were auto-encoded to `String` and if that failed
+    the `Uint8List` were used.
   - Types, fields and parameter names may have been renamed to be more
     consistent or more aligned with the Dart naming guides.
 

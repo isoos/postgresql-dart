@@ -243,7 +243,7 @@ void main() {
         '0.0': [0, 0, 0, 0, 0, 0, 0, 1], // .0 or 0.0
       };
 
-      final encoder = PostgresBinaryEncoder<Object>(Type.numeric);
+      final encoder = PostgresBinaryEncoder(Type.numeric);
       binaries.forEach((key, value) {
         final uint8List = Uint8List.fromList(value);
         final res = encoder.convert(key, utf8);
@@ -618,7 +618,7 @@ void main() {
   });
 
   test('Invalid UUID encoding', () {
-    final converter = PostgresBinaryEncoder<Object>(Type.uuid);
+    final converter = PostgresBinaryEncoder(Type.uuid);
     try {
       converter.convert('z0000000-0000-0000-0000-000000000000', utf8);
       fail('unreachable');
@@ -667,7 +667,7 @@ Future expectInverse(dynamic value, Type dataType) async {
     dataType = Type.bigInteger;
   }
 
-  final decoder = PostgresBinaryDecoder(dataType);
+  final decoder = PostgresBinaryDecoder(dataType.oid!, dataType);
   final decodedValue = decoder.convert(encodedValue, utf8);
 
   expect(decodedValue, value);

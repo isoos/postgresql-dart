@@ -43,8 +43,8 @@ Codec<Object?, List<int>> _jsonFusedEncoding(Encoding encoding) {
   }
 }
 
-class PostgresBinaryEncoder<T extends Object> {
-  final Type<T> _type;
+class PostgresBinaryEncoder {
+  final Type _type;
 
   const PostgresBinaryEncoder(this._type);
 
@@ -53,12 +53,19 @@ class PostgresBinaryEncoder<T extends Object> {
       return null;
     }
 
-    // ignore: unnecessary_cast
-    switch (_type as Type<Object>) {
+    switch (_type) {
       case Type.unknownType:
       case Type.unspecified:
+        {
+          // Pass-through of Uint8List instances allows client with custom types to
+          // encode their types for efficient binary transport.
+          if (input is Uint8List) {
+            return input;
+          }
+          throw ArgumentError('Cannot encode `$input` into ${_type.name}.');
+        }
       case Type.voidType:
-        throw ArgumentError('Cannot encode into ${_type.name}.');
+        throw ArgumentError('Cannot encode `$input` into ${_type.name}.');
       case Type.boolean:
         {
           if (input is bool) {
@@ -507,12 +514,13 @@ class PostgresBinaryEncoder<T extends Object> {
   }
 }
 
-class PostgresBinaryDecoder<T> {
-  PostgresBinaryDecoder(this.type);
-
+class PostgresBinaryDecoder {
+  final int typeOid;
   final Type type;
 
-  T? convert(Uint8List? input, Encoding encoding) {
+  PostgresBinaryDecoder(this.typeOid, this.type);
+
+  Object? convert(Uint8List? input, Encoding encoding) {
     if (input == null) {
       return null;
     }
@@ -524,52 +532,52 @@ class PostgresBinaryDecoder<T> {
       case Type.name:
       case Type.text:
       case Type.varChar:
-        return encoding.decode(input) as T;
+        return encoding.decode(input);
       case Type.boolean:
-        return (buffer.getInt8(0) != 0) as T;
+        return (buffer.getInt8(0) != 0);
       case Type.smallInteger:
-        return buffer.getInt16(0) as T;
+        return buffer.getInt16(0);
       case Type.serial:
       case Type.integer:
-        return buffer.getInt32(0) as T;
+        return buffer.getInt32(0);
       case Type.bigSerial:
       case Type.bigInteger:
-        return buffer.getInt64(0) as T;
+        return buffer.getInt64(0);
       case Type.real:
-        return buffer.getFloat32(0) as T;
+        return buffer.getFloat32(0);
       case Type.double:
-        return buffer.getFloat64(0) as T;
+        return buffer.getFloat64(0);
       case Type.timestampWithoutTimezone:
       case Type.timestampWithTimezone:
         return DateTime.utc(2000)
-            .add(Duration(microseconds: buffer.getInt64(0))) as T;
+            .add(Duration(microseconds: buffer.getInt64(0)));
 
       case Type.interval:
         return Interval(
           microseconds: buffer.getInt64(0),
           days: buffer.getInt32(8),
           months: buffer.getInt32(12),
-        ) as T;
+        );
 
       case Type.numeric:
-        return _decodeNumeric(input) as T;
+        return _decodeNumeric(input);
 
       case Type.date:
-        return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0))) as T;
+        return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0)));
 
       case Type.jsonb:
         {
           // Removes version which is first character and currently always '1'
           final bytes = input.buffer
               .asUint8List(input.offsetInBytes + 1, input.lengthInBytes - 1);
-          return _jsonFusedEncoding(encoding).decode(bytes) as T;
+          return _jsonFusedEncoding(encoding).decode(bytes);
         }
 
       case Type.json:
-        return _jsonFusedEncoding(encoding).decode(input) as T;
+        return _jsonFusedEncoding(encoding).decode(input);
 
       case Type.byteArray:
-        return input as T;
+        return input;
 
       case Type.uuid:
         {
@@ -588,59 +596,47 @@ class PostgresBinaryDecoder<T> {
             }
           }
 
-          return buf.toString() as T;
+          return buf.toString();
         }
       case Type.regtype:
         final data = input.buffer.asByteData(input.offsetInBytes, input.length);
         final oid = data.getInt32(0);
-        return (Type.byTypeOid[oid] ?? Type.unknownType) as T;
+        return Type.byTypeOid[oid] ?? Type.unknownType;
       case Type.voidType:
         return null;
 
       case Type.point:
-        return Point(buffer.getFloat64(0), buffer.getFloat64(8)) as T;
+        return Point(buffer.getFloat64(0), buffer.getFloat64(8));
 
       case Type.booleanArray:
         return readListBytes<bool>(
-            input, (reader, _) => reader.readUint8() != 0) as T;
+            input, (reader, _) => reader.readUint8() != 0);
 
       case Type.integerArray:
-        return readListBytes<int>(input, (reader, _) => reader.readInt32())
-            as T;
+        return readListBytes<int>(input, (reader, _) => reader.readInt32());
       case Type.bigIntegerArray:
-        return readListBytes<int>(input, (reader, _) => reader.readInt64())
-            as T;
+        return readListBytes<int>(input, (reader, _) => reader.readInt64());
 
       case Type.varCharArray:
       case Type.textArray:
         return readListBytes<String>(input, (reader, length) {
           return encoding.decode(length > 0 ? reader.read(length) : []);
-        }) as T;
+        });
 
       case Type.doubleArray:
-        return readListBytes<double>(input, (reader, _) => reader.readFloat64())
-            as T;
+        return readListBytes<double>(
+            input, (reader, _) => reader.readFloat64());
 
       case Type.jsonbArray:
         return readListBytes<dynamic>(input, (reader, length) {
           reader.read(1);
           final bytes = reader.read(length - 1);
           return _jsonFusedEncoding(encoding).decode(bytes);
-        }) as T;
+        });
 
       case Type.unknownType:
       case Type.unspecified:
-        {
-          // We'll try and decode this as a utf8 string and return that
-          // for many internal types, this is valid. If it fails,
-          // we just return the bytes and let the caller figure out what to
-          // do with it.
-          try {
-            return encoding.decode(input) as T;
-          } catch (_) {
-            return input as T;
-          }
-        }
+        return TypedBytes(typeOid: typeOid, bytes: input);
     }
   }
 

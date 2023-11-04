@@ -678,10 +678,10 @@ class _PgResultStreamSubscription
             final type = field.type;
             late final dynamic value;
             if (field.isBinaryEncoding) {
-              value = PostgresBinaryDecoder(type)
+              value = PostgresBinaryDecoder(field.typeOid, type)
                   .convert(message.values[i], session.encoding);
             } else {
-              value = PostgresTextDecoder(type)
+              value = PostgresTextDecoder(field.typeOid, type)
                   .convert(message.values[i], session.encoding);
             }
 
