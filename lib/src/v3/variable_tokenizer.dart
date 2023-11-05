@@ -1,4 +1,5 @@
 import 'package:charcode/charcode.dart';
+import 'package:postgres/src/types/type_registry.dart';
 
 import '../types.dart';
 import 'query_description.dart';
@@ -356,7 +357,7 @@ class VariableTokenizer {
 
     if (consumedColonForType) {
       final typeName = typeBuffer.toString();
-      final type = Type.bySubstitutionName[typeName];
+      final type = TypeRegistry.instance.resolveSubstitution(typeName);
       if (type == null) {
         error('Unknown type: $typeName');
       }

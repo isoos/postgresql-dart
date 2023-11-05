@@ -16,7 +16,6 @@ import '../message_window.dart';
 import '../messages/client_messages.dart';
 import '../messages/server_messages.dart';
 import '../replication.dart';
-import '../types.dart' show Severity;
 import 'execution_context.dart';
 import 'query.dart';
 import 'query_cache.dart';

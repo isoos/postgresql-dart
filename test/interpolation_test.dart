@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
+import 'package:postgres/src/types/type_registry.dart';
 import 'package:postgres/src/v2/query.dart';
 import 'package:test/test.dart';
 
@@ -9,13 +10,12 @@ void main() {
   test('Ensure all types/format type mappings are available and accurate', () {
     const withoutMapping = {
       Type.unspecified, // Can't bind into unspecified type
-      Type.unknownType, // Can't bind into unknown type
       Type.voidType, // Can't assign to void
       Type.bigSerial, // Can only be created from a table sequence
       Type.serial,
     };
 
-    for (final type in Type.values) {
+    for (final type in TypeRegistry.instance.values) {
       if (withoutMapping.contains(type)) continue;
 
       expect(
@@ -24,7 +24,10 @@ void main() {
         reason: 'There should be a type mapping for $type',
       );
       final code = PostgreSQLFormat.dataTypeStringForDataType(type);
-      expect(PostgreSQLFormatIdentifier.typeStringToCodeMap[code], type);
+      expect(
+          PostgreSQLFormatIdentifier.typeStringToCodeMap
+              .resolveSubstitution(code!),
+          type);
     }
   });
 

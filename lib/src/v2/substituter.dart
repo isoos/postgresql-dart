@@ -1,5 +1,5 @@
-import '../text_codec.dart';
 import '../types.dart';
+import '../types/text_codec.dart';
 import 'query.dart';
 
 class PostgreSQLFormat {

@@ -1,13 +1,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
 
-import '../binary_codec.dart';
 import '../buffer.dart';
 import '../replication.dart';
-import '../text_codec.dart';
 import '../time_converters.dart';
 import '../types.dart';
 import 'shared_messages.dart';
@@ -174,23 +171,6 @@ class DescribeMessage extends ClientMessage {
   }
 }
 
-extension on TypedValue {
-  bool get _hasKnownType => type != Type.unspecified;
-
-  Uint8List? encodeAsBytes(Encoding encoding) {
-    if (_hasKnownType) {
-      final encoder = PostgresBinaryEncoder(type);
-      return encoder.convert(value, encoding);
-    }
-    if (value != null) {
-      const converter = PostgresTextEncoder();
-      return castBytes(
-          encoding.encode(converter.convert(value, escapeStrings: false)));
-    }
-    return null;
-  }
-}
-
 class BindMessage extends ClientMessage {
   final List<TypedValue> _parameters;
   final String _portalName;
@@ -209,9 +189,10 @@ class BindMessage extends ClientMessage {
     final portalName = buffer.encodeString(_portalName);
     final statementName = buffer.encodeString(_statementName);
 
-    final parameterBytes =
-        _parameters.map((p) => p.encodeAsBytes(buffer.encoding)).toList();
-    final typeSpecCount = _parameters.where((p) => p._hasKnownType).length;
+    final parameterBytes = _parameters
+        .map((p) => p.type.encodeAsBytes(p.value, buffer.encoding))
+        .toList();
+    final typeSpecCount = _parameters.where((p) => p.type.hasOid).length;
     var inputParameterElementCount = _parameters.length;
     if (typeSpecCount == _parameters.length || typeSpecCount == 0) {
       inputParameterElementCount = 1;
@@ -245,7 +226,7 @@ class BindMessage extends ClientMessage {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.writeUint16(_parameters.length);
       for (final p in _parameters) {
-        buffer.writeUint16(p._hasKnownType
+        buffer.writeUint16(p.type.hasOid
             ? ClientMessageFormat.binary
             : ClientMessageFormat.text);
       }

@@ -4,12 +4,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:postgres/src/buffer.dart';
+import 'package:postgres/src/types/type_registry.dart';
 
-import '../binary_codec.dart';
 import '../exceptions.dart';
 import '../messages/client_messages.dart';
 import '../messages/server_messages.dart';
 import '../types.dart';
+import '../types/binary_codec.dart';
 import 'connection.dart';
 import 'execution_context.dart';
 import 'substituter.dart';
@@ -133,9 +134,8 @@ class Query<T> {
         return true;
       }
 
-      final actualType = PostgresBinaryDecoder
-          .typeMap[actualParameterTypeCodeIterator.current];
-      return actualType == specifiedType;
+      final actualOid = actualParameterTypeCodeIterator.current;
+      return actualOid == specifiedType.oid;
     }).any((v) => v == false);
 
     if (parametersAreMismatched) {
@@ -170,10 +170,7 @@ class Query<T> {
     final iterator = fieldDescriptions!.iterator;
     final lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
-      final converter = PostgresBinaryDecoder(
-        iterator.current.typeOid,
-        Type.byTypeOid[iterator.current.typeOid] ?? Type.unknownType,
-      );
+      final converter = PostgresBinaryDecoder(iterator.current.typeOid);
       return converter.convert(bd, connection.encoding);
     });
 
@@ -251,7 +248,7 @@ class PostgreSQLFormatToken {
 }
 
 class PostgreSQLFormatIdentifier {
-  static Map<String, Type> typeStringToCodeMap = Type.bySubstitutionName;
+  static final typeStringToCodeMap = TypeRegistry();
 
   factory PostgreSQLFormatIdentifier(String t) {
     String name;
@@ -270,7 +267,7 @@ class PostgreSQLFormatIdentifier {
       name = variableComponents.first;
 
       final dataTypeString = variableComponents.last;
-      type = typeStringToCodeMap[dataTypeString];
+      type = typeStringToCodeMap.resolveSubstitution(dataTypeString);
       if (type == null) {
         throw FormatException(
             "Invalid type code in substitution variable '$t'");

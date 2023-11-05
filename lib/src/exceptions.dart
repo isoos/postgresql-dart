@@ -4,7 +4,63 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
 import 'messages/server_messages.dart';
-import 'types.dart';
+
+/// The severity level of a [PgException].
+///
+/// [panic] and [fatal] errors will close the connection.
+enum Severity {
+  /// A [PgException] with this severity indicates the throwing connection is now closed.
+  panic,
+
+  /// A [PgException] with this severity indicates the throwing connection is now closed.
+  fatal,
+
+  /// A [PgException] with this severity indicates the throwing connection encountered an error when executing a query and the query has failed.
+  error,
+
+  /// Currently unsupported.
+  warning,
+
+  /// Currently unsupported.
+  notice,
+
+  /// Currently unsupported.
+  debug,
+
+  /// Currently unsupported.
+  info,
+
+  /// Currently unsupported.
+  log,
+
+  /// A [PgException] with this severity indicates a failed a precondition or other error that doesn't originate from the database.
+  unknown,
+  ;
+
+  @internal
+  static Severity parseServerString(String? str) {
+    switch (str) {
+      case 'ERROR':
+        return Severity.error;
+      case 'FATAL':
+        return Severity.fatal;
+      case 'PANIC':
+        return Severity.panic;
+      case 'WARNING':
+        return Severity.warning;
+      case 'NOTICE':
+        return Severity.notice;
+      case 'DEBUG':
+        return Severity.debug;
+      case 'INFO':
+        return Severity.info;
+      case 'LOG':
+        return Severity.log;
+      default:
+        return Severity.unknown;
+    }
+  }
+}
 
 /// Exception thrown by the package (client or server side).
 class PgException implements Exception {

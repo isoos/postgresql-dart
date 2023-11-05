@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/src/types/type_registry.dart';
 
-import '../binary_codec.dart';
 import '../buffer.dart';
 import '../time_converters.dart';
 import '../types.dart';
@@ -344,7 +344,7 @@ class TupleDataColumn {
   final int length;
 
   String get typeName =>
-      PostgresBinaryDecoder.typeMap[typeId]?.name ?? typeId.toString();
+      TypeRegistry.instance.tryResolveOid(typeId)?.name_ ?? typeId.toString();
 
   /// Data is the value of the column, in text format.
   /// n is the above length.
