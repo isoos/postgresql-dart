@@ -171,6 +171,9 @@ class Query<T> {
     final lazyDecodedData = rawRowData.map((bd) {
       iterator.moveNext();
       final converter = PostgresBinaryDecoder(iterator.current.typeOid);
+      if (bd == null) {
+        return null;
+      }
       return converter.convert(bd, connection.encoding);
     });
 

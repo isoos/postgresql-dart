@@ -218,9 +218,7 @@ class PostgresTextDecoder {
 
   const PostgresTextDecoder(this._typeOid);
 
-  Object? convert(Uint8List? input, Encoding encoding) {
-    if (input == null) return null;
-
+  Object? convert(Uint8List input, Encoding encoding) {
     late final asText = encoding.decode(input);
 
     // ignore: unnecessary_cast
