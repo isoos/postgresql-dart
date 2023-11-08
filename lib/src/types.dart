@@ -282,15 +282,11 @@ abstract class Type<T extends Object> {
   /// name can be used.
   final String? nameForSubstitution;
 
-  final String _name;
-
   const Type(
     this.oid, {
     this.nameForSubstitution,
-    String? name,
-  }) : _name = name ?? 'type($oid)';
+  });
 
-  String get name_ => _name;
   bool get hasOid => oid != null && oid! > 0;
 
   TypedValue<T> value(T value) => TypedValue<T>(this, value);
@@ -298,6 +294,9 @@ abstract class Type<T extends Object> {
   EncodeOutput encode(EncodeInput<T> input);
 
   T? decode(DecodeInput input);
+
+  @override
+  String toString() => '$runtimeType(oid:$oid)';
 }
 
 class EncodeInput<T extends Object> {
