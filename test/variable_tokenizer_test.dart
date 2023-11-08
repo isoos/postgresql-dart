@@ -53,12 +53,46 @@ void main() {
     );
   });
 
+  test('can declare variables by index', () {
+    final desc = InternalQueryDescription.indexed(
+        'SELECT ?:int8, ?3:boolean, ?2',
+        substitution: '?');
+
+    expect(desc.transformedSql, r'SELECT $1, $3, $2');
+    expect(desc.namedVariables, isNull);
+    expect(desc.parameterTypes, [Type.bigInteger, null, Type.boolean]);
+
+    expect(() => desc.bindParameters(null), throwsArgumentError);
+    expect(
+      desc.bindParameters([4, TypedValue(Type.text, 'z'), true]),
+      [
+        TypedValue(Type.bigInteger, 4),
+        TypedValue(Type.text, 'z'),
+        TypedValue(Type.boolean, true),
+      ],
+    );
+    expect(desc.bindParameters([4, 'z', true]), [
+      TypedValue(Type.bigInteger, 4),
+      TypedValue(Type.unspecified, 'z'),
+      TypedValue(Type.boolean, true),
+    ]);
+  });
+
   test('can use the same variable more than once', () {
     final desc = InternalQueryDescription.named(
         'SELECT * FROM foo WHERE a = @x OR bar = @y OR b = @x');
     expect(desc.transformedSql,
         r'SELECT * FROM foo WHERE a = $1 OR bar = $2 OR b = $1');
     expect(desc.namedVariables?.keys, ['x', 'y']);
+  });
+
+  test('indexed can use same variable more than once', () {
+    final indexed = InternalQueryDescription.indexed(
+        'SELECT * FROM foo WHERE a = @ OR bar = @ OR b = @1');
+    expect(indexed.transformedSql,
+        r'SELECT * FROM foo WHERE a = $1 OR bar = $2 OR b = $1');
+    expect(indexed.namedVariables, isNull);
+    expect(indexed.parameterTypes, hasLength(2));
   });
 
   test('can use custom variable symbol', () {
@@ -205,6 +239,29 @@ void main() {
           (e) => e.message,
           'message',
           'Missing variable for `foo`',
+        )),
+      );
+    });
+
+    test('for missing variable indexed', () {
+      expect(
+        () => InternalQueryDescription.indexed('SELECT @').bindParameters([]),
+        throwsA(isA<ArgumentError>().having(
+          (e) => e.message,
+          'message',
+          'Expected 1 parameters, got 0',
+        )),
+      );
+    });
+
+    test('when using map with indexed', () {
+      expect(
+        () => InternalQueryDescription.indexed('SELECT @')
+            .bindParameters({'1': 'foo'}),
+        throwsA(isA<ArgumentError>().having(
+          (e) => e.message,
+          'message',
+          'Maps are only supported by `Sql.named`',
         )),
       );
     });

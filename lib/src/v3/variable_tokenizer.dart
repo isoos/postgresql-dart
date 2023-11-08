@@ -1,8 +1,19 @@
+@internal
+library;
+
+import 'dart:math';
+
 import 'package:charcode/charcode.dart';
+import 'package:meta/meta.dart';
 import 'package:postgres/src/types/type_registry.dart';
 
 import '../types.dart';
 import 'query_description.dart';
+
+enum TokenizerMode {
+  named,
+  indexed,
+}
 
 /// In addition to indexed variables supported by the postgres protocol, most
 /// postgres clients (including this package) support a variable mode in which
@@ -36,17 +47,21 @@ class VariableTokenizer {
   /// The original SQL string as written by the user.
   final String _source;
 
-  /// THe list returned by [String.codeUnits] of [_source].
+  /// The list returned by [String.codeUnits] of [_source].
   final List<int> _codeUnits;
+
+  final TokenizerMode mode;
 
   /// Index of the next character to consider in [_codeUnits]
   int _index = 0;
+  int _highestVariableIndex = 0;
 
   bool get _isAtEnd => _index == _codeUnits.length;
 
   VariableTokenizer({
-    int variableCodeUnit = 64, // @
+    int variableCodeUnit = $at,
     required String sql,
+    required this.mode,
   })  : _variableCodeUnit = variableCodeUnit,
         _source = sql,
         _codeUnits = sql.codeUnits;
@@ -58,10 +73,13 @@ class VariableTokenizer {
       _source,
       _rewrittenSql.toString(),
       [
-        for (final entry in _namedVariables.entries)
-          _variableTypes[entry.value],
+        if (mode == TokenizerMode.indexed)
+          for (var i = 1; i <= _highestVariableIndex; i++) _variableTypes[i]
+        else
+          for (final entry in _namedVariables.entries)
+            _variableTypes[entry.value],
       ],
-      _namedVariables,
+      mode == TokenizerMode.named ? _namedVariables : null,
     );
   }
 
@@ -332,7 +350,7 @@ class VariableTokenizer {
       }
 
       // reading the type
-      if (_canAppearInVariable(nextChar)) {
+      if (_canAppearInTypeName(nextChar)) {
         typeBuffer.writeCharCode(nextChar);
         _advance();
         continue;
@@ -340,7 +358,7 @@ class VariableTokenizer {
       break;
     }
 
-    if (nameBuffer.isEmpty) {
+    if (nameBuffer.isEmpty && mode == TokenizerMode.named) {
       // No variable then. The variable declaration syntax conflicts with some
       // postgres operators (e.g `@>`). So in that case, we just write the
       // original syntax.
@@ -352,8 +370,19 @@ class VariableTokenizer {
       error('Expected type name after colon');
     }
 
-    final actualVariableIndex = _namedVariables.putIfAbsent(
-        nameBuffer.toString(), () => _namedVariables.length + 1);
+    int actualVariableIndex;
+    switch (mode) {
+      case TokenizerMode.named:
+        actualVariableIndex = _namedVariables.putIfAbsent(
+            nameBuffer.toString(), () => _namedVariables.length + 1);
+      case TokenizerMode.indexed:
+        if (nameBuffer.isNotEmpty) {
+          actualVariableIndex = int.parse(nameBuffer.toString());
+        } else {
+          actualVariableIndex = _highestVariableIndex + 1;
+        }
+        _highestVariableIndex = max(_highestVariableIndex, actualVariableIndex);
+    }
 
     if (consumedColonForType) {
       final typeName = typeBuffer.toString();
@@ -384,7 +413,18 @@ class VariableTokenizer {
     _rewrittenSql.write('\$$actualVariableIndex');
   }
 
-  static bool _canAppearInVariable(int charcode) {
+  bool _canAppearInVariable(int charcode) {
+    if (charcode >= $0 && charcode <= $9) return true;
+
+    if (mode == TokenizerMode.named) {
+      return _canAppearInTypeName(charcode);
+    } else {
+      // For indexed, only digits are allowed
+      return false;
+    }
+  }
+
+  static bool _canAppearInTypeName(int charcode) {
     return (charcode >= $0 && charcode <= $9) ||
         (charcode >= $a && charcode <= $z) ||
         (charcode >= $A && charcode <= $Z) ||
