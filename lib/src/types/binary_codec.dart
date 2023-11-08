@@ -49,7 +49,7 @@ class PostgresBinaryEncoder {
 
   const PostgresBinaryEncoder(this._typeOid);
 
-  Uint8List? convert(Object input, Encoding encoding) {
+  Uint8List convert(Object input, Encoding encoding) {
     switch (_typeOid) {
       case TypeOid.voidType:
         throw ArgumentError('Cannot encode `$input` into oid($_typeOid).');

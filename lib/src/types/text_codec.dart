@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import '../exceptions.dart';
 import '../types.dart';
@@ -218,29 +217,27 @@ class PostgresTextDecoder {
 
   const PostgresTextDecoder(this._typeOid);
 
-  Object? convert(Uint8List input, Encoding encoding) {
-    late final asText = encoding.decode(input);
-
+  Object? convert(DecodeInput di) {
     // ignore: unnecessary_cast
     switch (_typeOid) {
       case TypeOid.name:
       case TypeOid.text:
       case TypeOid.varChar:
-        return asText;
+        return di.asText;
       case TypeOid.integer:
       case TypeOid.smallInteger:
       case TypeOid.bigInteger:
-        return int.parse(asText);
+        return int.parse(di.asText);
       case TypeOid.real:
       case TypeOid.double:
-        return num.parse(asText);
+        return num.parse(di.asText);
       case TypeOid.boolean:
         // In text data format when using simple query protocol, "true" & "false"
         // are represented as `t` and `f`,  respectively.
         // we will check for both just in case
         // TODO: should we check for other representations (e.g. `1`, `on`, `y`,
         // and `yes`)?
-        return asText == 't' || asText == 'true';
+        return di.asText == 't' || di.asText == 'true';
 
       case TypeOid.voidType:
         // TODO: is returning `null` here is the appripriate thing to do?
@@ -265,8 +262,8 @@ class PostgresTextDecoder {
       case TypeOid.jsonbArray:
       case TypeOid.regtype:
         // TODO: implement proper decoding of the above
-        return TypedBytes(typeOid: _typeOid, bytes: input);
+        return TypedBytes(typeOid: _typeOid, bytes: di.bytes);
     }
-    return TypedBytes(typeOid: _typeOid, bytes: input);
+    return TypedBytes(typeOid: _typeOid, bytes: di.bytes);
   }
 }

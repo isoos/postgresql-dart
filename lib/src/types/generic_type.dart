@@ -1,7 +1,4 @@
-import 'dart:convert';
 import 'dart:typed_data';
-
-import 'package:buffer/buffer.dart';
 
 import '../types.dart';
 import 'binary_codec.dart';
@@ -11,21 +8,19 @@ class UnknownType extends Type<Object> {
   UnknownType(super.oid);
 
   @override
-  Uint8List? encodeAsBytes(Object value, Encoding encoding) {
-    if (value is Uint8List) {
-      return value;
+  EncodeOutput encode(Object input, CodecContext context) {
+    if (input is Uint8List) {
+      return EncodeOutput.bytes(input);
+    } else if (input is String) {
+      return EncodeOutput.text(input);
     }
     throw UnimplementedError(
-        'Encoding ${value.runtimeType} for oid:$oid is not supported.');
+        'Encoding ${input.runtimeType} for oid:$oid is not supported.');
   }
 
   @override
-  Object? decodeFromBytes(
-      Uint8List value, Encoding encoding, bool isBinaryEncoding) {
-    if (hasOid && isBinaryEncoding) {
-      return TypedBytes(typeOid: oid!, bytes: value);
-    }
-    throw UnimplementedError('Decoding of oid:$oid not supported.');
+  Object? decode(DecodeInput input) {
+    return TypedBytes(typeOid: oid ?? 0, bytes: input.bytes);
   }
 }
 
@@ -37,24 +32,25 @@ class GenericType<T extends Object> extends Type<T> {
   });
 
   @override
-  Uint8List? encodeAsBytes(Object value, Encoding encoding) {
-    if (canEncodeAsBinary) {
+  EncodeOutput encode(Object input, CodecContext context) {
+    if (hasOid) {
       final encoder = PostgresBinaryEncoder(oid!);
-      return encoder.convert(value, encoding);
+      final bytes = encoder.convert(input, context.encoding);
+      return EncodeOutput.bytes(bytes);
     } else {
       const converter = PostgresTextEncoder();
-      return castBytes(
-          encoding.encode(converter.convert(value, escapeStrings: false)));
+      final text = converter.convert(input, escapeStrings: false);
+      return EncodeOutput.text(text);
     }
   }
 
   @override
-  Object? decodeFromBytes(
-      Uint8List value, Encoding encoding, bool isBinaryEncoding) {
-    if (isBinaryEncoding) {
-      return PostgresBinaryDecoder(oid!).convert(value, encoding);
+  Object? decode(DecodeInput input) {
+    if (input.isBinary) {
+      return PostgresBinaryDecoder(oid!)
+          .convert(input.bytes, input.context.encoding);
     } else {
-      return PostgresTextDecoder(oid!).convert(value, encoding);
+      return PostgresTextDecoder(oid!).convert(input);
     }
   }
 }

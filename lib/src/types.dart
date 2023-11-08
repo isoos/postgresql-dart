@@ -293,16 +293,48 @@ abstract class Type<T extends Object> {
   String get name_ => _name;
   bool get hasOid => oid != null && oid! > 0;
 
-  /// Indicates that this [Type] can encode the [T] object as binary, otherwise
-  /// text encoding is expected.
-  bool get canEncodeAsBinary => hasOid;
-
   TypedValue<T> value(T value) => TypedValue<T>(this, value);
 
-  Uint8List? encodeAsBytes(Object value, Encoding encoding);
+  EncodeOutput encode(Object input, CodecContext context);
 
-  Object? decodeFromBytes(
-      Uint8List value, Encoding encoding, bool isBinaryEncoding);
+  Object? decode(DecodeInput input);
+}
+
+class CodecContext {
+  final Encoding encoding;
+
+  CodecContext({
+    required this.encoding,
+  });
+}
+
+class EncodeOutput {
+  final Uint8List? bytes;
+  final String? text;
+
+  EncodeOutput.bytes(Uint8List value)
+      : bytes = value,
+        text = null;
+
+  EncodeOutput.text(String value)
+      : bytes = null,
+        text = value;
+
+  bool get isBinary => bytes != null;
+}
+
+class DecodeInput {
+  final Uint8List bytes;
+  final bool isBinary;
+  final CodecContext context;
+
+  DecodeInput({
+    required this.bytes,
+    required this.isBinary,
+    required this.context,
+  });
+
+  late final asText = context.encoding.decode(bytes);
 }
 
 class TypedValue<T extends Object> {

@@ -189,24 +189,27 @@ class BindMessage extends ClientMessage {
     final portalName = buffer.encodeString(_portalName);
     final statementName = buffer.encodeString(_statementName);
 
-    final parameterBytes = _parameters
-        .map((p) => p.value == null
-            ? null
-            : p.type.encodeAsBytes(p.value!, buffer.encoding))
+    final codecContext = CodecContext(encoding: buffer.encoding);
+    final encodedOutputs = _parameters
+        .map((p) =>
+            p.value == null ? null : p.type.encode(p.value!, codecContext))
         .toList();
-    final typeSpecCount =
-        _parameters.where((p) => p.type.canEncodeAsBinary).length;
-    var inputParameterElementCount = _parameters.length;
-    if (typeSpecCount == _parameters.length || typeSpecCount == 0) {
-      inputParameterElementCount = 1;
-    }
+    final encodedBytes = encodedOutputs.map((e) {
+      if (e == null) return null;
+      return e.isBinary ? e.bytes! : buffer.encoding.encode(e.text!);
+    }).toList();
+    final binaryCount =
+        encodedOutputs.where((p) => p?.isBinary ?? false).length;
+    final isAllBinary = binaryCount == encodedOutputs.length;
+    final isAllText = binaryCount == 0;
+    final inputParameterElementCount =
+        isAllBinary || isAllText ? 1 : _parameters.length;
 
     var length = 14;
     length += statementName.bytesLength;
     length += portalName.bytesLength;
     length += inputParameterElementCount * 2;
-    length += parameterBytes.fold<int>(
-        0, (len, bytes) => len + 4 + (bytes?.length ?? 0));
+    length += encodedBytes.fold<int>(0, (len, v) => len + 4 + (v?.length ?? 0));
 
     buffer.writeUint32(length);
 
@@ -217,19 +220,19 @@ class BindMessage extends ClientMessage {
 
     // OK, if we have no specified types at all, we can use 0. If we have all specified types, we can use 1. If we have a mix, we have to individually
     // call out each type.
-    if (typeSpecCount == _parameters.length) {
+    if (isAllBinary) {
       buffer.writeUint16(1);
       // Apply following format code for all parameters by indicating 1
       buffer.writeUint16(ClientMessageFormat.binary);
-    } else if (typeSpecCount == 0) {
+    } else if (isAllText) {
       buffer.writeUint16(1);
       // Apply following format code for all parameters by indicating 1
       buffer.writeUint16(ClientMessageFormat.text);
     } else {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.writeUint16(_parameters.length);
-      for (final p in _parameters) {
-        buffer.writeUint16(p.type.canEncodeAsBinary
+      for (final p in encodedOutputs) {
+        buffer.writeUint16(p != null && p.isBinary
             ? ClientMessageFormat.binary
             : ClientMessageFormat.text);
       }
@@ -237,7 +240,7 @@ class BindMessage extends ClientMessage {
 
     // This must be the number of $n's in the query.
     buffer.writeUint16(_parameters.length);
-    for (final bytes in parameterBytes) {
+    for (final bytes in encodedBytes) {
       if (bytes == null) {
         buffer.writeInt32(-1);
       } else {
