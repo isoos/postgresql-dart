@@ -295,13 +295,13 @@ abstract class Type<T extends Object> {
 
   TypedValue<T> value(T value) => TypedValue<T>(this, value);
 
-  EncodeOutput encode(EncodeInput input);
+  EncodeOutput encode(EncodeInput<T> input);
 
-  Object? decode(DecodeInput input);
+  T? decode(DecodeInput input);
 }
 
-class EncodeInput {
-  final Object value;
+class EncodeInput<T extends Object> {
+  final T value;
   final Encoding encoding;
 
   EncodeInput({
