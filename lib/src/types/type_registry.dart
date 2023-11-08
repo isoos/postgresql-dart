@@ -74,7 +74,7 @@ class TypeRegistry {
 
   late final _byTypeOid = Map<int, Type>.unmodifiable({
     for (final type in values)
-      if (type.oid != null) type.oid: type,
+      if (type.hasOid) type.oid: type,
   });
 
   Type resolveOid(int oid) {
