@@ -92,6 +92,42 @@ void main() {
     });
   });
 
+  withPostgresServer('handles session errors', (server) {
+    test('timeout unlocks pool', () async {
+      final db = Pool.withEndpoints(
+        [await server.endpoint()],
+        settings: PoolSettings(
+          maxConnectionCount: 1,
+          connectTimeout: Duration(seconds: 3),
+        ),
+      );
+
+      await expectLater(
+        () => db.run((_) async {
+          // NOTE: session is not used here
+          await db.execute('SELECT 1');
+        }),
+        throwsA(isA<TimeoutException>()),
+      );
+    });
+
+    test('bad query does not lock up pool instance', () async {
+      final db = Pool.withEndpoints(
+        [await server.endpoint()],
+        settings: PoolSettings(
+          maxConnectionCount: 1,
+        ),
+      );
+
+      for (var i = 0; i < 10; i++) {
+        await expectLater(
+            () => db.run((c) => c.execute('select x;')), throwsException);
+      }
+
+      await db.execute('SELECT 1');
+    });
+  });
+
   withPostgresServer('limit pool connections', (server) {
     test('can limit concurrent connections', () async {
       final pool = Pool.withEndpoints(
