@@ -671,7 +671,6 @@ class _PgResultStreamSubscription
           final schema = _resultSchema!;
 
           final columnValues = <Object?>[];
-          final codecContext = CodecContext(encoding: session.encoding);
           for (var i = 0; i < message.values.length; i++) {
             final field = schema.columns[i];
 
@@ -682,7 +681,7 @@ class _PgResultStreamSubscription
                 : type.decode(DecodeInput(
                     bytes: input,
                     isBinary: field.isBinaryEncoding,
-                    context: codecContext,
+                    encoding: session.encoding,
                   ));
             columnValues.add(value);
           }

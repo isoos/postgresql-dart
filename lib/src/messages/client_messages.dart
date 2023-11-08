@@ -189,10 +189,11 @@ class BindMessage extends ClientMessage {
     final portalName = buffer.encodeString(_portalName);
     final statementName = buffer.encodeString(_statementName);
 
-    final codecContext = CodecContext(encoding: buffer.encoding);
     final encodedOutputs = _parameters
-        .map((p) =>
-            p.value == null ? null : p.type.encode(p.value!, codecContext))
+        .map((p) => p.value == null
+            ? null
+            : p.type.encode(
+                EncodeInput(value: p.value!, encoding: buffer.encoding)))
         .toList();
     final encodedBytes = encodedOutputs.map((e) {
       if (e == null) return null;

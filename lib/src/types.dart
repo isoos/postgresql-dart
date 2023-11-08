@@ -295,15 +295,17 @@ abstract class Type<T extends Object> {
 
   TypedValue<T> value(T value) => TypedValue<T>(this, value);
 
-  EncodeOutput encode(Object input, CodecContext context);
+  EncodeOutput encode(EncodeInput input);
 
   Object? decode(DecodeInput input);
 }
 
-class CodecContext {
+class EncodeInput {
+  final Object value;
   final Encoding encoding;
 
-  CodecContext({
+  EncodeInput({
+    required this.value,
     required this.encoding,
   });
 }
@@ -326,15 +328,15 @@ class EncodeOutput {
 class DecodeInput {
   final Uint8List bytes;
   final bool isBinary;
-  final CodecContext context;
+  final Encoding encoding;
 
   DecodeInput({
     required this.bytes,
     required this.isBinary,
-    required this.context,
+    required this.encoding,
   });
 
-  late final asText = context.encoding.decode(bytes);
+  late final asText = encoding.decode(bytes);
 }
 
 class TypedValue<T extends Object> {

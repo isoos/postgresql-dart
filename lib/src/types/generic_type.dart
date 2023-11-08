@@ -8,14 +8,15 @@ class UnknownType extends Type<Object> {
   UnknownType(super.oid);
 
   @override
-  EncodeOutput encode(Object input, CodecContext context) {
-    if (input is Uint8List) {
-      return EncodeOutput.bytes(input);
-    } else if (input is String) {
-      return EncodeOutput.text(input);
+  EncodeOutput encode(EncodeInput input) {
+    final v = input.value;
+    if (v is Uint8List) {
+      return EncodeOutput.bytes(v);
+    } else if (v is String) {
+      return EncodeOutput.text(v);
     }
     throw UnimplementedError(
-        'Encoding ${input.runtimeType} for oid:$oid is not supported.');
+        'Encoding ${v.runtimeType} for oid:$oid is not supported.');
   }
 
   @override
@@ -32,14 +33,14 @@ class GenericType<T extends Object> extends Type<T> {
   });
 
   @override
-  EncodeOutput encode(Object input, CodecContext context) {
+  EncodeOutput encode(EncodeInput input) {
     if (hasOid) {
       final encoder = PostgresBinaryEncoder(oid!);
-      final bytes = encoder.convert(input, context.encoding);
+      final bytes = encoder.convert(input.value, input.encoding);
       return EncodeOutput.bytes(bytes);
     } else {
       const converter = PostgresTextEncoder();
-      final text = converter.convert(input, escapeStrings: false);
+      final text = converter.convert(input.value, escapeStrings: false);
       return EncodeOutput.text(text);
     }
   }
@@ -47,8 +48,7 @@ class GenericType<T extends Object> extends Type<T> {
   @override
   Object? decode(DecodeInput input) {
     if (input.isBinary) {
-      return PostgresBinaryDecoder(oid!)
-          .convert(input.bytes, input.context.encoding);
+      return PostgresBinaryDecoder(oid!).convert(input.bytes, input.encoding);
     } else {
       return PostgresTextDecoder(oid!).convert(input);
     }
