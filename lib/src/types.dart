@@ -137,7 +137,7 @@ class Point {
 }
 
 /// Supported data types.
-class Type<T extends Object> {
+abstract class Type<T extends Object> {
   /// Used to represent value without any type representation.
   static const unspecified = GenericType<Object>(null);
 
@@ -293,26 +293,16 @@ class Type<T extends Object> {
   String get name_ => _name;
   bool get hasOid => oid != null && oid! > 0;
 
+  /// Indicates that this [Type] can encode the [T] object as binary, otherwise
+  /// text encoding is expected.
+  bool get canEncodeAsBinary => hasOid;
+
   TypedValue<T> value(T value) => TypedValue<T>(this, value);
 
-  Uint8List? encodeAsBytes(Object? value, Encoding encoding) {
-    if (value is Uint8List?) {
-      return value;
-    }
-    throw UnimplementedError(
-        'Encoding ${value.runtimeType} for oid:$oid is not supported.');
-  }
+  Uint8List? encodeAsBytes(Object value, Encoding encoding);
 
   Object? decodeFromBytes(
-      Uint8List? value, Encoding encoding, bool isBinaryEncoding) {
-    if (value == null) {
-      return null;
-    }
-    if (hasOid && isBinaryEncoding) {
-      return TypedBytes(typeOid: oid!, bytes: value);
-    }
-    throw UnimplementedError('Decoding of oid:$oid not supported.');
-  }
+      Uint8List value, Encoding encoding, bool isBinaryEncoding);
 }
 
 class TypedValue<T extends Object> {

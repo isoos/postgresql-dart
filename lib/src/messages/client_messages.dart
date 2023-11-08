@@ -190,9 +190,12 @@ class BindMessage extends ClientMessage {
     final statementName = buffer.encodeString(_statementName);
 
     final parameterBytes = _parameters
-        .map((p) => p.type.encodeAsBytes(p.value, buffer.encoding))
+        .map((p) => p.value == null
+            ? null
+            : p.type.encodeAsBytes(p.value!, buffer.encoding))
         .toList();
-    final typeSpecCount = _parameters.where((p) => p.type.hasOid).length;
+    final typeSpecCount =
+        _parameters.where((p) => p.type.canEncodeAsBinary).length;
     var inputParameterElementCount = _parameters.length;
     if (typeSpecCount == _parameters.length || typeSpecCount == 0) {
       inputParameterElementCount = 1;
@@ -226,7 +229,7 @@ class BindMessage extends ClientMessage {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.writeUint16(_parameters.length);
       for (final p in _parameters) {
-        buffer.writeUint16(p.type.hasOid
+        buffer.writeUint16(p.type.canEncodeAsBinary
             ? ClientMessageFormat.binary
             : ClientMessageFormat.text);
       }

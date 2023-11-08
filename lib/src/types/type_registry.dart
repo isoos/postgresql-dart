@@ -1,5 +1,7 @@
 import '../types.dart';
 
+import 'generic_type.dart';
+
 /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
 class TypeOid {
   static const bigInteger = 20;
@@ -76,7 +78,7 @@ class TypeRegistry {
   });
 
   Type resolveOid(int oid) {
-    return _byTypeOid[oid] ?? Type(oid);
+    return _byTypeOid[oid] ?? UnknownType(oid);
   }
 
   Type? tryResolveOid(int oid) {

@@ -8,11 +8,7 @@ import 'type_registry.dart';
 class PostgresTextEncoder {
   const PostgresTextEncoder();
 
-  String convert(dynamic input, {bool escapeStrings = true}) {
-    if (input == null) {
-      return 'null';
-    }
-
+  String convert(Object input, {bool escapeStrings = true}) {
     if (input is int) {
       return _encodeNumber(input);
     }

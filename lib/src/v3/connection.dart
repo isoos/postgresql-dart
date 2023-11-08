@@ -675,8 +675,11 @@ class _PgResultStreamSubscription
             final field = schema.columns[i];
 
             final type = field.type;
-            final value = type.decodeFromBytes(
-                message.values[i], session.encoding, field.isBinaryEncoding);
+            final input = message.values[i];
+            final value = input == null
+                ? null
+                : type.decodeFromBytes(
+                    input, session.encoding, field.isBinaryEncoding);
             columnValues.add(value);
           }
 
