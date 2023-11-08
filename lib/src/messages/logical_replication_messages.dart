@@ -344,7 +344,8 @@ class TupleDataColumn {
   final int length;
 
   String get typeName =>
-      TypeRegistry.instance.tryResolveOid(typeId)?.name_ ?? typeId.toString();
+      TypeRegistry.instance.tryResolveOid(typeId)?.toString() ??
+      typeId.toString();
 
   /// Data is the value of the column, in text format.
   /// n is the above length.
