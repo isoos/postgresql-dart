@@ -1,10 +1,12 @@
+import 'dart:convert';
 import 'dart:core';
 import 'dart:core' as core;
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
-import 'exceptions.dart' show PgException;
+import 'types/generic_type.dart';
+import 'types/type_registry.dart';
 
 /// In Postgresql `interval` values are stored as [months], [days], and [microseconds].
 /// This is done because the number of days in a month varies, and a day can
@@ -135,118 +137,141 @@ class Point {
 }
 
 /// Supported data types.
-enum Type<T extends Object> {
-  /// Used to represent a type not yet understood by this package.
-  unknownType<Object>(null),
-
+abstract class Type<T extends Object> {
   /// Used to represent value without any type representation.
-  unspecified<Object>(null),
+  static const unspecified = GenericType<Object>(null);
 
   /// Must be a [String].
-  text<String>(25, nameForSubstitution: 'text'),
+  static const text =
+      GenericType<String>(TypeOid.text, nameForSubstitution: 'text');
 
   /// Must be an [int] (4-byte integer)
-  integer<int>(23, nameForSubstitution: 'int4'),
+  static const integer =
+      GenericType<int>(TypeOid.integer, nameForSubstitution: 'int4');
 
   /// Must be an [int] (2-byte integer)
-  smallInteger<int>(21, nameForSubstitution: 'int2'),
+  static const smallInteger =
+      GenericType<int>(TypeOid.smallInteger, nameForSubstitution: 'int2');
 
   /// Must be an [int] (8-byte integer)
-  bigInteger<int>(20, nameForSubstitution: 'int8'),
+  static const bigInteger =
+      GenericType<int>(TypeOid.bigInteger, nameForSubstitution: 'int8');
 
   /// Must be an [int] (autoincrementing 4-byte integer)
-  serial(null, nameForSubstitution: 'int4'),
+  static const serial = GenericType<int>(null, nameForSubstitution: 'int4');
 
   /// Must be an [int] (autoincrementing 8-byte integer)
-  bigSerial(null, nameForSubstitution: 'int8'),
+  static const bigSerial = GenericType<int>(null, nameForSubstitution: 'int8');
 
   /// Must be a [double] (32-bit floating point value)
-  real<core.double>(700, nameForSubstitution: 'float4'),
+  static const real =
+      GenericType<core.double>(TypeOid.real, nameForSubstitution: 'float4');
 
   /// Must be a [double] (64-bit floating point value)
-  double<core.double>(701, nameForSubstitution: 'float8'),
+  static const double =
+      GenericType<core.double>(TypeOid.double, nameForSubstitution: 'float8');
 
   /// Must be a [bool]
-  boolean<bool>(16, nameForSubstitution: 'boolean'),
+  static const boolean =
+      GenericType<bool>(TypeOid.boolean, nameForSubstitution: 'boolean');
 
   /// Must be a [DateTime] (microsecond date and time precision)
-  timestampWithoutTimezone<DateTime>(1114, nameForSubstitution: 'timestamp'),
+  static const timestampWithoutTimezone = GenericType<DateTime>(
+      TypeOid.timestampWithoutTimezone,
+      nameForSubstitution: 'timestamp');
 
   /// Must be a [DateTime] (microsecond date and time precision)
-  timestampWithTimezone<DateTime>(1184, nameForSubstitution: 'timestamptz'),
+  static const timestampWithTimezone = GenericType<DateTime>(
+      TypeOid.timestampWithTimezone,
+      nameForSubstitution: 'timestamptz');
 
   /// Must be a [Interval]
-  interval<Interval>(1186, nameForSubstitution: 'interval'),
+  static const interval =
+      GenericType<Interval>(TypeOid.interval, nameForSubstitution: 'interval');
 
   /// An arbitrary-precision number.
   ///
   /// This library supports encoding numbers in a textual format, or when
   /// passed as [int] or [double]. When decoding values, numeric types are
   /// always returned as string.
-  numeric<Object>(1700, nameForSubstitution: 'numeric'),
+  static const numeric =
+      GenericType<Object>(TypeOid.numeric, nameForSubstitution: 'numeric');
 
   /// Must be a [DateTime] (contains year, month and day only)
-  date<DateTime>(1082, nameForSubstitution: 'date'),
+  static const date =
+      GenericType<DateTime>(TypeOid.date, nameForSubstitution: 'date');
 
   /// Must be encodable via [json.encode].
   ///
   /// Values will be encoded via [json.encode] before being sent to the database.
-  jsonb(3802, nameForSubstitution: 'jsonb'),
+  static const jsonb = GenericType(TypeOid.jsonb, nameForSubstitution: 'jsonb');
 
   /// Must be encodable via [core.json.encode].
   ///
   /// Values will be encoded via [core.json.encode] before being sent to the database.
-  json(114, nameForSubstitution: 'json'),
+  static const json = GenericType(TypeOid.json, nameForSubstitution: 'json');
 
   /// Must be a [List] of [int].
   ///
   /// Each element of the list must fit into a byte (0-255).
-  byteArray<List<int>>(17, nameForSubstitution: 'bytea'),
+  static const byteArray =
+      GenericType<List<int>>(TypeOid.byteArray, nameForSubstitution: 'bytea');
 
   /// Must be a [String]
   ///
   /// Used for internal pg structure names
-  name<String>(19, nameForSubstitution: 'name'),
+  static const name =
+      GenericType<String>(TypeOid.name, nameForSubstitution: 'name');
 
   /// Must be a [String].
   ///
   /// Must contain 32 hexadecimal characters. May contain any number of '-' characters.
   /// When returned from database, format will be xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
-  uuid<String>(2950, nameForSubstitution: 'uuid'),
+  static const uuid =
+      GenericType<String>(TypeOid.uuid, nameForSubstitution: 'uuid');
 
   /// Must be a [Point]
-  point<Point>(600, nameForSubstitution: 'point'),
+  static const point =
+      GenericType<Point>(TypeOid.point, nameForSubstitution: 'point');
 
   /// Must be a [List<bool>]
-  booleanArray<List<bool>>(1000, nameForSubstitution: '_bool'),
+  static const booleanArray = GenericType<List<bool>>(TypeOid.booleanArray,
+      nameForSubstitution: '_bool');
 
   /// Must be a [List<int>]
-  integerArray<List<int>>(1007, nameForSubstitution: '_int4'),
+  static const integerArray = GenericType<List<int>>(TypeOid.integerArray,
+      nameForSubstitution: '_int4');
 
   /// Must be a [List<int>]
-  bigIntegerArray<List<int>>(1016, nameForSubstitution: '_int8'),
+  static const bigIntegerArray = GenericType<List<int>>(TypeOid.bigIntegerArray,
+      nameForSubstitution: '_int8');
 
   /// Must be a [List<String>]
-  textArray<List<String>>(1009, nameForSubstitution: '_text'),
+  static const textArray = GenericType<List<String>>(TypeOid.textArray,
+      nameForSubstitution: '_text');
 
   /// Must be a [List<double>]
-  doubleArray<List<core.double>>(1022, nameForSubstitution: '_float8'),
+  static const doubleArray = GenericType<List<core.double>>(TypeOid.doubleArray,
+      nameForSubstitution: '_float8');
 
   /// Must be a [String]
-  varChar<String>(1043, nameForSubstitution: 'varchar'),
+  static const varChar =
+      GenericType<String>(TypeOid.varChar, nameForSubstitution: 'varchar');
 
   /// Must be a [List<String>]
-  varCharArray<List<String>>(1015, nameForSubstitution: '_varchar'),
+  static const varCharArray = GenericType<List<String>>(TypeOid.varCharArray,
+      nameForSubstitution: '_varchar');
 
   /// Must be a [List] of encodable objects
-  jsonbArray<List>(3807, nameForSubstitution: '_jsonb'),
+  static const jsonbArray =
+      GenericType<List>(TypeOid.jsonbArray, nameForSubstitution: '_jsonb');
 
   /// Must be a [Type].
-  regtype<Type>(2206, nameForSubstitution: 'regtype'),
+  static const regtype =
+      GenericType<Type>(TypeOid.regtype, nameForSubstitution: 'regtype');
 
   /// Impossible to bind to, always null when read.
-  voidType<Object>(2278),
-  ;
+  static const voidType = GenericType<Object>(TypeOid.voidType);
 
   /// The object ID of this data type.
   final int? oid;
@@ -257,85 +282,61 @@ enum Type<T extends Object> {
   /// name can be used.
   final String? nameForSubstitution;
 
-  const Type(this.oid, {this.nameForSubstitution});
+  final String _name;
+
+  const Type(
+    this.oid, {
+    this.nameForSubstitution,
+    String? name,
+  }) : _name = name ?? 'type($oid)';
+
+  String get name_ => _name;
+  bool get hasOid => oid != null && oid! > 0;
 
   TypedValue<T> value(T value) => TypedValue<T>(this, value);
 
-  @internal
-  static final Map<int, Type> byTypeOid = Map.unmodifiable({
-    for (final type in values)
-      if (type.oid != null) type.oid: type,
-  });
+  EncodeOutput encode(EncodeInput<T> input);
 
-  @internal
-  static final Map<String, Type> bySubstitutionName = Map.unmodifiable({
-    for (final type in values)
-      // We don't index serial and bigSerial types here because they're using
-      // the same names as int4 and int8, respectively.
-      // However, when a user is referring to these types in a query, they
-      // should always resolve to integer and bigInteger.
-      if (type != serial &&
-          type != bigSerial &&
-          type.nameForSubstitution != null)
-        type.nameForSubstitution: type,
+  T? decode(DecodeInput input);
+}
+
+class EncodeInput<T extends Object> {
+  final T value;
+  final Encoding encoding;
+
+  EncodeInput({
+    required this.value,
+    required this.encoding,
   });
 }
 
-/// The severity level of a [PgException].
-///
-/// [panic] and [fatal] errors will close the connection.
-enum Severity {
-  /// A [PgException] with this severity indicates the throwing connection is now closed.
-  panic,
+class EncodeOutput {
+  final Uint8List? bytes;
+  final String? text;
 
-  /// A [PgException] with this severity indicates the throwing connection is now closed.
-  fatal,
+  EncodeOutput.bytes(Uint8List value)
+      : bytes = value,
+        text = null;
 
-  /// A [PgException] with this severity indicates the throwing connection encountered an error when executing a query and the query has failed.
-  error,
+  EncodeOutput.text(String value)
+      : bytes = null,
+        text = value;
 
-  /// Currently unsupported.
-  warning,
+  bool get isBinary => bytes != null;
+}
 
-  /// Currently unsupported.
-  notice,
+class DecodeInput {
+  final Uint8List bytes;
+  final bool isBinary;
+  final Encoding encoding;
 
-  /// Currently unsupported.
-  debug,
+  DecodeInput({
+    required this.bytes,
+    required this.isBinary,
+    required this.encoding,
+  });
 
-  /// Currently unsupported.
-  info,
-
-  /// Currently unsupported.
-  log,
-
-  /// A [PgException] with this severity indicates a failed a precondition or other error that doesn't originate from the database.
-  unknown,
-  ;
-
-  @internal
-  static Severity parseServerString(String? str) {
-    switch (str) {
-      case 'ERROR':
-        return Severity.error;
-      case 'FATAL':
-        return Severity.fatal;
-      case 'PANIC':
-        return Severity.panic;
-      case 'WARNING':
-        return Severity.warning;
-      case 'NOTICE':
-        return Severity.notice;
-      case 'DEBUG':
-        return Severity.debug;
-      case 'INFO':
-        return Severity.info;
-      case 'LOG':
-        return Severity.log;
-      default:
-        return Severity.unknown;
-    }
-  }
+  late final asText = encoding.decode(bytes);
 }
 
 class TypedValue<T extends Object> {

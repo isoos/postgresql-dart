@@ -1,5 +1,6 @@
 library legacy;
 
+import 'src/exceptions.dart';
 import 'src/types.dart';
 
 export 'src/v2/connection.dart';

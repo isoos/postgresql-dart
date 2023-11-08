@@ -7,12 +7,11 @@ import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
 import 'package:meta/meta.dart';
 import 'package:pool/pool.dart' as pool;
+import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
 import '../auth/auth.dart';
-import '../binary_codec.dart';
-import '../text_codec.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 import 'resolved_settings.dart';
@@ -659,7 +658,7 @@ class _PgResultStreamSubscription
           for (final field in message.fieldDescriptions)
             ResultSchemaColumn(
               typeOid: field.typeOid,
-              type: Type.byTypeOid[field.typeOid] ?? Type.unknownType,
+              type: TypeRegistry.instance.resolveOid(field.typeOid),
               columnName: field.fieldName,
               columnOid: field.columnOid,
               tableOid: field.tableOid,
@@ -676,15 +675,14 @@ class _PgResultStreamSubscription
             final field = schema.columns[i];
 
             final type = field.type;
-            late final dynamic value;
-            if (field.isBinaryEncoding) {
-              value = PostgresBinaryDecoder(field.typeOid, type)
-                  .convert(message.values[i], session.encoding);
-            } else {
-              value = PostgresTextDecoder(field.typeOid, type)
-                  .convert(message.values[i], session.encoding);
-            }
-
+            final input = message.values[i];
+            final value = input == null
+                ? null
+                : type.decode(DecodeInput(
+                    bytes: input,
+                    isBinary: field.isBinaryEncoding,
+                    encoding: session.encoding,
+                  ));
             columnValues.add(value);
           }
 

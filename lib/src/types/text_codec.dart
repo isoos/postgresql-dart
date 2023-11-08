@@ -1,17 +1,13 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
-import 'exceptions.dart';
-import 'types.dart';
+import '../exceptions.dart';
+import '../types.dart';
+import 'type_registry.dart';
 
 class PostgresTextEncoder {
   const PostgresTextEncoder();
 
-  String convert(dynamic input, {bool escapeStrings = true}) {
-    if (input == null) {
-      return 'null';
-    }
-
+  String convert(Object input, {bool escapeStrings = true}) {
     if (input is int) {
       return _encodeNumber(input);
     }
@@ -218,65 +214,56 @@ class PostgresTextEncoder {
 
 class PostgresTextDecoder {
   final int _typeOid;
-  final Type _type;
 
-  const PostgresTextDecoder(this._typeOid, this._type);
+  const PostgresTextDecoder(this._typeOid);
 
-  Object? convert(Uint8List? input, Encoding encoding) {
-    if (input == null) return null;
-
-    late final asText = encoding.decode(input);
-
+  Object? convert(DecodeInput di) {
     // ignore: unnecessary_cast
-    switch (_type as Type<Object>) {
-      case Type.name:
-      case Type.text:
-      case Type.varChar:
-        return asText;
-      case Type.integer:
-      case Type.smallInteger:
-      case Type.bigInteger:
-      case Type.serial:
-      case Type.bigSerial:
-        return int.parse(asText);
-      case Type.real:
-      case Type.double:
-        return num.parse(asText);
-      case Type.boolean:
+    switch (_typeOid) {
+      case TypeOid.name:
+      case TypeOid.text:
+      case TypeOid.varChar:
+        return di.asText;
+      case TypeOid.integer:
+      case TypeOid.smallInteger:
+      case TypeOid.bigInteger:
+        return int.parse(di.asText);
+      case TypeOid.real:
+      case TypeOid.double:
+        return num.parse(di.asText);
+      case TypeOid.boolean:
         // In text data format when using simple query protocol, "true" & "false"
         // are represented as `t` and `f`,  respectively.
         // we will check for both just in case
         // TODO: should we check for other representations (e.g. `1`, `on`, `y`,
         // and `yes`)?
-        return asText == 't' || asText == 'true';
+        return di.asText == 't' || di.asText == 'true';
 
-      case Type.voidType:
+      case TypeOid.voidType:
         // TODO: is returning `null` here is the appripriate thing to do?
         return null;
 
-      case Type.timestampWithTimezone:
-      case Type.timestampWithoutTimezone:
-      case Type.interval:
-      case Type.numeric:
-      case Type.byteArray:
-      case Type.date:
-      case Type.json:
-      case Type.jsonb:
-      case Type.uuid:
-      case Type.point:
-      case Type.booleanArray:
-      case Type.integerArray:
-      case Type.bigIntegerArray:
-      case Type.textArray:
-      case Type.doubleArray:
-      case Type.varCharArray:
-      case Type.jsonbArray:
-      case Type.regtype:
+      case TypeOid.timestampWithTimezone:
+      case TypeOid.timestampWithoutTimezone:
+      case TypeOid.interval:
+      case TypeOid.numeric:
+      case TypeOid.byteArray:
+      case TypeOid.date:
+      case TypeOid.json:
+      case TypeOid.jsonb:
+      case TypeOid.uuid:
+      case TypeOid.point:
+      case TypeOid.booleanArray:
+      case TypeOid.integerArray:
+      case TypeOid.bigIntegerArray:
+      case TypeOid.textArray:
+      case TypeOid.doubleArray:
+      case TypeOid.varCharArray:
+      case TypeOid.jsonbArray:
+      case TypeOid.regtype:
         // TODO: implement proper decoding of the above
-        return TypedBytes(typeOid: _typeOid, bytes: input);
-      case Type.unspecified:
-      case Type.unknownType:
-        return TypedBytes(typeOid: _typeOid, bytes: input);
+        return TypedBytes(typeOid: _typeOid, bytes: di.bytes);
     }
+    return TypedBytes(typeOid: _typeOid, bytes: di.bytes);
   }
 }

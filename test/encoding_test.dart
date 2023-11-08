@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/binary_codec.dart';
-import 'package:postgres/src/text_codec.dart';
+import 'package:postgres/src/types/binary_codec.dart';
+import 'package:postgres/src/types/text_codec.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -243,7 +243,7 @@ void main() {
         '0.0': [0, 0, 0, 0, 0, 0, 0, 1], // .0 or 0.0
       };
 
-      final encoder = PostgresBinaryEncoder(Type.numeric);
+      final encoder = PostgresBinaryEncoder(Type.numeric.oid!);
       binaries.forEach((key, value) {
         final uint8List = Uint8List.fromList(value);
         final res = encoder.convert(key, utf8);
@@ -491,7 +491,7 @@ void main() {
       ]);
 
       expect(
-        () => PostgresBinaryEncoder(Type.voidType).convert(1, utf8),
+        () => PostgresBinaryEncoder(Type.voidType.oid!).convert(1, utf8),
         throwsArgumentError,
       );
     });
@@ -618,7 +618,7 @@ void main() {
   });
 
   test('Invalid UUID encoding', () {
-    final converter = PostgresBinaryEncoder(Type.uuid);
+    final converter = PostgresBinaryEncoder(Type.uuid.oid!);
     try {
       converter.convert('z0000000-0000-0000-0000-000000000000', utf8);
       fail('unreachable');
@@ -658,16 +658,16 @@ Future expectInverse(dynamic value, Type dataType) async {
       substitutionValues: {'v': value});
   expect(result.first.first, equals(value));
 
-  final encoder = PostgresBinaryEncoder(dataType);
-  final encodedValue = encoder.convert(value, utf8);
-
   if (dataType == Type.serial) {
     dataType = Type.integer;
   } else if (dataType == Type.bigSerial) {
     dataType = Type.bigInteger;
   }
 
-  final decoder = PostgresBinaryDecoder(dataType.oid!, dataType);
+  final encoder = PostgresBinaryEncoder(dataType.oid!);
+  final encodedValue = encoder.convert(value, utf8);
+
+  final decoder = PostgresBinaryDecoder(dataType.oid!);
   final decodedValue = decoder.convert(encodedValue, utf8);
 
   expect(decodedValue, value);

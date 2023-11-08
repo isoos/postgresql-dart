@@ -280,7 +280,7 @@ final class ResultSchemaColumn {
 
   @override
   String toString() {
-    final buffer = StringBuffer('${type.name} ');
+    final buffer = StringBuffer('${type.name_} ');
     if (tableOid != null && tableOid != 0) {
       buffer
         ..write('@$tableOid')
