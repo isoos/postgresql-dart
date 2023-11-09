@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/types/type_registry.dart';
 
 import '../buffer.dart';
 import '../time_converters.dart';
@@ -343,10 +342,6 @@ class TupleDataColumn {
   final int typeId;
   final int length;
 
-  String get typeName =>
-      TypeRegistry.instance.tryResolveOid(typeId)?.toString() ??
-      typeId.toString();
-
   /// Data is the value of the column, in text format.
   /// n is the above length.
   final String data;
@@ -359,21 +354,25 @@ class TupleDataColumn {
 
   @override
   String toString() =>
-      'TupleDataColumn(typeName: $typeName, length: $length, data: $data)';
+      'TupleDataColumn(typeId: $typeId, length: $length, data: $data)';
 }
 
 class TupleData {
   /// The message type
   // late final ReplicationMessageTypes baseMessage;
 
-  late final int columnCount;
-  late final columns = <TupleDataColumn>[];
+  final List<TupleDataColumn> columns;
+
+  TupleData({
+    required this.columns,
+  });
 
   /// TupleData does not consume the entire bytes
   ///
   /// It'll read until the types are generated.
-  TupleData(PgByteDataReader reader) {
-    columnCount = reader.readUint16();
+  factory TupleData._parse(PgByteDataReader reader) {
+    final columnCount = reader.readUint16();
+    final columns = <TupleDataColumn>[];
     for (var i = 0; i < columnCount; i++) {
       // reading order matters
       final typeId = reader.readUint8();
@@ -400,7 +399,10 @@ class TupleData {
         ),
       );
     }
+    return TupleData(columns: columns);
   }
+
+  late final int columnCount = columns.length;
 
   @override
   String toString() => 'TupleData(columnNum: $columnCount, columns: $columns)';
@@ -420,7 +422,7 @@ class InsertMessage implements LogicalReplicationMessage {
     if (tupleType != 'N'.codeUnitAt(0)) {
       throw Exception("InsertMessage must have 'N' tuple type");
     }
-    tuple = TupleData(reader);
+    tuple = TupleData._parse(reader);
   }
 
   @override
@@ -482,7 +484,7 @@ class UpdateMessage implements LogicalReplicationMessage {
     if (tupleType == UpdateMessageTuple.oldType ||
         tupleType == UpdateMessageTuple.keyType) {
       oldTupleType = tupleType;
-      oldTuple = TupleData(reader);
+      oldTuple = TupleData._parse(reader);
       tupleType = UpdateMessageTuple.fromByte(reader.readUint8());
     } else {
       oldTupleType = null;
@@ -490,7 +492,7 @@ class UpdateMessage implements LogicalReplicationMessage {
     }
 
     if (tupleType == UpdateMessageTuple.newType) {
-      newTuple = TupleData(reader);
+      newTuple = TupleData._parse(reader);
     } else {
       throw Exception('Invalid Tuple Type for UpdateMessage');
     }
@@ -553,7 +555,7 @@ class DeleteMessage implements LogicalReplicationMessage {
     switch (oldTupleType) {
       case DeleteMessageTuple.keyType:
       case DeleteMessageTuple.oldType:
-        oldTuple = TupleData(reader);
+        oldTuple = TupleData._parse(reader);
         break;
       case DeleteMessageTuple.unknown:
         throw Exception('Unknown tuple type for DeleteMessage');
