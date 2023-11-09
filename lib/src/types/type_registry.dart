@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 import '../types.dart';
 
 import 'generic_type.dart';
@@ -34,48 +36,69 @@ class TypeOid {
   static const voidType = 2278;
 }
 
+final _builtInTypes = <Type>{
+  Type.unspecified,
+  Type.name,
+  Type.text,
+  Type.varChar,
+  Type.integer,
+  Type.smallInteger,
+  Type.bigInteger,
+  Type.serial,
+  Type.bigSerial,
+  Type.real,
+  Type.double,
+  Type.boolean,
+  Type.voidType,
+  Type.timestampWithTimezone,
+  Type.timestampWithoutTimezone,
+  Type.interval,
+  Type.numeric,
+  Type.byteArray,
+  Type.date,
+  Type.json,
+  Type.jsonb,
+  Type.uuid,
+  Type.point,
+  Type.booleanArray,
+  Type.integerArray,
+  Type.bigIntegerArray,
+  Type.textArray,
+  Type.doubleArray,
+  Type.varCharArray,
+  Type.jsonbArray,
+  Type.regtype,
+};
+
 class TypeRegistry {
   // TODO: implement connection-level registry
+  @internal
   static final instance = TypeRegistry();
 
-  final values = <Type>{
-    Type.unspecified,
-    Type.name,
-    Type.text,
-    Type.varChar,
-    Type.integer,
-    Type.smallInteger,
-    Type.bigInteger,
-    Type.serial,
-    Type.bigSerial,
-    Type.real,
-    Type.double,
-    Type.boolean,
-    Type.voidType,
-    Type.timestampWithTimezone,
-    Type.timestampWithoutTimezone,
-    Type.interval,
-    Type.numeric,
-    Type.byteArray,
-    Type.date,
-    Type.json,
-    Type.jsonb,
-    Type.uuid,
-    Type.point,
-    Type.booleanArray,
-    Type.integerArray,
-    Type.bigIntegerArray,
-    Type.textArray,
-    Type.doubleArray,
-    Type.varCharArray,
-    Type.jsonbArray,
-    Type.regtype,
-  };
+  final _byTypeOid = <int, Type>{};
+  final _bySubstitutionName = <String, Type>{};
 
-  late final _byTypeOid = Map<int, Type>.unmodifiable({
-    for (final type in values)
-      if (type.hasOid) type.oid: type,
-  });
+  TypeRegistry() {
+    for (final t in _builtInTypes) {
+      _register(t);
+    }
+  }
+
+  /// Registers a type.
+  void _register(Type type) {
+    if (type.hasOid) {
+      _byTypeOid[type.oid!] = type;
+    }
+    // We don't index serial and bigSerial types here because they're using
+    // the same names as int4 and int8, respectively.
+    // However, when a user is referring to these types in a query, they
+    // should always resolve to integer and bigInteger.
+    if (type != Type.serial &&
+        type != Type.bigSerial &&
+        type.nameForSubstitution != null) {
+      _bySubstitutionName[type.nameForSubstitution!] = type;
+    }
+  }
 
   Type resolveOid(int oid) {
     return _byTypeOid[oid] ?? UnknownType(oid);
@@ -85,17 +108,8 @@ class TypeRegistry {
     return _byTypeOid[oid];
   }
 
-  late final _bySubstitutionName = Map<String, Type>.unmodifiable({
-    for (final type in values)
-      // We don't index serial and bigSerial types here because they're using
-      // the same names as int4 and int8, respectively.
-      // However, when a user is referring to these types in a query, they
-      // should always resolve to integer and bigInteger.
-      if (type != Type.serial &&
-          type != Type.bigSerial &&
-          type.nameForSubstitution != null)
-        type.nameForSubstitution: type,
-  });
-
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
+
+  @internal
+  Iterable<Type> get values => _byTypeOid.values;
 }
