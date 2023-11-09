@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/replication.dart';
@@ -436,6 +437,10 @@ class ConnectionSettings extends SessionSettings {
   /// [Streaming Replication Protocol]: https://www.postgresql.org/docs/current/protocol-replication.html
   final ReplicationMode? replicationMode;
 
+  /// When set, use the type registry with custom types, instead of the
+  /// built-in ones provided by the package.
+  final TypeRegistry? typeRegistry;
+
   ConnectionSettings({
     this.applicationName,
     this.timeZone,
@@ -443,6 +448,7 @@ class ConnectionSettings extends SessionSettings {
     this.sslMode,
     this.transformer,
     this.replicationMode,
+    this.typeRegistry,
     super.connectTimeout,
     super.queryTimeout,
     super.queryMode,

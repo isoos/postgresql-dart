@@ -386,7 +386,8 @@ class VariableTokenizer {
 
     if (consumedColonForType) {
       final typeName = typeBuffer.toString();
-      final type = TypeRegistry.instance.resolveSubstitution(typeName);
+      // TODO: get this from the connection settings
+      final type = TypeRegistry().resolveSubstitution(typeName);
       if (type == null) {
         error('Unknown type: $typeName');
       }
