@@ -174,7 +174,12 @@ class Query<T> {
       if (bd == null) {
         return null;
       }
-      return converter.convert(bd, connection.encoding);
+      return converter.convert(DecodeInput(
+        bytes: bd,
+        isBinary: true,
+        encoding: connection.encoding,
+        typeRegistry: TypeRegistry(),
+      ));
     });
 
     rows.add(lazyDecodedData.toList());

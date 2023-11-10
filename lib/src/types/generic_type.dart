@@ -48,8 +48,7 @@ class GenericType<T extends Object> extends Type<T> {
   @override
   T? decode(DecodeInput input) {
     if (input.isBinary) {
-      return PostgresBinaryDecoder(oid!).convert(input.bytes, input.encoding)
-          as T?;
+      return PostgresBinaryDecoder(oid!).convert(input) as T?;
     } else {
       return PostgresTextDecoder(oid!).convert(input) as T?;
     }
