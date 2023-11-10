@@ -45,6 +45,12 @@ jobs:
       - name: Run tests
         run: dart test --coverage=coverage
 
+      - name: Test example
+        run: |
+          docker run --detach --name postgres_for_dart_test -p 127.0.0.1:5432:5432 -e POSTGRES_USER=user -e POSTGRES_DATABASE=database -e POSTGRES_PASSWORD=pass postgres
+          dart run example/example.dart
+          docker container rm --force postgres_for_dart_test
+
       # https://www.bradcypert.com/how-to-upload-coverage-to-codecov-for-dart/
       - name: Install coverage tools
         run: dart pub global activate coverage
