@@ -328,11 +328,13 @@ class DecodeInput {
   final Uint8List bytes;
   final bool isBinary;
   final Encoding encoding;
+  final TypeRegistry typeRegistry;
 
   DecodeInput({
     required this.bytes,
     required this.isBinary,
     required this.encoding,
+    required this.typeRegistry,
   });
 
   late final asText = encoding.decode(bytes);

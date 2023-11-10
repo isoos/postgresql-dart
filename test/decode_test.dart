@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:buffer/buffer.dart';
 import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/types/binary_codec.dart';
+import 'package:postgres/src/types/type_registry.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -252,8 +253,13 @@ void main() {
 
       final decoder = PostgresBinaryDecoder(Type.numeric.oid!);
       binaries.forEach((key, value) {
-        final uint8List = Uint8List.fromList(value);
-        final res = decoder.convert(uint8List, utf8);
+        final input = DecodeInput(
+          bytes: castBytes(value),
+          isBinary: true,
+          encoding: utf8,
+          typeRegistry: TypeRegistry(),
+        );
+        final res = decoder.convert(input);
         expect(res, key);
       });
     });

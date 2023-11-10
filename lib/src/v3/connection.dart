@@ -682,6 +682,7 @@ class _PgResultStreamSubscription
                     bytes: input,
                     isBinary: field.isBinaryEncoding,
                     encoding: session.encoding,
+                    typeRegistry: session._connection._settings.typeRegistry,
                   ));
             columnValues.add(value);
           }

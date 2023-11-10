@@ -6,6 +6,7 @@ import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/types/binary_codec.dart';
 import 'package:postgres/src/types/text_codec.dart';
+import 'package:postgres/src/types/type_registry.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -668,7 +669,12 @@ Future expectInverse(dynamic value, Type dataType) async {
   final encodedValue = encoder.convert(value, utf8);
 
   final decoder = PostgresBinaryDecoder(dataType.oid!);
-  final decodedValue = decoder.convert(encodedValue, utf8);
+  final decodedValue = decoder.convert(DecodeInput(
+    bytes: encodedValue,
+    isBinary: true,
+    encoding: utf8,
+    typeRegistry: TypeRegistry(),
+  ));
 
   expect(decodedValue, value);
 }

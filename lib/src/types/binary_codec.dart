@@ -510,7 +510,9 @@ class PostgresBinaryDecoder {
 
   PostgresBinaryDecoder(this.typeOid);
 
-  Object? convert(Uint8List input, Encoding encoding) {
+  Object? convert(DecodeInput dinput) {
+    final encoding = dinput.encoding;
+    final input = dinput.bytes;
     late final buffer =
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
 
@@ -585,8 +587,7 @@ class PostgresBinaryDecoder {
       case TypeOid.regtype:
         final data = input.buffer.asByteData(input.offsetInBytes, input.length);
         final oid = data.getInt32(0);
-        // TODO: DecodeInput may provide the connection-level TypeRegistry
-        return TypeRegistry().resolveOid(oid);
+        return dinput.typeRegistry.resolveOid(oid);
       case TypeOid.voidType:
         return null;
 
