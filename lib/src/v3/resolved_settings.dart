@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:postgres/messages.dart';
+import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
@@ -50,6 +51,8 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
   final StreamChannelTransformer<Message, Message>? transformer;
   @override
   final ReplicationMode replicationMode;
+  @override
+  final TypeRegistry typeRegistry;
 
   ResolvedConnectionSettings(
       ConnectionSettings? super.settings, ConnectionSettings? super.fallback)
@@ -62,7 +65,10 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
         transformer = settings?.transformer ?? fallback?.transformer,
         replicationMode = settings?.replicationMode ??
             fallback?.replicationMode ??
-            ReplicationMode.none;
+            ReplicationMode.none,
+        // TODO: consider merging the type registries
+        typeRegistry =
+            settings?.typeRegistry ?? fallback?.typeRegistry ?? TypeRegistry();
 
   bool isMatchingConnection(ResolvedConnectionSettings other) {
     return isMatchingSession(other) &&

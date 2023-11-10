@@ -15,11 +15,12 @@ void main() {
       Type.serial,
     };
 
-    for (final type in TypeRegistry.instance.values) {
+    for (final type in TypeRegistry().registered) {
       if (withoutMapping.contains(type)) continue;
 
       expect(
-        PostgreSQLFormatIdentifier.typeStringToCodeMap.values.contains(type),
+        PostgreSQLFormatIdentifier.typeStringToCodeMap.registered
+            .contains(type),
         true,
         reason: 'There should be a type mapping for $type',
       );

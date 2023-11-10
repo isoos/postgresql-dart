@@ -7,7 +7,6 @@ import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
 import 'package:meta/meta.dart';
 import 'package:pool/pool.dart' as pool;
-import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
@@ -658,7 +657,8 @@ class _PgResultStreamSubscription
           for (final field in message.fieldDescriptions)
             ResultSchemaColumn(
               typeOid: field.typeOid,
-              type: TypeRegistry.instance.resolveOid(field.typeOid),
+              type: session._connection._settings.typeRegistry
+                  .resolveOid(field.typeOid),
               columnName: field.fieldName,
               columnOid: field.columnOid,
               tableOid: field.tableOid,

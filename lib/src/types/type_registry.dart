@@ -71,10 +71,6 @@ final _builtInTypes = <Type>{
 };
 
 class TypeRegistry {
-  // TODO: implement connection-level registry
-  @internal
-  static final instance = TypeRegistry();
-
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
 
@@ -110,6 +106,7 @@ class TypeRegistry {
 
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
 
+  /// Note: this returns only types with oids.
   @internal
-  Iterable<Type> get values => _byTypeOid.values;
+  Iterable<Type> get registered => _byTypeOid.values;
 }
