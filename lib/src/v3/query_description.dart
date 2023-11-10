@@ -28,7 +28,7 @@ class InternalQueryDescription implements Sql {
     String original,
     String transformed,
     List<Type?> parameterTypes,
-    Map<String, int> namedVariables,
+    Map<String, int>? namedVariables,
   ) : this._(
           transformed,
           original,
@@ -36,8 +36,18 @@ class InternalQueryDescription implements Sql {
           namedVariables,
         );
 
+  factory InternalQueryDescription.indexed(String sql,
+      {String substitution = '@'}) {
+    return _viaTokenizer(sql, substitution, TokenizerMode.indexed);
+  }
+
   factory InternalQueryDescription.named(String sql,
       {String substitution = '@'}) {
+    return _viaTokenizer(sql, substitution, TokenizerMode.named);
+  }
+
+  static InternalQueryDescription _viaTokenizer(
+      String sql, String substitution, TokenizerMode mode) {
     final charCodes = substitution.codeUnits;
     if (charCodes.length != 1) {
       throw ArgumentError.value(substitution, 'substitution',
@@ -45,7 +55,8 @@ class InternalQueryDescription implements Sql {
     }
 
     final tokenizer =
-        VariableTokenizer(variableCodeUnit: charCodes[0], sql: sql)..tokenize();
+        VariableTokenizer(variableCodeUnit: charCodes[0], sql: sql, mode: mode)
+          ..tokenize();
 
     return tokenizer.result;
   }
