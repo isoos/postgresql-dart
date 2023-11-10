@@ -32,7 +32,8 @@ export 'src/types.dart';
 /// Alternatively, you can use named variables that will be desugared by this
 /// package with the [Sql.named] factory. If you prefer positional variables,
 /// but want to specify their types in text or use a different symbol for
-/// variables (Postgres uses `$`), you
+/// variables (Postgres uses `$`), you can use the [Sql.indexed] constructor
+/// instead.
 class Sql {
   /// The default constructor, sending [sql] to the Postgres database without
   /// any modification.
@@ -48,7 +49,8 @@ class Sql {
   /// This mode is very similar to the native format understood by postgres,
   /// except that:
   ///  1. The character for variables is customizable (postgres will always use
-  ///     `@`). This method also uses `@` by default, but this can be changed.
+  ///     `$`). To be consistent with [Sql.named], this method uses `@` as the
+  ///     default character.
   ///  2. Not every variable needs to have en explicit index. When declaring a
   ///     variable without an index, the first index higher than any previously
   ///     seen index is used instead.
