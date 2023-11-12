@@ -104,13 +104,13 @@ class TypeRegistry {
       _bySubstitutionName[type.nameForSubstitution!] = type;
     }
   }
+}
 
+final _textEncoder = const PostgresTextEncoder();
+
+extension TypeRegistryExt on TypeRegistry {
   Type resolveOid(int oid) {
     return _byTypeOid[oid] ?? UnknownType(oid);
-  }
-
-  Type? tryResolveOid(int oid) {
-    return _byTypeOid[oid];
   }
 
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
@@ -118,11 +118,7 @@ class TypeRegistry {
   /// Note: this returns only types with oids.
   @internal
   Iterable<Type> get registered => _byTypeOid.values;
-}
 
-final _textEncoder = const PostgresTextEncoder();
-
-extension TypeRegistryExt on TypeRegistry {
   EncodeOutput? encodeValue(
     Object? value, {
     required Type type,
