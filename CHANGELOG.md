@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.0-beta.1
+## 3.0.0-beta.2
 
 New features:
 
@@ -59,6 +59,10 @@ The rewrite happened because of many contributions (including code, comments or
 criticism) on the new direction and design. I'd like to call out especially to
 [simolus3](https://github.com/simolus3) and [osaxma](https://github.com/osaxma),
 who helped to push forward.
+
+## 3.0.0-beta.1
+
+*see the latest 3.0.0 (pre)release*
 
 ## 3.0.0-alpha.1
 
