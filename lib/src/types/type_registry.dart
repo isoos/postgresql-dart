@@ -1,8 +1,14 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:meta/meta.dart';
 
 import '../types.dart';
 
 import 'generic_type.dart';
+
+typedef TypeEncoderFn = EncodeOutput Function(EncodeInput input);
+typedef TypeDecoderFn = Object? Function(DecodeInput input);
 
 /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
 class TypeOid {
@@ -109,4 +115,33 @@ class TypeRegistry {
   /// Note: this returns only types with oids.
   @internal
   Iterable<Type> get registered => _byTypeOid.values;
+}
+
+extension TypeRegistryExt on TypeRegistry {
+  EncodeOutput? encodeValue(
+    Object? value, {
+    Type? type,
+    required Encoding encoding,
+  }) {
+    if (value == null) return null;
+    return type?.encode(EncodeInput(value: value, encoding: encoding));
+  }
+
+  Object? decodeBytes(
+    Uint8List? bytes, {
+    required int typeOid,
+    required bool isBinary,
+    required Encoding encoding,
+  }) {
+    if (bytes == null) {
+      return null;
+    }
+    final type = resolveOid(typeOid);
+    return type.decode(DecodeInput(
+      bytes: bytes,
+      isBinary: isBinary,
+      encoding: encoding,
+      typeRegistry: this,
+    ));
+  }
 }

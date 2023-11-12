@@ -7,6 +7,7 @@ import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
 import 'package:meta/meta.dart';
 import 'package:pool/pool.dart' as pool;
+import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
@@ -568,7 +569,13 @@ class _PgResultStreamSubscription
 
       connection._channel.sink.add(AggregatedClientMessage([
         BindMessage(
-          statement.parameters,
+          statement.parameters
+              .map((e) => connection._settings.typeRegistry.encodeValue(
+                    e.value,
+                    type: e.type,
+                    encoding: connection.encoding,
+                  ))
+              .toList(),
           portalName: _portalName,
           statementName: statement.statement._name,
         ),
@@ -674,16 +681,14 @@ class _PgResultStreamSubscription
           for (var i = 0; i < message.values.length; i++) {
             final field = schema.columns[i];
 
-            final type = field.type;
             final input = message.values[i];
-            final value = input == null
-                ? null
-                : type.decode(DecodeInput(
-                    bytes: input,
-                    isBinary: field.isBinaryEncoding,
-                    encoding: session.encoding,
-                    typeRegistry: session._connection._settings.typeRegistry,
-                  ));
+            final value =
+                session._connection._settings.typeRegistry.decodeBytes(
+              input,
+              typeOid: field.typeOid,
+              isBinary: field.isBinaryEncoding,
+              encoding: session.encoding,
+            );
             columnValues.add(value);
           }
 

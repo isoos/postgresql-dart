@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:postgres/messages.dart';
-import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';

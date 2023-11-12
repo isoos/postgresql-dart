@@ -172,7 +172,7 @@ class DescribeMessage extends ClientMessage {
 }
 
 class BindMessage extends ClientMessage {
-  final List<TypedValue> _parameters;
+  final List<EncodeOutput?> _parameters;
   final String _portalName;
   final String _statementName;
 
@@ -189,19 +189,12 @@ class BindMessage extends ClientMessage {
     final portalName = buffer.encodeString(_portalName);
     final statementName = buffer.encodeString(_statementName);
 
-    final encodedOutputs = _parameters
-        .map((p) => p.value == null
-            ? null
-            : p.type.encode(
-                EncodeInput(value: p.value!, encoding: buffer.encoding)))
-        .toList();
-    final encodedBytes = encodedOutputs.map((e) {
+    final encodedBytes = _parameters.map((e) {
       if (e == null) return null;
       return e.isBinary ? e.bytes! : buffer.encoding.encode(e.text!);
     }).toList();
-    final binaryCount =
-        encodedOutputs.where((p) => p?.isBinary ?? false).length;
-    final isAllBinary = binaryCount == encodedOutputs.length;
+    final binaryCount = _parameters.where((p) => p?.isBinary ?? false).length;
+    final isAllBinary = binaryCount == _parameters.length;
     final isAllText = binaryCount == 0;
     final inputParameterElementCount =
         isAllBinary || isAllText ? 1 : _parameters.length;
@@ -232,7 +225,7 @@ class BindMessage extends ClientMessage {
     } else {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.writeUint16(_parameters.length);
-      for (final p in encodedOutputs) {
+      for (final p in _parameters) {
         buffer.writeUint16(p != null && p.isBinary
             ? ClientMessageFormat.binary
             : ClientMessageFormat.text);
