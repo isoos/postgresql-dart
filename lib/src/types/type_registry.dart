@@ -44,7 +44,7 @@ class TypeOid {
   static const voidType = 2278;
 }
 
-final _builtInTypes = <Type>{
+const _builtInTypes = <Type>{
   Type.unspecified,
   Type.name,
   Type.text,
