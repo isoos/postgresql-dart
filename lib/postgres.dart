@@ -3,11 +3,11 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
-import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/replication.dart';
 import 'src/types.dart';
+import 'src/types/type_registry.dart';
 import 'src/v3/connection.dart';
 import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
@@ -16,6 +16,7 @@ export 'src/exceptions.dart';
 export 'src/pool/pool_api.dart';
 export 'src/replication.dart';
 export 'src/types.dart';
+export 'src/types/type_registry.dart' show TypeOid, TypeRegistry;
 
 /// A description of a SQL query as interpreted by this package.
 ///

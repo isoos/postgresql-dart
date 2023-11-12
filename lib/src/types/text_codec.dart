@@ -8,6 +8,14 @@ class PostgresTextEncoder {
   const PostgresTextEncoder();
 
   String convert(Object input, {bool escapeStrings = true}) {
+    final value = tryConvert(input, escapeStrings: escapeStrings);
+    if (value != null) {
+      return value;
+    }
+    throw PgException("Could not infer type of value '$input'.");
+  }
+
+  String? tryConvert(Object input, {bool escapeStrings = false}) {
     if (input is int) {
       return _encodeNumber(input);
     }
@@ -40,9 +48,7 @@ class PostgresTextEncoder {
       return _encodeList(input);
     }
 
-    // TODO: use custom type encoders
-
-    throw PgException("Could not infer type of value '$input'.");
+    return null;
   }
 
   String _encodeString(String text, bool escapeStrings) {

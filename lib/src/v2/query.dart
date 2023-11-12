@@ -91,7 +91,8 @@ class Query<T> {
     final messages = [
       ParseMessage(sqlString, statementName: statementName),
       DescribeMessage(statementName: statementName),
-      BindMessage(parameterList, statementName: statementName),
+      BindMessage(_toEncodedOutput(parameterList),
+          statementName: statementName),
       ExecuteMessage(),
       SyncMessage(),
     ];
@@ -104,6 +105,17 @@ class Query<T> {
         .add(_aggregateClientMessages(messages, encoding: connection.encoding));
   }
 
+  late final _typeRegistry = TypeRegistry();
+  List<EncodeOutput?> _toEncodedOutput(List<ParameterValue> values) {
+    return values
+        .map((e) => _typeRegistry.encodeValue(
+              e.value,
+              type: e.type,
+              encoding: connection.encoding,
+            ))
+        .toList();
+  }
+
   void sendCachedQuery(Socket socket, CachedQuery cacheQuery,
       Map<String, dynamic>? substitutionValues) {
     final statementName = cacheQuery.preparedStatementName;
@@ -114,7 +126,8 @@ class Query<T> {
 
     final bytes = _aggregateClientMessages(
       [
-        BindMessage(parameterList, statementName: statementName!),
+        BindMessage(_toEncodedOutput(parameterList),
+            statementName: statementName!),
         ExecuteMessage(),
         SyncMessage()
       ],
