@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 
 void main() {
   test('Ensure all types/format type mappings are available and accurate', () {
-    const withoutMapping = {
+    final withoutMapping = {
       Type.unspecified, // Can't bind into unspecified type
       Type.voidType, // Can't assign to void
       Type.bigSerial, // Can only be created from a table sequence

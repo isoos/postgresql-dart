@@ -4,6 +4,7 @@ import 'package:buffer/buffer.dart';
 import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/types/binary_codec.dart';
+import 'package:postgres/src/types/generic_type.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';

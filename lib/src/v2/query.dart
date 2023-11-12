@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:postgres/src/buffer.dart';
+import 'package:postgres/src/types/generic_type.dart';
 import 'package:postgres/src/types/type_registry.dart';
 
 import '../exceptions.dart';

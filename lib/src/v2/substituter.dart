@@ -1,3 +1,5 @@
+import 'package:postgres/src/types/generic_type.dart';
+
 import '../types.dart';
 import '../types/text_codec.dart';
 import 'query.dart';
@@ -14,7 +16,8 @@ class PostgreSQLFormat {
   }
 
   static String? dataTypeStringForDataType(Type? dt) {
-    return dt?.nameForSubstitution;
+    final gt = dt is GenericType ? dt : null;
+    return gt?.nameForSubstitution;
   }
 
   static String substitute(String fmtString, Map<String, dynamic>? values,
