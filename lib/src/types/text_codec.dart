@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:postgres/src/types/generic_type.dart';
+
 import '../exceptions.dart';
 import '../types.dart';
 import 'type_registry.dart';

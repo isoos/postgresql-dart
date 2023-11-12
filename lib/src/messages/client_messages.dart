@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:charcode/ascii.dart';
+import 'package:postgres/src/types/generic_type.dart';
 
 import '../buffer.dart';
 import '../replication.dart';

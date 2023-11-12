@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
+import 'package:postgres/src/exceptions.dart';
+import 'package:postgres/src/types/text_codec.dart';
 
 import '../types.dart';
 
@@ -88,7 +90,7 @@ class TypeRegistry {
 
   /// Registers a type.
   void _register(Type type) {
-    if (type.hasOid) {
+    if (type.oid != null && type.oid! > 0) {
       _byTypeOid[type.oid!] = type;
     }
     // We don't index serial and bigSerial types here because they're using
@@ -97,6 +99,7 @@ class TypeRegistry {
     // should always resolve to integer and bigInteger.
     if (type != Type.serial &&
         type != Type.bigSerial &&
+        type is GenericType &&
         type.nameForSubstitution != null) {
       _bySubstitutionName[type.nameForSubstitution!] = type;
     }
@@ -117,14 +120,26 @@ class TypeRegistry {
   Iterable<Type> get registered => _byTypeOid.values;
 }
 
+final _textEncoder = const PostgresTextEncoder();
+
 extension TypeRegistryExt on TypeRegistry {
   EncodeOutput? encodeValue(
     Object? value, {
-    Type? type,
+    required Type type,
     required Encoding encoding,
   }) {
     if (value == null) return null;
-    return type?.encode(EncodeInput(value: value, encoding: encoding));
+    switch (type) {
+      case GenericType():
+        return type.encode(EncodeInput(value: value, encoding: encoding));
+      case UnspecifiedType():
+        final encoded = _textEncoder.tryConvert(value);
+        if (encoded != null) {
+          return EncodeOutput.text(encoded);
+        }
+        break;
+    }
+    throw PgException("Could not infer type of value '$value'.");
   }
 
   Object? decodeBytes(
@@ -137,11 +152,22 @@ extension TypeRegistryExt on TypeRegistry {
       return null;
     }
     final type = resolveOid(typeOid);
-    return type.decode(DecodeInput(
-      bytes: bytes,
-      isBinary: isBinary,
-      encoding: encoding,
-      typeRegistry: this,
-    ));
+    switch (type) {
+      case GenericType():
+        return type.decode(DecodeInput(
+          bytes: bytes,
+          isBinary: isBinary,
+          encoding: encoding,
+          typeRegistry: this,
+        ));
+      case UnknownType():
+        return type.decode(DecodeInput(
+          bytes: bytes,
+          isBinary: isBinary,
+          encoding: encoding,
+          typeRegistry: this,
+        ));
+    }
+    return TypedBytes(typeOid: typeOid, bytes: bytes);
   }
 }
