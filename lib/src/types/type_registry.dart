@@ -157,8 +157,18 @@ extension TypeRegistryExt on TypeRegistry {
           typeRegistry: this,
         ));
       case UnknownType():
-        return TypedBytes(typeOid: typeOid, bytes: bytes);
+        return UndecodedBytes(
+          typeOid: typeOid,
+          bytes: bytes,
+          isBinary: isBinary,
+          encoding: encoding,
+        );
     }
-    return TypedBytes(typeOid: typeOid, bytes: bytes);
+    return UndecodedBytes(
+      typeOid: typeOid,
+      bytes: bytes,
+      isBinary: isBinary,
+      encoding: encoding,
+    );
   }
 }

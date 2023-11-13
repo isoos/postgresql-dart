@@ -621,7 +621,12 @@ class PostgresBinaryDecoder {
           return _jsonFusedEncoding(encoding).decode(bytes);
         });
     }
-    return TypedBytes(typeOid: typeOid, bytes: input);
+    return UndecodedBytes(
+      typeOid: typeOid,
+      bytes: input,
+      isBinary: true,
+      encoding: encoding,
+    );
   }
 
   List<V> readListBytes<V>(Uint8List data,
