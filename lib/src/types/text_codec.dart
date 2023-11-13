@@ -270,8 +270,18 @@ class PostgresTextDecoder {
       case TypeOid.jsonbArray:
       case TypeOid.regtype:
         // TODO: implement proper decoding of the above
-        return TypedBytes(typeOid: _typeOid, bytes: di.bytes);
+        return UndecodedBytes(
+          typeOid: _typeOid,
+          bytes: di.bytes,
+          isBinary: false,
+          encoding: di.encoding,
+        );
     }
-    return TypedBytes(typeOid: _typeOid, bytes: di.bytes);
+    return UndecodedBytes(
+      typeOid: _typeOid,
+      bytes: di.bytes,
+      isBinary: false,
+      encoding: di.encoding,
+    );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:core';
 import 'dart:core' as core;
 import 'dart:typed_data';
@@ -53,14 +54,20 @@ class Interval {
 
 /// Describes a generic bytes string value..
 @immutable
-class TypedBytes {
+class UndecodedBytes {
   final int typeOid;
+  final bool isBinary;
   final Uint8List bytes;
+  final Encoding encoding;
 
-  TypedBytes({
+  UndecodedBytes({
     required this.typeOid,
+    required this.isBinary,
     required this.bytes,
+    required this.encoding,
   });
+
+  late final asString = encoding.decode(bytes);
 }
 
 /// LSN is a PostgreSQL Log Sequence Number.
