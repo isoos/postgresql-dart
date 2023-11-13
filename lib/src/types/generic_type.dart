@@ -48,29 +48,12 @@ class DecodeInput {
 }
 
 class UnknownType extends Type<Object> {
-  UnknownType(super.oid);
-
-  EncodeOutput encode(EncodeInput input) {
-    final v = input.value;
-    if (v is Uint8List) {
-      return EncodeOutput.bytes(v);
-    } else if (v is String) {
-      return EncodeOutput.text(v);
-    }
-    throw UnimplementedError(
-        'Encoding ${v.runtimeType} for oid:$oid is not supported.');
-  }
-
-  Object? decode(DecodeInput input) {
-    return TypedBytes(typeOid: oid ?? 0, bytes: input.bytes);
-  }
+  const UnknownType(super.oid);
 }
 
 class UnspecifiedType extends Type<Object> {
   const UnspecifiedType() : super(null);
 }
-
-Type<Object> unspecifiedType() => const UnspecifiedType();
 
 /// NOTE: do not use this type in client code.
 class GenericType<T extends Object> extends Type<T> {
@@ -78,12 +61,16 @@ class GenericType<T extends Object> extends Type<T> {
   ///
   /// To declare an explicit type for a substituted parameter in a query, this
   /// name can be used.
-  final String? nameForSubstitution;
+  final String? _nameForSubstitution;
 
   const GenericType(
     super.oid, {
-    this.nameForSubstitution,
-  });
+    String? nameForSubstitution,
+  }) : _nameForSubstitution = nameForSubstitution;
+}
+
+extension GenericTypeExt<T extends Object> on GenericType<T> {
+  String? get nameForSubstitution => _nameForSubstitution;
 
   EncodeOutput encode(EncodeInput input) {
     if (oid != null && oid! > 0) {

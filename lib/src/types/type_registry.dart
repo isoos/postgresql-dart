@@ -157,12 +157,7 @@ extension TypeRegistryExt on TypeRegistry {
           typeRegistry: this,
         ));
       case UnknownType():
-        return type.decode(DecodeInput(
-          bytes: bytes,
-          isBinary: isBinary,
-          encoding: encoding,
-          typeRegistry: this,
-        ));
+        return TypedBytes(typeOid: typeOid, bytes: bytes);
     }
     return TypedBytes(typeOid: typeOid, bytes: bytes);
   }
