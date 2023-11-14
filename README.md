@@ -56,14 +56,14 @@ regular session executor).
 ## Additional Capabilities
 
 The library supports connecting to PostgreSQL using the [Streaming Replication Protocol][].
-See [PostgreSQLConnection][] documentation for more info.
+See [Connection][] documentation for more info.
 An example can also be found at the following repository: [postgresql-dart-replication-example][]
 
 [Streaming Replication Protocol]: https://www.postgresql.org/docs/13/protocol-replication.html
-[PostgreSQLConnection]: https://pub.dev/documentation/postgres/latest/postgres/Connection/Connection.html
+[Connection]: https://pub.dev/documentation/postgres/latest/postgres/Connection/Connection.html
 [postgresql-dart-replication-example]: https://github.com/osaxma/postgresql-dart-replication-example
 
-## Features and bugs
+## Other notes
 
 This library originally started as [StableKernel's postgres library](https://github.com/stablekernel/postgresql-dart),
 but got a full API overhaul and partial rewrite of the internals.

@@ -1,20 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.2
+## 3.0.0
 
 New features:
 
 - New API (better names and consistency).
-- New SQL parsing and configurable substitutions.
+- New SQL parsing and configurable query substitutions.
 - Integrated connection pooling.
-- A somewhat-compatible legacy API support to help migrations.
+- A somewhat-compatible legacy API support to help migrations (will be removed in `3.1.0`).
 
 ### BREAKING CHANGES
 
 The package had a partial rewrite affecting public client API and internal
 behaviour, keeping most of the wire protocol handling from the old version.
 
-**Clients must need to rewrite and test their application when upgrading.**
+**Users of this package must rewrite and test their application when upgrading.**
 
 Notable breaking behaviour changes:
 
@@ -22,7 +22,7 @@ Notable breaking behaviour changes:
     awaiting on the result. The new implementation queues these request
     on the client instead.
   - Table name OIDs are not fetched or cached, this information from the
-    reesult schema is absent, also causing `mappedResultsQuery` to be
+    result schema is absent, also causing `mappedResultsQuery` to be
     removed from the new API.
   - Queries are not cached implicitly, explicit prepared statements can be
     used instead.
@@ -59,6 +59,10 @@ The rewrite happened because of many contributions (including code, comments or
 criticism) on the new direction and design. I'd like to call out especially to
 [simolus3](https://github.com/simolus3) and [osaxma](https://github.com/osaxma),
 who helped to push forward.
+
+## 3.0.0-beta.2
+
+*see the latest 3.0.0 (pre)release*
 
 ## 3.0.0-beta.1
 
