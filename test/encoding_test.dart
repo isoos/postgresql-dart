@@ -11,13 +11,12 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-late PostgreSQLConnection conn;
+late Connection conn;
 
 void main() {
   withPostgresServer('Binary encoders', (server) {
     setUp(() async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
+      conn = await server.newConnection();
     });
 
     tearDown(() async {
@@ -32,8 +31,8 @@ void main() {
       await expectInverse(true, Type.boolean);
       await expectInverse(false, Type.boolean);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:boolean)',
-            substitutionValues: {'v': 'not-bool'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:boolean)'),
+            parameters: {'v': 'not-bool'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: bool'));
@@ -45,8 +44,8 @@ void main() {
       await expectInverse(0, Type.smallInteger);
       await expectInverse(1, Type.smallInteger);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int2)',
-            substitutionValues: {'v': 'not-int2'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int2)'),
+            parameters: {'v': 'not-int2'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: int'));
@@ -58,8 +57,8 @@ void main() {
       await expectInverse(0, Type.integer);
       await expectInverse(1, Type.integer);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int4)',
-            substitutionValues: {'v': 'not-int4'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int4)'),
+            parameters: {'v': 'not-int4'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: int'));
@@ -70,8 +69,8 @@ void main() {
       await expectInverse(0, Type.serial);
       await expectInverse(1, Type.serial);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int4)',
-            substitutionValues: {'v': 'not-serial'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int4)'),
+            parameters: {'v': 'not-serial'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: int'));
@@ -83,8 +82,8 @@ void main() {
       await expectInverse(0, Type.bigInteger);
       await expectInverse(1, Type.bigInteger);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int8)',
-            substitutionValues: {'v': 'not-int8'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int8)'),
+            parameters: {'v': 'not-int8'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: int'));
@@ -95,8 +94,8 @@ void main() {
       await expectInverse(0, Type.bigSerial);
       await expectInverse(1, Type.bigSerial);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:int8)',
-            substitutionValues: {'v': 'not-bigserial'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int8)'),
+            parameters: {'v': 'not-bigserial'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: int'));
@@ -109,8 +108,8 @@ void main() {
       await expectInverse('foo\n', Type.text);
       await expectInverse('foo\nbar;s', Type.text);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:text)',
-            substitutionValues: {'v': 0});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:text)'),
+            parameters: {'v': 0});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: String'));
@@ -122,8 +121,8 @@ void main() {
       await expectInverse(0.0, Type.real);
       await expectInverse(1.0, Type.real);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:float4)',
-            substitutionValues: {'v': 'not-real'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:float4)'),
+            parameters: {'v': 'not-real'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: double'));
@@ -135,8 +134,8 @@ void main() {
       await expectInverse(0.0, Type.double);
       await expectInverse(1.0, Type.double);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:float8)',
-            substitutionValues: {'v': 'not-double'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:float8)'),
+            parameters: {'v': 'not-double'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: double'));
@@ -148,8 +147,8 @@ void main() {
       await expectInverse(DateTime.utc(2120, 10, 5), Type.date);
       await expectInverse(DateTime.utc(2016, 10, 1), Type.date);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:date)',
-            substitutionValues: {'v': 'not-date'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:date)'),
+            parameters: {'v': 'not-date'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: DateTime'));
@@ -162,8 +161,8 @@ void main() {
       await expectInverse(
           DateTime.utc(2120, 10, 5), Type.timestampWithoutTimezone);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:timestamp)',
-            substitutionValues: {'v': 'not-timestamp'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:timestamp)'),
+            parameters: {'v': 'not-timestamp'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: DateTime'));
@@ -176,8 +175,9 @@ void main() {
       await expectInverse(
           DateTime.utc(2120, 10, 5), Type.timestampWithTimezone);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:timestamptz)',
-            substitutionValues: {'v': 'not-timestamptz'});
+        await conn.execute(
+            Sql.named('INSERT INTO t (v) VALUES (@v:timestamptz)'),
+            parameters: {'v': 'not-timestamptz'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: DateTime'));
@@ -189,8 +189,8 @@ void main() {
       await expectInverse(Interval(days: 1, microseconds: 15), Type.interval);
       await expectInverse(Interval(days: -1, months: 5), Type.interval);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:interval)',
-            substitutionValues: {'v': 'not-interval'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:interval)'),
+            parameters: {'v': 'not-interval'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: Interval'));
@@ -272,8 +272,8 @@ void main() {
       await expectInverse('100000000.00000000', Type.numeric);
       await expectInverse('NaN', Type.numeric);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:numeric)',
-            substitutionValues: {'v': 'not-numeric'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:numeric)'),
+            parameters: {'v': 'not-numeric'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: String'));
@@ -291,8 +291,8 @@ void main() {
       }, Type.jsonb);
 
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:jsonb)',
-            substitutionValues: {'v': DateTime.now()});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:jsonb)'),
+            parameters: {'v': DateTime.now()});
         fail('unreachable');
       } on JsonUnsupportedObjectError catch (_) {}
     });
@@ -303,8 +303,8 @@ void main() {
       await expectInverse([255, 254, 253], Type.byteArray);
 
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:bytea)',
-            substitutionValues: {'v': DateTime.now()});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:bytea)'),
+            parameters: {'v': DateTime.now()});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: List<int>'));
@@ -316,8 +316,8 @@ void main() {
       await expectInverse('12345678-abcd-efab-cdef-012345678901', Type.uuid);
 
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:uuid)',
-            substitutionValues: {'v': DateTime.now()});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:uuid)'),
+            parameters: {'v': DateTime.now()});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: String'));
@@ -330,8 +330,8 @@ void main() {
       await expectInverse('foo\n', Type.varChar);
       await expectInverse('foo\nbar;s', Type.varChar);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:varchar)',
-            substitutionValues: {'v': 0});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:varchar)'),
+            parameters: {'v': 0});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: String'));
@@ -349,8 +349,8 @@ void main() {
       }, Type.json);
 
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:json)',
-            substitutionValues: {'v': DateTime.now()});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:json)'),
+            parameters: {'v': DateTime.now()});
         fail('unreachable');
       } on JsonUnsupportedObjectError catch (_) {}
     });
@@ -361,8 +361,8 @@ void main() {
       await expectInverse(Point(0.001, -999), Type.point);
 
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:point)',
-            substitutionValues: {'v': 'text'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:point)'),
+            parameters: {'v': 'text'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: PgPoint'));
@@ -374,8 +374,8 @@ void main() {
       await expectInverse([false, true], Type.booleanArray);
       await expectInverse([true], Type.booleanArray);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:_bool)',
-            substitutionValues: {'v': 'not-list-bool'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_bool)'),
+            parameters: {'v': 'not-list-bool'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: List<bool>'));
@@ -387,8 +387,8 @@ void main() {
       await expectInverse([-1, 0, 200], Type.integerArray);
       await expectInverse([-123], Type.integerArray);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:_int4)',
-            substitutionValues: {'v': 'not-list-int'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_int4)'),
+            parameters: {'v': 'not-list-int'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: List<int>'));
@@ -400,8 +400,8 @@ void main() {
       await expectInverse([-1, 0, 200], Type.bigIntegerArray);
       await expectInverse([-123], Type.bigIntegerArray);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:_int8)',
-            substitutionValues: {'v': 'not-list-int'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_int8)'),
+            parameters: {'v': 'not-list-int'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: List<int>'));
@@ -413,8 +413,8 @@ void main() {
       await expectInverse([-123.0, 0.0, 1.0], Type.doubleArray);
       await expectInverse([0.001, 45.678], Type.doubleArray);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:_float8)',
-            substitutionValues: {'v': 'not-list-double'});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_float8)'),
+            parameters: {'v': 'not-list-double'});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: List<double>'));
@@ -426,8 +426,9 @@ void main() {
       await expectInverse(['', 'foo', 'foo\n'], Type.varCharArray);
       await expectInverse(['foo\nbar;s', '"\'"'], Type.varCharArray);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:_varchar(10))',
-            substitutionValues: {'v': 0});
+        await conn.execute(
+            Sql.named('INSERT INTO t (v) VALUES (@v:_varchar(10))'),
+            parameters: {'v': 0});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: List<String>'));
@@ -439,8 +440,8 @@ void main() {
       await expectInverse(['', 'foo', 'foo\n'], Type.textArray);
       await expectInverse(['foo\nbar;s', '"\'"'], Type.textArray);
       try {
-        await conn.query('INSERT INTO t (v) VALUES (@v:_text)',
-            substitutionValues: {'v': 0});
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_text)'),
+            parameters: {'v': 0});
         fail('unreachable');
       } on FormatException catch (e) {
         expect(e.toString(), contains('Expected: List<String>'));
@@ -472,19 +473,19 @@ void main() {
       ], Type.jsonbArray);
 
       try {
-        await conn
-            .query('INSERT INTO t (v) VALUES (@v:_jsonb)', substitutionValues: {
-          'v': [DateTime.now()]
-        });
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_jsonb)'),
+            parameters: {
+              'v': [DateTime.now()]
+            });
         fail('unreachable');
       } on JsonUnsupportedObjectError catch (_) {}
     });
 
     test('void', () async {
-      final result = await conn.query('SELECT NULL::void AS r');
-      expect(result.columnDescriptions, [
-        isA<ColumnDescription>()
-            .having((e) => e.typeId, 'typeId', Type.voidType.oid)
+      final result = await conn.execute(Sql.named('SELECT NULL::void AS r'));
+      expect(result.schema.columns, [
+        isA<ResultSchemaColumn>()
+            .having((e) => e.typeOid, 'typeOid', Type.voidType.oid)
       ]);
 
       expect(result, [
@@ -654,9 +655,10 @@ Future expectInverse(dynamic value, Type dataType) async {
   final type = PostgreSQLFormat.dataTypeStringForDataType(dataType);
 
   await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $type)');
-  final result = await conn.query(
-      'INSERT INTO t (v) VALUES (${PostgreSQLFormat.id('v', type: dataType)}) RETURNING v',
-      substitutionValues: {'v': value});
+  final result = await conn.execute(
+      Sql.named(
+          'INSERT INTO t (v) VALUES (${PostgreSQLFormat.id('v', type: dataType)}) RETURNING v'),
+      parameters: {'v': value});
   expect(result.first.first, equals(value));
 
   if (dataType == Type.serial) {

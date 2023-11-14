@@ -109,6 +109,10 @@ abstract class _PgSessionBase implements Session {
     QueryMode? queryMode,
     Duration? timeout,
   }) async {
+    if (_connection._isClosing || _sessionClosed) {
+      throw PgException(
+          'Attempting to execute query, but connection is not open.');
+    }
     final description = InternalQueryDescription.wrap(query);
     final variables = description.bindParameters(
       parameters,

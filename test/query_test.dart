@@ -1,4 +1,3 @@
-import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
@@ -6,11 +5,10 @@ import 'docker.dart';
 
 void main() {
   withPostgresServer('Successful queries', (server) {
-    late PostgreSQLConnection connection;
+    late Connection connection;
 
     setUp(() async {
-      connection = await server.newPostgreSQLConnection();
-      await connection.open();
+      connection = await server.newConnection();
       await connection.execute('CREATE TEMPORARY TABLE t '
           '(i int, s serial, bi bigint, '
           'bs bigserial, bl boolean, si smallint, '
@@ -30,61 +28,47 @@ void main() {
     });
 
     test('UTF16 strings in value', () async {
-      var result = await connection.query(
-          'INSERT INTO t (t) values '
-          "(${PostgreSQLFormat.id("t", type: Type.text)})"
-          'returning t',
-          substitutionValues: {
-            't': '°∆',
-          });
+      var result = await connection.execute(
+          Sql.named('INSERT INTO t (t) values (@t:text) returning t'),
+          parameters: {'t': '°∆'});
 
       final expectedRow = ['°∆'];
       expect(result, [expectedRow]);
 
-      result = await connection.query('select t from t');
-      expect(result.columnDescriptions, hasLength(1));
-      expect(() => result.columnDescriptions.single.tableName,
-          throwsUnimplementedError);
-      expect(result.columnDescriptions.single.columnName, 't');
+      result = await connection.execute('select t from t');
+      expect(result.schema.columns, hasLength(1));
+      expect(result.schema.columns.single.columnName, 't');
       expect(result, [expectedRow]);
     });
 
     test('UTF16 strings in query', () async {
-      var result =
-          await connection.query("INSERT INTO t (t) values ('°∆') RETURNING t");
+      var result = await connection
+          .execute("INSERT INTO t (t) values ('°∆') RETURNING t");
 
       final expectedRow = ['°∆'];
       expect(result, [expectedRow]);
 
-      result = await connection.query('select t from t');
+      result = await connection.execute('select t from t');
       expect(result, [expectedRow]);
     });
 
     test('UTF16 strings in value with escape characters', () async {
-      await connection.execute(
-          'INSERT INTO t (t) values '
-          '(${PostgreSQLFormat.id('t', type: Type.text)})',
-          substitutionValues: {
-            't': "'©™®'",
-          });
+      await connection.execute(Sql.named('INSERT INTO t (t) values (@t:text)'),
+          parameters: {'t': "'©™®'"});
 
       final expectedRow = ["'©™®'"];
 
-      final result = await connection.query('select t from t');
+      final result = await connection.execute('select t from t');
       expect(result, [expectedRow]);
     });
 
     test('UTF16 strings in value with backslash', () async {
-      await connection.execute(
-          'INSERT INTO t (t) values '
-          '(${PostgreSQLFormat.id('t', type: Type.text)})',
-          substitutionValues: {
-            't': r"°\'©™®'",
-          });
+      await connection.execute(Sql.named('INSERT INTO t (t) values (@t:text)'),
+          parameters: {'t': r"°\'©™®'"});
 
       final expectedRow = [r"°\'©™®'"];
 
-      final result = await connection.query('select t from t');
+      final result = await connection.execute('select t from t');
       expect(result, [expectedRow]);
     });
 
@@ -93,52 +77,56 @@ void main() {
 
       final expectedRow = ["°'©™®'"];
 
-      final result = await connection.query('select t from t');
+      final result = await connection.execute('select t from t');
       expect(result, [expectedRow]);
     });
 
     test('Really long raw substitution value', () async {
-      final result = await connection.query(
-          "INSERT INTO t (t) VALUES (${PostgreSQLFormat.id("t", type: Type.text)}) returning t;",
-          substitutionValues: {'t': lorumIpsum});
+      final result = await connection.execute(
+          Sql.named('INSERT INTO t (t) VALUES (@t:text) returning t;'),
+          parameters: {'t': lorumIpsum});
       expect(result, [
         [lorumIpsum]
       ]);
     });
 
-    test('Really long SQL string in execute', () async {
-      final result = await connection
-          .execute("INSERT INTO t (t) VALUES ('$lorumIpsum') returning t;");
-      expect(result, 1);
+    test('Really long SQL string in execute, ignoring result row', () async {
+      final result = await connection.execute(
+        "INSERT INTO t (t) VALUES ('$lorumIpsum') returning t;",
+        ignoreRows: true,
+      );
+      expect(result.affectedRows, 1);
+      expect(result, hasLength(0));
     });
 
     test('Query without specifying types', () async {
-      var result = await connection.query(
-          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
-          '(${PostgreSQLFormat.id('i')},'
-          '${PostgreSQLFormat.id('bi')},'
-          '${PostgreSQLFormat.id('bl')},'
-          '${PostgreSQLFormat.id('si')},'
-          '${PostgreSQLFormat.id('t')},'
-          '${PostgreSQLFormat.id('f')},'
-          '${PostgreSQLFormat.id('d')},'
-          '${PostgreSQLFormat.id('dt')},'
-          '${PostgreSQLFormat.id('ts')},'
-          '${PostgreSQLFormat.id('tsz')},'
-          '${PostgreSQLFormat.id('j')},'
-          '${PostgreSQLFormat.id('u')},'
-          '${PostgreSQLFormat.id('v')},'
-          '${PostgreSQLFormat.id('p')},'
-          '${PostgreSQLFormat.id('jj')},'
-          '${PostgreSQLFormat.id('ia')},'
-          '${PostgreSQLFormat.id('bia')},'
-          '${PostgreSQLFormat.id('ta')},'
-          '${PostgreSQLFormat.id('da')},'
-          '${PostgreSQLFormat.id('ja')},'
-          '${PostgreSQLFormat.id('va')},'
-          '${PostgreSQLFormat.id('ba')}'
-          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba',
-          substitutionValues: {
+      var result = await connection.execute(
+          Sql.named(
+              'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
+              '(@i,'
+              '@bi,'
+              '@bl,'
+              '@si,'
+              '@t,'
+              '@f,'
+              '@d,'
+              '@dt,'
+              '@ts,'
+              '@tsz,'
+              '@j,'
+              '@u,'
+              '@v,'
+              '@p,'
+              '@jj,'
+              '@ia,'
+              '@bia,'
+              '@ta,'
+              '@da,'
+              '@ja,'
+              '@va,'
+              '@ba'
+              ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba'),
+          parameters: {
             'i': 1,
             'bi': 2,
             'bl': true,
@@ -197,44 +185,43 @@ void main() {
         ['a', 'b', 'c', 'd', 'e', 'f'],
         [false, true, false]
       ];
-      expect(result.columnDescriptions, hasLength(24));
-      expect(() => result.columnDescriptions.first.tableName,
-          throwsUnimplementedError);
-      expect(result.columnDescriptions.first.columnName, 'i');
-      expect(result.columnDescriptions.last.columnName, 'ba');
+      expect(result.schema.columns, hasLength(24));
+      expect(result.schema.columns.first.columnName, 'i');
+      expect(result.schema.columns.last.columnName, 'ba');
       expect(result, [expectedRow]);
-      result = await connection.query(
+      result = await connection.execute(
           'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba from t');
       expect(result, [expectedRow]);
     });
 
     test('Query by specifying all types', () async {
-      var result = await connection.query(
-          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
-          '(${PostgreSQLFormat.id('i', type: Type.integer)},'
-          '${PostgreSQLFormat.id('bi', type: Type.bigInteger)},'
-          '${PostgreSQLFormat.id('bl', type: Type.boolean)},'
-          '${PostgreSQLFormat.id('si', type: Type.smallInteger)},'
-          '${PostgreSQLFormat.id('t', type: Type.text)},'
-          '${PostgreSQLFormat.id('f', type: Type.real)},'
-          '${PostgreSQLFormat.id('d', type: Type.double)},'
-          '${PostgreSQLFormat.id('dt', type: Type.date)},'
-          '${PostgreSQLFormat.id('ts', type: Type.timestampWithoutTimezone)},'
-          '${PostgreSQLFormat.id('tsz', type: Type.timestampWithTimezone)},'
-          '${PostgreSQLFormat.id('j', type: Type.jsonb)},'
-          '${PostgreSQLFormat.id('u', type: Type.uuid)},'
-          '${PostgreSQLFormat.id('v', type: Type.varChar)},'
-          '${PostgreSQLFormat.id('p', type: Type.point)},'
-          '${PostgreSQLFormat.id('jj', type: Type.json)},'
-          '${PostgreSQLFormat.id('ia', type: Type.integerArray)},'
-          '${PostgreSQLFormat.id('bia', type: Type.bigIntegerArray)},'
-          '${PostgreSQLFormat.id('ta', type: Type.textArray)},'
-          '${PostgreSQLFormat.id('da', type: Type.doubleArray)},'
-          '${PostgreSQLFormat.id('ja', type: Type.jsonbArray)},'
-          '${PostgreSQLFormat.id('va', type: Type.varCharArray)},'
-          '${PostgreSQLFormat.id('ba', type: Type.booleanArray)}'
-          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba',
-          substitutionValues: {
+      var result = await connection.execute(
+          Sql.named(
+              'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
+              '(@i:int4, '
+              '@bi:int8, '
+              '@bl:boolean, '
+              '@si:int2, '
+              '@t:text, '
+              '@f:float4, '
+              '@d:float8, '
+              '@dt:date, '
+              '@ts:timestamp, '
+              '@tsz:timestamptz, '
+              '@j:jsonb, '
+              '@u:uuid, '
+              '@v:varchar, '
+              '@p:point, '
+              '@jj:json, '
+              '@ia:_int4, '
+              '@bia:_int8, '
+              '@ta:_text, '
+              '@da:_float8, '
+              '@ja:_jsonb, '
+              '@va:_varchar, '
+              '@ba:_bool'
+              ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba'),
+          parameters: {
             'i': 1,
             'bi': 2,
             'bl': true,
@@ -295,25 +282,26 @@ void main() {
       ];
       expect(result, [expectedRow]);
 
-      result = await connection.query(
+      result = await connection.execute(
           'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba from t');
       expect(result, [expectedRow]);
     });
 
     test('Query by specifying some types', () async {
-      var result = await connection.query(
-          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) values '
-          '(${PostgreSQLFormat.id('i')},'
-          '${PostgreSQLFormat.id('bi', type: Type.bigInteger)},'
-          '${PostgreSQLFormat.id('bl')},'
-          '${PostgreSQLFormat.id('si', type: Type.smallInteger)},'
-          '${PostgreSQLFormat.id('t')},'
-          '${PostgreSQLFormat.id('f', type: Type.real)},'
-          '${PostgreSQLFormat.id('d')},'
-          '${PostgreSQLFormat.id('dt', type: Type.date)},'
-          '${PostgreSQLFormat.id('ts')},'
-          '${PostgreSQLFormat.id('tsz', type: Type.timestampWithTimezone)}) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz',
-          substitutionValues: {
+      var result = await connection.execute(
+          Sql.named(
+              'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) values '
+              '(@i,'
+              '@bi:int8,'
+              '@bl,'
+              '@si:int2,'
+              '@t,'
+              '@f:float4,'
+              '@d,'
+              '@dt:date,'
+              '@ts,'
+              '@tsz:timestamptz) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz'),
+          parameters: {
             'i': 1,
             'bi': 2,
             'bl': true,
@@ -342,14 +330,15 @@ void main() {
       ];
       expect(result, [expectedRow]);
       result = await connection
-          .query('select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t');
+          .execute('select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t');
       expect(result, [expectedRow]);
     });
 
     test('Can supply null for values (binary)', () async {
-      final results = await connection.query(
-          'INSERT INTO n (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2',
-          substitutionValues: {
+      final results = await connection.execute(
+          Sql.named(
+              'INSERT INTO n (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2'),
+          parameters: {
             'i1': null,
             'i2': 1,
           });
@@ -360,9 +349,10 @@ void main() {
     });
 
     test('Can supply null for values (text)', () async {
-      final results = await connection.query(
-          'INSERT INTO n (i1, i2) values (@i1, @i2:int4) returning i1, i2',
-          substitutionValues: {
+      final results = await connection.execute(
+          Sql.named(
+              'INSERT INTO n (i1, i2) values (@i1, @i2:int4) returning i1, i2'),
+          parameters: {
             'i1': null,
             'i2': 1,
           });
@@ -372,38 +362,24 @@ void main() {
       ]);
     });
 
-    test('Overspecifying parameters does not impact query (text)', () async {
-      final results = await connection.query(
-          'INSERT INTO u (i1, i2) values (@i1, @i2) returning i1, i2',
-          substitutionValues: {
-            'i1': 0,
-            'i2': 1,
-            'i3': 0,
-          });
-
-      expect(results, [
-        [0, 1]
-      ]);
-    });
-
-    test('Overspecifying parameters does not impact query (binary)', () async {
-      final results = await connection.query(
-          'INSERT INTO u (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2',
-          substitutionValues: {
-            'i1': 0,
-            'i2': 1,
-            'i3': 0,
-          });
-
-      expect(results, [
-        [0, 1]
-      ]);
+    test('Overspecifying parameters throws query', () async {
+      await expectLater(
+          () => connection.execute(
+                  Sql.named(
+                      'INSERT INTO u (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2'),
+                  parameters: {
+                    'i1': 0,
+                    'i2': 1,
+                    'i3': 0,
+                  }),
+          throwsArgumentError);
     });
 
     test('Can cast text to int on db server', () async {
-      final results = await connection.query(
-          'INSERT INTO u (i1, i2) VALUES (@i1::int4, @i2::int4) RETURNING i1, i2',
-          substitutionValues: {'i1': '0', 'i2': '1'});
+      final results = await connection.execute(
+          Sql.named(
+              'INSERT INTO u (i1, i2) VALUES (@i1::int4, @i2::int4) RETURNING i1, i2'),
+          parameters: {'i1': '0', 'i2': '1'});
 
       expect(results, [
         [0, 1]
@@ -412,11 +388,10 @@ void main() {
   });
 
   withPostgresServer('Unsuccesful queries', (server) {
-    late PostgreSQLConnection connection;
+    late Connection connection;
 
     setUp(() async {
-      connection = await server.newPostgreSQLConnection();
-      await connection.open();
+      connection = await server.newConnection();
       await connection.execute(
           'CREATE TEMPORARY TABLE t (i1 int not null, i2 int not null)');
     });
@@ -429,11 +404,11 @@ void main() {
         'A query that fails on the server will report back an exception through the query method',
         () async {
       try {
-        await connection.query('INSERT INTO t (i1) values (@i1)',
-            substitutionValues: {'i1': 0});
+        await connection.execute(Sql.named('INSERT INTO t (i1) values (@i1)'),
+            parameters: {'i1': 0});
         expect(true, false);
-      } on PostgreSQLException catch (e) {
-        expect(e.severity, PostgreSQLSeverity.error);
+      } on PgException catch (e) {
+        expect(e.severity, Severity.error);
         expect(e.message, contains('null value in column "i2"'));
       }
     });
@@ -442,21 +417,22 @@ void main() {
         'Missing substitution value does not throw, query is sent to the server without changing that part.',
         () async {
       final rs1 = await connection
-          .query('SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1)');
+          .execute('SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1)');
       expect(rs1.first.toColumnMap(), {'col1': 'user@domain.com'});
 
-      final rs2 = await connection.query(
-        'SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1) WHERE col1 > @u1',
-        substitutionValues: {'u1': 'hello@domain.com'},
+      final rs2 = await connection.execute(
+        Sql.named(
+            'SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1) WHERE col1 > @u1'),
+        parameters: {'u1': 'hello@domain.com'},
       );
       expect(rs2.first.toColumnMap(), {'col1': 'user@domain.com'});
     });
 
     test('Wrong type for parameter in substitution values fails', () async {
       try {
-        await connection.query(
-            'INSERT INTO t (i1, i2) values (@i1:int4, @i2:int4)',
-            substitutionValues: {'i1': '1', 'i2': 1});
+        await connection.execute(
+            Sql.named('INSERT INTO t (i1, i2) values (@i1:int4, @i2:int4)'),
+            parameters: {'i1': '1', 'i2': 1});
         expect(true, false);
       } on FormatException catch (e) {
         expect(e.toString(), contains('Invalid type for parameter value'));
@@ -465,9 +441,9 @@ void main() {
 
     test('Invalid type code', () async {
       try {
-        await connection.query(
-            'INSERT INTO t (i1, i2) values (@i1:qwerty, @i2:int4)',
-            substitutionValues: {'i1': '1', 'i2': 1});
+        await connection.execute(
+            Sql.named('INSERT INTO t (i1, i2) values (@i1:qwerty, @i2:int4)'),
+            parameters: {'i1': '1', 'i2': 1});
         expect(true, false);
       } on FormatException catch (e) {
         expect(e.toString(), contains('Unknown type'));

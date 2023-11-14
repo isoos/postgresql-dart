@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
@@ -11,97 +10,52 @@ import 'docker.dart';
 
 void main() {
   withPostgresServer('connection state', (server) {
-    test('pre-open failure', () async {
-      final conn = await server.newPostgreSQLConnection();
-      await expectLater(
-          () => conn.query('SELECT 1;'),
-          throwsA(isA<Exception>().having(
-            (e) => '$e',
-            'text',
-            contains(
-                'Attempting to execute query, but connection is not open.'),
-          )));
-      await conn.open();
-      final rs = await conn.query('SELECT 1');
-      expect(rs.first.first, 1);
-      await conn.close();
-    });
-
-    test('pre-open failure with transaction', () async {
-      final conn = await server.newPostgreSQLConnection();
-      await expectLater(
-          () => conn.transaction((_) async {}),
-          throwsA(isA<Exception>().having(
-            (e) => '$e',
-            'text',
-            contains(
-                'Attempting to execute query, but connection is not open.'),
-          )));
-      await conn.open();
-      await conn.transaction((_) async {});
-      await conn.close();
-    });
-
     test('post-close failure', () async {
-      final conn = await server.newPostgreSQLConnection();
-      await conn.open();
-      final rs = await conn.query('SELECT 1');
+      final conn = await server.newConnection();
+      final rs = await conn.execute('SELECT 1');
       expect(rs.first.first, 1);
       await conn.close();
       await expectLater(
-          () => conn.query('SELECT 1;'),
+          () => conn.execute('SELECT 1;'),
           throwsA(isA<Exception>().having(
             (e) => '$e',
             'text',
             contains(
                 'Attempting to execute query, but connection is not open.'),
-          )));
-    });
-
-    test('reopen closed connection', () async {
-      final conn = await server.newPostgreSQLConnection();
-      await conn.open();
-      final rs = await conn.query('SELECT 1');
-      expect(rs.first.first, 1);
-      await conn.close();
-      await expectLater(
-          conn.open,
-          throwsA(isA<Exception>().having(
-            (e) => '$e',
-            'text',
-            contains(
-                'Attempting to reopen a closed connection. Create a instance instead.'),
           )));
     });
 
     test('Connecting with ReplicationMode.none uses Extended Query Protocol',
         () async {
-      final conn = await server.newPostgreSQLConnection(
+      final conn = await server.newConnection(
         replicationMode: ReplicationMode.none,
       );
 
-      await conn.open();
       // This would throw for ReplicationMode.logical or ReplicationMode.physical
-      final result = await conn.query('select 1');
-      expect(result.affectedRowCount, equals(1));
+      final result = await conn.execute('select 1');
+      expect(result.affectedRows, equals(1));
     });
 
     test('Connect with logical ReplicationMode.logical', () async {
-      final conn = await server.newPostgreSQLConnection(
+      final conn = await server.newConnection(
         replicationMode: ReplicationMode.logical,
       );
 
-      await conn.open();
-
-      expect(await conn.execute('select 1'), equals(1));
+      expect(
+        await conn.execute(
+          'select 1',
+          queryMode: QueryMode.simple,
+        ),
+        equals([
+          [1]
+        ]),
+      );
     });
 
     test('IDENTIFY_SYSTEM returns system information', () async {
-      final conn = await server.newPostgreSQLConnection(
+      final conn = await server.newConnection(
         replicationMode: ReplicationMode.logical,
       );
-
-      await conn.open();
 
       // This query can only be executed in Streaming Replication Protocol
       // In addition, it can only be executed using Simple Query Protocol:
@@ -109,17 +63,17 @@ void main() {
       //  only the simple query protocol can be used."
       // source and more info:
       // https://www.postgresql.org/docs/current/protocol-replication.html
-      final result = await conn.query(
+      final result = await conn.execute(
         'IDENTIFY_SYSTEM;',
-        useSimpleQueryProtocol: true,
+        queryMode: QueryMode.simple,
       );
 
       expect(result.length, 1);
-      expect(result.columnDescriptions.length, 4);
-      expect(result.columnDescriptions[0].columnName, 'systemid');
-      expect(result.columnDescriptions[1].columnName, 'timeline');
-      expect(result.columnDescriptions[2].columnName, 'xlogpos');
-      expect(result.columnDescriptions[3].columnName, 'dbname');
+      expect(result.schema.columns.length, 4);
+      expect(result.schema.columns[0].columnName, 'systemid');
+      expect(result.schema.columns[1].columnName, 'timeline');
+      expect(result.schema.columns[2].columnName, 'xlogpos');
+      expect(result.schema.columns[3].columnName, 'dbname');
     });
 
     // TODO: add test for ReplicationMode.physical which requires tuning some
@@ -127,51 +81,51 @@ void main() {
   });
 
   withPostgresServer('Connection lifecycle', initSqls: oldSchemaInit, (server) {
-    late PostgreSQLConnection conn;
+    late Connection conn;
 
     tearDown(() async {
       await conn.close();
     });
 
     test('Connect with md5 or scram-sha-256 auth required', () async {
-      conn = await server.newPostgreSQLConnection(sslMode: SslMode.disable);
+      conn = await server.newConnection(sslMode: SslMode.disable);
 
-      await conn.open();
-
-      expect(await conn.execute('select 1'), equals(1));
+      expect(await conn.execute('select 1'), hasLength(1));
     });
 
     test('SSL Connect with md5 or scram-sha-256 auth required', () async {
-      conn = await server.newPostgreSQLConnection(sslMode: SslMode.require);
-      await conn.open();
-      expect(await conn.execute('select 1'), equals(1));
+      conn = await server.newConnection(sslMode: SslMode.require);
+      expect(await conn.execute('select 1'), hasLength(1));
     });
 
     test('Connect with no auth required', () async {
-      conn = await server.newPostgreSQLConnection(
-          endpoint: Endpoint(
-            host: 'localhost',
-            database: 'dart_test',
-            port: await server.port,
-            username: 'darttrust',
-          ),
-          sslMode: SslMode.disable);
-      await conn.open();
-      expect(await conn.execute('select 1'), equals(1));
-    });
-
-    test('Connect with no auth throws for non trusted users', () async {
-      conn = await server.newPostgreSQLConnection(
-        endpoint: Endpoint(
+      conn = await Connection.open(
+        Endpoint(
           host: 'localhost',
           database: 'dart_test',
           port: await server.port,
-          username: 'dart',
+          username: 'darttrust',
         ),
-        sslMode: SslMode.disable,
+        settings: ConnectionSettings(
+          sslMode: SslMode.disable,
+        ),
       );
+      expect(await conn.execute('select 1'), hasLength(1));
+    });
+
+    test('Connect with no auth throws for non trusted users', () async {
       try {
-        await conn.open();
+        conn = await Connection.open(
+          Endpoint(
+            host: 'localhost',
+            database: 'dart_test',
+            port: await server.port,
+            username: 'dart',
+          ),
+          settings: ConnectionSettings(
+            sslMode: SslMode.disable,
+          ),
+        );
       } catch (e) {
         expect(e, isA<PgException>());
         expect(
@@ -179,31 +133,32 @@ void main() {
           contains('password authentication failed for user "'),
         );
       }
+      conn = await server.newConnection();
     });
 
     test('SSL Connect with no auth required', () async {
-      conn = conn = await server.newPostgreSQLConnection(
-        endpoint: Endpoint(
+      conn = await Connection.open(
+        Endpoint(
           host: 'localhost',
           database: 'dart_test',
           port: await server.port,
           username: 'darttrust',
         ),
-        sslMode: SslMode.require,
+        settings: ConnectionSettings(
+          sslMode: SslMode.require,
+        ),
       );
-      await conn.open();
 
-      expect(await conn.execute('select 1'), equals(1));
+      expect(await conn.execute('select 1'), hasLength(1));
     });
   });
 
   withPostgresServer('Successful queries over time', initSqls: oldSchemaInit,
       (server) {
-    late PostgreSQLConnection conn;
+    late Connection conn;
 
     setUp(() async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
+      conn = await server.newConnection();
     });
 
     tearDown(() async {
@@ -214,27 +169,27 @@ void main() {
         'Issuing multiple queries and awaiting between each one successfully returns the right value',
         () async {
       expect(
-          await conn.query('select 1', allowReuse: false),
+          await conn.execute('select 1'),
           equals([
             [1]
           ]));
       expect(
-          await conn.query('select 2', allowReuse: false),
+          await conn.execute('select 2'),
           equals([
             [2]
           ]));
       expect(
-          await conn.query('select 3', allowReuse: false),
+          await conn.execute('select 3'),
           equals([
             [3]
           ]));
       expect(
-          await conn.query('select 4', allowReuse: false),
+          await conn.execute('select 4'),
           equals([
             [4]
           ]));
       expect(
-          await conn.query('select 5', allowReuse: false),
+          await conn.execute('select 5'),
           equals([
             [5]
           ]));
@@ -244,11 +199,11 @@ void main() {
         'Issuing multiple queries without awaiting are returned with appropriate values',
         () async {
       final futures = [
-        conn.query('select 1', allowReuse: false),
-        conn.query('select 2', allowReuse: false),
-        conn.query('select 3', allowReuse: false),
-        conn.query('select 4', allowReuse: false),
-        conn.query('select 5', allowReuse: false)
+        conn.execute('select 1'),
+        conn.execute('select 2'),
+        conn.execute('select 3'),
+        conn.execute('select 4'),
+        conn.execute('select 5'),
       ];
 
       final results = await Future.wait(futures);
@@ -275,130 +230,91 @@ void main() {
 
   withPostgresServer('Unintended user-error situations',
       initSqls: oldSchemaInit, (server) {
-    late PostgreSQLConnection conn;
-    Future? openFuture;
+    Connection? conn;
 
     tearDown(() async {
-      await openFuture;
-      await conn.close();
-    });
-
-    test('Starting transaction while opening connection triggers error',
-        () async {
-      conn = await server.newPostgreSQLConnection(sslMode: SslMode.require);
-      openFuture = conn.open();
-
-      try {
-        await conn.transaction((ctx) async {
-          await ctx.execute('select 1');
-        });
-        expect(true, false);
-      } on PgException catch (e) {
-        expect(e.message, contains('connection is not open'));
-      }
-    });
-
-    test('SSL Starting transaction while opening connection triggers error',
-        () async {
-      conn = await server.newPostgreSQLConnection(sslMode: SslMode.require);
-      openFuture = conn.open();
-
-      try {
-        await conn.transaction((ctx) async {
-          await ctx.execute('select 1');
-        });
-        expect(true, false);
-      } on PgException catch (e) {
-        expect(e.message, contains('connection is not open'));
-      }
+      await conn?.close();
     });
 
     test('Invalid password reports error, conn is closed, disables conn',
         () async {
-      late PostgreSQLConnection conn;
-
       try {
-        conn = await server.newPostgreSQLConnection(
-          endpoint: Endpoint(
+        await Connection.open(
+          Endpoint(
             host: 'localhost',
             database: 'dart_test',
             port: await server.port,
             username: 'dart',
             password: 'notdart',
           ),
-          sslMode: SslMode.disable,
+          settings: ConnectionSettings(
+            sslMode: SslMode.disable,
+          ),
         );
-        await conn.open();
         expect(true, false);
       } on PgException catch (e) {
         expect(e.message, contains('password authentication failed'));
       }
-
-      await expectConnectionIsInvalid(conn);
     });
 
     test('SSL Invalid password reports error, conn is closed, disables conn',
         () async {
-      late PostgreSQLConnection conn;
       try {
-        conn = await server.newPostgreSQLConnection(
-          endpoint: Endpoint(
+        await Connection.open(
+          Endpoint(
             host: 'localhost',
             database: 'dart_test',
             port: await server.port,
             username: 'dart',
             password: 'notdart',
           ),
-          sslMode: SslMode.require,
+          settings: ConnectionSettings(
+            sslMode: SslMode.require,
+          ),
         );
-        await conn.open();
         expect(true, false);
       } on PgException catch (e) {
         expect(e.message, contains('password authentication failed'));
       }
-
-      await expectConnectionIsInvalid(conn);
     });
 
     test('A query error maintains connectivity, allows future queries',
         () async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
+      conn = await server.newConnection();
 
-      await conn.execute('CREATE TEMPORARY TABLE t (i int unique)');
-      await conn.execute('INSERT INTO t (i) VALUES (1)');
+      await conn!.execute('CREATE TEMPORARY TABLE t (i int unique)');
+      await conn!.execute('INSERT INTO t (i) VALUES (1)');
       try {
-        await conn.execute('INSERT INTO t (i) VALUES (1)');
+        await conn!.execute('INSERT INTO t (i) VALUES (1)');
         expect(true, false);
       } on PgException catch (e) {
         expect(e.message, contains('duplicate key value violates'));
       }
 
-      await conn.execute('INSERT INTO t (i) VALUES (2)');
+      await conn!.execute('INSERT INTO t (i) VALUES (2)');
     });
 
     test(
         'A query error maintains connectivity, continues processing pending transactions',
         () async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
+      conn = await server.newConnection();
 
-      await conn.execute('CREATE TEMPORARY TABLE t (i int unique)');
-      await conn.execute('INSERT INTO t (i) VALUES (1)');
+      await conn!.execute('CREATE TEMPORARY TABLE t (i int unique)');
+      await conn!.execute('INSERT INTO t (i) VALUES (1)');
 
       final orderEnsurer = [];
 
       // this will emit a query error
-      conn.execute('INSERT INTO t (i) VALUES (1)').catchError((err) {
+      conn!.execute('INSERT INTO t (i) VALUES ()').catchError((err) {
         orderEnsurer.add(1);
         // ignore
-        return 0;
+        return Result(rows: [], affectedRows: 0, schema: ResultSchema([]));
       });
 
       orderEnsurer.add(2);
-      final res = await conn.transaction((ctx) async {
+      final res = await conn!.runTx((ctx) async {
         orderEnsurer.add(3);
-        return await ctx.query('SELECT i FROM t');
+        return await ctx.execute('SELECT i FROM t');
       });
       orderEnsurer.add(4);
 
@@ -427,44 +343,39 @@ void main() {
         () async {
       final port = await selectFreePort();
 
-      late PostgreSQLConnection conn;
       try {
-        conn = await server.newPostgreSQLConnection(
-          endpoint:
-              Endpoint(host: 'localhost', database: 'dart_test', port: port),
-          sslMode: SslMode.disable,
+        await Connection.open(
+          Endpoint(host: 'localhost', database: 'dart_test', port: port),
+          settings: ConnectionSettings(
+            sslMode: SslMode.disable,
+          ),
         );
-        await conn.open();
         expect(true, false);
       } on SocketException {
         // ignore
       }
-
-      await expectConnectionIsInvalid(conn);
     });
 
     test(
         'SSL Socket fails to connect reports error, disables connection for future use',
         () async {
       final port = await selectFreePort();
-      late PostgreSQLConnection conn;
 
       try {
-        conn = await server.newPostgreSQLConnection(
-          endpoint: Endpoint(
+        await Connection.open(
+          Endpoint(
             host: 'localhost',
             database: 'dart_test',
             port: port,
           ),
-          sslMode: SslMode.require,
+          settings: ConnectionSettings(
+            sslMode: SslMode.require,
+          ),
         );
-        await conn.open();
         expect(true, false);
       } on SocketException {
         // ignore
       }
-
-      await expectConnectionIsInvalid(conn);
     });
 
     test(
@@ -479,24 +390,22 @@ void main() {
         s.listen((bytes) {});
       });
 
-      late PostgreSQLConnection conn;
       try {
-        conn = await server.newPostgreSQLConnection(
-          endpoint: Endpoint(
+        await Connection.open(
+          Endpoint(
             host: 'localhost',
             port: port,
             database: 'dart_test',
           ),
-          connectTimeout: Duration(seconds: 2),
-          sslMode: SslMode.disable,
+          settings: ConnectionSettings(
+            connectTimeout: Duration(seconds: 2),
+            sslMode: SslMode.disable,
+          ),
         );
-        await conn.open();
         fail('unreachable');
       } on TimeoutException {
         // ignore
       }
-
-      await expectConnectionIsInvalid(conn);
     });
 
     test(
@@ -511,30 +420,29 @@ void main() {
         s.listen((bytes) {});
       });
 
-      late PostgreSQLConnection conn;
       try {
-        conn = await server.newPostgreSQLConnection(
-          endpoint: Endpoint(
+        await Connection.open(
+          Endpoint(
             host: 'localhost',
             port: port,
             database: 'dart_test',
           ),
-          connectTimeout: Duration(seconds: 2),
-          sslMode: SslMode.require,
+          settings: ConnectionSettings(
+            connectTimeout: Duration(seconds: 2),
+            sslMode: SslMode.require,
+          ),
         );
-        await conn.open();
         fail('unreachable');
       } on TimeoutException {
         // ignore
       }
-
-      await expectConnectionIsInvalid(conn);
     });
   });
 
   withPostgresServer('connection', (server) {
     test('If connection is closed, do not allow .execute', () async {
-      final conn = await server.newPostgreSQLConnection();
+      final conn = await server.newConnection();
+      await conn.close();
       try {
         await conn.execute('SELECT 1');
         fail('unreachable');
@@ -542,31 +450,5 @@ void main() {
         expect(e.toString(), contains('connection is not open'));
       }
     });
-
-    test('If connection is closed, do not allow .query', () async {
-      final conn = await server.newPostgreSQLConnection();
-      try {
-        await conn.query('SELECT 1');
-        fail('unreachable');
-      } on PgException catch (e) {
-        expect(e.toString(), contains('connection is not open'));
-      }
-    });
   });
-}
-
-Future expectConnectionIsInvalid(PostgreSQLConnection conn) async {
-  try {
-    await conn.execute('select 1');
-    expect(true, false);
-  } on PgException catch (e) {
-    expect(e.message, contains('connection is not open'));
-  }
-
-  try {
-    await conn.open();
-    expect(true, false);
-  } on PgException catch (e) {
-    expect(e.message, contains('Attempting to reopen a closed connection'));
-  }
 }
