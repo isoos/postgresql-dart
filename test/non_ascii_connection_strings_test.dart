@@ -1,4 +1,3 @@
-import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
 import 'package:test/expect.dart';
 import 'package:test/scaffolding.dart';
@@ -15,15 +14,14 @@ void main() {
     pgPassword: password,
     pgHbaConfContent: _sampleHbaConfigPassword,
     (server) {
-      PostgreSQLConnection? conn;
+      Connection? conn;
       tearDown(() async {
         await conn?.close();
       });
 
       test('- Connect with non-ascii connection string', () async {
-        conn = await server.newPostgreSQLConnection(sslMode: SslMode.disable);
-        await conn!.open();
-        final res = await conn!.query('select 1;');
+        conn = await server.newConnection(sslMode: SslMode.disable);
+        final res = await conn!.execute('select 1;');
         expect(res.length, 1);
       });
     },
@@ -35,15 +33,14 @@ void main() {
     pgPassword: password,
     pgHbaConfContent: _sampleHbaConfigMd5,
     (server) {
-      PostgreSQLConnection? conn;
+      Connection? conn;
       tearDown(() async {
         await conn?.close();
       });
 
       test('- Connect with non-ascii connection string', () async {
-        conn = await server.newPostgreSQLConnection();
-        await conn!.open();
-        final res = await conn!.query('select 1;');
+        conn = await server.newConnection();
+        final res = await conn!.execute('select 1;');
         expect(res.length, 1);
       });
     },
@@ -55,16 +52,15 @@ void main() {
     pgPassword: password,
     pgHbaConfContent: _sampleHbaConfigScramSha256,
     (server) {
-      PostgreSQLConnection? conn;
+      Connection? conn;
 
       tearDown(() async {
         await conn?.close();
       });
 
       test('- Connect with non-ascii connection string', () async {
-        conn = await server.newPostgreSQLConnection();
-        await conn!.open();
-        final res = await conn!.query('select 1;');
+        conn = await server.newConnection();
+        final res = await conn!.execute('select 1;');
         expect(res.length, 1);
       });
     },

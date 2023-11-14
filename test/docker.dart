@@ -6,7 +6,6 @@ import 'package:docker_process/containers/postgres.dart';
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
-import 'package:postgres/legacy.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart';
 import 'package:stream_channel/stream_channel.dart';
@@ -62,6 +61,7 @@ class PostgresServer {
 
   Future<Connection> newConnection({
     ReplicationMode replicationMode = ReplicationMode.none,
+    SslMode? sslMode,
   }) async {
     return Connection.open(
       await endpoint(),
@@ -70,25 +70,7 @@ class PostgresServer {
         queryTimeout: Duration(seconds: 3),
         replicationMode: replicationMode,
         transformer: loggingTransformer('conn'),
-      ),
-    );
-  }
-
-  Future<PostgreSQLConnection> newPostgreSQLConnection({
-    ReplicationMode replicationMode = ReplicationMode.none,
-    Endpoint? endpoint,
-    Duration? connectTimeout,
-    SslMode? sslMode,
-  }) async {
-    final e = endpoint ?? await this.endpoint();
-
-    return PostgreSQLConnection.withV3(
-      e,
-      connectionSettings: ConnectionSettings(
         sslMode: sslMode,
-        replicationMode: replicationMode,
-        ignoreSuperfluousParameters: true,
-        connectTimeout: connectTimeout,
       ),
     );
   }

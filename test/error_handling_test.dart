@@ -5,13 +5,12 @@ import 'docker.dart';
 void main() {
   withPostgresServer('error handling', (server) {
     test('Reports stacktrace correctly', () async {
-      final conn = await server.newPostgreSQLConnection();
-      await conn.open();
+      final conn = await server.newConnection();
       addTearDown(() async => conn.close());
 
       // Root connection query
       try {
-        await conn.query('SELECT hello');
+        await conn.execute('SELECT hello');
         fail('Should not reach');
       } catch (e, st) {
         expect(e.toString(), contains('column "hello" does not exist'));
@@ -35,8 +34,8 @@ void main() {
 
       // Inside transaction
       try {
-        await conn.transaction((conn) async {
-          await conn.query('SELECT hello');
+        await conn.runTx((s) async {
+          await s.execute('SELECT hello');
           fail('Should not reach');
         });
       } catch (e, st) {

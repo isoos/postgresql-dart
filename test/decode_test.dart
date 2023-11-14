@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/types/binary_codec.dart';
 import 'package:postgres/src/types/generic_type.dart';
@@ -11,10 +10,9 @@ import 'docker.dart';
 
 void main() {
   withPostgresServer('decode', (server) {
-    late PostgreSQLConnection connection;
+    late Connection connection;
     setUp(() async {
-      connection = await server.newPostgreSQLConnection();
-      await connection.open();
+      connection = await server.newConnection();
 
       await connection.execute('''
         CREATE TEMPORARY TABLE t (
@@ -61,7 +59,7 @@ void main() {
     });
 
     test(' Fetch em', () async {
-      final res = await connection.query('select * from t');
+      final res = await connection.execute('select * from t');
 
       final row1 = res[0];
       final row2 = res[1];
@@ -176,14 +174,14 @@ void main() {
 
     test('Fetch/insert empty string', () async {
       await connection.execute('CREATE TEMPORARY TABLE u (t text)');
-      var results = await connection.query(
-          'INSERT INTO u (t) VALUES (@t:text) returning t',
-          substitutionValues: {'t': ''});
+      var results = await connection.execute(
+          Sql.named('INSERT INTO u (t) VALUES (@t:text) returning t'),
+          parameters: {'t': ''});
       expect(results, [
         ['']
       ]);
 
-      results = await connection.query('select * from u');
+      results = await connection.execute('select * from u');
       expect(results, [
         ['']
       ]);
@@ -191,14 +189,14 @@ void main() {
 
     test('Fetch/insert null value', () async {
       await connection.execute('CREATE TEMPORARY TABLE u (t text)');
-      var results = await connection.query(
-          'INSERT INTO u (t) VALUES (@t:text) returning t',
-          substitutionValues: {'t': null});
+      var results = await connection.execute(
+          Sql.named('INSERT INTO u (t) VALUES (@t:text) returning t'),
+          parameters: {'t': null});
       expect(results, [
         [null]
       ]);
 
-      results = await connection.query('select * from u');
+      results = await connection.execute('select * from u');
       expect(results, [
         [null]
       ]);
