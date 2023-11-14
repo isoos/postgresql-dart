@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.1
+
+- Fix: do not allow `execute` after closing the `Connection`.
+
 ## 3.0.0
 
 New features:
