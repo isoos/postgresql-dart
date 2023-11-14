@@ -689,7 +689,7 @@ void main() {
         uncaughtException = error;
       });
       expect(uncaughtException.toString(), thrownException.toString());
-    }, skip: !server.useV3);
+    });
 
     // TODO: decide if this is the desired outcome.
     test('exception caught in transaction is propagated out', () async {
@@ -704,7 +704,7 @@ void main() {
         }),
         throwsA(isA<ServerException>()),
       );
-    }, skip: !server.useV3);
+    });
   });
 
   withPostgresServer('transaction isolations', (server) {

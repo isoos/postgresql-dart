@@ -2,7 +2,6 @@
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:mirrors';
 
 import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
@@ -144,17 +143,9 @@ void main() {
 
     test('SSL Connect with md5 or scram-sha-256 auth required', () async {
       conn = await server.newPostgreSQLConnection(sslMode: SslMode.require);
-
       await conn.open();
-
       expect(await conn.execute('select 1'), equals(1));
-      final socketMirror = reflect(conn).type.declarations.values.firstWhere(
-          (DeclarationMirror dm) =>
-              dm.simpleName.toString().contains('_socket'));
-      final underlyingSocket =
-          reflect(conn).getField(socketMirror.simpleName).reflectee;
-      expect(underlyingSocket is SecureSocket, true);
-    }, skip: server.skippedOnV3('Tests internals'));
+    });
 
     test('Connect with no auth required', () async {
       conn = await server.newPostgreSQLConnection(
@@ -185,9 +176,7 @@ void main() {
         expect(e, isA<PgException>());
         expect(
           (e as PgException).message,
-          contains(server.useV3
-              ? 'password authentication failed for user "'
-              : 'Password is required'),
+          contains('password authentication failed for user "'),
         );
       }
     });
@@ -206,100 +195,6 @@ void main() {
 
       expect(await conn.execute('select 1'), equals(1));
     });
-
-    test('Closing idle connection succeeds, closes underlying socket',
-        () async {
-      // ignore: deprecated_member_use_from_same_package
-      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
-          username: 'darttrust');
-      await conn.open();
-
-      await conn.close();
-
-      final socketMirror = reflect(conn).type.declarations.values.firstWhere(
-          (DeclarationMirror dm) =>
-              dm.simpleName.toString().contains('_socket'));
-      final underlyingSocket =
-          reflect(conn).getField(socketMirror.simpleName).reflectee as Socket;
-      expect(await underlyingSocket.done, isNotNull);
-    }, skip: server.skippedOnV3());
-
-    test('SSL Closing idle connection succeeds, closes underlying socket',
-        () async {
-      // ignore: deprecated_member_use_from_same_package
-      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
-          username: 'darttrust', useSSL: true);
-      await conn.open();
-
-      await conn.close();
-
-      final socketMirror = reflect(conn).type.declarations.values.firstWhere(
-          (DeclarationMirror dm) =>
-              dm.simpleName.toString().contains('_socket'));
-      final underlyingSocket =
-          reflect(conn).getField(socketMirror.simpleName).reflectee as Socket;
-      expect(await underlyingSocket.done, isNotNull);
-    }, skip: server.skippedOnV3());
-
-    test(
-        'Closing connection while busy succeeds, queued queries are all accounted for (canceled), closes underlying socket',
-        () async {
-      // ignore: deprecated_member_use_from_same_package
-      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
-          username: 'darttrust');
-      await conn.open();
-
-      final rs = await conn.query('select 1');
-      final errors = <PgException>[];
-      PostgreSQLResult catcher(e) {
-        errors.add(e);
-        return rs;
-      }
-
-      final futures = [
-        conn.query('select 1', allowReuse: false).catchError(catcher),
-        conn.query('select 2', allowReuse: false).catchError(catcher),
-        conn.query('select 3', allowReuse: false).catchError(catcher),
-        conn.query('select 4', allowReuse: false).catchError(catcher),
-        conn.query('select 5', allowReuse: false).catchError(catcher),
-      ];
-
-      await conn.close();
-      await Future.wait(futures);
-      expect(errors.length, 5);
-      expect(errors.map((e) => e.message),
-          everyElement(contains('Query cancelled')));
-    }, skip: server.skippedOnV3());
-
-    test(
-        'SSL Closing connection while busy succeeds, queued queries are all accounted for (canceled), closes underlying socket',
-        () async {
-      // ignore: deprecated_member_use_from_same_package
-      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
-          username: 'darttrust', useSSL: true);
-      await conn.open();
-      final rs = await conn.query('select 1');
-
-      final errors = <PgException>[];
-      PostgreSQLResult catcher(e) {
-        errors.add(e);
-        return rs;
-      }
-
-      final futures = [
-        conn.query('select 1', allowReuse: false).catchError(catcher),
-        conn.query('select 2', allowReuse: false).catchError(catcher),
-        conn.query('select 3', allowReuse: false).catchError(catcher),
-        conn.query('select 4', allowReuse: false).catchError(catcher),
-        conn.query('select 5', allowReuse: false).catchError(catcher),
-      ];
-
-      await conn.close();
-      await Future.wait(futures);
-      expect(errors.length, 5);
-      expect(errors.map((e) => e.message),
-          everyElement(contains('Query cancelled')));
-    }, skip: server.skippedOnV3());
   });
 
   withPostgresServer('Successful queries over time', initSqls: oldSchemaInit,
@@ -387,34 +282,6 @@ void main() {
       await openFuture;
       await conn.close();
     });
-
-    test('Sending queries to opening connection triggers error', () async {
-      // ignore: deprecated_member_use_from_same_package
-      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
-          username: 'darttrust');
-      openFuture = conn.open();
-
-      try {
-        await conn.execute('select 1');
-        expect(true, false);
-      } on PgException catch (e) {
-        expect(e.message, contains('connection is not open'));
-      }
-    }, skip: server.skippedOnV3());
-
-    test('SSL Sending queries to opening connection triggers error', () async {
-      // ignore: deprecated_member_use_from_same_package
-      conn = PostgreSQLConnection('localhost', await server.port, 'dart_test',
-          username: 'darttrust', useSSL: true);
-      openFuture = conn.open();
-
-      try {
-        await conn.execute('select 1');
-        expect(true, false);
-      } on PgException catch (e) {
-        expect(e.message, contains('connection is not open'));
-      }
-    }, skip: server.skippedOnV3());
 
     test('Starting transaction while opening connection triggers error',
         () async {
@@ -511,48 +378,6 @@ void main() {
     });
 
     test(
-        'A query error maintains connectivity, continues processing pending queries',
-        () async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
-
-      await conn.execute('CREATE TEMPORARY TABLE t (i int unique)');
-
-      await conn.execute('INSERT INTO t (i) VALUES (1)');
-
-      conn.execute('INSERT INTO t (i) VALUES (1)').catchError((e) {
-        // ignore
-        return 0;
-      });
-
-      final futures = [
-        conn.query('select 1', allowReuse: false),
-        conn.query('select 2', allowReuse: false),
-        conn.query('select 3', allowReuse: false),
-      ];
-      final results = await Future.wait(futures);
-
-      expect(results, [
-        [
-          [1]
-        ],
-        [
-          [2]
-        ],
-        [
-          [3]
-        ]
-      ]);
-
-      final queueMirror = reflect(conn).type.instanceMembers.values.firstWhere(
-          (DeclarationMirror dm) =>
-              dm.simpleName.toString().contains('_queue'));
-      final queue =
-          reflect(conn).getField(queueMirror.simpleName).reflectee as List;
-      expect(queue, isEmpty);
-    }, skip: server.skippedOnV3('Tests internals'));
-
-    test(
         'A query error maintains connectivity, continues processing pending transactions',
         () async {
       conn = await server.newPostgreSQLConnection();
@@ -582,40 +407,6 @@ void main() {
       ]);
       expect(orderEnsurer, [2, 1, 3, 4]);
     });
-
-    test(
-        'Building query throws error, connection continues processing pending queries',
-        () async {
-      conn = await server.newPostgreSQLConnection();
-      await conn.open();
-
-      // Make some async queries that'll exit the event loop, but then fail on a query that'll die early
-      conn.execute('askdl').catchError((err, st) => 0);
-      conn.execute('abdef').catchError((err, st) => 0);
-      conn.execute('select @a').catchError((err, st) => 0);
-
-      final futures = [
-        conn.query('select 1', allowReuse: false),
-        conn.query('select 2', allowReuse: false),
-      ];
-      final results = await Future.wait(futures);
-
-      expect(results, [
-        [
-          [1]
-        ],
-        [
-          [2]
-        ]
-      ]);
-
-      final queueMirror = reflect(conn).type.instanceMembers.values.firstWhere(
-          (DeclarationMirror dm) =>
-              dm.simpleName.toString().contains('_queue'));
-      final queue =
-          reflect(conn).getField(queueMirror.simpleName).reflectee as List;
-      expect(queue, isEmpty);
-    }, skip: server.skippedOnV3('Tests internals'));
   });
 
   withPostgresServer('Network error situations', (server) {
@@ -739,71 +530,6 @@ void main() {
 
       await expectConnectionIsInvalid(conn);
     });
-
-    test('Connection that times out triggers future for pending queries',
-        () async {
-      final openCompleter = Completer();
-      final port = await selectFreePort();
-      serverSocket =
-          await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
-      serverSocket!.listen((s) {
-        socket = s;
-        // Don't respond on purpose
-        s.listen((bytes) {});
-        Future.delayed(Duration(milliseconds: 100), openCompleter.complete);
-      });
-
-      // ignore: deprecated_member_use_from_same_package
-      final conn = PostgreSQLConnection('localhost', port, 'dart_test',
-          timeoutInSeconds: 2);
-      conn.open().catchError((e) {});
-
-      await openCompleter.future;
-
-      try {
-        await conn.execute('select 1');
-        expect(true, false);
-      } on PgException catch (e) {
-        expect(e.message, contains('Failed to connect'));
-      }
-    }, skip: server.skippedOnV3());
-
-    test('SSL Connection that times out triggers future for pending queries',
-        () async {
-      final openCompleter = Completer();
-      final port = await selectFreePort();
-      serverSocket =
-          await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
-      serverSocket!.listen((s) {
-        socket = s;
-        // Don't respond on purpose
-        s.listen((bytes) {});
-        Future.delayed(Duration(milliseconds: 100), openCompleter.complete);
-      });
-
-      // ignore: deprecated_member_use_from_same_package
-      final conn = PostgreSQLConnection('localhost', port, 'dart_test',
-          timeoutInSeconds: 2, useSSL: true);
-      conn.open().catchError((e) {
-        return null;
-      });
-
-      await openCompleter.future;
-
-      try {
-        await conn.execute('select 1');
-        expect(true, false);
-      } on PgException catch (e) {
-        expect(e.message, contains('but connection is not open'));
-      }
-
-      try {
-        await conn.open();
-        expect(true, false);
-      } on PgException {
-        // ignore
-      }
-    }, skip: server.skippedOnV3());
   });
 
   withPostgresServer('connection', (server) {
@@ -826,36 +552,6 @@ void main() {
         expect(e.toString(), contains('connection is not open'));
       }
     });
-
-    test('If connection is closed, do not allow .mappedResultsQuery', () async {
-      final conn = await server.newPostgreSQLConnection();
-      try {
-        await conn.mappedResultsQuery('SELECT 1');
-        fail('unreachable');
-      } on PgException catch (e) {
-        expect(e.toString(), contains('connection is not open'));
-      }
-    }, skip: server.skippedOnV3('v3 does not need explicit opening'));
-
-    test(
-        'Queue size, should be 0 on open, >0 if queries added and 0 again after queries executed',
-        () async {
-      final conn = await server.newPostgreSQLConnection();
-      await conn.open();
-      expect(conn.queueSize, 0);
-
-      final futures = [
-        conn.query('select 1', allowReuse: false),
-        conn.query('select 2', allowReuse: false),
-        conn.query('select 3', allowReuse: false)
-      ];
-      expect(conn.queueSize, 3);
-
-      await Future.wait(futures);
-      expect(conn.queueSize, 0);
-    },
-        skip: server.skippedOnV3(
-            'queueSize is an internal property not exposed in the V3 API'));
   });
 }
 

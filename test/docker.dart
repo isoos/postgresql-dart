@@ -43,31 +43,14 @@ class PostgresServer {
   final _containerName = Completer<String>();
 
   Future<int> get port => _port.future;
-  final bool _useV3;
   final String? _pgUser;
   final String? _pgPassword;
 
   PostgresServer({
-    bool? useV3,
     String? pgUser,
     String? pgPassword,
-  })  : _useV3 = useV3 ?? false,
-        _pgUser = pgUser,
+  })  : _pgUser = pgUser,
         _pgPassword = pgPassword;
-
-  bool get useV3 => _useV3;
-
-  /// Can be used as the `skip` parameter on tests that can't run with the v3
-  /// backend for v2 API, for instance because they're testing internals.
-  String? skippedOnV3([String? reason]) {
-    if (_useV3) {
-      return reason != null
-          ? 'Skipped with v3 delegate: $reason'
-          : 'Skipped with v3 delegate.';
-    } else {
-      return null;
-    }
-  }
 
   Future<Endpoint> endpoint() async => Endpoint(
         host: 'localhost',
@@ -99,29 +82,14 @@ class PostgresServer {
   }) async {
     final e = endpoint ?? await this.endpoint();
 
-    if (_useV3) {
-      return PostgreSQLConnection.withV3(
-        e,
-        connectionSettings: ConnectionSettings(
-          sslMode: sslMode,
-          replicationMode: replicationMode,
-          ignoreSuperfluousParameters: true,
-          connectTimeout: connectTimeout,
-        ),
-      );
-    }
-
-    // ignore: deprecated_member_use_from_same_package
-    return PostgreSQLConnection(
-      e.host,
-      e.port,
-      e.database,
-      username: e.username,
-      password: e.password,
-      useSSL: sslMode != SslMode.disable,
-      replicationMode: replicationMode,
-      allowClearTextPassword: sslMode == SslMode.disable,
-      timeoutInSeconds: connectTimeout?.inSeconds ?? 30,
+    return PostgreSQLConnection.withV3(
+      e,
+      connectionSettings: ConnectionSettings(
+        sslMode: sslMode,
+        replicationMode: replicationMode,
+        ignoreSuperfluousParameters: true,
+        connectTimeout: connectTimeout,
+      ),
     );
   }
 }
@@ -135,62 +103,52 @@ void withPostgresServer(
   String? pgPassword,
   String? pgHbaConfContent,
 }) {
-  void setupGroup(bool useV3) {
-    group(useV3 ? '$name v3' : name, () {
-      final server = PostgresServer(
-        useV3: useV3,
-        pgUser: pgUser,
-        pgPassword: pgPassword,
-      );
-      Directory? tempDir;
+  group(name, () {
+    final server = PostgresServer(
+      pgUser: pgUser,
+      pgPassword: pgPassword,
+    );
+    Directory? tempDir;
 
-      setUpAll(() async {
-        try {
-          final port = await selectFreePort();
-          String? pgHbaConfPath;
-          if (pgHbaConfContent != null) {
-            tempDir = await Directory.systemTemp
-                .createTemp('postgres-dart-test-$port');
-            pgHbaConfPath = p.join(tempDir!.path, 'pg_hba.conf');
-            await File(pgHbaConfPath).writeAsString(pgHbaConfContent);
-          }
-
-          final containerName = 'postgres-dart-test-$port';
-          await _startPostgresContainer(
-            port: port,
-            containerName: containerName,
-            initSqls: initSqls ?? const <String>[],
-            pgUser: pgUser,
-            pgPassword: pgPassword,
-            pgHbaConfPath: pgHbaConfPath,
-          );
-
-          server._containerName.complete(containerName);
-          server._port.complete(port);
-        } catch (e, st) {
-          server._containerName.completeError(e, st);
-          server._port.completeError(e, st);
-          rethrow;
+    setUpAll(() async {
+      try {
+        final port = await selectFreePort();
+        String? pgHbaConfPath;
+        if (pgHbaConfContent != null) {
+          tempDir =
+              await Directory.systemTemp.createTemp('postgres-dart-test-$port');
+          pgHbaConfPath = p.join(tempDir!.path, 'pg_hba.conf');
+          await File(pgHbaConfPath).writeAsString(pgHbaConfContent);
         }
-      });
 
-      tearDownAll(() async {
-        final containerName = await server._containerName.future;
-        await Process.run('docker', ['stop', containerName]);
-        await Process.run('docker', ['kill', containerName]);
-        await tempDir?.delete(recursive: true);
-      });
+        final containerName = 'postgres-dart-test-$port';
+        await _startPostgresContainer(
+          port: port,
+          containerName: containerName,
+          initSqls: initSqls ?? const <String>[],
+          pgUser: pgUser,
+          pgPassword: pgPassword,
+          pgHbaConfPath: pgHbaConfPath,
+        );
 
-      fn(server);
+        server._containerName.complete(containerName);
+        server._port.complete(port);
+      } catch (e, st) {
+        server._containerName.completeError(e, st);
+        server._port.completeError(e, st);
+        rethrow;
+      }
     });
-  }
 
-  if (Platform.environment['V3'] == '1') {
-    setupGroup(true);
-  } else {
-    setupGroup(false);
-    setupGroup(true);
-  }
+    tearDownAll(() async {
+      final containerName = await server._containerName.future;
+      await Process.run('docker', ['stop', containerName]);
+      await Process.run('docker', ['kill', containerName]);
+      await tempDir?.delete(recursive: true);
+    });
+
+    fn(server);
+  });
 }
 
 Future<int> selectFreePort() async {
