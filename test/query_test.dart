@@ -43,12 +43,8 @@ void main() {
 
       result = await connection.query('select t from t');
       expect(result.columnDescriptions, hasLength(1));
-      if (server.useV3) {
-        expect(() => result.columnDescriptions.single.tableName,
-            throwsUnimplementedError);
-      } else {
-        expect(result.columnDescriptions.single.tableName, 't');
-      }
+      expect(() => result.columnDescriptions.single.tableName,
+          throwsUnimplementedError);
       expect(result.columnDescriptions.single.columnName, 't');
       expect(result, [expectedRow]);
     });
@@ -202,12 +198,8 @@ void main() {
         [false, true, false]
       ];
       expect(result.columnDescriptions, hasLength(24));
-      if (server.useV3) {
-        expect(() => result.columnDescriptions.first.tableName,
-            throwsUnimplementedError);
-      } else {
-        expect(result.columnDescriptions.first.tableName, 't');
-      }
+      expect(() => result.columnDescriptions.first.tableName,
+          throwsUnimplementedError);
       expect(result.columnDescriptions.first.columnName, 'i');
       expect(result.columnDescriptions.last.columnName, 'ba');
       expect(result, [expectedRow]);
@@ -478,11 +470,7 @@ void main() {
             substitutionValues: {'i1': '1', 'i2': 1});
         expect(true, false);
       } on FormatException catch (e) {
-        expect(
-            e.toString(),
-            server.useV3
-                ? contains('Unknown type')
-                : contains('Invalid type code'));
+        expect(e.toString(), contains('Unknown type'));
         expect(e.toString(), contains('qwerty'));
       }
     });
