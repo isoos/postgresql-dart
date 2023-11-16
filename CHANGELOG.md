@@ -3,6 +3,8 @@
 ## 3.0.1
 
 - Fix: do not allow `execute` after closing the `Connection`.
+- `Session.runTx()` supports rolling back the transaction through `TxSession.rollback()`
+  (otherwise any exception has the same effect, but callers need to catch it).
 
 ## 3.0.0
 

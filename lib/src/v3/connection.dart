@@ -395,7 +395,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   @override
   Future<R> runTx<R>(
-    Future<R> Function(Session session) fn, {
+    Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
   }) {
     final rsettings = ResolvedTransactionSettings(settings, _settings);
@@ -428,7 +428,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
       try {
         final result = await fn(transaction);
-        await transaction._sendAndMarkClosed('COMMIT;');
+        if (transaction.mayCommit) {
+          await transaction._sendAndMarkClosed('COMMIT;');
+        } else {
+          await transaction._sendAndMarkClosed('ROLLBACK;');
+        }
 
         // If we have received an error while the transaction was active, it
         // will always be rolled back.
@@ -866,12 +870,13 @@ class _RegularSession extends _PgSessionBase {
   _RegularSession(this._connection, this._settings);
 }
 
-class _TransactionSession extends _PgSessionBase {
+class _TransactionSession extends _PgSessionBase implements TxSession {
   @override
   final PgConnectionImplementation _connection;
   @override
   final ResolvedTransactionSettings _settings;
 
+  bool _markedAsRollback = false;
   PgException? _transactionException;
 
   _TransactionSession(this._connection, this._settings);
@@ -899,6 +904,13 @@ class _TransactionSession extends _PgSessionBase {
     await querySubscription.asFuture();
     await querySubscription.cancel();
   }
+
+  @override
+  void rollback() {
+    _markedAsRollback = true;
+  }
+
+  bool get mayCommit => !_markedAsRollback && _transactionException == null;
 }
 
 abstract class _PendingOperation {

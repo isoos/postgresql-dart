@@ -579,11 +579,24 @@ void main() {
       await conn.close();
     });
 
-    test('Is rolled back/executes later query', () async {
+    test('Is rolled back/executes later query after exception', () async {
       expect(conn.runTx((c) async {
         await c.execute('INSERT INTO t (id) VALUES (1)');
         throw Exception();
       }), throwsA(isException));
+
+      final noRows = await conn.execute('SELECT id FROM t');
+      expect(noRows, []);
+    });
+
+    test('Is rolled back/executes later query after marking the session',
+        () async {
+      final rs = await conn.runTx((c) async {
+        await c.execute('INSERT INTO t (id) VALUES (1)');
+        c.rollback();
+        return 123;
+      });
+      expect(rs, 123);
 
       final noRows = await conn.execute('SELECT id FROM t');
       expect(noRows, []);
