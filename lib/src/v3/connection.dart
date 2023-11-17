@@ -395,7 +395,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   @override
   Future<R> runTx<R>(
-    Future<R> Function(Session session) fn, {
+    Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
   }) {
     final rsettings = ResolvedTransactionSettings(settings, _settings);
@@ -428,7 +428,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
       try {
         final result = await fn(transaction);
-        await transaction._sendAndMarkClosed('COMMIT;');
+        if (transaction.mayCommit) {
+          await transaction._sendAndMarkClosed('COMMIT;');
+        } else if (!transaction._sessionClosed) {
+          await transaction._sendAndMarkClosed('ROLLBACK;');
+        }
 
         // If we have received an error while the transaction was active, it
         // will always be rolled back.
@@ -866,12 +870,13 @@ class _RegularSession extends _PgSessionBase {
   _RegularSession(this._connection, this._settings);
 }
 
-class _TransactionSession extends _PgSessionBase {
+class _TransactionSession extends _PgSessionBase implements TxSession {
   @override
   final PgConnectionImplementation _connection;
   @override
   final ResolvedTransactionSettings _settings;
 
+  bool _closing = false;
   PgException? _transactionException;
 
   _TransactionSession(this._connection, this._settings);
@@ -882,6 +887,7 @@ class _TransactionSession extends _PgSessionBase {
   /// This prevents other pending operations on the transaction that haven't
   /// been awaited from running.
   Future<void> _sendAndMarkClosed(String command) async {
+    _closing = true;
     final controller = StreamController<ResultRow>();
     final items = <ResultRow>[];
 
@@ -899,6 +905,16 @@ class _TransactionSession extends _PgSessionBase {
     await querySubscription.asFuture();
     await querySubscription.cancel();
   }
+
+  @override
+  Future<void> rollback() async {
+    await _sendAndMarkClosed('ROLLBACK;');
+  }
+
+  bool get mayCommit =>
+      !_closing &&
+      _connection._activeTransaction == this &&
+      _transactionException == null;
 }
 
 abstract class _PendingOperation {

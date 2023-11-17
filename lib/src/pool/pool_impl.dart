@@ -112,7 +112,7 @@ class PoolImplementation<L> implements Pool<L> {
 
   @override
   Future<R> runTx<R>(
-    Future<R> Function(Session session) fn, {
+    Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
     L? locality,
   }) {
@@ -309,7 +309,7 @@ class _PoolConnection implements Connection {
 
   @override
   Future<R> runTx<R>(
-    Future<R> Function(Session session) fn, {
+    Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
   }) {
     return _connection.runTx(

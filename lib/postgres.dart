@@ -169,6 +169,13 @@ abstract class Session {
   });
 }
 
+/// A [Session] with transaction-related helper method(s).
+abstract class TxSession extends Session {
+  /// Executes `ROLLBACK` and closes the transaction session.
+  /// Further queries will throw an exception.
+  Future<void> rollback();
+}
+
 abstract class SessionExecutor {
   /// Obtains a [Session] capable of running statements and calls [fn] with
   /// it.
@@ -188,7 +195,7 @@ abstract class SessionExecutor {
   /// Note that other invocations on a [Connection] are blocked while a
   /// transaction is active.
   Future<R> runTx<R>(
-    Future<R> Function(Session session) fn, {
+    Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
   });
 
