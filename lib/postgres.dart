@@ -171,8 +171,9 @@ abstract class Session {
 
 /// A [Session] with transaction-related helper method(s).
 abstract class TxSession extends Session {
-  /// At the end of the transaction callback, the session will be closed with a `ROLLBACK`.
-  void rollback();
+  /// Executes `ROLLBACK` and closes the transaction session.
+  /// Further queries will throw an exception.
+  Future<void> rollback();
 }
 
 abstract class SessionExecutor {

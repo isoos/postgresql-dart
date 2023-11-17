@@ -430,7 +430,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         final result = await fn(transaction);
         if (transaction.mayCommit) {
           await transaction._sendAndMarkClosed('COMMIT;');
-        } else {
+        } else if (!transaction._sessionClosed) {
           await transaction._sendAndMarkClosed('ROLLBACK;');
         }
 
@@ -876,7 +876,7 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
   @override
   final ResolvedTransactionSettings _settings;
 
-  bool _markedAsRollback = false;
+  bool _closing = false;
   PgException? _transactionException;
 
   _TransactionSession(this._connection, this._settings);
@@ -887,6 +887,7 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
   /// This prevents other pending operations on the transaction that haven't
   /// been awaited from running.
   Future<void> _sendAndMarkClosed(String command) async {
+    _closing = true;
     final controller = StreamController<ResultRow>();
     final items = <ResultRow>[];
 
@@ -906,11 +907,14 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
   }
 
   @override
-  void rollback() {
-    _markedAsRollback = true;
+  Future<void> rollback() async {
+    await _sendAndMarkClosed('ROLLBACK;');
   }
 
-  bool get mayCommit => !_markedAsRollback && _transactionException == null;
+  bool get mayCommit =>
+      !_closing &&
+      _connection._activeTransaction == this &&
+      _transactionException == null;
 }
 
 abstract class _PendingOperation {
