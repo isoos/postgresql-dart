@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'dart:async';
 
 import '../types.dart';
@@ -6,6 +8,7 @@ import 'connection.dart';
 import 'query.dart';
 import 'substituter.dart';
 
+@Deprecated('Do not use v2 API, will be removed in next release.')
 abstract class PostgreSQLExecutionContext {
   /// Returns this context queue size
   int get queueSize;
@@ -110,6 +113,7 @@ abstract class PostgreSQLExecutionContext {
 }
 
 /// A description of a column.
+@Deprecated('Do not use v2 API, will be removed in next release.')
 class ColumnDescription {
   /// The name of the column returned by the query.
   final String columnName;
@@ -130,6 +134,7 @@ class ColumnDescription {
 /// A single row of a query result.
 ///
 /// Column values can be accessed through the `[]` operator.
+@Deprecated('Do not use v2 API, will be removed in next release.')
 abstract class PostgreSQLResultRow implements List {
   List<ColumnDescription> get columnDescriptions;
 
@@ -145,6 +150,7 @@ abstract class PostgreSQLResultRow implements List {
 /// The query result.
 ///
 /// Rows can be accessed through the `[]` operator.
+@Deprecated('Do not use v2 API, will be removed in next release.')
 abstract class PostgreSQLResult implements List<PostgreSQLResultRow> {
   /// How many rows did this query affect?
   int get affectedRowCount;

@@ -22,6 +22,7 @@ typedef PostgreSQLException = ServerException;
 ///
 /// The primary type of this library, a connection is responsible for connecting to databases and executing queries.
 /// A connection may be opened with [open] after it is created.
+@Deprecated('Do not use v2 API, will be removed in next release.')
 abstract class PostgreSQLConnection implements PostgreSQLExecutionContext {
   /// Returns a somewhat compatible version of [PostgreSQLConnection]
   /// that is backed by the new v3 implementation.

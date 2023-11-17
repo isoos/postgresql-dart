@@ -2,16 +2,20 @@ import 'package:postgres/src/types/type_registry.dart';
 
 import '../types.dart';
 
+@Deprecated('Do not use v2 API, will be removed in next release.')
 class ParameterValue extends TypedValue {
   ParameterValue(Type? type, Object? value)
       : super(type ?? Type.unspecified, value);
 }
 
+@Deprecated('Do not use v2 API, will be removed in next release.')
 typedef SQLReplaceIdentifierFunction = String Function(
     PostgreSQLFormatIdentifier identifier, int index);
 
+@Deprecated('Do not use v2 API, will be removed in next release.')
 enum PostgreSQLFormatTokenType { text, variable }
 
+@Deprecated('Do not use v2 API, will be removed in next release.')
 class PostgreSQLFormatToken {
   PostgreSQLFormatToken(this.type);
 
@@ -19,6 +23,7 @@ class PostgreSQLFormatToken {
   StringBuffer buffer = StringBuffer();
 }
 
+@Deprecated('Do not use v2 API, will be removed in next release.')
 class PostgreSQLFormatIdentifier {
   static final typeStringToCodeMap = TypeRegistry();
 
