@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'dart:collection';
 import 'dart:convert';
 
@@ -70,6 +72,7 @@ mixin _DelegatingContext implements PostgreSQLExecutionContext {
   int get queueSize => throw UnimplementedError();
 }
 
+@Deprecated('Do not use v2 API, will be removed in next release.')
 class WrappedPostgreSQLConnection
     with _DelegatingContext
     implements PostgreSQLConnection {

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:postgres/legacy.dart';
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/types/binary_codec.dart';
 import 'package:postgres/src/types/generic_type.dart';
@@ -652,12 +651,11 @@ void main() {
 }
 
 Future expectInverse(dynamic value, Type dataType) async {
-  final type = PostgreSQLFormat.dataTypeStringForDataType(dataType);
+  final type = dataType is GenericType ? dataType.nameForSubstitution : null;
 
   await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $type)');
   final result = await conn.execute(
-      Sql.named(
-          'INSERT INTO t (v) VALUES (${PostgreSQLFormat.id('v', type: dataType)}) RETURNING v'),
+      Sql.named('INSERT INTO t (v) VALUES (@v:$type) RETURNING v'),
       parameters: {'v': value});
   expect(result.first.first, equals(value));
 
