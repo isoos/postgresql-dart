@@ -148,52 +148,51 @@ abstract class Type<T extends Object> {
   static const unspecified = UnspecifiedType();
 
   /// Must be a [String].
-  static const text =
-      GenericType<String>(TypeOid.text, nameForSubstitution: 'text');
+  static const text = GenericType<String>(TypeOid.text, typeNames: ['text']);
 
   /// Must be an [int] (4-byte integer)
   static const integer =
-      GenericType<int>(TypeOid.integer, nameForSubstitution: 'int4');
+      GenericType<int>(TypeOid.integer, typeNames: ['int4', 'serial4']);
 
   /// Must be an [int] (2-byte integer)
   static const smallInteger =
-      GenericType<int>(TypeOid.smallInteger, nameForSubstitution: 'int2');
+      GenericType<int>(TypeOid.smallInteger, typeNames: ['int2']);
 
   /// Must be an [int] (8-byte integer)
   static const bigInteger =
-      GenericType<int>(TypeOid.bigInteger, nameForSubstitution: 'int8');
+      GenericType<int>(TypeOid.bigInteger, typeNames: ['int8', 'serial8']);
 
   /// Must be an [int] (autoincrementing 4-byte integer)
-  static const serial = GenericType<int>(null, nameForSubstitution: 'int4');
+  static const serial = integer;
 
   /// Must be an [int] (autoincrementing 8-byte integer)
-  static const bigSerial = GenericType<int>(null, nameForSubstitution: 'int8');
+  static const bigSerial = bigInteger;
 
   /// Must be a [double] (32-bit floating point value)
   static const real =
-      GenericType<core.double>(TypeOid.real, nameForSubstitution: 'float4');
+      GenericType<core.double>(TypeOid.real, typeNames: ['float4']);
 
   /// Must be a [double] (64-bit floating point value)
   static const double =
-      GenericType<core.double>(TypeOid.double, nameForSubstitution: 'float8');
+      GenericType<core.double>(TypeOid.double, typeNames: ['float8']);
 
   /// Must be a [bool]
   static const boolean =
-      GenericType<bool>(TypeOid.boolean, nameForSubstitution: 'boolean');
+      GenericType<bool>(TypeOid.boolean, typeNames: ['boolean']);
 
   /// Must be a [DateTime] (microsecond date and time precision)
   static const timestampWithoutTimezone = GenericType<DateTime>(
       TypeOid.timestampWithoutTimezone,
-      nameForSubstitution: 'timestamp');
+      typeNames: ['timestamp']);
 
   /// Must be a [DateTime] (microsecond date and time precision)
   static const timestampWithTimezone = GenericType<DateTime>(
       TypeOid.timestampWithTimezone,
-      nameForSubstitution: 'timestamptz');
+      typeNames: ['timestamptz']);
 
   /// Must be a [Interval]
   static const interval =
-      GenericType<Interval>(TypeOid.interval, nameForSubstitution: 'interval');
+      GenericType<Interval>(TypeOid.interval, typeNames: ['interval']);
 
   /// An arbitrary-precision number.
   ///
@@ -201,80 +200,76 @@ abstract class Type<T extends Object> {
   /// passed as [int] or [double]. When decoding values, numeric types are
   /// always returned as string.
   static const numeric =
-      GenericType<Object>(TypeOid.numeric, nameForSubstitution: 'numeric');
+      GenericType<Object>(TypeOid.numeric, typeNames: ['numeric']);
 
   /// Must be a [DateTime] (contains year, month and day only)
-  static const date =
-      GenericType<DateTime>(TypeOid.date, nameForSubstitution: 'date');
+  static const date = GenericType<DateTime>(TypeOid.date, typeNames: ['date']);
 
   /// Must be encodable via [json.encode].
   ///
   /// Values will be encoded via [json.encode] before being sent to the database.
-  static const jsonb = GenericType(TypeOid.jsonb, nameForSubstitution: 'jsonb');
+  static const jsonb = GenericType(TypeOid.jsonb, typeNames: ['jsonb']);
 
   /// Must be encodable via [core.json.encode].
   ///
   /// Values will be encoded via [core.json.encode] before being sent to the database.
-  static const json = GenericType(TypeOid.json, nameForSubstitution: 'json');
+  static const json = GenericType(TypeOid.json, typeNames: ['json']);
 
   /// Must be a [List] of [int].
   ///
   /// Each element of the list must fit into a byte (0-255).
   static const byteArray =
-      GenericType<List<int>>(TypeOid.byteArray, nameForSubstitution: 'bytea');
+      GenericType<List<int>>(TypeOid.byteArray, typeNames: ['bytea']);
 
   /// Must be a [String]
   ///
   /// Used for internal pg structure names
-  static const name =
-      GenericType<String>(TypeOid.name, nameForSubstitution: 'name');
+  static const name = GenericType<String>(TypeOid.name, typeNames: ['name']);
 
   /// Must be a [String].
   ///
   /// Must contain 32 hexadecimal characters. May contain any number of '-' characters.
   /// When returned from database, format will be xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
-  static const uuid =
-      GenericType<String>(TypeOid.uuid, nameForSubstitution: 'uuid');
+  static const uuid = GenericType<String>(TypeOid.uuid, typeNames: ['uuid']);
 
   /// Must be a [Point]
-  static const point =
-      GenericType<Point>(TypeOid.point, nameForSubstitution: 'point');
+  static const point = GenericType<Point>(TypeOid.point, typeNames: ['point']);
 
   /// Must be a [List<bool>]
-  static const booleanArray = GenericType<List<bool>>(TypeOid.booleanArray,
-      nameForSubstitution: '_bool');
+  static const booleanArray =
+      GenericType<List<bool>>(TypeOid.booleanArray, typeNames: ['_bool']);
 
   /// Must be a [List<int>]
-  static const integerArray = GenericType<List<int>>(TypeOid.integerArray,
-      nameForSubstitution: '_int4');
+  static const integerArray =
+      GenericType<List<int>>(TypeOid.integerArray, typeNames: ['_int4']);
 
   /// Must be a [List<int>]
-  static const bigIntegerArray = GenericType<List<int>>(TypeOid.bigIntegerArray,
-      nameForSubstitution: '_int8');
+  static const bigIntegerArray =
+      GenericType<List<int>>(TypeOid.bigIntegerArray, typeNames: ['_int8']);
 
   /// Must be a [List<String>]
-  static const textArray = GenericType<List<String>>(TypeOid.textArray,
-      nameForSubstitution: '_text');
+  static const textArray =
+      GenericType<List<String>>(TypeOid.textArray, typeNames: ['_text']);
 
   /// Must be a [List<double>]
   static const doubleArray = GenericType<List<core.double>>(TypeOid.doubleArray,
-      nameForSubstitution: '_float8');
+      typeNames: ['_float8']);
 
   /// Must be a [String]
   static const varChar =
-      GenericType<String>(TypeOid.varChar, nameForSubstitution: 'varchar');
+      GenericType<String>(TypeOid.varChar, typeNames: ['varchar']);
 
   /// Must be a [List<String>]
-  static const varCharArray = GenericType<List<String>>(TypeOid.varCharArray,
-      nameForSubstitution: '_varchar');
+  static const varCharArray =
+      GenericType<List<String>>(TypeOid.varCharArray, typeNames: ['_varchar']);
 
   /// Must be a [List] of encodable objects
   static const jsonbArray =
-      GenericType<List>(TypeOid.jsonbArray, nameForSubstitution: '_jsonb');
+      GenericType<List>(TypeOid.jsonbArray, typeNames: ['_jsonb']);
 
   /// Must be a [Type].
   static const regtype =
-      GenericType<Type>(TypeOid.regtype, nameForSubstitution: 'regtype');
+      GenericType<Type>(TypeOid.regtype, typeNames: ['regtype']);
 
   /// Impossible to bind to, always null when read.
   static const voidType = GenericType<Object>(TypeOid.voidType);

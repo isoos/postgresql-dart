@@ -6,6 +6,7 @@ import 'package:postgres/postgres.dart';
 import 'package:postgres/src/types/binary_codec.dart';
 import 'package:postgres/src/types/generic_type.dart';
 import 'package:postgres/src/types/text_codec.dart';
+import 'package:postgres/src/types/type_registry.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -68,7 +69,7 @@ void main() {
       await expectInverse(0, Type.serial);
       await expectInverse(1, Type.serial);
       try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int4)'),
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:serial4)'),
             parameters: {'v': 'not-serial'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -93,7 +94,7 @@ void main() {
       await expectInverse(0, Type.bigSerial);
       await expectInverse(1, Type.bigSerial);
       try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int8)'),
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:serial8)'),
             parameters: {'v': 'not-bigserial'});
         fail('unreachable');
       } on FormatException catch (e) {
@@ -651,19 +652,13 @@ void main() {
 }
 
 Future expectInverse(dynamic value, Type dataType) async {
-  final type = dataType is GenericType ? dataType.nameForSubstitution : null;
+  final type = TypeRegistry().lookupTypeName(dataType);
 
   await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $type)');
   final result = await conn.execute(
       Sql.named('INSERT INTO t (v) VALUES (@v:$type) RETURNING v'),
       parameters: {'v': value});
   expect(result.first.first, equals(value));
-
-  if (dataType == Type.serial) {
-    dataType = Type.integer;
-  } else if (dataType == Type.bigSerial) {
-    dataType = Type.bigInteger;
-  }
 
   final encoder = PostgresBinaryEncoder(dataType.oid!);
   final encodedValue = encoder.convert(value, utf8);

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:postgres/src/exceptions.dart';
 import 'package:postgres/src/types/text_codec.dart';
@@ -52,8 +53,6 @@ final _builtInTypes = <Type>{
   Type.integer,
   Type.smallInteger,
   Type.bigInteger,
-  Type.serial,
-  Type.bigSerial,
   Type.real,
   Type.double,
   Type.boolean,
@@ -93,15 +92,10 @@ class TypeRegistry {
     if (type.oid != null && type.oid! > 0) {
       _byTypeOid[type.oid!] = type;
     }
-    // We don't index serial and bigSerial types here because they're using
-    // the same names as int4 and int8, respectively.
-    // However, when a user is referring to these types in a query, they
-    // should always resolve to integer and bigInteger.
-    if (type != Type.serial &&
-        type != Type.bigSerial &&
-        type is GenericType &&
-        type.nameForSubstitution != null) {
-      _bySubstitutionName[type.nameForSubstitution!] = type;
+    if (type is GenericType && type.typeNames != null) {
+      for (final typeName in type.typeNames!) {
+        _bySubstitutionName[typeName] = type;
+      }
     }
   }
 }
@@ -109,6 +103,12 @@ class TypeRegistry {
 final _textEncoder = const PostgresTextEncoder();
 
 extension TypeRegistryExt on TypeRegistry {
+  String? lookupTypeName(Type type) {
+    return _bySubstitutionName.entries
+        .firstWhereOrNull((e) => e.value == type)
+        ?.key;
+  }
+
   Type resolveOid(int oid) {
     return _byTypeOid[oid] ?? UnknownType(oid);
   }

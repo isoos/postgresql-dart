@@ -6,6 +6,7 @@
 - `Session.runTx()` supports rolling back the transaction through `TxSession.rollback()`
   (otherwise any exception has the same effect, but callers need to catch it).
 - Deprecated all of v2 API, legacy fallback will be removed in next version.
+- Support `serial4` and `serial8` type names.
 
 ## 3.0.0
 

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:async/async.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/types/generic_type.dart';
+import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
 
@@ -93,10 +93,10 @@ void main() {
           [matcher ?? value]
         ]);
 
-        final gt = type is GenericType ? type as GenericType : null;
-        if (gt?.nameForSubstitution != null) {
+        final typeName = TypeRegistry().lookupTypeName(type);
+        if (typeName != null) {
           final rowFromInferredType = await connection.execute(
-            Sql.named('SELECT @var:${gt?.nameForSubstitution}'),
+            Sql.named('SELECT @var:$typeName'),
             parameters: [value],
           );
           expect(rowFromInferredType, [
