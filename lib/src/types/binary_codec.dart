@@ -259,13 +259,13 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: PgPoint Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: Point Got: ${input.runtimeType}');
         }
       case TypeOid.regtype:
-        final oid = input is Type ? input.oid : null;
+        final oid = input is Type ? input.oid : (input is int ? input : null);
         if (oid == null) {
           throw FormatException(
-              'Invalid type for parameter value, expected a data type an oid, got $input');
+              'Invalid type for parameter value, expected a data type an int or Type, got $input');
         }
 
         final outBuffer = Uint8List(4);
