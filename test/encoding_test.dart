@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/types/binary_codec.dart';
-import 'package:postgres/src/types/generic_type.dart';
 import 'package:postgres/src/types/text_codec.dart';
 import 'package:postgres/src/types/type_registry.dart';
 import 'package:test/test.dart';
@@ -23,272 +20,168 @@ void main() {
       await conn.close();
     });
 
-    // expectInverse ensures that:
-    // 1. encoder/decoder is reversible
-    // 2. can actually encode and decode a real pg query
-    // it also creates a table named t with column v of type being tested
     test('bool', () async {
-      await expectInverse(true, Type.boolean);
-      await expectInverse(false, Type.boolean);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:boolean)'),
-            parameters: {'v': 'not-bool'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: bool'));
-      }
+      await expectReversible(
+        'boolean',
+        [true, false],
+        expectedDartType: 'bool',
+      );
     });
 
     test('smallint', () async {
-      await expectInverse(-1, Type.smallInteger);
-      await expectInverse(0, Type.smallInteger);
-      await expectInverse(1, Type.smallInteger);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int2)'),
-            parameters: {'v': 'not-int2'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: int'));
-      }
+      await expectReversible(
+        'int2',
+        [-1, 0, 1],
+        expectedDartType: 'int',
+      );
     });
 
     test('integer', () async {
-      await expectInverse(-1, Type.integer);
-      await expectInverse(0, Type.integer);
-      await expectInverse(1, Type.integer);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int4)'),
-            parameters: {'v': 'not-int4'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: int'));
-      }
+      await expectReversible(
+        'int4',
+        [-1, 0, 1],
+        expectedDartType: 'int',
+      );
     });
 
     test('serial', () async {
-      await expectInverse(0, Type.serial);
-      await expectInverse(1, Type.serial);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:serial4)'),
-            parameters: {'v': 'not-serial'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: int'));
-      }
+      await expectReversible(
+        'serial4',
+        [0, 1],
+        expectedDartType: 'int',
+      );
     });
 
     test('bigint', () async {
-      await expectInverse(-1, Type.bigInteger);
-      await expectInverse(0, Type.bigInteger);
-      await expectInverse(1, Type.bigInteger);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:int8)'),
-            parameters: {'v': 'not-int8'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: int'));
-      }
+      await expectReversible(
+        'int8',
+        [-1, 0, 1],
+        expectedDartType: 'int',
+      );
     });
 
     test('bigserial', () async {
-      await expectInverse(0, Type.bigSerial);
-      await expectInverse(1, Type.bigSerial);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:serial8)'),
-            parameters: {'v': 'not-bigserial'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: int'));
-      }
+      await expectReversible(
+        'serial8',
+        [0, 1],
+        expectedDartType: 'int',
+      );
     });
 
     test('text', () async {
-      await expectInverse('', Type.text);
-      await expectInverse('foo', Type.text);
-      await expectInverse('foo\n', Type.text);
-      await expectInverse('foo\nbar;s', Type.text);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:text)'),
-            parameters: {'v': 0});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: String'));
-      }
+      await expectReversible(
+        'text',
+        ['', 'foo', 'foo\n', 'foo\nbar;s'],
+        negative: 0,
+        expectedDartType: 'String',
+      );
     });
 
     test('real', () async {
-      await expectInverse(-1.0, Type.real);
-      await expectInverse(0.0, Type.real);
-      await expectInverse(1.0, Type.real);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:float4)'),
-            parameters: {'v': 'not-real'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: double'));
-      }
+      await expectReversible(
+        'float4',
+        [-1.0, 0.0, 1.0],
+        expectedDartType: 'double',
+      );
     });
 
     test('double', () async {
-      await expectInverse(-1.0, Type.double);
-      await expectInverse(0.0, Type.double);
-      await expectInverse(1.0, Type.double);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:float8)'),
-            parameters: {'v': 'not-double'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: double'));
-      }
+      await expectReversible(
+        'float8',
+        [-1.0, 0.0, 1.0],
+        expectedDartType: 'double',
+      );
     });
 
     test('date', () async {
-      await expectInverse(DateTime.utc(1920, 10, 1), Type.date);
-      await expectInverse(DateTime.utc(2120, 10, 5), Type.date);
-      await expectInverse(DateTime.utc(2016, 10, 1), Type.date);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:date)'),
-            parameters: {'v': 'not-date'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: DateTime'));
-      }
+      await expectReversible(
+        'date',
+        [
+          DateTime.utc(1920, 10, 1),
+          DateTime.utc(2120, 10, 5),
+          DateTime.utc(2016, 10, 1),
+        ],
+        expectedDartType: 'DateTime',
+      );
     });
 
     test('timestamp', () async {
-      await expectInverse(
-          DateTime.utc(1920, 10, 1), Type.timestampWithoutTimezone);
-      await expectInverse(
-          DateTime.utc(2120, 10, 5), Type.timestampWithoutTimezone);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:timestamp)'),
-            parameters: {'v': 'not-timestamp'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: DateTime'));
-      }
+      await expectReversible(
+        'timestamp',
+        [
+          DateTime.utc(1920, 10, 1),
+          DateTime.utc(2120, 10, 5),
+          DateTime.utc(2016, 10, 1),
+        ],
+        expectedDartType: 'DateTime',
+      );
     });
 
     test('timestamptz', () async {
-      await expectInverse(
-          DateTime.utc(1920, 10, 1), Type.timestampWithTimezone);
-      await expectInverse(
-          DateTime.utc(2120, 10, 5), Type.timestampWithTimezone);
-      try {
-        await conn.execute(
-            Sql.named('INSERT INTO t (v) VALUES (@v:timestamptz)'),
-            parameters: {'v': 'not-timestamptz'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: DateTime'));
-      }
+      await expectReversible(
+        'timestamptz',
+        [
+          DateTime.utc(1920, 10, 1),
+          DateTime.utc(2120, 10, 5),
+          DateTime.utc(2016, 10, 1),
+        ],
+        expectedDartType: 'DateTime',
+      );
     });
 
     test('interval', () async {
-      await expectInverse(Interval(microseconds: 12345678), Type.interval);
-      await expectInverse(Interval(days: 1, microseconds: 15), Type.interval);
-      await expectInverse(Interval(days: -1, months: 5), Type.interval);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:interval)'),
-            parameters: {'v': 'not-interval'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: Interval'));
-      }
+      await expectReversible(
+        'interval',
+        [
+          Interval(microseconds: 12345678),
+          Interval(days: 1, microseconds: 15),
+          Interval(days: -1, months: 5),
+        ],
+        expectedDartType: 'Interval',
+      );
     });
 
     test('numeric', () async {
-      final binaries = {
-        '-123400000.20000': [
-          0,
-          4,
-          0,
-          2,
-          64,
-          0,
-          0,
-          5,
-          0,
-          1,
-          9,
-          36,
-          0,
-          0,
-          7,
-          208
-        ],
-        '-123400001.00002': [
-          0,
-          5,
-          0,
-          2,
-          64,
-          0,
-          0,
-          5,
-          0,
-          1,
-          9,
-          36,
-          0,
-          1,
-          0,
-          0,
-          7,
-          208
-        ],
-        '0.00001': [0, 1, 255, 254, 0, 0, 0, 5, 3, 232],
-        '10000.000000000': [0, 1, 0, 1, 0, 0, 0, 9, 0, 1],
-        'NaN': [0, 0, 0, 0, 192, 0, 0, 0],
-        '0': [0, 0, 0, 0, 0, 0, 0, 0], // 0 or 0.
-        '0.0': [0, 0, 0, 0, 0, 0, 0, 1], // .0 or 0.0
-      };
-
-      final encoder = PostgresBinaryEncoder(Type.numeric.oid!);
-      binaries.forEach((key, value) {
-        final uint8List = Uint8List.fromList(value);
-        final res = encoder.convert(key, utf8);
-        expect(res, uint8List);
-      });
-
-      await expectInverse(
+      await expectReversible(
+        'numeric',
+        [
+          '-123400000.20000',
+          '-123400001.00002',
           '1000000000000000000000000000.0000000000000000000000000001',
-          Type.numeric);
-      await expectInverse(
           '3141592653589793238462643383279502.1618033988749894848204586834365638',
-          Type.numeric);
-      await expectInverse(
           '-3141592653589793238462643383279502.1618033988749894848204586834365638',
-          Type.numeric);
-      await expectInverse('0.0', Type.numeric);
-      await expectInverse('0.1', Type.numeric);
-      await expectInverse('0.0001', Type.numeric);
-      await expectInverse('0.00001', Type.numeric);
-      await expectInverse('0.000001', Type.numeric);
-      await expectInverse('0.000000001', Type.numeric);
-      await expectInverse('1.000000000', Type.numeric);
-      await expectInverse('1000.000000000', Type.numeric);
-      await expectInverse('10000.000000000', Type.numeric);
-      await expectInverse('100000000.00000000', Type.numeric);
-      await expectInverse('NaN', Type.numeric);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:numeric)'),
-            parameters: {'v': 'not-numeric'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: String'));
-      }
+          '0',
+          '0.0',
+          '0.1',
+          '0.0001',
+          '0.00001',
+          '0.000001',
+          '0.000000001',
+          '1.000000000',
+          '1000.000000000',
+          '10000.000000000',
+          '100000000.00000000',
+          'NaN',
+        ],
+        expectedDartType: 'String',
+      );
     });
 
     test('jsonb', () async {
-      await expectInverse('string', Type.jsonb);
-      await expectInverse(2, Type.jsonb);
-      await expectInverse(['foo'], Type.jsonb);
-      await expectInverse({
-        'key': 'val',
-        'key1': 1,
-        'array': ['foo']
-      }, Type.jsonb);
+      await expectReversible(
+        'jsonb',
+        [
+          'string',
+          2,
+          ['foo'],
+          {
+            'key': 'val',
+            'key1': 1,
+            'array': ['foo'],
+          },
+        ],
+        skipNegative: true,
+      );
 
       try {
         await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:jsonb)'),
@@ -298,55 +191,80 @@ void main() {
     });
 
     test('bytea', () async {
-      await expectInverse([0], Type.byteArray);
-      await expectInverse([1, 2, 3, 4, 5], Type.byteArray);
-      await expectInverse([255, 254, 253], Type.byteArray);
-
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:bytea)'),
-            parameters: {'v': DateTime.now()});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: List<int>'));
-      }
+      await expectReversible(
+        'bytea',
+        [
+          [0],
+          [1, 2, 3, 4, 5],
+          [255, 254, 253],
+        ],
+        expectedDartType: 'List<int>',
+      );
     });
 
     test('uuid', () async {
-      await expectInverse('00000000-0000-0000-0000-000000000000', Type.uuid);
-      await expectInverse('12345678-abcd-efab-cdef-012345678901', Type.uuid);
+      await expectReversible(
+        'uuid',
+        [
+          '00000000-0000-0000-0000-000000000000',
+          '12345678-abcd-efab-cdef-012345678901',
+        ],
+        negative: 0,
+        expectedDartType: 'String',
+      );
+    });
 
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:uuid)'),
-            parameters: {'v': DateTime.now()});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: String'));
+    test('Invalid UUID encoding', () async {
+      final invalids = [
+        'z0000000-0000-0000-0000-000000000000',
+        '0000000-0000-0000-0000-000000000000',
+        '00000000-0000-0000-0000-000000000000f',
+      ];
+
+      await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v uuid)');
+
+      for (final value in invalids) {
+        try {
+          await conn.execute(
+              Sql.named('INSERT INTO t (v) VALUES (@v:uuid) RETURNING v'),
+              parameters: {'v': value});
+          fail('unreachable');
+        } on FormatException catch (e) {
+          expect(e.toString(), contains('Invalid UUID string'));
+        }
       }
     });
 
     test('varchar', () async {
-      await expectInverse('', Type.varChar);
-      await expectInverse('foo', Type.varChar);
-      await expectInverse('foo\n', Type.varChar);
-      await expectInverse('foo\nbar;s', Type.varChar);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:varchar)'),
-            parameters: {'v': 0});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: String'));
-      }
+      await expectReversible(
+        'varchar',
+        ['', 'foo', 'foo\n', 'foo\nbar;s'],
+        negative: 0,
+        expectedDartType: 'String',
+      );
     });
 
     test('json', () async {
-      await expectInverse('string', Type.json);
-      await expectInverse(2, Type.json);
-      await expectInverse(['foo'], Type.json);
-      await expectInverse({
-        'key': 'val',
-        'key1': 1,
-        'array': ['foo']
-      }, Type.json);
+      await expectReversible(
+        'jsonb',
+        [
+          'string',
+          2,
+          ['foo'],
+          {
+            'key': 'val',
+            'key1': 1,
+            'array': ['foo'],
+          },
+        ],
+        skipNegative: true,
+      );
+
+      try {
+        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:jsonb)'),
+            parameters: {'v': DateTime.now()});
+        fail('unreachable');
+      } on JsonUnsupportedObjectError catch (_) {}
 
       try {
         await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:json)'),
@@ -356,121 +274,107 @@ void main() {
     });
 
     test('point', () async {
-      await expectInverse(Point(0, 0), Type.point);
-      await expectInverse(Point(100, 123.456), Type.point);
-      await expectInverse(Point(0.001, -999), Type.point);
-
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:point)'),
-            parameters: {'v': 'text'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: PgPoint'));
-      }
+      await expectReversible(
+        'point',
+        [
+          Point(0, 0),
+          Point(100, 123.456),
+          Point(0.001, -999),
+        ],
+        expectedDartType: 'Point',
+      );
     });
 
     test('booleanArray', () async {
-      await expectInverse(<bool>[], Type.booleanArray);
-      await expectInverse([false, true], Type.booleanArray);
-      await expectInverse([true], Type.booleanArray);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_bool)'),
-            parameters: {'v': 'not-list-bool'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: List<bool>'));
-      }
+      await expectReversible(
+        '_bool',
+        [
+          <bool>[],
+          [false, true],
+          [true],
+        ],
+        expectedDartType: 'List<bool>',
+      );
     });
 
     test('integerArray', () async {
-      await expectInverse(<int>[], Type.integerArray);
-      await expectInverse([-1, 0, 200], Type.integerArray);
-      await expectInverse([-123], Type.integerArray);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_int4)'),
-            parameters: {'v': 'not-list-int'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: List<int>'));
-      }
+      await expectReversible(
+        '_int4',
+        [
+          <int>[],
+          [-1, 0, 200],
+          [-123],
+        ],
+        expectedDartType: 'List<int>',
+      );
     });
 
     test('bigIntegerArray', () async {
-      await expectInverse(<int>[], Type.bigIntegerArray);
-      await expectInverse([-1, 0, 200], Type.bigIntegerArray);
-      await expectInverse([-123], Type.bigIntegerArray);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_int8)'),
-            parameters: {'v': 'not-list-int'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: List<int>'));
-      }
+      await expectReversible(
+        '_int8',
+        [
+          <int>[],
+          [-1, 0, 200],
+          [-123],
+        ],
+        expectedDartType: 'List<int>',
+      );
     });
 
     test('doubleArray', () async {
-      await expectInverse(<double>[], Type.doubleArray);
-      await expectInverse([-123.0, 0.0, 1.0], Type.doubleArray);
-      await expectInverse([0.001, 45.678], Type.doubleArray);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_float8)'),
-            parameters: {'v': 'not-list-double'});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: List<double>'));
-      }
+      await expectReversible(
+        '_float8',
+        [
+          <double>[],
+          [-123.0, 0.0, 1.0],
+          [0.001, 45.678],
+        ],
+        expectedDartType: 'List<double>',
+      );
     });
 
     test('varCharArray', () async {
-      await expectInverse(<String>[], Type.varCharArray);
-      await expectInverse(['', 'foo', 'foo\n'], Type.varCharArray);
-      await expectInverse(['foo\nbar;s', '"\'"'], Type.varCharArray);
-      try {
-        await conn.execute(
-            Sql.named('INSERT INTO t (v) VALUES (@v:_varchar(10))'),
-            parameters: {'v': 0});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: List<String>'));
-      }
+      await expectReversible(
+        '_varchar',
+        [
+          <String>[],
+          ['', 'foo', 'foo\n', 'foo\nbar;s'],
+        ],
+        negative: 0,
+        expectedDartType: 'List<String>',
+      );
     });
 
     test('textArray', () async {
-      await expectInverse(<String>[], Type.textArray);
-      await expectInverse(['', 'foo', 'foo\n'], Type.textArray);
-      await expectInverse(['foo\nbar;s', '"\'"'], Type.textArray);
-      try {
-        await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_text)'),
-            parameters: {'v': 0});
-        fail('unreachable');
-      } on FormatException catch (e) {
-        expect(e.toString(), contains('Expected: List<String>'));
-      }
+      await expectReversible(
+        '_text',
+        [
+          <String>[],
+          ['', 'foo', 'foo\n', 'foo\nbar;s'],
+        ],
+        negative: 0,
+        expectedDartType: 'List<String>',
+      );
     });
 
     test('jsonbArray', () async {
-      await expectInverse(['string', 2, 0.1], Type.jsonbArray);
-      await expectInverse([
-        1,
-        {},
-        {'a': 'b'}
-      ], Type.jsonbArray);
-      await expectInverse([
-        ['foo'],
+      await expectReversible(
+        '_jsonb',
         [
-          1,
-          {
-            'a': ['b']
-          }
-        ]
-      ], Type.jsonbArray);
-      await expectInverse([
-        {
-          'key': 'val',
-          'key1': 1,
-          'array': ['foo']
-        }
-      ], Type.jsonbArray);
+          [],
+          ['', 'foo', 'foo\n', 'foo\nbar;s', 2, 0.1, true],
+          [
+            {'a': false},
+            {},
+            2,
+            ['a'],
+            {
+              'a': ['b']
+            }
+          ],
+        ],
+        skipNegative: true,
+      );
 
       try {
         await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:_jsonb)'),
@@ -483,24 +387,25 @@ void main() {
 
     test('void', () async {
       final result = await conn.execute(Sql.named('SELECT NULL::void AS r'));
-      expect(result.schema.columns, [
-        isA<ResultSchemaColumn>()
-            .having((e) => e.typeOid, 'typeOid', Type.voidType.oid)
-      ]);
+      expect(result.schema.columns.single.typeOid, TypeOid.voidType);
 
       expect(result, [
         [null]
       ]);
 
       expect(
-        () => PostgresBinaryEncoder(Type.voidType.oid!).convert(1, utf8),
+        () =>
+            TypeRegistry().encodeValue(1, type: Type.voidType, encoding: utf8),
         throwsArgumentError,
       );
     });
 
     test('regtype', () async {
-      await expectInverse(Type.bigInteger, Type.regtype);
-      await expectInverse(Type.voidType, Type.regtype);
+      await expectReversible(
+        'regtype',
+        [Type.bigInteger, Type.voidType],
+        skipNegative: true,
+      );
     });
   });
 
@@ -618,58 +523,35 @@ void main() {
       }
     });
   });
-
-  test('Invalid UUID encoding', () {
-    final converter = PostgresBinaryEncoder(Type.uuid.oid!);
-    try {
-      converter.convert('z0000000-0000-0000-0000-000000000000', utf8);
-      fail('unreachable');
-    } on FormatException catch (e) {
-      expect(e.toString(), contains('Invalid UUID string'));
-    }
-
-    try {
-      converter.convert(123123, utf8);
-      fail('unreachable');
-    } on FormatException catch (e) {
-      expect(e.toString(), contains('Invalid type for parameter'));
-    }
-
-    try {
-      converter.convert('0000000-0000-0000-0000-000000000000', utf8);
-      fail('unreachable');
-    } on FormatException catch (e) {
-      expect(e.toString(), contains('Invalid UUID string'));
-    }
-
-    try {
-      converter.convert('00000000-0000-0000-0000-000000000000f', utf8);
-      fail('unreachable');
-    } on FormatException catch (e) {
-      expect(e.toString(), contains('Invalid UUID string'));
-    }
-  });
 }
 
-Future expectInverse(dynamic value, Type dataType) async {
-  final type = TypeRegistry().lookupTypeName(dataType);
+Future expectReversible(
+  String typeName,
+  List values, {
+  String? expectedDartType,
+  bool skipNegative = false,
+  Object negative = 'non-value',
+}) async {
+  await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $typeName)');
 
-  await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $type)');
-  final result = await conn.execute(
-      Sql.named('INSERT INTO t (v) VALUES (@v:$type) RETURNING v'),
-      parameters: {'v': value});
-  expect(result.first.first, equals(value));
+  for (final value in values) {
+    final result = await conn.execute(
+        Sql.named('INSERT INTO t (v) VALUES (@v:$typeName) RETURNING v'),
+        parameters: {'v': value});
+    expect(result.first.first, equals(value));
+  }
 
-  final encoder = PostgresBinaryEncoder(dataType.oid!);
-  final encodedValue = encoder.convert(value, utf8);
-
-  final decoder = PostgresBinaryDecoder(dataType.oid!);
-  final decodedValue = decoder.convert(DecodeInput(
-    bytes: encodedValue,
-    isBinary: true,
-    encoding: utf8,
-    typeRegistry: TypeRegistry(),
-  ));
-
-  expect(decodedValue, value);
+  if (!skipNegative) {
+    try {
+      await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:$typeName)'),
+          parameters: {'v': negative});
+      fail('unreachable');
+    } on FormatException catch (e) {
+      expect(
+          e.toString(),
+          contains(expectedDartType == null
+              ? 'Expected: '
+              : 'Expected: $expectedDartType'));
+    }
+  }
 }
