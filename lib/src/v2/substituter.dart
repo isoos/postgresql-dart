@@ -1,4 +1,4 @@
-import 'package:postgres/src/types/generic_type.dart';
+import 'package:postgres/src/types/type_registry.dart';
 
 import '../types.dart';
 
@@ -13,7 +13,6 @@ class PostgreSQLFormat {
   }
 
   static String? dataTypeStringForDataType(Type? dt) {
-    final gt = dt is GenericType ? dt : null;
-    return gt?.nameForSubstitution;
+    return dt == null ? null : TypeRegistry().lookupTypeName(dt);
   }
 }
