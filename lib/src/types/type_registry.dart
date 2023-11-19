@@ -77,6 +77,44 @@ final _builtInTypes = <Type>{
   Type.regtype,
 };
 
+final _builtInTypeNames = <String, Type>{
+  'bigint': Type.bigInteger,
+  'boolean': Type.boolean,
+  'bytea': Type.byteArray,
+  'date': Type.date,
+  'double precision': Type.double,
+  'float4': Type.real,
+  'float8': Type.double,
+  'int': Type.integer,
+  'int2': Type.smallInteger,
+  'int4': Type.integer,
+  'int8': Type.bigInteger,
+  'integer': Type.integer,
+  'interval': Type.interval,
+  'json': Type.json,
+  'jsonb': Type.jsonb,
+  'name': Type.name,
+  'numeric': Type.numeric,
+  'point': Type.point,
+  'read': Type.real,
+  'regtype': Type.regtype,
+  'serial4': Type.serial,
+  'serial8': Type.bigSerial,
+  'smallint': Type.smallInteger,
+  'text': Type.text,
+  'timestamp': Type.timestampWithoutTimezone,
+  'timestamptz': Type.timestampWithTimezone,
+  'varchar': Type.varChar,
+  'uuid': Type.uuid,
+  '_bool': Type.booleanArray,
+  '_float8': Type.doubleArray,
+  '_int4': Type.integerArray,
+  '_int8': Type.bigIntegerArray,
+  '_jsonb': Type.jsonbArray,
+  '_text': Type.textArray,
+  '_varchar': Type.varCharArray,
+};
+
 class TypeRegistry {
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
@@ -89,13 +127,9 @@ class TypeRegistry {
 
   /// Registers a type.
   void _register(Type type) {
+    _bySubstitutionName.addAll(_builtInTypeNames);
     if (type.oid != null && type.oid! > 0) {
       _byTypeOid[type.oid!] = type;
-    }
-    if (type is GenericType && type.typeNames != null) {
-      for (final typeName in type.typeNames!) {
-        _bySubstitutionName[typeName] = type;
-      }
     }
   }
 }
