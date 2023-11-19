@@ -57,21 +57,10 @@ class UnspecifiedType extends Type<Object> {
 
 /// NOTE: do not use this type in client code.
 class GenericType<T extends Object> extends Type<T> {
-  /// The name of this type as considered by [Sql].
-  ///
-  /// To declare an explicit type for a substituted parameter in a query, this
-  /// name can be used.
-  final List<String>? _typeNames;
-
-  const GenericType(
-    super.oid, {
-    List<String>? typeNames,
-  }) : _typeNames = typeNames;
+  const GenericType(super.oid);
 }
 
 extension GenericTypeExt<T extends Object> on GenericType<T> {
-  List<String>? get typeNames => _typeNames;
-
   EncodeOutput encode(EncodeInput input) {
     if (oid != null && oid! > 0) {
       final encoder = PostgresBinaryEncoder(oid!);

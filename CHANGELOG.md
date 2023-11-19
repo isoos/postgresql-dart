@@ -5,8 +5,8 @@
 - Fix: do not allow `execute` after closing the `Connection`.
 - `Session.runTx()` supports rolling back the transaction through `TxSession.rollback()`
   (otherwise any exception has the same effect, but callers need to catch it).
+- Supporting more type aliases, including `serial4`, `serial8`, `integer`...
 - Deprecated all of v2 API, legacy fallback will be removed in next version.
-- Support `serial4` and `serial8` type names.
 
 ## 3.0.0
 
