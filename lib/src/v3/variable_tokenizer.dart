@@ -393,7 +393,9 @@ class VariableTokenizer {
       }
 
       _variableTypes[actualVariableIndex] = type;
-      if (type == Type.varCharArray && _peek() == $openParenthesis) {
+      if (type == Type.varCharArray &&
+          !_isAtEnd &&
+          _peek() == $openParenthesis) {
         // read through `([0-9]+)`
         final closeOffset = _codeUnits.indexOf($closeParenthesis, _index);
         if (closeOffset == -1) {

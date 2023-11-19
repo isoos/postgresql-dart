@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:async/async.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
 
@@ -80,60 +79,6 @@ void main() {
         connection.execute('SELECT 1, pg_sleep(3)'),
       ]);
       expect(sw.elapsed.inSeconds >= 6, isTrue);
-    });
-
-    group('binary encoding and decoding', () {
-      Future<void> shouldPassthrough<T extends Object>(Type<T> type, T? value,
-          {dynamic matcher}) async {
-        final rowFromExplicitType = await connection.execute(
-          Sql(r'SELECT $1', types: [type]),
-          parameters: [value],
-        );
-        expect(rowFromExplicitType, [
-          [matcher ?? value]
-        ]);
-
-        final typeName = TypeRegistry().lookupTypeName(type);
-        if (typeName != null) {
-          final rowFromInferredType = await connection.execute(
-            Sql.named('SELECT @var:$typeName'),
-            parameters: [value],
-          );
-          expect(rowFromInferredType, [
-            [matcher ?? value]
-          ]);
-        }
-      }
-
-      test('string', () async {
-        await shouldPassthrough<String>(Type.text, null);
-        await shouldPassthrough<String>(Type.text, 'hello world');
-      });
-
-      test('int', () async {
-        await shouldPassthrough<int>(Type.smallInteger, null);
-        await shouldPassthrough<int>(Type.smallInteger, 42);
-        await shouldPassthrough<int>(Type.integer, 1024);
-        await shouldPassthrough<int>(Type.bigInteger, 999999999999);
-      });
-
-      test('real', () async {
-        await shouldPassthrough<double>(Type.double, 1.25);
-        await shouldPassthrough<double>(Type.double, double.nan,
-            matcher: isNaN);
-        await shouldPassthrough<double>(Type.double, double.negativeInfinity);
-      });
-
-      test('numeric', () async {
-        await shouldPassthrough<Object>(Type.numeric, 1.25, matcher: '1.25');
-        await shouldPassthrough<Object>(Type.numeric, 17, matcher: '17');
-        await shouldPassthrough<Object>(Type.numeric, double.nan,
-            matcher: 'NaN');
-      });
-
-      test('regtype', () async {
-        await shouldPassthrough<Type>(Type.regtype, Type.bigInteger);
-      });
     });
 
     test('listen and notify', () async {

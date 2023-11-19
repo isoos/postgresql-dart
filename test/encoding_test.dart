@@ -23,7 +23,7 @@ void main() {
     test('bool', () async {
       await expectReversible(
         'boolean',
-        [true, false],
+        [null, true, false],
         expectedDartType: 'bool',
       );
     });
@@ -31,7 +31,7 @@ void main() {
     test('smallint', () async {
       await expectReversible(
         'int2',
-        [-1, 0, 1],
+        [null, -1, 0, 1],
         expectedDartType: 'int',
       );
     });
@@ -39,7 +39,7 @@ void main() {
     test('integer', () async {
       await expectReversible(
         'int4',
-        [-1, 0, 1],
+        [null, -1, 0, 1],
         expectedDartType: 'int',
       );
     });
@@ -55,7 +55,7 @@ void main() {
     test('bigint', () async {
       await expectReversible(
         'int8',
-        [-1, 0, 1],
+        [null, -1, 0, 1, 999999999999],
         expectedDartType: 'int',
       );
     });
@@ -71,7 +71,13 @@ void main() {
     test('text', () async {
       await expectReversible(
         'text',
-        ['', 'foo', 'foo\n', 'foo\nbar;s'],
+        [
+          null,
+          '',
+          'foo',
+          'foo\n',
+          'foo\nbar;s',
+        ],
         negative: 0,
         expectedDartType: 'String',
       );
@@ -80,7 +86,7 @@ void main() {
     test('real', () async {
       await expectReversible(
         'float4',
-        [-1.0, 0.0, 1.0],
+        [null, -1.0, 0.0, 1.0, double.nan],
         expectedDartType: 'double',
       );
     });
@@ -88,7 +94,7 @@ void main() {
     test('double', () async {
       await expectReversible(
         'float8',
-        [-1.0, 0.0, 1.0],
+        [null, -1.0, 0.0, 1.0, double.negativeInfinity, double.infinity],
         expectedDartType: 'double',
       );
     });
@@ -97,6 +103,7 @@ void main() {
       await expectReversible(
         'date',
         [
+          null,
           DateTime.utc(1920, 10, 1),
           DateTime.utc(2120, 10, 5),
           DateTime.utc(2016, 10, 1),
@@ -109,6 +116,7 @@ void main() {
       await expectReversible(
         'timestamp',
         [
+          null,
           DateTime.utc(1920, 10, 1),
           DateTime.utc(2120, 10, 5),
           DateTime.utc(2016, 10, 1),
@@ -121,6 +129,7 @@ void main() {
       await expectReversible(
         'timestamptz',
         [
+          null,
           DateTime.utc(1920, 10, 1),
           DateTime.utc(2120, 10, 5),
           DateTime.utc(2016, 10, 1),
@@ -133,6 +142,7 @@ void main() {
       await expectReversible(
         'interval',
         [
+          null,
           Interval(microseconds: 12345678),
           Interval(days: 1, microseconds: 15),
           Interval(days: -1, months: 5),
@@ -145,6 +155,7 @@ void main() {
       await expectReversible(
         'numeric',
         [
+          null,
           '-123400000.20000',
           '-123400001.00002',
           '1000000000000000000000000000.0000000000000000000000000001',
@@ -171,6 +182,7 @@ void main() {
       await expectReversible(
         'jsonb',
         [
+          null,
           'string',
           2,
           ['foo'],
@@ -194,6 +206,7 @@ void main() {
       await expectReversible(
         'bytea',
         [
+          null,
           [0],
           [1, 2, 3, 4, 5],
           [255, 254, 253],
@@ -206,6 +219,7 @@ void main() {
       await expectReversible(
         'uuid',
         [
+          null,
           '00000000-0000-0000-0000-000000000000',
           '12345678-abcd-efab-cdef-012345678901',
         ],
@@ -238,7 +252,7 @@ void main() {
     test('varchar', () async {
       await expectReversible(
         'varchar',
-        ['', 'foo', 'foo\n', 'foo\nbar;s'],
+        [null, '', 'foo', 'foo\n', 'foo\nbar;s'],
         negative: 0,
         expectedDartType: 'String',
       );
@@ -246,8 +260,9 @@ void main() {
 
     test('json', () async {
       await expectReversible(
-        'jsonb',
+        'json',
         [
+          null,
           'string',
           2,
           ['foo'],
@@ -277,6 +292,7 @@ void main() {
       await expectReversible(
         'point',
         [
+          null,
           Point(0, 0),
           Point(100, 123.456),
           Point(0.001, -999),
@@ -289,6 +305,7 @@ void main() {
       await expectReversible(
         '_bool',
         [
+          null,
           <bool>[],
           [false, true],
           [true],
@@ -301,6 +318,7 @@ void main() {
       await expectReversible(
         '_int4',
         [
+          null,
           <int>[],
           [-1, 0, 200],
           [-123],
@@ -313,6 +331,7 @@ void main() {
       await expectReversible(
         '_int8',
         [
+          null,
           <int>[],
           [-1, 0, 200],
           [-123],
@@ -325,6 +344,7 @@ void main() {
       await expectReversible(
         '_float8',
         [
+          null,
           <double>[],
           [-123.0, 0.0, 1.0],
           [0.001, 45.678],
@@ -337,6 +357,7 @@ void main() {
       await expectReversible(
         '_varchar',
         [
+          null,
           <String>[],
           ['', 'foo', 'foo\n', 'foo\nbar;s'],
         ],
@@ -349,6 +370,7 @@ void main() {
       await expectReversible(
         '_text',
         [
+          null,
           <String>[],
           ['', 'foo', 'foo\n', 'foo\nbar;s'],
         ],
@@ -361,6 +383,7 @@ void main() {
       await expectReversible(
         '_jsonb',
         [
+          null,
           [],
           ['', 'foo', 'foo\n', 'foo\nbar;s', 2, 0.1, true],
           [
@@ -403,7 +426,7 @@ void main() {
     test('regtype', () async {
       await expectReversible(
         'regtype',
-        [Type.bigInteger, Type.voidType],
+        [null, Type.bigInteger, Type.voidType],
         skipNegative: true,
       );
     });
@@ -535,10 +558,32 @@ Future expectReversible(
   await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $typeName)');
 
   for (final value in values) {
-    final result = await conn.execute(
+    final explicit = await conn.execute(
+      Sql(r'SELECT $1', types: [TypeRegistry().resolveSubstitution(typeName)!]),
+      parameters: [value],
+    );
+    if (value is! double || !value.isNaN) {
+      expect(explicit.single.single, value);
+    } else {
+      expect((explicit.first.first as double).isNaN, true);
+    }
+
+    final named = await conn
+        .execute(Sql.named('SELECT @v:$typeName'), parameters: {'v': value});
+    if (value is! double || !value.isNaN) {
+      expect(named.single.single, value);
+    } else {
+      expect((named.first.first as double).isNaN, true);
+    }
+
+    final inserted = await conn.execute(
         Sql.named('INSERT INTO t (v) VALUES (@v:$typeName) RETURNING v'),
         parameters: {'v': value});
-    expect(result.first.first, equals(value));
+    if (value is! double || !value.isNaN) {
+      expect(inserted.first.first, equals(value));
+    } else {
+      expect((inserted.first.first as double).isNaN, true);
+    }
   }
 
   if (!skipNegative) {
