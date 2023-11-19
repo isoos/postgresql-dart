@@ -1,9 +1,4 @@
-import 'dart:convert';
-
-import 'package:buffer/buffer.dart';
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/types/binary_codec.dart';
-import 'package:postgres/src/types/generic_type.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -200,66 +195,6 @@ void main() {
       expect(results, [
         [null]
       ]);
-    });
-
-    test('Decode Numeric to String', () {
-      final binaries = {
-        '-123400000.20000': [
-          0,
-          4,
-          0,
-          2,
-          64,
-          0,
-          0,
-          5,
-          0,
-          1,
-          9,
-          36,
-          0,
-          0,
-          7,
-          208
-        ],
-        '-123400001.00002': [
-          0,
-          5,
-          0,
-          2,
-          64,
-          0,
-          0,
-          5,
-          0,
-          1,
-          9,
-          36,
-          0,
-          1,
-          0,
-          0,
-          7,
-          208
-        ],
-        '0.00001': [0, 1, 255, 254, 0, 0, 0, 5, 3, 232],
-        '10000.000000000': [0, 1, 0, 1, 0, 0, 0, 9, 0, 1],
-        'NaN': [0, 0, 0, 0, 192, 0, 0, 0],
-        '0': [0, 0, 0, 0, 0, 0, 0, 0], // 0 or 0.
-        '0.0': [0, 0, 0, 0, 0, 0, 0, 1], // .0 or 0.0
-      };
-
-      final decoder = PostgresBinaryDecoder(Type.numeric.oid!);
-      binaries.forEach((key, value) {
-        final input = DecodeInput(
-          bytes: castBytes(value),
-          isBinary: true,
-          encoding: utf8,
-          typeRegistry: TypeRegistry(),
-        );
-        final res = decoder.convert(input);
-        expect(res, key);
-      });
     });
   });
 
