@@ -225,4 +225,23 @@ void main() {
       expect(rs.single, ['3.2']);
     });
   });
+
+  withPostgresServer('function', (server) {
+    test('function returns select', () async {
+      final c = await server.newConnection();
+      await c.execute(
+          'CREATE TABLE table1 (id integer, name text, description text);');
+      await c.execute(
+        r'INSERT INTO table1 VALUES ($1, $2, $3)',
+        parameters: [1, 'x', 'y'],
+      );
+      await c.execute('CREATE OR REPLACE FUNCTION get_t1_data() RETURNS '
+          r'TABLE(id integer, name text, description text) LANGUAGE plpgsql AS $function$ '
+          r'BEGIN RETURN QUERY SELECT t1.id, t1.name, t1.description FROM table1 AS t1; END $function$ ;');
+      final rs = await c.execute('SELECT * FROM get_t1_data();');
+      expect(rs, [
+        [1, 'x', 'y'],
+      ]);
+    });
+  });
 }
