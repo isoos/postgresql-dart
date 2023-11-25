@@ -126,6 +126,17 @@ void main() {
 
       await db.execute('SELECT 1');
     });
+
+    test('empty query does not lock up pool instance', () async {
+      final db = Pool.withEndpoints(
+        [await server.endpoint()],
+        settings: PoolSettings(
+          maxConnectionCount: 1,
+        ),
+      );
+
+      await db.execute('SELECT 1');
+    });
   });
 
   withPostgresServer('limit pool connections', (server) {
