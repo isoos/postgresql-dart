@@ -135,7 +135,7 @@ void main() {
         ),
       );
 
-      await conn.execute('-- test'); // this doesn't throw but it causes the connection to close
+      await db.execute('-- test'); // this doesn't throw but it causes the connection to close
       await db.execute('SELECT 1');
     });
   });
