@@ -2,7 +2,7 @@
 
 ## 3.0.2
 
-- Fix: Dispose disconnected pool `Connection`s.
+- Fix: Dispose disconnected pool `Connection`s. ([#260](https://github.com/isoos/postgresql-dart/pull/260) by [nehzata](https://github.com/nehzata)).
 
 ## 3.0.1
 
