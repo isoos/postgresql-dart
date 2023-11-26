@@ -158,16 +158,18 @@ class PoolImplementation<L> implements Pool<L> {
     } finally {
       resource.release();
       sw.stop();
-      connection?._elapsedInUse += sw.elapsed;
 
       // If the pool has been closed, this connection needs to be closed as
       // well.
-      if (_semaphore.isClosed || !reuse) {
-        await connection?._dispose();
-      } else {
-        // Allow the connection to be re-used later.
-        connection?._isInUse = false;
-        connection?._lastReturned = DateTime.now();
+      if (connection != null) {
+        connection._elapsedInUse += sw.elapsed;
+        if (_semaphore.isClosed || !reuse || !connection.isOpen) {
+          await connection._dispose();
+        } else {
+          // Allow the connection to be re-used later.
+          connection._isInUse = false;
+          connection._lastReturned = DateTime.now();
+        }
       }
     }
   }
