@@ -176,7 +176,7 @@ abstract class _PgSessionBase implements Session {
     await _sendAndWaitForQuery<ParseCompleteMessage>(ParseMessage(
       description.transformedSql,
       statementName: name,
-      types: description.parameterTypes,
+      typeOids: description.parameterTypes?.map((e) => e?.oid).toList(),
     )).optionalTimeout(timeout);
 
     return _PreparedStatement(description, name, this);

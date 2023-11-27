@@ -3,6 +3,8 @@
 ## 3.0.2
 
 - Fix: Dispose disconnected pool `Connection`s. ([#260](https://github.com/isoos/postgresql-dart/pull/260) by [nehzata](https://github.com/nehzata)).
+- Deprecated `ParseMessage` constructor's `types` argument, use `typeOids` instead.
+  (As most users don't access this directly, it will be removed in `3.1.0`).
 
 ## 3.0.1
 
