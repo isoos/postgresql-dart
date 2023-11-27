@@ -112,15 +112,17 @@ class QueryMessage extends ClientMessage {
 class ParseMessage extends ClientMessage {
   final String _statementName;
   final String _statement;
-  final List<Type?> _types;
+  final List<int?> _typeOids;
 
   ParseMessage(
     String statement, {
     String statementName = '',
+    @Deprecated('Use typeOids instead. Will be removed soon.')
     List<Type?>? types,
+    List<int?>? typeOids,
   })  : _statement = statement,
         _statementName = statementName,
-        _types = types ?? const [];
+        _typeOids = typeOids ?? types?.map((e) => e?.oid).toList() ?? const [];
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
@@ -130,16 +132,16 @@ class ParseMessage extends ClientMessage {
     final length = 8 +
         statement.bytesLength +
         statementName.bytesLength +
-        _types.length * 4;
+        _typeOids.length * 4;
     buffer.writeUint32(length);
     // Name of prepared statement
     buffer.writeEncodedString(statementName);
     buffer.writeEncodedString(statement); // Query string
 
     // Parameters and their types
-    buffer.writeUint16(_types.length);
-    for (final type in _types) {
-      buffer.writeInt32(type?.oid ?? 0);
+    buffer.writeUint16(_typeOids.length);
+    for (final oid in _typeOids) {
+      buffer.writeInt32(oid ?? 0);
     }
   }
 
