@@ -8,10 +8,66 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-late Connection conn;
-
 void main() {
-  withPostgresServer('Binary encoders', (server) {
+  withPostgresServer('Binary encoders with reversible tests', (server) {
+    late Connection conn;
+
+    Future expectReversible(
+      String typeName,
+      List values, {
+      String? expectedDartType,
+      bool skipNegative = false,
+      Object negative = 'non-value',
+    }) async {
+      await conn
+          .execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $typeName)');
+
+      for (final value in values) {
+        final explicit = await conn.execute(
+          Sql(r'SELECT $1',
+              types: [TypeRegistry().resolveSubstitution(typeName)!]),
+          parameters: [value],
+        );
+        if (value is! double || !value.isNaN) {
+          expect(explicit.single.single, value);
+        } else {
+          expect((explicit.first.first as double).isNaN, true);
+        }
+
+        final named = await conn.execute(Sql.named('SELECT @v:$typeName'),
+            parameters: {'v': value});
+        if (value is! double || !value.isNaN) {
+          expect(named.single.single, value);
+        } else {
+          expect((named.first.first as double).isNaN, true);
+        }
+
+        final inserted = await conn.execute(
+            Sql.named('INSERT INTO t (v) VALUES (@v:$typeName) RETURNING v'),
+            parameters: {'v': value});
+        if (value is! double || !value.isNaN) {
+          expect(inserted.first.first, equals(value));
+        } else {
+          expect((inserted.first.first as double).isNaN, true);
+        }
+      }
+
+      if (!skipNegative) {
+        try {
+          await conn.execute(
+              Sql.named('INSERT INTO t (v) VALUES (@v:$typeName)'),
+              parameters: {'v': negative});
+          fail('unreachable');
+        } on FormatException catch (e) {
+          expect(
+              e.toString(),
+              contains(expectedDartType == null
+                  ? 'Expected: '
+                  : 'Expected: $expectedDartType'));
+        }
+      }
+    }
+
     setUp(() async {
       conn = await server.newConnection();
     });
@@ -430,6 +486,14 @@ void main() {
         skipNegative: true,
       );
     });
+
+    test('issue #22', () async {
+      // TODO: investigate
+      // await conn.execute(Sql.named('SELECT TO_TIMESTAMP(@ts / 1000)'),
+      //     parameters: {'ts': 1640556171599});
+      await conn.execute(Sql.named('SELECT TO_TIMESTAMP(@ts:int8 / 1000)'),
+          parameters: {'ts': 1640556171599});
+    });
   });
 
   group('Text encoders', () {
@@ -546,57 +610,4 @@ void main() {
       }
     });
   });
-}
-
-Future expectReversible(
-  String typeName,
-  List values, {
-  String? expectedDartType,
-  bool skipNegative = false,
-  Object negative = 'non-value',
-}) async {
-  await conn.execute('CREATE TEMPORARY TABLE IF NOT EXISTS t (v $typeName)');
-
-  for (final value in values) {
-    final explicit = await conn.execute(
-      Sql(r'SELECT $1', types: [TypeRegistry().resolveSubstitution(typeName)!]),
-      parameters: [value],
-    );
-    if (value is! double || !value.isNaN) {
-      expect(explicit.single.single, value);
-    } else {
-      expect((explicit.first.first as double).isNaN, true);
-    }
-
-    final named = await conn
-        .execute(Sql.named('SELECT @v:$typeName'), parameters: {'v': value});
-    if (value is! double || !value.isNaN) {
-      expect(named.single.single, value);
-    } else {
-      expect((named.first.first as double).isNaN, true);
-    }
-
-    final inserted = await conn.execute(
-        Sql.named('INSERT INTO t (v) VALUES (@v:$typeName) RETURNING v'),
-        parameters: {'v': value});
-    if (value is! double || !value.isNaN) {
-      expect(inserted.first.first, equals(value));
-    } else {
-      expect((inserted.first.first as double).isNaN, true);
-    }
-  }
-
-  if (!skipNegative) {
-    try {
-      await conn.execute(Sql.named('INSERT INTO t (v) VALUES (@v:$typeName)'),
-          parameters: {'v': negative});
-      fail('unreachable');
-    } on FormatException catch (e) {
-      expect(
-          e.toString(),
-          contains(expectedDartType == null
-              ? 'Expected: '
-              : 'Expected: $expectedDartType'));
-    }
-  }
 }
