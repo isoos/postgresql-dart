@@ -1,7 +1,26 @@
 import '../../postgres.dart';
 import 'variable_tokenizer.dart';
 
-class InternalQueryDescription implements Sql {
+class SqlImpl implements Sql {
+  final String sql;
+  final TokenizerMode mode;
+  final String substitution;
+  final List<Type>? types;
+
+  SqlImpl.direct(this.sql, {this.types})
+      : mode = TokenizerMode.none,
+        substitution = '';
+
+  SqlImpl.indexed(this.sql, {this.substitution = '@'})
+      : mode = TokenizerMode.indexed,
+        types = null;
+
+  SqlImpl.named(this.sql, {this.substitution = '@'})
+      : mode = TokenizerMode.named,
+        types = null;
+}
+
+class InternalQueryDescription {
   /// The SQL to send to postgres.
   ///
   /// This is the [originalSql] statement after local processing ran to
@@ -36,39 +55,77 @@ class InternalQueryDescription implements Sql {
           namedVariables,
         );
 
-  factory InternalQueryDescription.indexed(String sql,
-      {String substitution = '@'}) {
-    return _viaTokenizer(sql, substitution, TokenizerMode.indexed);
+  factory InternalQueryDescription.indexed(
+    String sql, {
+    String substitution = '@',
+    TypeRegistry? typeRegistry,
+  }) {
+    return _viaTokenizer(typeRegistry ?? TypeRegistry(), sql, substitution,
+        TokenizerMode.indexed);
   }
 
-  factory InternalQueryDescription.named(String sql,
-      {String substitution = '@'}) {
-    return _viaTokenizer(sql, substitution, TokenizerMode.named);
+  factory InternalQueryDescription.named(
+    String sql, {
+    String substitution = '@',
+    TypeRegistry? typeRegistry,
+  }) {
+    return _viaTokenizer(
+        typeRegistry ?? TypeRegistry(), sql, substitution, TokenizerMode.named);
   }
 
   static InternalQueryDescription _viaTokenizer(
-      String sql, String substitution, TokenizerMode mode) {
+    TypeRegistry typeRegistry,
+    String sql,
+    String substitution,
+    TokenizerMode mode,
+  ) {
     final charCodes = substitution.codeUnits;
     if (charCodes.length != 1) {
       throw ArgumentError.value(substitution, 'substitution',
           'Must be a string with a single code unit');
     }
 
-    final tokenizer =
-        VariableTokenizer(variableCodeUnit: charCodes[0], sql: sql, mode: mode)
-          ..tokenize();
+    final tokenizer = VariableTokenizer(
+      typeRegistry: typeRegistry,
+      variableCodeUnit: charCodes[0],
+      sql: sql,
+      mode: mode,
+    )..tokenize();
 
     return tokenizer.result;
   }
 
-  factory InternalQueryDescription.wrap(Object query) {
+  factory InternalQueryDescription.wrap(
+    Object query, {
+    required TypeRegistry typeRegistry,
+  }) {
     if (query is String) {
       return InternalQueryDescription.direct(query);
     } else if (query is InternalQueryDescription) {
       return query;
+    } else if (query is SqlImpl) {
+      switch (query.mode) {
+        case TokenizerMode.none:
+          return InternalQueryDescription.direct(
+            query.sql,
+            types: query.types,
+          );
+        case TokenizerMode.indexed:
+          return InternalQueryDescription.indexed(
+            query.sql,
+            substitution: query.substitution,
+            typeRegistry: typeRegistry,
+          );
+        case TokenizerMode.named:
+          return InternalQueryDescription.named(
+            query.sql,
+            substitution: query.substitution,
+            typeRegistry: typeRegistry,
+          );
+      }
     } else {
-      throw ArgumentError.value(query, 'query',
-          'Must either be a String or an InternalQueryDescription');
+      throw ArgumentError.value(
+          query, 'query', 'Must either be a String or an SqlImpl');
     }
   }
 

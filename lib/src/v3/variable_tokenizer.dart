@@ -11,6 +11,7 @@ import '../types.dart';
 import 'query_description.dart';
 
 enum TokenizerMode {
+  none,
   named,
   indexed,
 }
@@ -30,6 +31,9 @@ enum TokenizerMode {
 /// Just like postgres, we ignore variables inside string literals, identifiers
 /// or comments.
 class VariableTokenizer {
+  /// The TypeRegistry of the connection.
+  final TypeRegistry typeRegistry;
+
   /// A map from variable names (without the [_variableCodeUnit]) to their
   /// resolved index of the underlying SQL parameter.
   final Map<String, int> _namedVariables = {};
@@ -59,6 +63,7 @@ class VariableTokenizer {
   bool get _isAtEnd => _index == _codeUnits.length;
 
   VariableTokenizer({
+    required this.typeRegistry,
     int variableCodeUnit = $at,
     required String sql,
     required this.mode,
@@ -372,6 +377,8 @@ class VariableTokenizer {
 
     int actualVariableIndex;
     switch (mode) {
+      case TokenizerMode.none:
+        throw ArgumentError('Did not expect $mode.');
       case TokenizerMode.named:
         actualVariableIndex = _namedVariables.putIfAbsent(
             nameBuffer.toString(), () => _namedVariables.length + 1);
@@ -386,8 +393,7 @@ class VariableTokenizer {
 
     if (consumedColonForType) {
       final typeName = typeBuffer.toString();
-      // TODO: get this from the connection settings
-      final type = TypeRegistry().resolveSubstitution(typeName);
+      final type = typeRegistry.resolveSubstitution(typeName);
       if (type == null) {
         error('Unknown type: $typeName');
       }
