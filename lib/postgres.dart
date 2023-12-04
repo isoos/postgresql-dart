@@ -449,7 +449,7 @@ class ConnectionSettings extends SessionSettings {
   /// built-in ones provided by the package.
   final TypeRegistry? typeRegistry;
 
-  ConnectionSettings({
+  const ConnectionSettings({
     this.applicationName,
     this.timeZone,
     this.encoding,
@@ -484,7 +484,7 @@ class SessionSettings {
   /// parameters are found.
   final bool? ignoreSuperfluousParameters;
 
-  SessionSettings({
+  const SessionSettings({
     this.connectTimeout,
     this.queryTimeout,
     this.queryMode,

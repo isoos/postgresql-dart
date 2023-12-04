@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.3
+
+- Using const for ConnectionSettings, SessionSettings and PoolSettings classes. ([#267](https://github.com/isoos/postgresql-dart/pull/267) by [Gerrel](https://github.com/Gerrel))
+
 ## 3.0.2
 
 - Fix: Dispose disconnected pool `Connection`s. ([#260](https://github.com/isoos/postgresql-dart/pull/260) by [nehzata](https://github.com/nehzata)).
