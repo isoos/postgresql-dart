@@ -23,7 +23,7 @@ class PoolSettings extends ConnectionSettings {
   /// NOTE: not yet implemented
   final int? maxQueryCount;
 
-  PoolSettings({
+  const PoolSettings({
     this.maxConnectionCount,
     this.maxConnectionAge,
     this.maxSessionUse,

@@ -2,7 +2,7 @@
 
 ## 3.0.3
 
-- Using const for ConnectionSettings and SessionSettings classes.
+- Using const for ConnectionSettings, SessionSettings and PoolSettings classes.
 
 ## 3.0.2
 
