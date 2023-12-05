@@ -113,7 +113,10 @@ abstract class _PgSessionBase implements Session {
       throw PgException(
           'Attempting to execute query, but connection is not open.');
     }
-    final description = InternalQueryDescription.wrap(query);
+    final description = InternalQueryDescription.wrap(
+      query,
+      typeRegistry: _connection._settings.typeRegistry,
+    );
     final variables = description.bindParameters(
       parameters,
       ignoreSuperfluous: _settings.ignoreSuperfluousParameters,
@@ -171,7 +174,10 @@ abstract class _PgSessionBase implements Session {
   }) async {
     final conn = _connection;
     final name = 's/${conn._statementCounter++}';
-    final description = InternalQueryDescription.wrap(query);
+    final description = InternalQueryDescription.wrap(
+      query,
+      typeRegistry: _connection._settings.typeRegistry,
+    );
 
     await _sendAndWaitForQuery<ParseCompleteMessage>(ParseMessage(
       description.transformedSql,

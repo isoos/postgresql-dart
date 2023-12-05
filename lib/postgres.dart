@@ -43,8 +43,7 @@ class Sql {
   /// The [types] parameter can optionally be used to pass the types of
   /// parameters in the query. If they're not set, only [TypedValue]
   /// instances can be used when binding values later.
-  factory Sql(String sql, {List<Type>? types}) =
-      InternalQueryDescription.direct;
+  factory Sql(String sql, {List<Type>? types}) = SqlImpl.direct;
 
   /// Looks for positional parameters in [sql] and desugars them.
   ///
@@ -62,8 +61,7 @@ class Sql {
   ///
   /// Just like with [Sql.named], it is possible to declare an explicit type for
   /// variables: `Sql.indexed('SELECT @1:int8')`.
-  factory Sql.indexed(String sql, {String substitution}) =
-      InternalQueryDescription.indexed;
+  factory Sql.indexed(String sql, {String substitution}) = SqlImpl.indexed;
 
   /// Looks for named parameters in [sql] and desugars them.
   ///
@@ -106,8 +104,7 @@ class Sql {
   /// Also, the scanner might interpret queries incorrectly in the case of
   /// malformed [sql] (like an unterminated string literal or comment). In that
   /// case, the transformation might not recognize all variables.
-  factory Sql.named(String sql, {String substitution}) =
-      InternalQueryDescription.named;
+  factory Sql.named(String sql, {String substitution}) = SqlImpl.named;
 }
 
 abstract class Session {

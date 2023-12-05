@@ -3,6 +3,8 @@
 ## 3.0.3
 
 - Using const for ConnectionSettings, SessionSettings and PoolSettings classes. ([#267](https://github.com/isoos/postgresql-dart/pull/267) by [Gerrel](https://github.com/Gerrel))
+- Parsing of `Sql.indexed` and `Sql.named` happens when the `Connection` starts
+  to interpret it. Errors with unknown type names are thrown in this later step.
 
 ## 3.0.2
 
