@@ -243,6 +243,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     // ignore: cancel_subscriptions
     final subscription = socket.listen(
       (data) {
+        if (sslCompleter.isCompleted) {
+          return;
+        }
         if (data.length != 1) {
           sslCompleter.completeError(PgException(
               'Could not initialize SSL connection, received unknown byte stream.'));
@@ -251,9 +254,19 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
         sslCompleter.complete(data.first);
       },
-      onDone: () => sslCompleter.completeError(PgException(
-          'Could not initialize SSL connection, connection closed during handshake.')),
-      onError: sslCompleter.completeError,
+      onDone: () {
+        if (sslCompleter.isCompleted) {
+          return;
+        }
+        sslCompleter.completeError(PgException(
+            'Could not initialize SSL connection, connection closed during handshake.'));
+      },
+      onError: (e) {
+        if (sslCompleter.isCompleted) {
+          return;
+        }
+        sslCompleter.completeError(e);
+      },
     );
 
     Stream<Uint8List> adaptedStream;
