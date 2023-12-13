@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.4
+
+- Fix: SSL connection problem handler.
+
 ## 3.0.3
 
 - Using const for ConnectionSettings, SessionSettings and PoolSettings classes. ([#267](https://github.com/isoos/postgresql-dart/pull/267) by [Gerrel](https://github.com/Gerrel))
