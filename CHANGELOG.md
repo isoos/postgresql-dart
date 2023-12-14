@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.0
+
+**BREAKING CHANGE**: Removed v2 support and `legacy.dart`.
+
 ## 3.0.4
 
 - Fix: SSL connection problem handler.
