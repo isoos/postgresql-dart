@@ -305,6 +305,16 @@ void main() {
       }
     });
 
+    test('char', () async {
+      await expectReversible(
+        'char',
+        [null, 'a'],
+        negative: 0,
+        expectedDartType: 'String',
+      );
+    });
+
+
     test('varchar', () async {
       await expectReversible(
         'varchar',
