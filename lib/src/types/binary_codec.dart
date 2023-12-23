@@ -92,7 +92,7 @@ class PostgresBinaryEncoder {
           throw FormatException(
               'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}');
         }
-      case TypeOid.char:
+      case TypeOid.character:
       case TypeOid.name:
       case TypeOid.text:
       case TypeOid.varChar:
@@ -519,7 +519,7 @@ class PostgresBinaryDecoder {
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
 
     switch (typeOid) {
-      case TypeOid.char:
+      case TypeOid.character:
       case TypeOid.name:
       case TypeOid.text:
       case TypeOid.varChar:

@@ -148,7 +148,7 @@ abstract class Type<T extends Object> {
   static const unspecified = UnspecifiedType();
 
   /// Must be a [String]
-  static const char = GenericType<String>(TypeOid.char);
+  static const character = GenericType<String>(TypeOid.character);
 
   /// Must be a [String].
   static const text = GenericType<String>(TypeOid.text);

@@ -20,7 +20,7 @@ class TypeOid {
   static const boolean = 16;
   static const booleanArray = 1000;
   static const byteArray = 17;
-  static const char = 1042;
+  static const character = 1042;
   static const date = 1082;
   static const double = 701;
   static const doubleArray = 1022;
@@ -48,7 +48,7 @@ class TypeOid {
 
 final _builtInTypes = <Type>{
   Type.unspecified,
-  Type.char,
+  Type.character,
   Type.name,
   Type.text,
   Type.varChar,
@@ -83,9 +83,9 @@ final _builtInTypeNames = <String, Type>{
   'bigint': Type.bigInteger,
   'boolean': Type.boolean,
   'bytea': Type.byteArray,
-  'bpchar': Type.char,
-  'char': Type.char,
-  'character': Type.char,
+  'bpchar': Type.character,
+  'char': Type.character,
+  'character': Type.character,
   'date': Type.date,
   'double precision': Type.double,
   'float4': Type.real,
