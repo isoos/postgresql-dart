@@ -314,7 +314,6 @@ void main() {
       );
     });
 
-
     test('varchar', () async {
       await expectReversible(
         'varchar',

@@ -228,7 +228,7 @@ class PostgresTextDecoder {
   Object? convert(DecodeInput di) {
     // ignore: unnecessary_cast
     switch (_typeOid) {
-      case TypeOid.char:
+      case TypeOid.character:
       case TypeOid.name:
       case TypeOid.text:
       case TypeOid.varChar:
