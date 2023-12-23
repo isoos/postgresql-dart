@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.5
+
+- Support for type `char`/`character`/`bpchar`.
+
 ## 3.0.4
 
 - Fix: SSL connection problem handler.
