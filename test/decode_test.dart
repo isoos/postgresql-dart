@@ -244,4 +244,21 @@ void main() {
       ]);
     });
   });
+
+  withPostgresServer('enum', (server) {
+    test('custom type enum as string', () async {
+      final c = await server.newConnection();
+      await c.execute(
+          '''CREATE TYPE item_category AS ENUM ('android', 'blackberry', 'flutter');''');
+      await c.execute(
+          '''CREATE TABLE portfolio_item (id integer, category item_category)''');
+      await c.execute(r'''INSERT INTO portfolio_item values ($1, $2)''',
+          parameters: [1, 'flutter']);
+      final rs = await c.execute('SELECT * FROM portfolio_item');
+      final row = rs.single;
+      expect(row[0], 1);
+      expect(row[1] is UndecodedBytes, isTrue);
+      expect((row[1] as UndecodedBytes).asString, 'flutter');
+    });
+  });
 }
