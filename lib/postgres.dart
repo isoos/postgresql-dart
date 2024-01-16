@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
@@ -364,6 +365,14 @@ final class Endpoint {
   final String? password;
   final bool isUnixSocket;
 
+  /// The [SecurityContext] to use when connecting to this endpoint.
+  ///
+  /// This can be configured to only allow some certificates. When used,
+  /// [ConnectionSettings.sslMode] should be set to [SslMode.verifyFull], as
+  /// this package will allow other certificates or insecure connections
+  /// otherwise.
+  final SecurityContext? securityContext;
+
   Endpoint({
     required this.host,
     this.port = 5432,
@@ -371,6 +380,7 @@ final class Endpoint {
     this.username,
     this.password,
     this.isUnixSocket = false,
+    this.securityContext,
   });
 
   @override
@@ -400,6 +410,13 @@ enum SslMode {
   disable,
 
   /// Always use SSL (but ignore verification errors).
+  ///
+  /// If you're using this option to accept self-signed certificates, consider
+  /// the security ramifications of accepting _every_ certificate: Despite using
+  /// TLS, MitM attacks are possible by injecting another certificate.
+  /// An alternative is using [verifyFull] with a [SecurityContext] passed to
+  /// [Endpoint.securityContext] that only accepts the known self-signed
+  /// certificate.
   require,
 
   /// Always use SSL and verify certificates.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.6
+
+- Allow passing a `SecurityContext` when opening postgres connections.
+
 ## 3.0.5
 
 - Support for type `char`/`character`/`bpchar`.
