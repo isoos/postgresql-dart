@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
@@ -400,6 +401,13 @@ enum SslMode {
   disable,
 
   /// Always use SSL (but ignore verification errors).
+  ///
+  /// If you're using this option to accept self-signed certificates, consider
+  /// the security ramifications of accepting _every_ certificate: Despite using
+  /// TLS, MitM attacks are possible by injecting another certificate.
+  /// An alternative is using [verifyFull] with a [SecurityContext] passed to
+  /// [ConnectionSettings.securityContext] that only accepts the known
+  /// self-signed certificate.
   require,
 
   /// Always use SSL and verify certificates.
@@ -415,6 +423,14 @@ class ConnectionSettings extends SessionSettings {
   final String? timeZone;
   final Encoding? encoding;
   final SslMode? sslMode;
+
+  /// The [SecurityContext] to use when opening a connection.
+  ///
+  /// This can be configured to only allow some certificates. When used,
+  /// [ConnectionSettings.sslMode] should be set to [SslMode.verifyFull], as
+  /// this package will allow other certificates or insecure connections
+  /// otherwise.
+  final SecurityContext? securityContext;
 
   /// An optional [StreamChannelTransformer] sitting behind the postgres client
   /// as implemented in the `posgres` package and the database server.
@@ -454,6 +470,7 @@ class ConnectionSettings extends SessionSettings {
     this.transformer,
     this.replicationMode,
     this.typeRegistry,
+    this.securityContext,
     super.connectTimeout,
     super.queryTimeout,
     super.queryMode,

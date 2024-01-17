@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:postgres/messages.dart';
 import 'package:stream_channel/stream_channel.dart';
@@ -47,6 +48,8 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
   @override
   final SslMode sslMode;
   @override
+  final SecurityContext? securityContext;
+  @override
   final StreamChannelTransformer<Message, Message>? transformer;
   @override
   final ReplicationMode replicationMode;
@@ -60,6 +63,7 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
         timeZone = settings?.timeZone ?? fallback?.timeZone ?? 'UTC',
         encoding = settings?.encoding ?? fallback?.encoding ?? utf8,
         sslMode = settings?.sslMode ?? fallback?.sslMode ?? SslMode.require,
+        securityContext = settings?.securityContext,
         // TODO: consider merging the transformers
         transformer = settings?.transformer ?? fallback?.transformer,
         replicationMode = settings?.replicationMode ??

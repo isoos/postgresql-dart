@@ -285,6 +285,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
         socket = await SecureSocket.secure(
           socket,
+          context: settings.securityContext,
           onBadCertificate: settings.sslMode.ignoreCertificateIssues
               ? (_) => true
               : (c) => throw BadCertificateException(c),
