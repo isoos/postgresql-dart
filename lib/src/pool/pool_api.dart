@@ -31,6 +31,7 @@ class PoolSettings extends ConnectionSettings {
     super.applicationName,
     super.connectTimeout,
     super.sslMode,
+    super.securityContext,
     super.encoding,
     super.timeZone,
     super.replicationMode,

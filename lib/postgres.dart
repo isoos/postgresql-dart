@@ -365,14 +365,6 @@ final class Endpoint {
   final String? password;
   final bool isUnixSocket;
 
-  /// The [SecurityContext] to use when connecting to this endpoint.
-  ///
-  /// This can be configured to only allow some certificates. When used,
-  /// [ConnectionSettings.sslMode] should be set to [SslMode.verifyFull], as
-  /// this package will allow other certificates or insecure connections
-  /// otherwise.
-  final SecurityContext? securityContext;
-
   Endpoint({
     required this.host,
     this.port = 5432,
@@ -380,7 +372,6 @@ final class Endpoint {
     this.username,
     this.password,
     this.isUnixSocket = false,
-    this.securityContext,
   });
 
   @override
@@ -415,8 +406,8 @@ enum SslMode {
   /// the security ramifications of accepting _every_ certificate: Despite using
   /// TLS, MitM attacks are possible by injecting another certificate.
   /// An alternative is using [verifyFull] with a [SecurityContext] passed to
-  /// [Endpoint.securityContext] that only accepts the known self-signed
-  /// certificate.
+  /// [ConnectionSettings.securityContext] that only accepts the known
+  /// self-signed certificate.
   require,
 
   /// Always use SSL and verify certificates.
@@ -432,6 +423,14 @@ class ConnectionSettings extends SessionSettings {
   final String? timeZone;
   final Encoding? encoding;
   final SslMode? sslMode;
+
+  /// The [SecurityContext] to use when opening a connection.
+  ///
+  /// This can be configured to only allow some certificates. When used,
+  /// [ConnectionSettings.sslMode] should be set to [SslMode.verifyFull], as
+  /// this package will allow other certificates or insecure connections
+  /// otherwise.
+  final SecurityContext? securityContext;
 
   /// An optional [StreamChannelTransformer] sitting behind the postgres client
   /// as implemented in the `posgres` package and the database server.
@@ -471,6 +470,7 @@ class ConnectionSettings extends SessionSettings {
     this.transformer,
     this.replicationMode,
     this.typeRegistry,
+    this.securityContext,
     super.connectTimeout,
     super.queryTimeout,
     super.queryMode,
