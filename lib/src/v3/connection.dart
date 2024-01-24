@@ -197,7 +197,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     final settings = connectionSettings is ResolvedConnectionSettings
         ? connectionSettings
         : ResolvedConnectionSettings(connectionSettings, null);
-    var channel = await _connect(endpoint, settings);
+    var (channel, secure) = await _connect(endpoint, settings);
 
     if (_debugLog) {
       channel = channel.transform(StreamChannelTransformer(
@@ -219,12 +219,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     }
 
     final connection =
-        PgConnectionImplementation._(endpoint, settings, channel);
+        PgConnectionImplementation._(endpoint, settings, channel, secure);
     await connection._startup();
     return connection;
   }
 
-  static Future<StreamChannel<Message>> _connect(
+  static Future<(StreamChannel<Message>, bool)> _connect(
     Endpoint endpoint,
     ResolvedConnectionSettings settings,
   ) async {
@@ -270,6 +270,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     );
 
     Stream<Uint8List> adaptedStream;
+    var secure = false;
+
     if (settings.sslMode != SslMode.disable) {
       // Query if SSL is possible by sending a SSLRequest message
       final byteBuffer = ByteData(8);
@@ -290,6 +292,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
               ? (_) => true
               : (c) => throw BadCertificateException(c),
         ).timeout(settings.connectTimeout);
+        secure = true;
 
         // We can listen to the secured socket again, the existing subscription is
         // ignored.
@@ -313,14 +316,20 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       return out.close();
     }));
 
-    return StreamChannel<List<int>>(adaptedStream, outgoingSocket)
-        .transform(messageTransformer(settings.encoding));
+    return (
+      StreamChannel<List<int>>(adaptedStream, outgoingSocket)
+          .transform(messageTransformer(settings.encoding)),
+      secure,
+    );
   }
 
   final Endpoint _endpoint;
   @override
   final ResolvedConnectionSettings _settings;
   final StreamChannel<Message> _channel;
+
+  /// Whether [_channel] is backed by a TLS connection.
+  final bool _channelIsSecure;
   late final StreamSubscription<Message> _serverMessages;
   bool _isClosing = false;
 
@@ -346,13 +355,15 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   @override
   PgConnectionImplementation get _connection => this;
 
-  PgConnectionImplementation._(this._endpoint, this._settings, this._channel) {
+  PgConnectionImplementation._(
+      this._endpoint, this._settings, this._channel, this._channelIsSecure) {
     _serverMessages = _channel.stream.listen(_handleMessage);
   }
 
   Future<void> _startup() {
     return _withResource(() {
-      final result = _pending = _AuthenticationProcedure(this);
+      final result =
+          _pending = _AuthenticationProcedure(this, _channelIsSecure);
 
       _channel.sink.add(StartupMessage(
         database: _endpoint.database,
@@ -1005,12 +1016,15 @@ class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
 }
 
 class _AuthenticationProcedure extends _PendingOperation {
+  final bool _hasSecureTransport;
+
   final StackTrace _trace;
   final _done = Completer<void>();
 
   late PostgresAuthenticator _authenticator;
 
-  _AuthenticationProcedure(super.connection) : _trace = StackTrace.current;
+  _AuthenticationProcedure(super.connection, this._hasSecureTransport)
+      : _trace = StackTrace.current;
 
   void _initializeAuthenticate(
       AuthenticationMessage message, AuthenticationScheme scheme) {
@@ -1053,7 +1067,8 @@ class _AuthenticationProcedure extends _PendingOperation {
           _initializeAuthenticate(message, AuthenticationScheme.md5);
           break;
         case AuthenticationMessageType.clearTextPassword:
-          if (!connection._settings.sslMode.allowCleartextPassword) {
+          if (!_hasSecureTransport &&
+              !connection._settings.sslMode.allowCleartextPassword) {
             _done.completeError(
               ServerException('Refused to send clear text password to server'),
               _trace,
