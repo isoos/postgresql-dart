@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.7
+
+- Allow cleartext passwords when secure connection is used. ([#283](https://github.com/isoos/postgresql-dart/pull/283) by [simolus3](https://github.com/simolus3))
+
 ## 3.0.6
 
 - Allow passing a `SecurityContext` when opening postgres connections.
