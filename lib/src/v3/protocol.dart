@@ -73,9 +73,12 @@ StreamTransformer<Uint8List, ServerMessage> _readMessages(Encoding encoding) {
         emitFinishedMessages();
       }
 
-      final rawSubscription = rawStream.listen(handleChunk)
-        ..onError(listener.addErrorSync)
-        ..onDone(listener.closeSync);
+      // Don't cancel this subscription on error! If the listener wants that,
+      // they'll unsubscribe in time after we forward it synchronously.
+      final rawSubscription =
+          rawStream.listen(handleChunk, cancelOnError: false)
+            ..onError(listener.addErrorSync)
+            ..onDone(listener.closeSync);
 
       listener.onPause = () {
         paused = true;

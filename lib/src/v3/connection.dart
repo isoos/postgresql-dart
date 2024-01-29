@@ -357,8 +357,14 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   PgConnectionImplementation._(
       this._endpoint, this._settings, this._channel, this._channelIsSecure) {
-    _serverMessages =
-        _channel.stream.listen(_handleMessage, onDone: _socketClosed);
+    _serverMessages = _channel.stream
+        .listen(_handleMessage, onDone: _socketClosed, onError: (e, s) {
+      _close(
+        true,
+        PgException('Socket error: $e'),
+        socketIsBroken: true,
+      );
+    });
   }
 
   Future<void> _startup() {
@@ -1056,13 +1062,13 @@ class _AuthenticationProcedure extends _PendingOperation {
   void handleConnectionClosed(PgException? dueToException) {
     _done.completeError(
       dueToException ?? PgException('Connection closed during authentication'),
-      _trace,
+      StackTrace.current,
     );
   }
 
   @override
   void handleError(PgException exception) {
-    _done.completeError(exception, _trace);
+    _done.completeError(exception, StackTrace.current);
 
     // If the authentication procedure fails, the connection is unusable - so we
     // might as well close it right away.
