@@ -1062,13 +1062,13 @@ class _AuthenticationProcedure extends _PendingOperation {
   void handleConnectionClosed(PgException? dueToException) {
     _done.completeError(
       dueToException ?? PgException('Connection closed during authentication'),
-      StackTrace.current,
+      _trace,
     );
   }
 
   @override
   void handleError(PgException exception) {
-    _done.completeError(exception, StackTrace.current);
+    _done.completeError(exception, _trace);
 
     // If the authentication procedure fails, the connection is unusable - so we
     // might as well close it right away.
