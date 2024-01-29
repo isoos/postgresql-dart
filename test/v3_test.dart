@@ -483,6 +483,22 @@ void main() {
           'select pg_terminate_backend($conn1PID) from pg_stat_activity;');
     });
   });
+
+  withPostgresServer('reacts to socket being closed', (server) {
+    test('when killing server', () async {
+      final conn = await server.newConnection();
+      var isClosed = false;
+      unawaited(conn.closed.whenComplete(() => isClosed = true));
+
+      expect(isClosed, isFalse);
+      await conn.execute('select 1');
+      expect(isClosed, isFalse);
+
+      await server.kill();
+      await conn.closed;
+      expect(isClosed, isTrue);
+    });
+  });
 }
 
 final _isPostgresException = isA<PgException>();
