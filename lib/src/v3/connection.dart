@@ -357,7 +357,14 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   PgConnectionImplementation._(
       this._endpoint, this._settings, this._channel, this._channelIsSecure) {
-    _serverMessages = _channel.stream.listen(_handleMessage);
+    _serverMessages = _channel.stream
+        .listen(_handleMessage, onDone: _socketClosed, onError: (e, s) {
+      _close(
+        true,
+        PgException('Socket error: $e'),
+        socketIsBroken: true,
+      );
+    });
   }
 
   Future<void> _startup() {
@@ -375,6 +382,15 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
       return result._done.future.timeout(_settings.connectTimeout);
     });
+  }
+
+  Future<void> _socketClosed() async {
+    await _close(
+      true,
+      PgException(
+          'The underlying socket to Postgres has been closed unexpectedly.'),
+      socketIsBroken: true,
+    );
   }
 
   Future<void> _handleMessage(Message message) async {
@@ -487,13 +503,16 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     await _close(false, null);
   }
 
-  Future<void> _close(bool interruptRunning, PgException? cause) async {
+  Future<void> _close(bool interruptRunning, PgException? cause,
+      {bool socketIsBroken = false}) async {
     if (!_isClosing) {
       _isClosing = true;
 
       if (interruptRunning) {
         _pending?.handleConnectionClosed(cause);
-        _channel.sink.add(const TerminateMessage());
+        if (!socketIsBroken) {
+          _channel.sink.add(const TerminateMessage());
+        }
       } else {
         // Wait for the previous operation to complete by using the lock
         await _operationLock.withResource(() {
@@ -503,6 +522,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       }
 
       await Future.wait([_channel.sink.close(), _serverMessages.cancel()]);
+      _closeSession();
     }
   }
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.8
+
+- Properly react to connection losses by reporting the database connection as
+  closed.
+
 ## 3.0.7
 
 - Allow cleartext passwords when secure connection is used. ([#283](https://github.com/isoos/postgresql-dart/pull/283) by [simolus3](https://github.com/simolus3))

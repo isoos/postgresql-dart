@@ -74,6 +74,10 @@ class PostgresServer {
       ),
     );
   }
+
+  Future<void> kill() async {
+    await Process.run('docker', ['kill', await _containerName.future]);
+  }
 }
 
 @isTestGroup
