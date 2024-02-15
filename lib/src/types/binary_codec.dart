@@ -829,8 +829,6 @@ class PostgresBinaryDecoder {
         return range == null
             ? DateRange.empty()
             : DateRange(range.$1, range.$2, range.$3);
-      case TypeOid.numrange:
-        return _decodeRange(buffer, dinput, Type.numeric.oid!);
       case TypeOid.tsrange:
         final range =
             _decodeRange(buffer, dinput, Type.timestampWithoutTimezone.oid!);
