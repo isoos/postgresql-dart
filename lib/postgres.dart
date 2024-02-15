@@ -17,6 +17,8 @@ export 'src/exceptions.dart';
 export 'src/pool/pool_api.dart';
 export 'src/replication.dart';
 export 'src/types.dart';
+export 'src/types/geo_types.dart';
+export 'src/types/range_types.dart' hide Range, DiscreteRange, ContinuousRange;
 export 'src/types/type_registry.dart' show TypeRegistry;
 
 /// A description of a SQL query as interpreted by this package.
@@ -227,6 +229,7 @@ abstract class ResultStream implements Stream<ResultRow> {
 abstract class ResultStreamSubscription
     implements StreamSubscription<ResultRow> {
   Future<int> get affectedRows;
+
   Future<ResultSchema> get schema;
 }
 
@@ -335,7 +338,9 @@ abstract class Channels {
   Stream<Notification> get all;
 
   Stream<String> operator [](String channel);
+
   Future<void> notify(String channel, [String? payload]);
+
   Future<void> cancelAll();
 }
 
@@ -415,6 +420,7 @@ enum SslMode {
   ;
 
   bool get ignoreCertificateIssues => this == SslMode.require;
+
   bool get allowCleartextPassword => this == SslMode.disable;
 }
 

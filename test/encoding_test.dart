@@ -503,6 +503,233 @@ void main() {
       await conn.execute(Sql.named('SELECT TO_TIMESTAMP(@ts:int8 / 1000)'),
           parameters: {'ts': 1640556171599});
     });
+
+    test('time', () async {
+      await expectReversible(
+        'time',
+        [
+          null,
+          Time(16, 0, 44, 0, 888),
+          Time.fromMicroseconds(57644000888),
+          Time(0, 0, 0, 0, 86400000000),
+          Time(0),
+        ],
+        expectedDartType: 'Time',
+      );
+    });
+
+    test('line', () async {
+      await expectReversible(
+        'line',
+        [
+          null,
+          Line(1, 2, 3),
+          Line(.0002, .000001, 100000),
+        ],
+        expectedDartType: 'Line',
+      );
+    });
+
+    test('lseg', () async {
+      await expectReversible(
+        'lseg',
+        [
+          null,
+          Lseg(Point(1, 2), Point(3, 4)),
+          Lseg(Point(1, 2), Point(1, 2)),
+        ],
+        expectedDartType: 'Lseg',
+      );
+    });
+
+    test('box', () async {
+      await expectReversible(
+        'box',
+        [
+          null,
+          Box(Point(1, 2), Point(3, 4)),
+          Box(Point(1.0, 2), Point(1, 2)),
+          Box(Point(3, 4), Point(-12, -12312.123412)),
+        ],
+        expectedDartType: 'Box',
+      );
+    });
+
+    test('polygon', () async {
+      await expectReversible(
+        'polygon',
+        [
+          null,
+          Polygon([Point(0, 0)]),
+          Polygon([Point(1, 2), Point(3, 4), Point(5, 6), Point(7, 8.2)]),
+          Polygon([Point(1, 2), Point(3, 4), Point(5, 6), Point(-7, -8.2)]),
+        ],
+        expectedDartType: 'Polygon',
+      );
+    });
+
+    test('path', () async {
+      await expectReversible(
+        'path',
+        [
+          null,
+          Path([Point(0, 0)], false),
+          Path([Point(1, 2), Point(3, 4), Point(5, 6), Point(7, 8.2)], true),
+          Path([Point(1, 2), Point(3, 4), Point(5, 6), Point(-7, -8.2)], true),
+        ],
+        expectedDartType: 'Path',
+      );
+    });
+
+    test('circle', () async {
+      await expectReversible(
+        'circle',
+        [
+          null,
+          Circle(Point(0, 0), 0),
+          Circle(Point(-1, 1), 1.234),
+        ],
+        expectedDartType: 'Circle',
+      );
+    });
+
+    test('int4range', () async {
+      await expectReversible(
+        'int4range',
+        [
+          null,
+          // normal ranges
+          IntRange(4, 4, Bounds(Bound.inclusive, Bound.inclusive)),
+          IntRange(4, 5, Bounds(Bound.inclusive, Bound.inclusive)),
+          IntRange(4, 6, Bounds(Bound.exclusive, Bound.exclusive)),
+          // partially unbounded ranges
+          IntRange(null, 4, Bounds(Bound.inclusive, Bound.exclusive)),
+          IntRange(4, null, Bounds(Bound.inclusive, Bound.exclusive)),
+          IntRange(null, 4, Bounds(Bound.exclusive, Bound.inclusive)),
+          IntRange(4, null, Bounds(Bound.exclusive, Bound.inclusive)),
+          // unbounded ranges
+          IntRange(null, null, Bounds(Bound.exclusive, Bound.inclusive)),
+          IntRange(null, null, Bounds(Bound.exclusive, Bound.exclusive)),
+          IntRange(null, null, Bounds(Bound.inclusive, Bound.exclusive)),
+          IntRange(null, null, Bounds(Bound.inclusive, Bound.inclusive)),
+          // empty ranges
+          IntRange(4, 4, Bounds(Bound.exclusive, Bound.exclusive)),
+          IntRange(4, 4, Bounds(Bound.inclusive, Bound.exclusive)),
+          IntRange(4, 4, Bounds(Bound.exclusive, Bound.inclusive)),
+          IntRange(4, 5, Bounds(Bound.exclusive, Bound.exclusive)),
+        ],
+        expectedDartType: 'IntRange',
+      );
+    });
+
+    test('int8range', () async {
+      await expectReversible(
+        'int8range',
+        [
+          null,
+          // normal ranges
+          IntRange(4, 4, Bounds(Bound.inclusive, Bound.inclusive)),
+          IntRange(4, 5, Bounds(Bound.inclusive, Bound.inclusive)),
+          IntRange(4, 6, Bounds(Bound.exclusive, Bound.exclusive)),
+          // partially unbounded ranges
+          IntRange(null, 4, Bounds(Bound.inclusive, Bound.exclusive)),
+          IntRange(4, null, Bounds(Bound.inclusive, Bound.exclusive)),
+          IntRange(null, 4, Bounds(Bound.exclusive, Bound.inclusive)),
+          IntRange(4, null, Bounds(Bound.exclusive, Bound.inclusive)),
+          // unbounded ranges
+          IntRange(null, null, Bounds(Bound.exclusive, Bound.inclusive)),
+          IntRange(null, null, Bounds(Bound.exclusive, Bound.exclusive)),
+          IntRange(null, null, Bounds(Bound.inclusive, Bound.exclusive)),
+          IntRange(null, null, Bounds(Bound.inclusive, Bound.inclusive)),
+          // empty ranges
+          IntRange(4, 4, Bounds(Bound.exclusive, Bound.exclusive)),
+          IntRange(4, 4, Bounds(Bound.inclusive, Bound.exclusive)),
+          IntRange(4, 4, Bounds(Bound.exclusive, Bound.inclusive)),
+          IntRange(4, 5, Bounds(Bound.exclusive, Bound.exclusive)),
+        ],
+        expectedDartType: 'IntRange',
+      );
+    });
+
+    test('daterange', () async {
+      await expectReversible(
+        'daterange',
+        [
+          null,
+          // normal ranges
+          DateRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4, 12),
+              Bounds(Bound.inclusive, Bound.inclusive)),
+          DateRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 5),
+              Bounds(Bound.inclusive, Bound.inclusive)),
+          DateRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 6),
+              Bounds(Bound.exclusive, Bound.exclusive)),
+          // partially unbounded ranges
+          DateRange(null, DateTime.utc(2000, 4, 4),
+              Bounds(Bound.inclusive, Bound.exclusive)),
+          DateRange(DateTime.utc(2000, 4, 4), null,
+              Bounds(Bound.inclusive, Bound.exclusive)),
+          DateRange(null, DateTime.utc(2000, 4, 4),
+              Bounds(Bound.exclusive, Bound.inclusive)),
+          DateRange(DateTime.utc(2000, 4, 4), null,
+              Bounds(Bound.exclusive, Bound.inclusive)),
+          // unbounded ranges
+          DateRange(null, null, Bounds(Bound.exclusive, Bound.inclusive)),
+          DateRange(null, null, Bounds(Bound.exclusive, Bound.exclusive)),
+          DateRange(null, null, Bounds(Bound.inclusive, Bound.exclusive)),
+          DateRange(null, null, Bounds(Bound.inclusive, Bound.inclusive)),
+          // empty ranges
+          DateRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4, 12),
+              Bounds(Bound.exclusive, Bound.exclusive)),
+          DateRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4),
+              Bounds(Bound.inclusive, Bound.exclusive)),
+          DateRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4),
+              Bounds(Bound.exclusive, Bound.inclusive)),
+          DateRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 5),
+              Bounds(Bound.exclusive, Bound.exclusive)),
+        ],
+        expectedDartType: 'DateRange',
+      );
+    });
+
+    test('tsrange', () async {
+      await expectReversible(
+        'tsrange',
+        [
+          null,
+          // normal ranges
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4, 12),
+              Bounds(Bound.inclusive, Bound.inclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 5),
+              Bounds(Bound.inclusive, Bound.inclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 6),
+              Bounds(Bound.exclusive, Bound.exclusive)),
+          // partially unbounded ranges
+          DateTimeRange(null, DateTime.utc(2000, 4, 4),
+              Bounds(Bound.inclusive, Bound.exclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), null,
+              Bounds(Bound.inclusive, Bound.exclusive)),
+          DateTimeRange(null, DateTime.utc(2000, 4, 4),
+              Bounds(Bound.exclusive, Bound.inclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), null,
+              Bounds(Bound.exclusive, Bound.inclusive)),
+          // unbounded ranges
+          DateTimeRange(null, null, Bounds(Bound.exclusive, Bound.inclusive)),
+          DateTimeRange(null, null, Bounds(Bound.exclusive, Bound.exclusive)),
+          DateTimeRange(null, null, Bounds(Bound.inclusive, Bound.exclusive)),
+          DateTimeRange(null, null, Bounds(Bound.inclusive, Bound.inclusive)),
+          // empty ranges
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4),
+              Bounds(Bound.exclusive, Bound.exclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4),
+              Bounds(Bound.inclusive, Bound.exclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4),
+              Bounds(Bound.exclusive, Bound.inclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 5),
+              Bounds(Bound.exclusive, Bound.exclusive)),
+        ],
+        expectedDartType: 'DateTimeRange',
+      );
+    });
   });
 
   group('Text encoders', () {

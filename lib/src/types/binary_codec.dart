@@ -6,6 +6,8 @@ import 'package:postgres/src/types/generic_type.dart';
 
 import '../buffer.dart';
 import '../types.dart';
+import 'geo_types.dart';
+import 'range_types.dart';
 import 'type_registry.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;
@@ -132,6 +134,17 @@ class PostgresBinaryEncoder {
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}');
+        }
+
+      case TypeOid.time:
+        {
+          if (input is Time) {
+            final bd = ByteData(8);
+            bd.setInt64(0, input.microseconds);
+            return bd.buffer.asUint8List();
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: Time Got: ${input.runtimeType}');
         }
 
       case TypeOid.timestampWithoutTimezone:
@@ -262,6 +275,80 @@ class PostgresBinaryEncoder {
           throw FormatException(
               'Invalid type for parameter value. Expected: Point Got: ${input.runtimeType}');
         }
+
+      case TypeOid.line:
+        if (input is Line) {
+          final bd = ByteData(24);
+          bd.setFloat64(0, input.a);
+          bd.setFloat64(8, input.b);
+          bd.setFloat64(16, input.c);
+          return bd.buffer.asUint8List();
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: Line Got: ${input.runtimeType}');
+
+      case TypeOid.lseg:
+        if (input is Lseg) {
+          final bd = ByteData(32);
+          bd.setFloat64(0, input.p1.latitude);
+          bd.setFloat64(8, input.p1.longitude);
+          bd.setFloat64(16, input.p2.latitude);
+          bd.setFloat64(24, input.p2.longitude);
+          return bd.buffer.asUint8List();
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: Lseg Got: ${input.runtimeType}');
+
+      case TypeOid.box:
+        if (input is Box) {
+          final bd = ByteData(32);
+          bd.setFloat64(0, input.p1.latitude);
+          bd.setFloat64(8, input.p1.longitude);
+          bd.setFloat64(16, input.p2.latitude);
+          bd.setFloat64(24, input.p2.longitude);
+          return bd.buffer.asUint8List();
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: Box Got: ${input.runtimeType}');
+
+      case TypeOid.path:
+        if (input is Path) {
+          final bd = ByteData(5 + 16 * input.points.length);
+          bd.setInt8(0, input.open ? 0 : 1);
+          bd.setInt32(1, input.points.length);
+          for (int i = 0; i < input.points.length; i++) {
+            bd.setFloat64(i * 16 + 5, input.points[i].latitude);
+            bd.setFloat64(i * 16 + 13, input.points[i].longitude);
+          }
+          return bd.buffer.asUint8List();
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: Path Got: ${input.runtimeType}');
+
+      case TypeOid.polygon:
+        if (input is Polygon) {
+          final bd = ByteData(4 + 16 * input.points.length);
+          bd.setInt32(0, input.points.length);
+          for (int i = 0; i < input.points.length; i++) {
+            bd.setFloat64(i * 16 + 4, input.points[i].latitude);
+            bd.setFloat64(i * 16 + 12, input.points[i].longitude);
+          }
+          return bd.buffer.asUint8List();
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: Polygon Got: ${input.runtimeType}');
+
+      case TypeOid.circle:
+        if (input is Circle) {
+          final bd = ByteData(24);
+          bd.setFloat64(0, input.center.latitude);
+          bd.setFloat64(8, input.center.longitude);
+          bd.setFloat64(16, input.radius);
+          return bd.buffer.asUint8List();
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: Circle Got: ${input.runtimeType}');
+
       case TypeOid.regtype:
         final oid = input is Type ? input.oid : (input is int ? input : null);
         if (oid == null) {
@@ -384,6 +471,42 @@ class PostgresBinaryEncoder {
           throw FormatException(
               'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
         }
+
+      case TypeOid.int4range:
+        if (input is IntRange) {
+          return _encodeRange(input, encoding, Type.integer.oid!);
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}');
+
+      case TypeOid.int8range:
+        if (input is IntRange) {
+          return _encodeRange(input, encoding, Type.bigInteger.oid!);
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}');
+
+      case TypeOid.daterange:
+        if (input is DateRange) {
+          return _encodeRange(input, encoding, Type.date.oid!);
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: DateRange Got: ${input.runtimeType}');
+
+      case TypeOid.tsrange:
+        if (input is DateTimeRange) {
+          return _encodeRange(
+              input, encoding, Type.timestampWithoutTimezone.oid!);
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: DateTimeRange Got: ${input.runtimeType}');
+
+      case TypeOid.tstzrange:
+        if (input is DateTimeRange) {
+          return _encodeRange(input, encoding, Type.timestampWithTimezone.oid!);
+        }
+        throw FormatException(
+            'Invalid type for parameter value. Expected: DateTimeRange Got: ${input.runtimeType}');
     }
     // Pass-through of Uint8List instances allows client with custom types to
     // encode their types for efficient binary transport.
@@ -505,6 +628,35 @@ class PostgresBinaryEncoder {
     }
     return writer.toBytes();
   }
+
+  Uint8List _encodeRange<T>(
+      Range<T> range, Encoding encoding, int elementTypeOid) {
+    final buffer = BytesBuffer();
+    buffer.add([range.flag]);
+    switch ((range.lower == null, range.upper == null)) {
+      case (false, false):
+        if (range.flag == 1) break;
+        _encodeRangeValue(range.lower!, encoding, elementTypeOid, buffer);
+        _encodeRangeValue(range.upper!, encoding, elementTypeOid, buffer);
+        break;
+      case (false, true) || (true, false):
+        final value = range.lower ?? range.upper!;
+        _encodeRangeValue(value, encoding, elementTypeOid, buffer);
+      case (true, true):
+    }
+    // print(buffer.toBytes());
+    return buffer.toBytes();
+  }
+
+  // Returns 4 length bytes + value bytes
+  _encodeRangeValue(
+      Object value, Encoding encoding, int elementTypeOid, BytesBuffer buffer) {
+    final encoder = PostgresBinaryEncoder(elementTypeOid);
+    final valueBytes = encoder.convert(value, encoding);
+    final lengthBytes = ByteData(4)..setInt32(0, valueBytes.length);
+    buffer.add(lengthBytes.buffer.asUint8List());
+    buffer.add(valueBytes);
+  }
 }
 
 class PostgresBinaryDecoder {
@@ -536,6 +688,8 @@ class PostgresBinaryDecoder {
         return buffer.getFloat32(0);
       case TypeOid.double:
         return buffer.getFloat64(0);
+      case TypeOid.time:
+        return Time.fromMicroseconds(buffer.getInt64(0));
       case TypeOid.timestampWithoutTimezone:
       case TypeOid.timestampWithTimezone:
         return DateTime.utc(2000)
@@ -597,6 +751,43 @@ class PostgresBinaryDecoder {
       case TypeOid.point:
         return Point(buffer.getFloat64(0), buffer.getFloat64(8));
 
+      case TypeOid.line:
+        return Line(
+            buffer.getFloat64(0), buffer.getFloat64(8), buffer.getFloat64(16));
+
+      case TypeOid.lseg:
+        return Lseg(Point(buffer.getFloat64(0), buffer.getFloat64(8)),
+            Point(buffer.getFloat64(16), buffer.getFloat64(24)));
+
+      case TypeOid.box:
+        return Box(Point(buffer.getFloat64(0), buffer.getFloat64(8)),
+            Point(buffer.getFloat64(16), buffer.getFloat64(24)));
+
+      case TypeOid.path:
+        final open = buffer.getInt8(0) == 0;
+        final length = buffer.getInt32(1);
+        final points = <Point>[];
+        for (int i = 0; i < length; i++) {
+          final x = buffer.getFloat64(i * 16 + 5);
+          final y = buffer.getFloat64(i * 16 + 13);
+          points.add(Point(x, y));
+        }
+        return Path(points, open);
+
+      case TypeOid.polygon:
+        final length = buffer.getInt32(0);
+        final points = <Point>[];
+        for (int i = 0; i < length; i++) {
+          final x = buffer.getFloat64(i * 16 + 4);
+          final y = buffer.getFloat64(i * 16 + 12);
+          points.add(Point(x, y));
+        }
+        return Polygon(points);
+
+      case TypeOid.circle:
+        return Circle(Point(buffer.getFloat64(0), buffer.getFloat64(8)),
+            buffer.getFloat64(16));
+
       case TypeOid.booleanArray:
         return readListBytes<bool>(
             input, (reader, _) => reader.readUint8() != 0);
@@ -622,6 +813,36 @@ class PostgresBinaryDecoder {
           final bytes = reader.read(length - 1);
           return _jsonFusedEncoding(encoding).decode(bytes);
         });
+
+      case TypeOid.int4range:
+        final range = _decodeRange(buffer, dinput, Type.integer.oid!);
+        return range == null
+            ? IntRange.empty()
+            : IntRange(range.$1, range.$2, range.$3);
+      case TypeOid.int8range:
+        final range = _decodeRange(buffer, dinput, Type.bigInteger.oid!);
+        return range == null
+            ? IntRange.empty()
+            : IntRange(range.$1, range.$2, range.$3);
+      case TypeOid.daterange:
+        final range = _decodeRange(buffer, dinput, Type.date.oid!);
+        return range == null
+            ? DateRange.empty()
+            : DateRange(range.$1, range.$2, range.$3);
+      case TypeOid.numrange:
+        return _decodeRange(buffer, dinput, Type.numeric.oid!);
+      case TypeOid.tsrange:
+        final range =
+            _decodeRange(buffer, dinput, Type.timestampWithoutTimezone.oid!);
+        return range == null
+            ? DateTimeRange.empty()
+            : DateTimeRange(range.$1, range.$2, range.$3);
+      case TypeOid.tstzrange:
+        final range =
+            _decodeRange(buffer, dinput, Type.timestampWithTimezone.oid!);
+        return range == null
+            ? DateTimeRange.empty()
+            : DateTimeRange(range.$1, range.$2, range.$3);
     }
     return UndecodedBytes(
       typeOid: typeOid,
@@ -698,5 +919,42 @@ class PostgresBinaryDecoder {
       result += '.${fractPart.padRight(dScale, '0').substring(0, dScale)}';
     }
     return result;
+  }
+
+  (T?, T?, Bounds)? _decodeRange<T>(
+      ByteData buffer, DecodeInput dinput, int elementTypeOid) {
+    final flag = buffer.getInt8(0);
+    final bounds = Bounds.fromFlag(flag);
+    switch (flag) {
+      case 0 || 2 || 4 || 6:
+        final lowerLength = buffer.getInt32(1);
+        final lowerBytes = dinput.bytes.sublist(5, 5 + lowerLength);
+        final lower = _decodeRangeElement(dinput, elementTypeOid, lowerBytes);
+        final upperBytes = dinput.bytes.sublist(9 + lowerLength);
+        final upper = _decodeRangeElement(dinput, elementTypeOid, upperBytes);
+        return (lower, upper, bounds);
+      case 8 || 12:
+        final bytes = dinput.bytes.sublist(5);
+        final upper = _decodeRangeElement(dinput, elementTypeOid, bytes);
+        return (null, upper, bounds);
+      case 16 || 18:
+        final bytes = dinput.bytes.sublist(5);
+        final lower = _decodeRangeElement(dinput, elementTypeOid, bytes);
+        return (lower, null, bounds);
+      case 24:
+        return (null, null, bounds);
+      default:
+        return null;
+    }
+  }
+
+  T _decodeRangeElement<T>(
+      DecodeInput dinput, int elementTypeOid, Uint8List bytes) {
+    final decoder = PostgresBinaryDecoder(elementTypeOid);
+    return decoder.convert(DecodeInput(
+        bytes: bytes,
+        isBinary: dinput.isBinary,
+        encoding: dinput.encoding,
+        typeRegistry: dinput.typeRegistry)) as T;
   }
 }

@@ -7,7 +7,6 @@ import 'package:postgres/src/exceptions.dart';
 import 'package:postgres/src/types/text_codec.dart';
 
 import '../types.dart';
-
 import 'generic_type.dart';
 
 typedef TypeEncoderFn = EncodeOutput Function(EncodeInput input);
@@ -19,27 +18,40 @@ class TypeOid {
   static const bigIntegerArray = 1016;
   static const boolean = 16;
   static const booleanArray = 1000;
+  static const box = 603;
   static const byteArray = 17;
   static const character = 1042;
+  static const circle = 718;
   static const date = 1082;
+  static const daterange = 3912;
   static const double = 701;
   static const doubleArray = 1022;
+  static const int4range = 3904;
+  static const int8range = 3926;
   static const integer = 23;
   static const integerArray = 1007;
   static const interval = 1186;
   static const json = 114;
   static const jsonb = 3802;
   static const jsonbArray = 3807;
+  static const line = 628;
+  static const lseg = 601;
   static const name = 19;
   static const numeric = 1700;
+  static const numrange = 3906;
+  static const path = 602;
   static const point = 600;
+  static const polygon = 604;
   static const real = 700;
   static const regtype = 2206;
   static const smallInteger = 21;
   static const text = 25;
   static const textArray = 1009;
+  static const time = 1083;
   static const timestampWithoutTimezone = 1114;
   static const timestampWithTimezone = 1184;
+  static const tsrange = 3908;
+  static const tstzrange = 3910;
   static const uuid = 2950;
   static const varChar = 1043;
   static const varCharArray = 1015;
@@ -59,6 +71,7 @@ final _builtInTypes = <Type>{
   Type.double,
   Type.boolean,
   Type.voidType,
+  Type.time,
   Type.timestampWithTimezone,
   Type.timestampWithoutTimezone,
   Type.interval,
@@ -69,6 +82,12 @@ final _builtInTypes = <Type>{
   Type.jsonb,
   Type.uuid,
   Type.point,
+  Type.line,
+  Type.lseg,
+  Type.box,
+  Type.polygon,
+  Type.path,
+  Type.circle,
   Type.booleanArray,
   Type.integerArray,
   Type.bigIntegerArray,
@@ -77,6 +96,12 @@ final _builtInTypes = <Type>{
   Type.varCharArray,
   Type.jsonbArray,
   Type.regtype,
+  Type.int4range,
+  Type.int8range,
+  Type.daterange,
+  // Type.numrange,
+  Type.tsrange,
+  Type.tstzrange,
 };
 
 final _builtInTypeNames = <String, Type>{
@@ -87,28 +112,41 @@ final _builtInTypeNames = <String, Type>{
   'char': Type.character,
   'character': Type.character,
   'date': Type.date,
+  'daterange': Type.daterange,
   'double precision': Type.double,
   'float4': Type.real,
   'float8': Type.double,
   'int': Type.integer,
   'int2': Type.smallInteger,
   'int4': Type.integer,
+  'int4range': Type.int4range,
   'int8': Type.bigInteger,
+  'int8range': Type.int8range,
   'integer': Type.integer,
   'interval': Type.interval,
   'json': Type.json,
   'jsonb': Type.jsonb,
   'name': Type.name,
   'numeric': Type.numeric,
+  // 'numrange': Type.numrange,
   'point': Type.point,
+  'line': Type.line,
+  'lseg': Type.lseg,
+  'box': Type.box,
+  'polygon': Type.polygon,
+  'path': Type.path,
+  'circle': Type.circle,
   'read': Type.real,
   'regtype': Type.regtype,
   'serial4': Type.serial,
   'serial8': Type.bigSerial,
   'smallint': Type.smallInteger,
   'text': Type.text,
+  'time': Type.time,
   'timestamp': Type.timestampWithoutTimezone,
   'timestamptz': Type.timestampWithTimezone,
+  'tsrange': Type.tsrange,
+  'tstzrange': Type.tstzrange,
   'varchar': Type.varChar,
   'uuid': Type.uuid,
   '_bool': Type.booleanArray,
