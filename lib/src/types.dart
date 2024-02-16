@@ -170,7 +170,8 @@ class Time {
       DateTime.fromMicrosecondsSinceEpoch(microseconds, isUtc: true);
 
   /// The hour of the day, expressed as in a 25-hour clock `0...24`.
-  int get hour => microseconds == Duration.microsecondsPerDay ? 24 : 0;
+  int get hour =>
+      microseconds == Duration.microsecondsPerDay ? 24 : utcDateTime.hour;
 
   /// The minute `[0...59]`.
   int get minute => utcDateTime.minute;
