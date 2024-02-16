@@ -196,7 +196,7 @@ class DateRange extends DiscreteRange<DateTime> {
     if (dt == null) return null;
     final days = dt.microsecondsSinceEpoch ~/ Duration.microsecondsPerDay;
     final microseconds = days * Duration.microsecondsPerDay;
-    return DateTime.fromMicrosecondsSinceEpoch(microseconds);
+    return DateTime.fromMicrosecondsSinceEpoch(microseconds, isUtc: true);
   }
 
   @override
