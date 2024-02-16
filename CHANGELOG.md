@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.9
+
+Added the following PostgreSQL builtin types:
+- Geometric types `line`, `lseg`,`path`,`polygon`,`box`,`circle`
+- Range types `int4range`, `int8range`, `daterange`, `tsrange`,`tstzrange`
+- Time type `time`
+
 ## 3.0.8
 
 - Properly react to connection losses by reporting the database connection as
@@ -7,7 +14,9 @@
 
 ## 3.0.7
 
-- Allow cleartext passwords when secure connection is used. ([#283](https://github.com/isoos/postgresql-dart/pull/283) by [simolus3](https://github.com/simolus3))
+- Allow cleartext passwords when secure connection is
+  used. ([#283](https://github.com/isoos/postgresql-dart/pull/283)
+  by [simolus3](https://github.com/simolus3))
 
 ## 3.0.6
 
@@ -23,13 +32,17 @@
 
 ## 3.0.3
 
-- Using const for ConnectionSettings, SessionSettings and PoolSettings classes. ([#267](https://github.com/isoos/postgresql-dart/pull/267) by [Gerrel](https://github.com/Gerrel))
+- Using const for ConnectionSettings, SessionSettings and PoolSettings
+  classes. ([#267](https://github.com/isoos/postgresql-dart/pull/267)
+  by [Gerrel](https://github.com/Gerrel))
 - Parsing of `Sql.indexed` and `Sql.named` happens when the `Connection` starts
   to interpret it. Errors with unknown type names are thrown in this later step.
 
 ## 3.0.2
 
-- Fix: Dispose disconnected pool `Connection`s. ([#260](https://github.com/isoos/postgresql-dart/pull/260) by [nehzata](https://github.com/nehzata)).
+- Fix: Dispose disconnected pool `Connection`
+  s. ([#260](https://github.com/isoos/postgresql-dart/pull/260)
+  by [nehzata](https://github.com/nehzata)).
 - Deprecated `ParseMessage` constructor's `types` argument, use `typeOids` instead.
   (As most users don't access this directly, it will be removed in `3.1.0`).
 
@@ -59,21 +72,21 @@ behaviour, keeping most of the wire protocol handling from the old version.
 
 Notable breaking behaviour changes:
 
-  - Simple query protocol allows sending queries to the server without
-    awaiting on the result. The new implementation queues these request
-    on the client instead.
-  - Table name OIDs are not fetched or cached, this information from the
-    result schema is absent, also causing `mappedResultsQuery` to be
-    removed from the new API.
-  - Queries are not cached implicitly, explicit prepared statements can be
-    used instead.
-  - `interval` values are returned as `Interval` type instead of `Duration`.
-  - A newly added `UndecodedBytes` instances are returned when the package does
-    not know or has not implemented the appropriate type decoding yet.
-    Previously these values were auto-encoded to `String` and if that failed
-    the `Uint8List` were used.
-  - Types, fields and parameter names may have been renamed to be more
-    consistent or more aligned with the Dart naming guides.
+- Simple query protocol allows sending queries to the server without
+  awaiting on the result. The new implementation queues these request
+  on the client instead.
+- Table name OIDs are not fetched or cached, this information from the
+  result schema is absent, also causing `mappedResultsQuery` to be
+  removed from the new API.
+- Queries are not cached implicitly, explicit prepared statements can be
+  used instead.
+- `interval` values are returned as `Interval` type instead of `Duration`.
+- A newly added `UndecodedBytes` instances are returned when the package does
+  not know or has not implemented the appropriate type decoding yet.
+  Previously these values were auto-encoded to `String` and if that failed
+  the `Uint8List` were used.
+- Types, fields and parameter names may have been renamed to be more
+  consistent or more aligned with the Dart naming guides.
 
 ### Legacy compatibility layer
 
@@ -83,13 +96,13 @@ the ones mentioned above are missing and/or throw `UnimplementedError` when call
 
 ### Migration
 
-  - You may use the legacy compatibility layer to check if your code relies on
-    any of the above mentioned feature, rewrite if needed.
-  - Start using the new API, incrementally, when possible.
-  - For most queries, you may use `Sql.named('SELECT ...')` to keep the default
-    name- and `Map`-based query `@variable`` substitution, or you may use the
-    raw `$1` version (with 1-based indexes).
-  - Always write tests.
+- You may use the legacy compatibility layer to check if your code relies on
+  any of the above mentioned feature, rewrite if needed.
+- Start using the new API, incrementally, when possible.
+- For most queries, you may use `Sql.named('SELECT ...')` to keep the default
+  name- and `Map`-based query `@variable`` substitution, or you may use the
+  raw `$1` version (with 1-based indexes).
+- Always write tests.
 
 If you have any issues with migration or with the new behavior, please open an
 issue on the package's GitHub issue tracker or discussions.
@@ -115,20 +128,25 @@ who helped to push forward.
 
 ## 2.6.3
 
-- Allow `encoding` to be specified for connections. The setting will be used for all connection-related string conversions.
-- Allow generic `List` type as substitution values in binary encoding (as long as the inner type matches).
+- Allow `encoding` to be specified for connections. The setting will be used for all
+  connection-related string conversions.
+- Allow generic `List` type as substitution values in binary encoding (as long as the inner type
+  matches).
 - Refactor: replaced `UTF8BackedString` with generic encoding (not complete).
-- Breaking change in `package:postgres/messages.dart`: default constructors made internal, parsing is done with more efficient reader.
+- Breaking change in `package:postgres/messages.dart`: default constructors made internal, parsing
+  is done with more efficient reader.
 
 ## 2.6.2
 
 - Improved (experimental) v3 implementation.
   [#98](https://github.com/isoos/postgresql-dart/pull/98) and
-  [#102](https://github.com/isoos/postgresql-dart/pull/102) by [simolus3](https://github.com/simolus3).
+  [#102](https://github.com/isoos/postgresql-dart/pull/102)
+  by [simolus3](https://github.com/simolus3).
 
 ## 2.6.1
 
-- Added support for bigInt (int8) arrays. [#41](https://github.com/isoos/postgresql-dart/pull/88) by [schultek](https://github.com/schultek).
+- Added support for bigInt (int8) arrays. [#41](https://github.com/isoos/postgresql-dart/pull/88)
+  by [schultek](https://github.com/schultek).
 
 ## 2.6.0
 
@@ -142,52 +160,77 @@ who helped to push forward.
 
 ## 2.5.2
 
-- Connecting without a password for non-trusted users throws an exception instead of timing out [#68](https://github.com/isoos/postgresql-dart/pull/68) by [osaxma](https://github.com/osaxma).
+- Connecting without a password for non-trusted users throws an exception instead of timing
+  out [#68](https://github.com/isoos/postgresql-dart/pull/68)
+  by [osaxma](https://github.com/osaxma).
 
 ## 2.5.1
 
-- Use `substitutionValues` with `useSimpleQueryProtocol` [#62](https://github.com/isoos/postgresql-dart/pull/62) by [osaxma](https://github.com/osaxma)
+- Use `substitutionValues`
+  with `useSimpleQueryProtocol` [#62](https://github.com/isoos/postgresql-dart/pull/62)
+  by [osaxma](https://github.com/osaxma)
 
 ## 2.5.0
 
 - Added Support for Streaming Replication Protocol which included the following changes:
-  - Replication Mode Messages Handling. [#58](https://github.com/isoos/postgresql-dart/pull/58) by [osaxma](https://github.com/osaxma)
-  - Add new message types for replication. [#57](https://github.com/isoos/postgresql-dart/pull/57) by [osaxma](https://github.com/osaxma)
-  - Add connection configuration for Streaming Replication Protocol. [#56](https://github.com/isoos/postgresql-dart/pull/56) by [osaxma](https://github.com/osaxma)
-  - Raise the min sdk version to support enhanced enums. [#55](https://github.com/isoos/postgresql-dart/pull/55) by [osaxma](https://github.com/osaxma)
-  - Add LSN type and time conversion to and from ms-since-Y2K. [#53](https://github.com/isoos/postgresql-dart/pull/53) by [osaxma](https://github.com/osaxma)
-  - Fix affected rows parsing in CommandCompleteMessage. [#52](https://github.com/isoos/postgresql-dart/pull/52) by [osaxma](https://github.com/osaxma)
-  - Introduced new APIs to `PostgreSQLConnection`: `addMessage` to send client messages, `messages` stream to listen to server messages & `useSimpleQueryProtocol` option in `query` method. [#51](https://github.com/isoos/postgresql-dart/pull/51) by [osaxma](https://github.com/osaxma)
+    - Replication Mode Messages Handling. [#58](https://github.com/isoos/postgresql-dart/pull/58)
+      by [osaxma](https://github.com/osaxma)
+    - Add new message types for replication. [#57](https://github.com/isoos/postgresql-dart/pull/57)
+      by [osaxma](https://github.com/osaxma)
+    - Add connection configuration for Streaming Replication
+      Protocol. [#56](https://github.com/isoos/postgresql-dart/pull/56)
+      by [osaxma](https://github.com/osaxma)
+    - Raise the min sdk version to support enhanced
+      enums. [#55](https://github.com/isoos/postgresql-dart/pull/55)
+      by [osaxma](https://github.com/osaxma)
+    - Add LSN type and time conversion to and from
+      ms-since-Y2K. [#53](https://github.com/isoos/postgresql-dart/pull/53)
+      by [osaxma](https://github.com/osaxma)
+    - Fix affected rows parsing in
+      CommandCompleteMessage. [#52](https://github.com/isoos/postgresql-dart/pull/52)
+      by [osaxma](https://github.com/osaxma)
+    - Introduced new APIs to `PostgreSQLConnection`: `addMessage` to send client
+      messages, `messages` stream to listen to server messages & `useSimpleQueryProtocol` option
+      in `query` method. [#51](https://github.com/isoos/postgresql-dart/pull/51)
+      by [osaxma](https://github.com/osaxma)
 
 ## 2.4.6
 
 - Fix crash when manually issuing a transaction statement like `BEGIN` without
-  using the high-level transaction APIs. [#47](https://github.com/isoos/postgresql-dart/pull/47) by [simolus3](https://github.com/simolus3).
+  using the high-level transaction APIs. [#47](https://github.com/isoos/postgresql-dart/pull/47)
+  by [simolus3](https://github.com/simolus3).
 
 ## 2.4.5
 
-- Added support for boolean arrays. [#41](https://github.com/isoos/postgresql-dart/pull/41) by [slightfoot](https://github.com/slightfoot).
+- Added support for boolean arrays. [#41](https://github.com/isoos/postgresql-dart/pull/41)
+  by [slightfoot](https://github.com/slightfoot).
 
 ## 2.4.4
 
-- Added support for varchar arrays. [#39](https://github.com/isoos/postgresql-dart/pull/39) by [paschalisp](https://github.com/paschalisp).
+- Added support for varchar arrays. [#39](https://github.com/isoos/postgresql-dart/pull/39)
+  by [paschalisp](https://github.com/paschalisp).
 
 ## 2.4.3
 
-- Support for clear text passwords using a boolean parameter in connection as 'allowClearTextPassword' to activate / deactivate the feature. [#20](https://github.com/isoos/postgresql-dart/pull/20).
+- Support for clear text passwords using a boolean parameter in connection as '
+  allowClearTextPassword' to activate / deactivate the
+  feature. [#20](https://github.com/isoos/postgresql-dart/pull/20).
 
 ## 2.4.2
 
 - Include original stacktrace when query fails.
-  ([#15](https://github.com/isoos/postgresql-dart/pull/15) by [davidmartos96](https://github.com/davidmartos96))
+  ([#15](https://github.com/isoos/postgresql-dart/pull/15)
+  by [davidmartos96](https://github.com/davidmartos96))
 
 ## 2.4.1+2
 
-- Fix error when sending json data with `execute()` [#11](https://github.com/isoos/postgresql-dart/pull/11)
+- Fix error when sending json data
+  with `execute()` [#11](https://github.com/isoos/postgresql-dart/pull/11)
 
 ## 2.4.1+1
 
-- Fix error when passing `allowReuse: null` into `query()` [#8](https://github.com/isoos/postgresql-dart/pull/8)
+- Fix error when passing `allowReuse: null`
+  into `query()` [#8](https://github.com/isoos/postgresql-dart/pull/8)
 
 ## 2.4.1
 
@@ -195,8 +238,10 @@ who helped to push forward.
 
 ## 2.4.0
 
-- Support for type `numeric` / `decimal` ([#7](https://github.com/isoos/postgresql-dart/pull/7), [#9](https://github.com/isoos/postgresql-dart/pull/9)).
-- Support SASL / SCRAM-SHA-256 Authentication, [#6](https://github.com/isoos/postgresql-dart/pull/6).
+- Support for
+  type `numeric` / `decimal` ([#7](https://github.com/isoos/postgresql-dart/pull/7), [#9](https://github.com/isoos/postgresql-dart/pull/9)).
+- Support SASL / SCRAM-SHA-256
+  Authentication, [#6](https://github.com/isoos/postgresql-dart/pull/6).
 
 ## 2.3.2
 
@@ -204,8 +249,10 @@ who helped to push forward.
 
 ## 2.3.1
 
-- Added support for types `varchar`, `point`, `integerArray`, `doubleArray`, `textArray` and `jsonArray`.
-  (Thanks to [schultek](https://github.com/schultek), [#3](https://github.com/isoos/postgresql-dart/pull/3))
+- Added support for types `varchar`, `point`, `integerArray`, `doubleArray`, `textArray`
+  and `jsonArray`.
+  (Thanks
+  to [schultek](https://github.com/schultek), [#3](https://github.com/isoos/postgresql-dart/pull/3))
 
 ## 2.3.0
 
@@ -222,7 +269,8 @@ who helped to push forward.
 
 ## 2.3.0-null-safety.0
 
-- Migrate to null safety. (Thanks to [j4qfrost](https://github.com/j4qfrost), [#153](https://github.com/stablekernel/postgresql-dart/pull/153)).
+- Migrate to null safety. (Thanks
+  to [j4qfrost](https://github.com/j4qfrost), [#153](https://github.com/stablekernel/postgresql-dart/pull/153)).
 - Documentation fix (by [saward](https://github.com/saward)).
 
 ## 2.2.0
@@ -256,9 +304,9 @@ who helped to push forward.
 - Hardened codebase with `package:pedantic` and additional lints.
 - Updated codebase to Dart 2.2.
 - `PostgreSQLResult` and `PostgreSQLResultRow` as the return value of a query.
-  - Returned lists are protected with `UnmodifiableListView`.
-  - Exposing column metadata through `ColumnDescription`.
-  - row-level `toTableColumnMap` and `toColumnMap`
+    - Returned lists are protected with `UnmodifiableListView`.
+    - Exposing column metadata through `ColumnDescription`.
+    - row-level `toTableColumnMap` and `toColumnMap`
 - `PostgreSQLConnection` and `_TransactionProxy` share the OID cache.
 - default value for `query(allowReuse = true)` is set only in the implementation method.
 
@@ -267,6 +315,7 @@ who helped to push forward.
 - Table OIDs are always resolved to table names (and not only with mapped queries).
 
 ## 1.0.2
+
 - Add connection queue size
 
 ## 1.0.1
@@ -288,7 +337,8 @@ who helped to push forward.
 
 ## 0.9.7
 
-- Adds `Connection.mappedResultsQuery` to return query results as a `Map` with keys for table and column names.
+- Adds `Connection.mappedResultsQuery` to return query results as a `Map` with keys for table and
+  column names.
 
 ## 0.9.6
 
