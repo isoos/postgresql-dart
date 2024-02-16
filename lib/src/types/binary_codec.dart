@@ -636,8 +636,8 @@ class PostgresBinaryEncoder {
     switch ((range.lower == null, range.upper == null)) {
       case (false, false):
         if (range.flag == 1) break;
-        _encodeRangeValue(range.lower!, encoding, elementTypeOid, buffer);
-        _encodeRangeValue(range.upper!, encoding, elementTypeOid, buffer);
+        _encodeRangeValue(range.lower, encoding, elementTypeOid, buffer);
+        _encodeRangeValue(range.upper, encoding, elementTypeOid, buffer);
         break;
       case (false, true) || (true, false):
         final value = range.lower ?? range.upper!;
@@ -649,10 +649,10 @@ class PostgresBinaryEncoder {
   }
 
   // Returns 4 length bytes + value bytes
-  _encodeRangeValue(
-      Object value, Encoding encoding, int elementTypeOid, BytesBuffer buffer) {
+  _encodeRangeValue<T>(
+      T value, Encoding encoding, int elementTypeOid, BytesBuffer buffer) {
     final encoder = PostgresBinaryEncoder(elementTypeOid);
-    final valueBytes = encoder.convert(value, encoding);
+    final valueBytes = encoder.convert(value as Object, encoding);
     final lengthBytes = ByteData(4)..setInt32(0, valueBytes.length);
     buffer.add(lengthBytes.buffer.asUint8List());
     buffer.add(valueBytes);
