@@ -409,7 +409,7 @@ class UnknownMessage extends ServerMessage {
   }
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (other is! UnknownMessage) {
       return false;
     }

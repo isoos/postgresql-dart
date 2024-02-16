@@ -592,6 +592,21 @@ enum DeferrableMode {
   const DeferrableMode._(String value) : queryPart = ' $value';
 }
 
+/// The settings that control the retry of [SessionExecutor.run] and [SessionExecutor.runTx] methods.
+class Retry<R> {
+  /// The maximum number of attempts to run the operation.
+  final int maxAttempts;
+
+  final FutureOr<R> Function()? orElse;
+  final FutureOr<bool> Function(Exception)? retryIf;
+
+  Retry({
+    required this.maxAttempts,
+    this.orElse,
+    this.retryIf,
+  });
+}
+
 /// The characteristics of the current transaction.
 class TransactionSettings extends SessionSettings {
   /// The isolation level of a transaction determines what data the transaction
