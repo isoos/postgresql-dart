@@ -297,7 +297,7 @@ class PostgresBinaryEncoder {
           return bd.buffer.asUint8List();
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: Lseg Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: LineSegment Got: ${input.runtimeType}');
 
       case TypeOid.box:
         if (input is Box) {

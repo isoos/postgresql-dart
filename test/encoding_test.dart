@@ -538,7 +538,7 @@ void main() {
           LineSegment(Point(1, 2), Point(3, 4)),
           LineSegment(Point(1, 2), Point(1, 2)),
         ],
-        expectedDartType: 'Lseg',
+        expectedDartType: 'LineSegment',
       );
     });
 
@@ -694,6 +694,46 @@ void main() {
     test('tsrange', () async {
       await expectReversible(
         'tsrange',
+        [
+          null,
+          // normal ranges
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4, 12),
+              Bounds(Bound.inclusive, Bound.inclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 5),
+              Bounds(Bound.inclusive, Bound.inclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 6),
+              Bounds(Bound.exclusive, Bound.exclusive)),
+          // partially unbounded ranges
+          DateTimeRange(null, DateTime.utc(2000, 4, 4),
+              Bounds(Bound.inclusive, Bound.exclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), null,
+              Bounds(Bound.inclusive, Bound.exclusive)),
+          DateTimeRange(null, DateTime.utc(2000, 4, 4),
+              Bounds(Bound.exclusive, Bound.inclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), null,
+              Bounds(Bound.exclusive, Bound.inclusive)),
+          // unbounded ranges
+          DateTimeRange(null, null, Bounds(Bound.exclusive, Bound.inclusive)),
+          DateTimeRange(null, null, Bounds(Bound.exclusive, Bound.exclusive)),
+          DateTimeRange(null, null, Bounds(Bound.inclusive, Bound.exclusive)),
+          DateTimeRange(null, null, Bounds(Bound.inclusive, Bound.inclusive)),
+          // empty ranges
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4),
+              Bounds(Bound.exclusive, Bound.exclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4),
+              Bounds(Bound.inclusive, Bound.exclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 4),
+              Bounds(Bound.exclusive, Bound.inclusive)),
+          DateTimeRange(DateTime.utc(2000, 4, 4), DateTime.utc(2000, 4, 5),
+              Bounds(Bound.exclusive, Bound.exclusive)),
+        ],
+        expectedDartType: 'DateTimeRange',
+      );
+    });
+
+    test('tstzrange', () async {
+      await expectReversible(
+        'tstzrange',
         [
           null,
           // normal ranges
