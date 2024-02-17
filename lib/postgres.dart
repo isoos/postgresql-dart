@@ -18,7 +18,7 @@ export 'src/pool/pool_api.dart';
 export 'src/replication.dart';
 export 'src/types.dart';
 export 'src/types/geo_types.dart';
-export 'src/types/range_types.dart' hide Range, DiscreteRange, ContinuousRange;
+export 'src/types/range_types.dart';
 export 'src/types/type_registry.dart' show TypeRegistry;
 
 /// A description of a SQL query as interpreted by this package.

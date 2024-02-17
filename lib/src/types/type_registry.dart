@@ -23,7 +23,7 @@ class TypeOid {
   static const character = 1042;
   static const circle = 718;
   static const date = 1082;
-  static const daterange = 3912;
+  static const dateRange = 3912;
   static const double = 701;
   static const doubleArray = 1022;
   static const int4range = 3904;
@@ -35,7 +35,7 @@ class TypeOid {
   static const jsonb = 3802;
   static const jsonbArray = 3807;
   static const line = 628;
-  static const lseg = 601;
+  static const lineSegment = 601;
   static const name = 19;
   static const numeric = 1700;
   static const numrange = 3906;
@@ -50,8 +50,8 @@ class TypeOid {
   static const time = 1083;
   static const timestampWithoutTimezone = 1114;
   static const timestampWithTimezone = 1184;
-  static const tsrange = 3908;
-  static const tstzrange = 3910;
+  static const timestampRange = 3908;
+  static const timestampTzRange = 3910;
   static const uuid = 2950;
   static const varChar = 1043;
   static const varCharArray = 1015;
@@ -83,7 +83,7 @@ final _builtInTypes = <Type>{
   Type.uuid,
   Type.point,
   Type.line,
-  Type.lseg,
+  Type.lineSegment,
   Type.box,
   Type.polygon,
   Type.path,
@@ -98,10 +98,10 @@ final _builtInTypes = <Type>{
   Type.regtype,
   Type.int4range,
   Type.int8range,
-  Type.daterange,
+  Type.dateRange,
   // Type.numrange,
-  Type.tsrange,
-  Type.tstzrange,
+  Type.timestampRange,
+  Type.timestampTzRange,
 };
 
 final _builtInTypeNames = <String, Type>{
@@ -112,7 +112,7 @@ final _builtInTypeNames = <String, Type>{
   'char': Type.character,
   'character': Type.character,
   'date': Type.date,
-  'daterange': Type.daterange,
+  'daterange': Type.dateRange,
   'double precision': Type.double,
   'float4': Type.real,
   'float8': Type.double,
@@ -131,7 +131,7 @@ final _builtInTypeNames = <String, Type>{
   // 'numrange': Type.numrange,
   'point': Type.point,
   'line': Type.line,
-  'lseg': Type.lseg,
+  'lseg': Type.lineSegment,
   'box': Type.box,
   'polygon': Type.polygon,
   'path': Type.path,
@@ -145,8 +145,8 @@ final _builtInTypeNames = <String, Type>{
   'time': Type.time,
   'timestamp': Type.timestampWithoutTimezone,
   'timestamptz': Type.timestampWithTimezone,
-  'tsrange': Type.tsrange,
-  'tstzrange': Type.tstzrange,
+  'tsrange': Type.timestampRange,
+  'tstzrange': Type.timestampTzRange,
   'varchar': Type.varChar,
   'uuid': Type.uuid,
   '_bool': Type.booleanArray,

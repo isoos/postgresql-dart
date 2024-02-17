@@ -535,8 +535,8 @@ void main() {
         'lseg',
         [
           null,
-          Lseg(Point(1, 2), Point(3, 4)),
-          Lseg(Point(1, 2), Point(1, 2)),
+          LineSegment(Point(1, 2), Point(3, 4)),
+          LineSegment(Point(1, 2), Point(1, 2)),
         ],
         expectedDartType: 'Lseg',
       );

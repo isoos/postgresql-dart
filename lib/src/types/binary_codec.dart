@@ -151,8 +151,8 @@ class PostgresBinaryEncoder {
         {
           if (input is DateTime) {
             final bd = ByteData(8);
-            final diff = input.toUtc().difference(DateTime.utc(2000));
-            bd.setInt64(0, diff.inMicroseconds);
+            bd.setInt64(
+                0, input.toUtc().difference(DateTime.utc(2000)).inMicroseconds);
             return bd.buffer.asUint8List();
           }
           throw FormatException(
@@ -287,8 +287,8 @@ class PostgresBinaryEncoder {
         throw FormatException(
             'Invalid type for parameter value. Expected: Line Got: ${input.runtimeType}');
 
-      case TypeOid.lseg:
-        if (input is Lseg) {
+      case TypeOid.lineSegment:
+        if (input is LineSegment) {
           final bd = ByteData(32);
           bd.setFloat64(0, input.p1.latitude);
           bd.setFloat64(8, input.p1.longitude);
@@ -486,14 +486,14 @@ class PostgresBinaryEncoder {
         throw FormatException(
             'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}');
 
-      case TypeOid.daterange:
+      case TypeOid.dateRange:
         if (input is DateRange) {
           return _encodeRange(input, encoding, Type.date.oid!);
         }
         throw FormatException(
             'Invalid type for parameter value. Expected: DateRange Got: ${input.runtimeType}');
 
-      case TypeOid.tsrange:
+      case TypeOid.timestampRange:
         if (input is DateTimeRange) {
           return _encodeRange(
               input, encoding, Type.timestampWithoutTimezone.oid!);
@@ -501,7 +501,7 @@ class PostgresBinaryEncoder {
         throw FormatException(
             'Invalid type for parameter value. Expected: DateTimeRange Got: ${input.runtimeType}');
 
-      case TypeOid.tstzrange:
+      case TypeOid.timestampTzRange:
         if (input is DateTimeRange) {
           return _encodeRange(input, encoding, Type.timestampWithTimezone.oid!);
         }
@@ -642,9 +642,10 @@ class PostgresBinaryEncoder {
       case (false, true) || (true, false):
         final value = range.lower ?? range.upper!;
         _encodeRangeValue(value, encoding, elementTypeOid, buffer);
+        break;
       case (true, true):
+        break;
     }
-    // print(buffer.toBytes());
     return buffer.toBytes();
   }
 
@@ -755,8 +756,8 @@ class PostgresBinaryDecoder {
         return Line(
             buffer.getFloat64(0), buffer.getFloat64(8), buffer.getFloat64(16));
 
-      case TypeOid.lseg:
-        return Lseg(Point(buffer.getFloat64(0), buffer.getFloat64(8)),
+      case TypeOid.lineSegment:
+        return LineSegment(Point(buffer.getFloat64(0), buffer.getFloat64(8)),
             Point(buffer.getFloat64(16), buffer.getFloat64(24)));
 
       case TypeOid.box:
@@ -824,18 +825,18 @@ class PostgresBinaryDecoder {
         return range == null
             ? IntRange.empty()
             : IntRange(range.$1, range.$2, range.$3);
-      case TypeOid.daterange:
+      case TypeOid.dateRange:
         final range = _decodeRange(buffer, dinput, Type.date.oid!);
         return range == null
             ? DateRange.empty()
             : DateRange(range.$1, range.$2, range.$3);
-      case TypeOid.tsrange:
+      case TypeOid.timestampRange:
         final range =
             _decodeRange(buffer, dinput, Type.timestampWithoutTimezone.oid!);
         return range == null
             ? DateTimeRange.empty()
             : DateTimeRange(range.$1, range.$2, range.$3);
-      case TypeOid.tstzrange:
+      case TypeOid.timestampTzRange:
         final range =
             _decodeRange(buffer, dinput, Type.timestampWithTimezone.oid!);
         return range == null

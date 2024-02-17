@@ -62,18 +62,18 @@ class Line {
 
 /// Describes PostgreSQL's geometric type: `lseg`.
 @immutable
-class Lseg {
+class LineSegment {
   late final Point p1, p2;
 
-  Lseg(this.p1, this.p2);
+  LineSegment(this.p1, this.p2);
 
   @override
-  String toString() => 'Lseg($p1,$p2)';
+  String toString() => 'LineSegment($p1,$p2)';
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Lseg &&
+      other is LineSegment &&
           runtimeType == other.runtimeType &&
           p1 == other.p1 &&
           p2 == other.p2;

@@ -292,8 +292,8 @@ abstract class Type<T extends Object> {
   /// Must be a [Line]
   static const line = GenericType<Line>(TypeOid.line);
 
-  /// Must be a [Lseg]
-  static const lseg = GenericType<Lseg>(TypeOid.lseg);
+  /// Must be a [LineSegment]
+  static const lineSegment = GenericType<LineSegment>(TypeOid.lineSegment);
 
   /// Must be a [Box]
   static const box = GenericType<Box>(TypeOid.box);
@@ -346,7 +346,7 @@ abstract class Type<T extends Object> {
   static const int8range = GenericType<IntRange>(TypeOid.int8range);
 
   /// Must be a [DateRange]
-  static const daterange = GenericType<DateRange>(TypeOid.daterange);
+  static const dateRange = GenericType<DateRange>(TypeOid.dateRange);
 
   /// Must be a [Range<Object>]
   ///
@@ -355,10 +355,12 @@ abstract class Type<T extends Object> {
   //     GenericType<ContinuousRange<String>>(TypeOid.numrange);
 
   /// Must be a [Range<DateTime>]
-  static const tsrange = GenericType<DateTimeRange>(TypeOid.tsrange);
+  static const timestampRange =
+      GenericType<DateTimeRange>(TypeOid.timestampRange);
 
   /// Must be a [Range<DateTime>]
-  static const tstzrange = GenericType<DateTimeRange>(TypeOid.tstzrange);
+  static const timestampTzRange =
+      GenericType<DateTimeRange>(TypeOid.timestampTzRange);
 
   /// The object ID of this data type.
   final int? oid;

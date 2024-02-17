@@ -21,35 +21,40 @@ class Bounds {
 
   Bounds(this.lower, this.upper);
 
+  ///  Construct a [Bounds] instance from a PostgreSQL [flag] value.
+  ///
+  ///
+  ///  PostgreSQL stores a flag byte that determines range bounds and
+  ///  whether a range is empty. The default lower and upper bounds are `exclusive`.
+  ///
+  ///  A range's flags byte contains these bits:
+  ///  - #define RANGE_EMPTY         0x01    (range is empty)
+  ///  - #define RANGE_LB_INC        0x02    (lower bound is inclusive)
+  ///  - #define RANGE_UB_INC        0x04    (upper bound is inclusive)
+  ///  - #define RANGE_LB_INF        0x08    (lower bound is -infinity)
+  ///  - #define RANGE_UB_INF        0x10    (upper bound is +infinity)
+  ///
+  ///  - #define RANGE_LB_NULL       0x20    (lower bound is null (NOT USED))
+  ///  - #define RANGE_UB_NULL       0x40    (upper bound is null (NOT USED))
+  ///  - #define RANGE_CONTAIN_EMPTY 0x80    (marks a GiST internal-page entry whose subtree contains some empty ranges)
+  ///
+  /// See https://www.npgsql.org/doc/dev/type-representations.html
   Bounds.fromFlag(int flag) {
     switch (flag) {
-      case 0 || 1:
+      case 0 || 1 || 8 || 16 || 24:
         lower = Bound.exclusive;
         upper = Bound.exclusive;
-      case 2:
+      case 2 || 18:
         lower = Bound.inclusive;
         upper = Bound.exclusive;
-      case 4:
+      case 4 || 12:
         lower = Bound.exclusive;
         upper = Bound.inclusive;
       case 6:
         lower = Bound.inclusive;
         upper = Bound.inclusive;
-      case 8:
-        lower = Bound.exclusive;
-        upper = Bound.exclusive;
-      case 12:
-        lower = Bound.exclusive;
-        upper = Bound.inclusive;
-      case 16:
-        lower = Bound.exclusive;
-        upper = Bound.exclusive;
-      case 18:
-        lower = Bound.inclusive;
-        upper = Bound.exclusive;
-      case 24:
-        lower = Bound.exclusive;
-        upper = Bound.exclusive;
+      default:
+        throw UnimplementedError('Range flag $flag not implemented');
     }
   }
 
