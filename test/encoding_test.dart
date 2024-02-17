@@ -553,8 +553,8 @@ void main() {
           Box(Point(1, -1), Point(-1, 1)),
           Box(Point(1, 1), Point(-1, -1)),
           Box(Point(-1, -1), Point(1, 1)),
-          Box(Point(0,0),Point(-1,0)),
-          Box(Point(0,0),Point(0,0)),
+          Box(Point(0, 0), Point(-1, 0)),
+          Box(Point(0, 0), Point(0, 0)),
         ],
         expectedDartType: 'Box',
       );
@@ -578,9 +578,11 @@ void main() {
         'path',
         [
           null,
-          Path([Point(0, 0)], false),
-          Path([Point(1, 2), Point(3, 4), Point(5, 6), Point(7, 8.2)], true),
-          Path([Point(1, 2), Point(3, 4), Point(5, 6), Point(-7, -8.2)], true),
+          Path([Point(0, 0)], open: false),
+          Path([Point(1, 2), Point(3, 4), Point(5, 6), Point(7, 8.2)],
+              open: true),
+          Path([Point(1, 2), Point(3, 4), Point(5, 6), Point(-7, -8.2)],
+              open: true),
         ],
         expectedDartType: 'Path',
       );
