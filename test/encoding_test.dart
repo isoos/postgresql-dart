@@ -547,9 +547,14 @@ void main() {
         'box',
         [
           null,
-          Box(Point(1, 2), Point(3, 4)),
-          Box(Point(1.0, 2), Point(1, 2)),
-          Box(Point(3, 4), Point(-12, -12312.123412)),
+          Box(Point(1.23, 2), Point(3, 4)),
+          // Check all box coordinate permutations are reordered correctly
+          Box(Point(-1, 1), Point(1, -1)),
+          Box(Point(1, -1), Point(-1, 1)),
+          Box(Point(1, 1), Point(-1, -1)),
+          Box(Point(-1, -1), Point(1, 1)),
+          Box(Point(0,0),Point(-1,0)),
+          Box(Point(0,0),Point(0,0)),
         ],
         expectedDartType: 'Box',
       );

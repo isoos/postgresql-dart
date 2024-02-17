@@ -85,9 +85,27 @@ class LineSegment {
 /// Describes PostgreSQL's geometric type: `box`.
 @immutable
 class Box {
-  late final Point p1, p2;
+  late final Point _p1, _p2;
 
-  Box(this.p1, this.p2);
+  /// Construct a [Box].
+  ///
+  /// Reorders point coordinates as needed to store the upper right and lower left corners, in that order.
+  ///
+  /// https://www.postgresql.org/docs/current/datatype-geometric.html#DATATYPE-GEOMETRIC-BOXES
+  Box(Point p1, Point p2) {
+    final (x1, x2) = p1.latitude >= p2.latitude
+        ? (p1.latitude, p2.latitude)
+        : (p2.latitude, p1.latitude);
+    final (y1, y2) = p1.longitude >= p2.longitude
+        ? (p1.longitude, p2.longitude)
+        : (p2.longitude, p1.longitude);
+    _p1 = Point(x1, y1);
+    _p2 = Point(x2, y2);
+  }
+
+  Point get p1 => _p1;
+
+  Point get p2 => _p2;
 
   @override
   String toString() => 'Box($p1,$p2)';
@@ -95,10 +113,10 @@ class Box {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Box &&
-          runtimeType == other.runtimeType &&
-          (p1 == other.p1 && p2 == other.p2 ||
-              p1 == other.p2 && p2 == other.p1);
+          other is Box &&
+              runtimeType == other.runtimeType &&
+              p1 == other.p1 &&
+              p2 == other.p2;
 
   @override
   int get hashCode => Object.hash(p1, p2);
