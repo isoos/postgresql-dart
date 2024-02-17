@@ -1,11 +1,13 @@
 import 'dart:convert';
-import 'dart:core';
 import 'dart:core' as core;
+import 'dart:core';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
 import 'types/generic_type.dart';
+import 'types/geo_types.dart';
+import 'types/range_types.dart';
 import 'types/type_registry.dart';
 
 /// In Postgresql `interval` values are stored as [months], [days], and [microseconds].
@@ -119,27 +121,84 @@ class LSN {
   int get hashCode => value.hashCode;
 }
 
-/// Describes PostgreSQL's geometric type: `point`.
-@immutable
-class Point {
-  /// also referred as `x`
-  final double latitude;
+/// Describes PostgreSQL's `time without time zone` type.
+///
+/// See https://www.postgresql.org/docs/current/datatype-datetime.html
+///
+/// `time with time zone` is not implemented as Postgres wiki recommends against its use:
+///
+/// https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_timetz
+class Time {
+  /// The time in microseconds
+  late final int microseconds;
 
-  /// also referred as `y`
-  final double longitude;
+  /// Construct a [Time] instance from [microseconds].
+  ///
+  /// [microseconds] must be positive and not resolve to a time larger than 24:00:00.000000.
+  Time.fromMicroseconds(this.microseconds) {
+    _check();
+  }
 
-  const Point(this.latitude, this.longitude);
+  /// Construct a [Time] instance.
+  ///
+  /// [Time] value must be positive and not larger than 24:00:00.000000.
+  Time(
+      [int hour = 0,
+      int minute = 0,
+      int second = 0,
+      int millisecond = 0,
+      int microsecond = 0]) {
+    microseconds = hour * Duration.microsecondsPerHour +
+        minute * Duration.microsecondsPerMinute +
+        second * Duration.microsecondsPerSecond +
+        millisecond * Duration.microsecondsPerMillisecond +
+        microsecond;
+    _check();
+  }
+
+  _check() {
+    if (microseconds > Duration.microsecondsPerDay) {
+      throw ArgumentError(
+          'Time: values greater than 24:00:00.000000 are not allowed');
+    }
+    if (microseconds < 0) {
+      throw ArgumentError('Time: negative value not allowed');
+    }
+  }
+
+  DateTime get utcDateTime =>
+      DateTime.fromMicrosecondsSinceEpoch(microseconds, isUtc: true);
+
+  /// The hour of the day, expressed as in a 25-hour clock `0...24`.
+  int get hour =>
+      microseconds == Duration.microsecondsPerDay ? 24 : utcDateTime.hour;
+
+  /// The minute `[0...59]`.
+  int get minute => utcDateTime.minute;
+
+  /// The second `[0...59]`.
+  int get second => utcDateTime.second;
+
+  /// The millisecond `[0...999]`.
+  int get millisecond => utcDateTime.millisecond;
+
+  /// The microsecond `[0...999]`.
+  int get microsecond => utcDateTime.microsecond;
+
+  @override
+  String toString() => microseconds == Duration.microsecondsPerDay
+      ? 'Time(24:00:00.000)'
+      : 'Time(${utcDateTime.toIso8601String().split('T')[1].replaceAll('Z', '')})';
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Point &&
+      other is Time &&
           runtimeType == other.runtimeType &&
-          latitude == other.latitude &&
-          longitude == other.longitude;
+          microseconds == other.microseconds;
 
   @override
-  int get hashCode => Object.hash(latitude, longitude);
+  int get hashCode => microseconds;
 }
 
 /// Supported data types.
@@ -176,6 +235,9 @@ abstract class Type<T extends Object> {
 
   /// Must be a [bool]
   static const boolean = GenericType<bool>(TypeOid.boolean);
+
+  /// Must be a [Time]
+  static const time = GenericType<Time>(TypeOid.time);
 
   /// Must be a [DateTime] (microsecond date and time precision)
   static const timestampWithoutTimezone =
@@ -227,6 +289,24 @@ abstract class Type<T extends Object> {
   /// Must be a [Point]
   static const point = GenericType<Point>(TypeOid.point);
 
+  /// Must be a [Line]
+  static const line = GenericType<Line>(TypeOid.line);
+
+  /// Must be a [LineSegment]
+  static const lineSegment = GenericType<LineSegment>(TypeOid.lineSegment);
+
+  /// Must be a [Box]
+  static const box = GenericType<Box>(TypeOid.box);
+
+  /// Must be a [Polygon]
+  static const polygon = GenericType<Polygon>(TypeOid.polygon);
+
+  /// Must be a [Path]
+  static const path = GenericType<Path>(TypeOid.path);
+
+  /// Must be a [Circle]
+  static const circle = GenericType<Circle>(TypeOid.circle);
+
   /// Must be a [List<bool>]
   static const booleanArray = GenericType<List<bool>>(TypeOid.booleanArray);
 
@@ -258,6 +338,29 @@ abstract class Type<T extends Object> {
 
   /// Impossible to bind to, always null when read.
   static const voidType = GenericType<Object>(TypeOid.voidType);
+
+  /// Must be a [IntRange]
+  static const int4range = GenericType<IntRange>(TypeOid.int4range);
+
+  /// Must be a [IntRange]
+  static const int8range = GenericType<IntRange>(TypeOid.int8range);
+
+  /// Must be a [DateRange]
+  static const dateRange = GenericType<DateRange>(TypeOid.dateRange);
+
+  /// Must be a [Range<Object>]
+  ///
+  /// Supported element types are the same as for [Type.numeric].
+  // static const numrange =
+  //     GenericType<ContinuousRange<String>>(TypeOid.numrange);
+
+  /// Must be a [Range<DateTime>]
+  static const timestampRange =
+      GenericType<DateTimeRange>(TypeOid.timestampRange);
+
+  /// Must be a [Range<DateTime>]
+  static const timestampTzRange =
+      GenericType<DateTimeRange>(TypeOid.timestampTzRange);
 
   /// The object ID of this data type.
   final int? oid;

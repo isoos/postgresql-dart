@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.9
+
+Added the following PostgreSQL builtin types:
+- Geometric types `line`, `lseg`,`path`,`polygon`,`box`,`circle`
+- Range types `int4range`, `int8range`, `daterange`, `tsrange`,`tstzrange`
+- Time type `time`
+
 ## 3.0.8
 
 - Properly react to connection losses by reporting the database connection as

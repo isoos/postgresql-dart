@@ -4,6 +4,7 @@ import 'package:postgres/src/types/generic_type.dart';
 
 import '../exceptions.dart';
 import '../types.dart';
+import 'geo_types.dart';
 import 'type_registry.dart';
 
 class PostgresTextEncoder {
