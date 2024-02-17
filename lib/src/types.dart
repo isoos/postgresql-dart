@@ -240,12 +240,18 @@ abstract class Type<T extends Object> {
   static const time = GenericType<Time>(TypeOid.time);
 
   /// Must be a [DateTime] (microsecond date and time precision)
-  static const timestampWithoutTimezone =
+  static const timestamp =
       GenericType<DateTime>(TypeOid.timestampWithoutTimezone);
 
+  /// Please use [Type.timestamp] instead.
+  static const timestampWithoutTimezone = timestamp;
+
   /// Must be a [DateTime] (microsecond date and time precision)
-  static const timestampWithTimezone =
+  static const timestampTz =
       GenericType<DateTime>(TypeOid.timestampWithTimezone);
+
+  /// Please use [Type.timestampTz] instead.
+  static const timestampWithTimezone = timestampTz;
 
   /// Must be a [Interval]
   static const interval = GenericType<Interval>(TypeOid.interval);
@@ -340,10 +346,10 @@ abstract class Type<T extends Object> {
   static const voidType = GenericType<Object>(TypeOid.voidType);
 
   /// Must be a [IntRange]
-  static const int4range = GenericType<IntRange>(TypeOid.int4range);
+  static const integerRange = GenericType<IntRange>(TypeOid.integerRange);
 
   /// Must be a [IntRange]
-  static const int8range = GenericType<IntRange>(TypeOid.int8range);
+  static const bigIntegerRange = GenericType<IntRange>(TypeOid.bigIntegerRange);
 
   /// Must be a [DateRange]
   static const dateRange = GenericType<DateRange>(TypeOid.dateRange);

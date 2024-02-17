@@ -16,6 +16,7 @@ typedef TypeDecoderFn = Object? Function(DecodeInput input);
 class TypeOid {
   static const bigInteger = 20;
   static const bigIntegerArray = 1016;
+  static const bigIntegerRange = 3926;
   static const boolean = 16;
   static const booleanArray = 1000;
   static const box = 603;
@@ -26,10 +27,9 @@ class TypeOid {
   static const dateRange = 3912;
   static const double = 701;
   static const doubleArray = 1022;
-  static const int4range = 3904;
-  static const int8range = 3926;
   static const integer = 23;
   static const integerArray = 1007;
+  static const integerRange = 3904;
   static const interval = 1186;
   static const json = 114;
   static const jsonb = 3802;
@@ -38,7 +38,7 @@ class TypeOid {
   static const lineSegment = 601;
   static const name = 19;
   static const numeric = 1700;
-  static const numrange = 3906;
+  static const numericRange = 3906;
   static const path = 602;
   static const point = 600;
   static const polygon = 604;
@@ -48,10 +48,16 @@ class TypeOid {
   static const text = 25;
   static const textArray = 1009;
   static const time = 1083;
-  static const timestampWithoutTimezone = 1114;
-  static const timestampWithTimezone = 1184;
+  static const timestamp = 1114;
   static const timestampRange = 3908;
+
+  /// Please use [TypeOid.timestamp] instead.
+  static const timestampWithoutTimezone = timestamp;
+  static const timestampTz = 1184;
   static const timestampTzRange = 3910;
+
+  /// Please use [TypeOid.timestampTz] instead.
+  static const timestampWithTimezone = timestampTz;
   static const uuid = 2950;
   static const varChar = 1043;
   static const varCharArray = 1015;
@@ -96,8 +102,8 @@ final _builtInTypes = <Type>{
   Type.varCharArray,
   Type.jsonbArray,
   Type.regtype,
-  Type.int4range,
-  Type.int8range,
+  Type.integerRange,
+  Type.bigIntegerRange,
   Type.dateRange,
   // Type.numrange,
   Type.timestampRange,
@@ -119,9 +125,9 @@ final _builtInTypeNames = <String, Type>{
   'int': Type.integer,
   'int2': Type.smallInteger,
   'int4': Type.integer,
-  'int4range': Type.int4range,
+  'int4range': Type.integerRange,
   'int8': Type.bigInteger,
-  'int8range': Type.int8range,
+  'int8range': Type.bigIntegerRange,
   'integer': Type.integer,
   'interval': Type.interval,
   'json': Type.json,

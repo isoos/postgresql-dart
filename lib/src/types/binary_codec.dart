@@ -472,14 +472,14 @@ class PostgresBinaryEncoder {
               'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
         }
 
-      case TypeOid.int4range:
+      case TypeOid.integerRange:
         if (input is IntRange) {
           return _encodeRange(input, encoding, Type.integer.oid!);
         }
         throw FormatException(
             'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}');
 
-      case TypeOid.int8range:
+      case TypeOid.bigIntegerRange:
         if (input is IntRange) {
           return _encodeRange(input, encoding, Type.bigInteger.oid!);
         }
@@ -815,12 +815,12 @@ class PostgresBinaryDecoder {
           return _jsonFusedEncoding(encoding).decode(bytes);
         });
 
-      case TypeOid.int4range:
+      case TypeOid.integerRange:
         final range = _decodeRange(buffer, dinput, Type.integer.oid!);
         return range == null
             ? IntRange.empty()
             : IntRange(range.$1, range.$2, range.$3);
-      case TypeOid.int8range:
+      case TypeOid.bigIntegerRange:
         final range = _decodeRange(buffer, dinput, Type.bigInteger.oid!);
         return range == null
             ? IntRange.empty()
