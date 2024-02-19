@@ -63,7 +63,7 @@ class Line {
 /// Describes PostgreSQL's geometric type: `lseg`.
 @immutable
 class LineSegment {
-  late final Point p1, p2;
+  final Point p1, p2;
 
   LineSegment(this.p1, this.p2);
 
@@ -113,10 +113,10 @@ class Box {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is Box &&
-              runtimeType == other.runtimeType &&
-              p1 == other.p1 &&
-              p2 == other.p2;
+      other is Box &&
+          runtimeType == other.runtimeType &&
+          p1 == other.p1 &&
+          p2 == other.p2;
 
   @override
   int get hashCode => Object.hash(p1, p2);
@@ -125,15 +125,14 @@ class Box {
 /// Describes PostgreSQL's geometric type: `polygon`.
 @immutable
 class Polygon {
-  late final List<Point> _points;
+  final List<Point> _points;
 
   List<Point> get points => _points;
 
-  Polygon(Iterable<Point> points) {
-    if (points.isEmpty) {
+  Polygon(Iterable<Point> points) : _points = List.unmodifiable(points) {
+    if (_points.isEmpty) {
       throw ArgumentError('$runtimeType: at least one point required');
     }
-    _points = List.unmodifiable(points);
   }
 
   @override
@@ -162,7 +161,7 @@ class Polygon {
 class Path extends Polygon {
   final bool open;
 
-  Path(super.points, this.open);
+  Path(super.points, {required this.open});
 
   @override
   String toString() =>

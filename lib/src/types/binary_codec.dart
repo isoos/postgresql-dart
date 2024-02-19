@@ -773,7 +773,7 @@ class PostgresBinaryDecoder {
           final y = buffer.getFloat64(i * 16 + 13);
           points.add(Point(x, y));
         }
-        return Path(points, open);
+        return Path(points, open: open);
 
       case TypeOid.polygon:
         final length = buffer.getInt32(0);
