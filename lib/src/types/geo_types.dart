@@ -35,7 +35,8 @@ class Point {
 /// See https://www.postgresql.org/docs/current/datatype-geometric.html#DATATYPE-LINE
 ///
 @immutable
-class Line {
+@sealed
+final class Line {
   final double a, b, c;
 
   Line(this.a, this.b, this.c) {
@@ -50,11 +51,7 @@ class Line {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Line &&
-          runtimeType == other.runtimeType &&
-          a == other.a &&
-          b == other.b &&
-          c == other.c;
+      other is Line && a == other.a && b == other.b && c == other.c;
 
   @override
   int get hashCode => Object.hash(a, b, c);
@@ -62,7 +59,8 @@ class Line {
 
 /// Describes PostgreSQL's geometric type: `lseg`.
 @immutable
-class LineSegment {
+@sealed
+final class LineSegment {
   final Point p1, p2;
 
   LineSegment(this.p1, this.p2);
@@ -73,10 +71,7 @@ class LineSegment {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is LineSegment &&
-          runtimeType == other.runtimeType &&
-          p1 == other.p1 &&
-          p2 == other.p2;
+      other is LineSegment && p1 == other.p1 && p2 == other.p2;
 
   @override
   int get hashCode => Object.hash(p1, p2);
@@ -84,7 +79,8 @@ class LineSegment {
 
 /// Describes PostgreSQL's geometric type: `box`.
 @immutable
-class Box {
+@sealed
+final class Box {
   late final Point _p1, _p2;
 
   /// Construct a [Box].
@@ -113,10 +109,7 @@ class Box {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Box &&
-          runtimeType == other.runtimeType &&
-          p1 == other.p1 &&
-          p2 == other.p2;
+      other is Box && p1 == other.p1 && p2 == other.p2;
 
   @override
   int get hashCode => Object.hash(p1, p2);
@@ -124,7 +117,8 @@ class Box {
 
 /// Describes PostgreSQL's geometric type: `polygon`.
 @immutable
-class Polygon {
+@sealed
+final class Polygon {
   final List<Point> _points;
 
   List<Point> get points => _points;
@@ -141,9 +135,7 @@ class Polygon {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Polygon &&
-          runtimeType == other.runtimeType &&
-          _allPointsAreEqual(other.points);
+      other is Polygon && _allPointsAreEqual(other.points);
 
   bool _allPointsAreEqual(List<Point> otherPoints) {
     if (points.length != otherPoints.length) return false;
@@ -158,7 +150,8 @@ class Polygon {
 }
 
 /// Describes PostgreSQL's geometric type: `path`.
-class Path extends Polygon {
+@sealed
+final class Path extends Polygon {
   final bool open;
 
   Path(super.points, {required this.open});
@@ -170,16 +163,15 @@ class Path extends Polygon {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Path &&
-          runtimeType == other.runtimeType &&
-          open == other.open &&
-          _allPointsAreEqual(other.points);
+      other is Path && open == other.open && _allPointsAreEqual(other.points);
 
   @override
   int get hashCode => Object.hashAll([...points, open]);
 }
 
-class Circle {
+@immutable
+@sealed
+final class Circle {
   final Point center;
   final double radius;
 
@@ -193,10 +185,7 @@ class Circle {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Circle &&
-          runtimeType == other.runtimeType &&
-          radius == other.radius &&
-          center == other.center;
+      other is Circle && radius == other.radius && center == other.center;
 
   @override
   int get hashCode => Object.hash(center, radius);

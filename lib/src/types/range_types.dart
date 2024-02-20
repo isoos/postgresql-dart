@@ -15,7 +15,8 @@ enum Bound {
 ///
 /// https://www.postgresql.org/docs/current/rangetypes.html#RANGETYPES-INCLUSIVITY
 @immutable
-class Bounds {
+@sealed
+final class Bounds {
   late final Bound lower;
   late final Bound upper;
 
@@ -82,10 +83,7 @@ class Bounds {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Bounds &&
-          runtimeType == other.runtimeType &&
-          lower == other.lower &&
-          upper == other.upper;
+      other is Bounds && lower == other.lower && upper == other.upper;
 
   @override
   int get hashCode => _lowerFlag + _upperFlag;
@@ -164,7 +162,8 @@ abstract interface class DiscreteRange<T> extends Range<T> {
 /// Describes PostgreSQL's builtin `int4range` and `int8range`
 ///
 /// https://www.postgresql.org/docs/current/rangetypes.html#RANGETYPES-BUILTIN
-class IntRange extends DiscreteRange<int> {
+@sealed
+final class IntRange extends DiscreteRange<int> {
   IntRange(super.lower, super.upper, super.bounds);
 
   /// Construct an empty [IntRange]
@@ -190,7 +189,8 @@ final _z0 = DateTime.utc(1970);
 /// Describes PostgreSQL's builtin `daterange`
 ///
 /// https://www.postgresql.org/docs/current/rangetypes.html#RANGETYPES-BUILTIN
-class DateRange extends DiscreteRange<DateTime> {
+@sealed
+final class DateRange extends DiscreteRange<DateTime> {
   DateRange(super.lower, super.upper, super.bounds);
 
   /// Construct an empty [DateRange]
@@ -254,7 +254,8 @@ interface class ContinuousRange<T> extends Range<T> {
   }
 }
 
-class DateTimeRange extends ContinuousRange<DateTime> {
+@sealed
+final class DateTimeRange extends ContinuousRange<DateTime> {
   DateTimeRange(super.lower, super.upper, super.bounds);
 
   /// Construct an empty [TsRange]

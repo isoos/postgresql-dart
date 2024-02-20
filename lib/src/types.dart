@@ -128,7 +128,9 @@ class LSN {
 /// `time with time zone` is not implemented as Postgres wiki recommends against its use:
 ///
 /// https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_timetz
-class Time {
+@immutable
+@sealed
+final class Time {
   /// The time in microseconds
   late final int microseconds;
 
@@ -142,18 +144,18 @@ class Time {
   /// Construct a [Time] instance.
   ///
   /// [Time] value must be positive and not larger than 24:00:00.000000.
-  Time(
-      [int hour = 0,
-      int minute = 0,
-      int second = 0,
-      int millisecond = 0,
-      int microsecond = 0]) {
-    microseconds = hour * Duration.microsecondsPerHour +
+  factory Time([
+    int hour = 0,
+    int minute = 0,
+    int second = 0,
+    int millisecond = 0,
+    int microsecond = 0,
+  ]) {
+    return Time.fromMicroseconds(hour * Duration.microsecondsPerHour +
         minute * Duration.microsecondsPerMinute +
         second * Duration.microsecondsPerSecond +
         millisecond * Duration.microsecondsPerMillisecond +
-        microsecond;
-    _check();
+        microsecond);
   }
 
   _check() {
@@ -193,9 +195,7 @@ class Time {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Time &&
-          runtimeType == other.runtimeType &&
-          microseconds == other.microseconds;
+      other is Time && microseconds == other.microseconds;
 
   @override
   int get hashCode => microseconds;
