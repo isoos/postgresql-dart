@@ -379,6 +379,19 @@ void main() {
       );
     });
 
+    test('smallIntegerArray', () async {
+      await expectReversible(
+        '_int2',
+        [
+          null,
+          <int>[],
+          [-1, 0, 200],
+          [-123],
+        ],
+        expectedDartType: 'List<int>',
+      );
+    });
+
     test('integerArray', () async {
       await expectReversible(
         '_int4',
@@ -402,6 +415,38 @@ void main() {
           [-123],
         ],
         expectedDartType: 'List<int>',
+      );
+    });
+
+    test('timestampArray', () async {
+      await expectReversible(
+        '_timestamp',
+        [
+          null,
+          <DateTime>[],
+          [
+            DateTime.utc(1970),
+            DateTime.fromMicrosecondsSinceEpoch(12345678, isUtc: true),
+            DateTime.timestamp()
+          ],
+        ],
+        expectedDartType: 'List<DateTime>',
+      );
+    });
+
+    test('timestampTzArray', () async {
+      await expectReversible(
+        '_timestamptz',
+        [
+          null,
+          <DateTime>[],
+          [
+            DateTime.utc(1970),
+            DateTime.fromMicrosecondsSinceEpoch(12345678, isUtc: true),
+            DateTime.timestamp()
+          ],
+        ],
+        expectedDartType: 'List<DateTime>',
       );
     });
 

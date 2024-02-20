@@ -317,6 +317,10 @@ abstract class Type<T extends Object> {
   static const booleanArray = GenericType<List<bool>>(TypeOid.booleanArray);
 
   /// Must be a [List<int>]
+  static const smallIntegerArray =
+      GenericType<List<int>>(TypeOid.smallIntegerArray);
+
+  /// Must be a [List<int>]
   static const integerArray = GenericType<List<int>>(TypeOid.integerArray);
 
   /// Must be a [List<int>]
@@ -329,6 +333,14 @@ abstract class Type<T extends Object> {
   /// Must be a [List<double>]
   static const doubleArray =
       GenericType<List<core.double>>(TypeOid.doubleArray);
+
+  /// Must be a [DateTime] (microsecond date and time precision)
+  static const timestampArray =
+      GenericType<List<DateTime>>(TypeOid.timestampArray);
+
+  /// Must be a [DateTime] (microsecond date and time precision)
+  static const timestampTzArray =
+      GenericType<List<DateTime>>(TypeOid.timestampTzArray);
 
   /// Must be a [String]
   static const varChar = GenericType<String>(TypeOid.varChar);

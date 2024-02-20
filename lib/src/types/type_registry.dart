@@ -45,15 +45,18 @@ class TypeOid {
   static const real = 700;
   static const regtype = 2206;
   static const smallInteger = 21;
+  static const smallIntegerArray = 1005;
   static const text = 25;
   static const textArray = 1009;
   static const time = 1083;
   static const timestamp = 1114;
+  static const timestampArray = 1115;
   static const timestampRange = 3908;
 
   /// Please use [TypeOid.timestamp] instead.
   static const timestampWithoutTimezone = timestamp;
   static const timestampTz = 1184;
+  static const timestampTzArray = 1185;
   static const timestampTzRange = 3910;
 
   /// Please use [TypeOid.timestampTz] instead.
@@ -95,10 +98,13 @@ final _builtInTypes = <Type>{
   Type.path,
   Type.circle,
   Type.booleanArray,
+  Type.smallIntegerArray,
   Type.integerArray,
   Type.bigIntegerArray,
   Type.textArray,
   Type.doubleArray,
+  Type.timestampArray,
+  Type.timestampTzArray,
   Type.varCharArray,
   Type.jsonbArray,
   Type.regtype,
@@ -157,8 +163,11 @@ final _builtInTypeNames = <String, Type>{
   'uuid': Type.uuid,
   '_bool': Type.booleanArray,
   '_float8': Type.doubleArray,
+  '_int2': Type.smallIntegerArray,
   '_int4': Type.integerArray,
   '_int8': Type.bigIntegerArray,
+  '_timestamp': Type.timestampArray,
+  '_timestamptz': Type.timestampTzArray,
   '_jsonb': Type.jsonbArray,
   '_text': Type.textArray,
   '_varchar': Type.varCharArray,
