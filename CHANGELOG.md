@@ -8,7 +8,7 @@ Added the following PostgreSQL builtin types:
 - Time type `time`
 - Array types `_int2`, `_timestamp`, `_timestamptz`
 
-Huge thanks for [#294](https://github.com/isoos/postgresql-dart/pull/294) by [wolframm](https://github.com/wolframm).
+Huge thanks for [#294](https://github.com/isoos/postgresql-dart/pull/294) by [wolframm](https://github.com/Wolframm-Activities-OU).
 
 ## 3.0.8
 
