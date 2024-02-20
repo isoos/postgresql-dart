@@ -374,6 +374,21 @@ class PostgresBinaryEncoder {
               'Invalid type for parameter value. Expected: List<bool> Got: ${input.runtimeType}');
         }
 
+      case TypeOid.smallIntegerArray:
+        {
+          if (input is List) {
+            return _writeListBytes<int>(
+              _castOrThrowList<int>(input),
+              TypeOid.smallInteger,
+              (_) => 2,
+              (writer, item) => writer.writeInt16(item),
+              encoding,
+            );
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
+        }
+
       case TypeOid.integerArray:
         {
           if (input is List) {
@@ -402,6 +417,38 @@ class PostgresBinaryEncoder {
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
+        }
+
+      case TypeOid.timestampArray:
+        {
+          if (input is List) {
+            return _writeListBytes<DateTime>(
+              _castOrThrowList<DateTime>(input),
+              TypeOid.timestamp,
+              (_) => 8,
+              (writer, item) => writer.writeInt64(
+                  item.toUtc().difference(DateTime.utc(2000)).inMicroseconds),
+              encoding,
+            );
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: List<DateTime> Got: ${input.runtimeType}');
+        }
+
+      case TypeOid.timestampTzArray:
+        {
+          if (input is List) {
+            return _writeListBytes<DateTime>(
+              _castOrThrowList<DateTime>(input),
+              TypeOid.timestampTz,
+              (_) => 8,
+              (writer, item) => writer.writeInt64(
+                  item.toUtc().difference(DateTime.utc(2000)).inMicroseconds),
+              encoding,
+            );
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: List<DateTime> Got: ${input.runtimeType}');
         }
 
       case TypeOid.varCharArray:
@@ -793,10 +840,19 @@ class PostgresBinaryDecoder {
         return readListBytes<bool>(
             input, (reader, _) => reader.readUint8() != 0);
 
+      case TypeOid.smallIntegerArray:
+        return readListBytes<int>(input, (reader, _) => reader.readInt16());
       case TypeOid.integerArray:
         return readListBytes<int>(input, (reader, _) => reader.readInt32());
       case TypeOid.bigIntegerArray:
         return readListBytes<int>(input, (reader, _) => reader.readInt64());
+
+      case TypeOid.timestampArray:
+      case TypeOid.timestampTzArray:
+        return readListBytes<DateTime>(
+            input,
+            (reader, _) => DateTime.utc(2000)
+                .add(Duration(microseconds: reader.readInt64())));
 
       case TypeOid.varCharArray:
       case TypeOid.textArray:
