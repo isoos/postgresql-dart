@@ -24,6 +24,7 @@ class TypeOid {
   static const character = 1042;
   static const circle = 718;
   static const date = 1082;
+  static const dateArray = 1182;
   static const dateRange = 3912;
   static const double = 701;
   static const doubleArray = 1022;
@@ -49,6 +50,7 @@ class TypeOid {
   static const text = 25;
   static const textArray = 1009;
   static const time = 1083;
+  static const timeArray = 1183;
   static const timestamp = 1114;
   static const timestampArray = 1115;
   static const timestampRange = 3908;
@@ -62,6 +64,7 @@ class TypeOid {
   /// Please use [TypeOid.timestampTz] instead.
   static const timestampWithTimezone = timestampTz;
   static const uuid = 2950;
+  static const uuidArray = 2951;
   static const varChar = 1043;
   static const varCharArray = 1015;
   static const voidType = 2278;
@@ -103,8 +106,11 @@ final _builtInTypes = <Type>{
   Type.bigIntegerArray,
   Type.textArray,
   Type.doubleArray,
+  Type.dateArray,
+  Type.timeArray,
   Type.timestampArray,
   Type.timestampTzArray,
+  Type.uuidArray,
   Type.varCharArray,
   Type.jsonbArray,
   Type.regtype,
@@ -162,14 +168,17 @@ final _builtInTypeNames = <String, Type>{
   'varchar': Type.varChar,
   'uuid': Type.uuid,
   '_bool': Type.booleanArray,
+  '_date': Type.dateArray,
   '_float8': Type.doubleArray,
   '_int2': Type.smallIntegerArray,
   '_int4': Type.integerArray,
   '_int8': Type.bigIntegerArray,
+  '_time': Type.timeArray,
   '_timestamp': Type.timestampArray,
   '_timestamptz': Type.timestampTzArray,
   '_jsonb': Type.jsonbArray,
   '_text': Type.textArray,
+  '_uuid': Type.uuidArray,
   '_varchar': Type.varCharArray,
 };
 

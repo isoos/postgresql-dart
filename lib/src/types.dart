@@ -292,6 +292,9 @@ abstract class Type<T extends Object> {
   /// When returned from database, format will be xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
   static const uuid = GenericType<String>(TypeOid.uuid);
 
+  /// Must be a [List<String>].
+  static const uuidArray = GenericType<List<String>>(TypeOid.uuidArray);
+
   /// Must be a [Point]
   static const point = GenericType<Point>(TypeOid.point);
 
@@ -334,11 +337,17 @@ abstract class Type<T extends Object> {
   static const doubleArray =
       GenericType<List<core.double>>(TypeOid.doubleArray);
 
-  /// Must be a [DateTime] (microsecond date and time precision)
+  /// Must be a [List<DateTime>]
+  static const dateArray = GenericType<List<DateTime>>(TypeOid.dateArray);
+
+  /// Must be a [List<Time>]
+  static const timeArray = GenericType<List<Time>>(TypeOid.timeArray);
+
+  /// Must be a [List<DateTime>] (microsecond date and time precision)
   static const timestampArray =
       GenericType<List<DateTime>>(TypeOid.timestampArray);
 
-  /// Must be a [DateTime] (microsecond date and time precision)
+  /// Must be a [List<DateTime>] (microsecond date and time precision)
   static const timestampTzArray =
       GenericType<List<DateTime>>(TypeOid.timestampTzArray);
 
