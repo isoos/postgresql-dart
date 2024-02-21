@@ -232,36 +232,22 @@ class PostgresBinaryEncoder {
             throw FormatException(
                 'Invalid type for parameter value. Expected: String Got: ${input.runtimeType}');
           }
+          return _encodeUuid(input);
+        }
 
-          final hexBytes = input
-              .toLowerCase()
-              .codeUnits
-              .where((c) => c != _dashUnit)
-              .toList();
-          if (hexBytes.length != 32) {
-            throw FormatException(
-                "Invalid UUID string. There must be exactly 32 hexadecimal (0-9 and a-f) characters and any number of '-' characters.");
+      case TypeOid.uuidArray:
+        {
+          if (input is List) {
+            return _writeListBytes<String>(
+              _castOrThrowList<String>(input),
+              TypeOid.uuid,
+              (_) => 16,
+              (writer, item) => writer.write(_encodeUuid(item)),
+              encoding,
+            );
           }
-
-          int byteConvert(int charCode) {
-            if (charCode >= 48 && charCode <= 57) {
-              return charCode - 48;
-            } else if (charCode >= 97 && charCode <= 102) {
-              return charCode - 87;
-            }
-
-            throw FormatException(
-                'Invalid UUID string. Contains non-hexadecimal character (0-9 and a-f).');
-          }
-
-          final outBuffer = Uint8List(16);
-          for (var i = 0, j = 0; i < hexBytes.length; i += 2, j++) {
-            final upperByte = byteConvert(hexBytes[i]);
-            final lowerByte = byteConvert(hexBytes[i + 1]);
-
-            outBuffer[j] = (upperByte << 4) + lowerByte;
-          }
-          return outBuffer;
+          throw FormatException(
+              'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
         }
 
       case TypeOid.point:
@@ -417,6 +403,37 @@ class PostgresBinaryEncoder {
           }
           throw FormatException(
               'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
+        }
+
+      case TypeOid.dateArray:
+        {
+          if (input is List) {
+            return _writeListBytes<DateTime>(
+              _castOrThrowList<DateTime>(input),
+              TypeOid.date,
+              (_) => 4,
+              (writer, item) => writer.writeInt32(
+                  item.toUtc().difference(DateTime.utc(2000)).inDays),
+              encoding,
+            );
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: List<DateTime> Got: ${input.runtimeType}');
+        }
+
+      case TypeOid.timeArray:
+        {
+          if (input is List) {
+            return _writeListBytes<Time>(
+              _castOrThrowList<Time>(input),
+              TypeOid.time,
+              (_) => 8,
+              (writer, item) => writer.writeInt64(item.microseconds),
+              encoding,
+            );
+          }
+          throw FormatException(
+              'Invalid type for parameter value. Expected: List<Time> Got: ${input.runtimeType}');
         }
 
       case TypeOid.timestampArray:
@@ -696,7 +713,7 @@ class PostgresBinaryEncoder {
     return buffer.toBytes();
   }
 
-  // Returns 4 length bytes + value bytes
+  // Adds 4 length bytes followed by the value bytes
   _encodeRangeValue<T>(
       T value, Encoding encoding, int elementTypeOid, BytesBuffer buffer) {
     final encoder = PostgresBinaryEncoder(elementTypeOid);
@@ -704,6 +721,35 @@ class PostgresBinaryEncoder {
     final lengthBytes = ByteData(4)..setInt32(0, valueBytes.length);
     buffer.add(lengthBytes.buffer.asUint8List());
     buffer.add(valueBytes);
+  }
+
+  Uint8List _encodeUuid(String value) {
+    final hexBytes =
+        value.toLowerCase().codeUnits.where((c) => c != _dashUnit).toList();
+    if (hexBytes.length != 32) {
+      throw FormatException(
+          "Invalid UUID string. There must be exactly 32 hexadecimal (0-9 and a-f) characters and any number of '-' characters.");
+    }
+
+    int byteConvert(int charCode) {
+      if (charCode >= 48 && charCode <= 57) {
+        return charCode - 48;
+      } else if (charCode >= 97 && charCode <= 102) {
+        return charCode - 87;
+      }
+
+      throw FormatException(
+          'Invalid UUID string. Contains non-hexadecimal character (0-9 and a-f).');
+    }
+
+    final outBuffer = Uint8List(16);
+    for (var i = 0, j = 0; i < hexBytes.length; i += 2, j++) {
+      final upperByte = byteConvert(hexBytes[i]);
+      final lowerByte = byteConvert(hexBytes[i + 1]);
+
+      outBuffer[j] = (upperByte << 4) + lowerByte;
+    }
+    return outBuffer;
   }
 }
 
@@ -771,24 +817,11 @@ class PostgresBinaryDecoder {
         return input;
 
       case TypeOid.uuid:
-        {
-          final buf = StringBuffer();
-          for (var i = 0; i < buffer.lengthInBytes; i++) {
-            final byteValue = buffer.getUint8(i);
-            final upperByteValue = byteValue >> 4;
-            final lowerByteValue = byteValue & 0x0f;
+        return _decodeUuid(input);
+      case TypeOid.uuidArray:
+        return readListBytes<String>(
+            input, (reader, _) => _decodeUuid(reader.read(16)));
 
-            final upperByteHex = _hex[upperByteValue];
-            final lowerByteHex = _hex[lowerByteValue];
-            buf.write(upperByteHex);
-            buf.write(lowerByteHex);
-            if (i == 3 || i == 5 || i == 7 || i == 9) {
-              buf.writeCharCode(_dashUnit);
-            }
-          }
-
-          return buf.toString();
-        }
       case TypeOid.regtype:
         final data = input.buffer.asByteData(input.offsetInBytes, input.length);
         final oid = data.getInt32(0);
@@ -847,6 +880,14 @@ class PostgresBinaryDecoder {
       case TypeOid.bigIntegerArray:
         return readListBytes<int>(input, (reader, _) => reader.readInt64());
 
+      case TypeOid.dateArray:
+        return readListBytes<DateTime>(
+            input,
+            (reader, _) =>
+                DateTime.utc(2000).add(Duration(days: reader.readInt32())));
+      case TypeOid.timeArray:
+        return readListBytes<Time>(
+            input, (reader, _) => Time.fromMicroseconds(reader.readInt64()));
       case TypeOid.timestampArray:
       case TypeOid.timestampTzArray:
         return readListBytes<DateTime>(
@@ -1011,5 +1052,24 @@ class PostgresBinaryDecoder {
         isBinary: dinput.isBinary,
         encoding: dinput.encoding,
         typeRegistry: dinput.typeRegistry)) as T;
+  }
+
+  String _decodeUuid(Uint8List bytes) {
+    late final buffer =
+        ByteData.view(bytes.buffer, bytes.offsetInBytes, bytes.lengthInBytes);
+    final buf = StringBuffer();
+    for (var i = 0; i < buffer.lengthInBytes; i++) {
+      final byteValue = buffer.getUint8(i);
+      final upperByteValue = byteValue >> 4;
+      final lowerByteValue = byteValue & 0x0f;
+      final upperByteHex = _hex[upperByteValue];
+      final lowerByteHex = _hex[lowerByteValue];
+      buf.write(upperByteHex);
+      buf.write(lowerByteHex);
+      if (i == 3 || i == 5 || i == 7 || i == 9) {
+        buf.writeCharCode(_dashUnit);
+      }
+    }
+    return buf.toString();
   }
 }

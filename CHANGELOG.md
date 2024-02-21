@@ -3,10 +3,10 @@
 ## 3.1.0
 
 Added the following PostgreSQL builtin types:
-- Geometric types `line`, `lseg`,`path`,`polygon`,`box`,`circle`
-- Range types `int4range`, `int8range`, `daterange`, `tsrange`,`tstzrange`
+- Geometric types `line`, `lseg`, `path`, `polygon`, `box`, `circle`
+- Range types `int4range`, `int8range`, `daterange`, `tsrange`, `tstzrange`
 - Time type `time`
-- Array types `_int2`, `_timestamp`, `_timestamptz`
+- Array types `_int2`, `_date`, `_time`, `_timestamp`, `_timestamptz`, `_uuid`
 
 Huge thanks for [#294](https://github.com/isoos/postgresql-dart/pull/294) by [wolframm](https://github.com/Wolframm-Activities-OU).
 

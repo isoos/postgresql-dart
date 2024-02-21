@@ -168,6 +168,22 @@ void main() {
       );
     });
 
+    test('dateArray', () async {
+      await expectReversible(
+        '_date',
+        [
+          null,
+          <DateTime>[],
+          [
+            DateTime.utc(1920, 10, 1),
+            DateTime.utc(2120, 10, 5),
+            DateTime.utc(2016, 10, 1),
+          ],
+        ],
+        expectedDartType: 'List<DateTime>',
+      );
+    });
+
     test('timestamp', () async {
       await expectReversible(
         'timestamp',
@@ -281,6 +297,21 @@ void main() {
         ],
         negative: 0,
         expectedDartType: 'String',
+      );
+    });
+
+    test('uuidArray', () async {
+      await expectReversible(
+        '_uuid',
+        [
+          null,
+          <String>[],
+          [
+            '00000000-0000-0000-0000-000000000000',
+            '12345678-abcd-efab-cdef-012345678901',
+          ],
+        ],
+        expectedDartType: 'List<String>',
       );
     });
 
@@ -560,6 +591,23 @@ void main() {
           Time(0),
         ],
         expectedDartType: 'Time',
+      );
+    });
+
+    test('timeArray', () async {
+      await expectReversible(
+        '_time',
+        [
+          null,
+          <Time>[],
+          [
+            Time(16, 0, 44, 0, 888),
+            Time.fromMicroseconds(57644000888),
+            Time(0, 0, 0, 0, 86400000000),
+            Time(0),
+          ],
+        ],
+        expectedDartType: 'List<Time>',
       );
     });
 
