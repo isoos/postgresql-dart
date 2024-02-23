@@ -122,6 +122,49 @@ void main() {
       ]);
     });
 
+    test(
+        'Make sure two simultaneous transactions after multiple concurrent queries cannot be interwoven',
+        () async {
+      final firstAsync = conn.execute('SELECT 1;');
+      final secondAsync = conn.execute('SELECT 1;');
+
+      await Future.wait([firstAsync, secondAsync]);
+      final orderEnsurer = [];
+
+      final firstTransactionFuture = conn.runTx((c) async {
+        orderEnsurer.add(11);
+        await c.execute('INSERT INTO t (id) VALUES (1)');
+        orderEnsurer.add(12);
+        final result = await c.execute('SELECT id FROM t');
+        orderEnsurer.add(13);
+
+        return result;
+      });
+
+      final secondTransactionFuture = conn.runTx((c) async {
+        orderEnsurer.add(21);
+        await c.execute('INSERT INTO t (id) VALUES (2)');
+        orderEnsurer.add(22);
+        final result = await c.execute('SELECT id FROM t');
+        orderEnsurer.add(23);
+
+        return result;
+      });
+
+      final firstResults = await firstTransactionFuture;
+      final secondResults = await secondTransactionFuture;
+
+      expect(orderEnsurer, [11, 12, 13, 21, 22, 23]);
+
+      expect(firstResults, [
+        [1]
+      ]);
+      expect(secondResults, [
+        [1],
+        [2]
+      ]);
+    });
+
     test('May intentionally rollback transaction', () async {
       final rollback = Exception();
 

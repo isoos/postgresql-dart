@@ -61,6 +61,95 @@ void main() {
       expect(rows, hasLength(3));
     });
 
+    test('Make sure two simultaneous transactions cannot be interwoven',
+        () async {
+      await pool.execute(
+          'CREATE TABLE IF NOT EXISTS test.transactions (bar INTEGER);');
+      addTearDown(() => pool.execute('DROP TABLE test.transactions;'));
+
+      final orderEnsurer = [];
+
+      final firstTransactionFuture = pool.runTx((c) async {
+        orderEnsurer.add(11);
+        await c.execute('INSERT INTO test.transactions VALUES (1)');
+        orderEnsurer.add(12);
+        final result = await c.execute('SELECT bar FROM test.transactions');
+        orderEnsurer.add(13);
+
+        return result;
+      });
+
+      final secondTransactionFuture = pool.runTx((c) async {
+        orderEnsurer.add(21);
+        await c.execute('INSERT INTO test.transactions VALUES (2)');
+        orderEnsurer.add(22);
+        final result = await c.execute('SELECT bar FROM test.transactions');
+        orderEnsurer.add(23);
+
+        return result;
+      });
+
+      final firstResults = await firstTransactionFuture;
+      final secondResults = await secondTransactionFuture;
+
+      expect(orderEnsurer, [11, 12, 13, 21, 22, 23]);
+
+      expect(firstResults, [
+        [1]
+      ]);
+      expect(secondResults, [
+        [1],
+        [2]
+      ]);
+    });
+
+    test(
+        'Make sure two simultaneous transactions after multiple concurrent queries cannot be interwoven',
+        () async {
+      await pool.execute(
+          'CREATE TABLE IF NOT EXISTS test.transactions (bar INTEGER);');
+      addTearDown(() => pool.execute('DROP TABLE test.transactions;'));
+
+      final firstAsync = pool.execute('SELECT 1;');
+      final secondAsync = pool.execute('SELECT 1;');
+
+      await Future.wait([firstAsync, secondAsync]);
+      final orderEnsurer = [];
+
+      final firstTransactionFuture = pool.runTx((c) async {
+        orderEnsurer.add(11);
+        await c.execute('INSERT INTO test.transactions VALUES (1)');
+        orderEnsurer.add(12);
+        final result = await c.execute('SELECT bar FROM test.transactions');
+        orderEnsurer.add(13);
+
+        return result;
+      });
+
+      final secondTransactionFuture = pool.runTx((c) async {
+        orderEnsurer.add(21);
+        await c.execute('INSERT INTO test.transactions VALUES (2)');
+        orderEnsurer.add(22);
+        final result = await c.execute('SELECT bar FROM test.transactions');
+        orderEnsurer.add(23);
+
+        return result;
+      });
+
+      final firstResults = await firstTransactionFuture;
+      final secondResults = await secondTransactionFuture;
+
+      expect(orderEnsurer, [11, 12, 13, 21, 22, 23]);
+
+      expect(firstResults, [
+        [1]
+      ]);
+      expect(secondResults, [
+        [1],
+        [2]
+      ]);
+    });
+
     test('can use prepared statements', () async {
       await pool
           .execute('CREATE TABLE IF NOT EXISTS test.statements (bar INTEGER);');
