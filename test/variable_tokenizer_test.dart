@@ -104,6 +104,27 @@ void main() {
     expect(desc.parameterTypes, [Type.bigInteger]);
   });
 
+  group('can use : substitution symbol and cast operator together', () {
+    test('simple', () {
+      final desc = InternalQueryDescription.named(
+          'SELECT id::text FROM foo WHERE a = :x:int8::int',
+          substitution: ':');
+      expect(
+          desc.transformedSql, r'SELECT id::text FROM foo WHERE a = $1::int');
+      expect(desc.namedVariables?.keys, ['x']);
+      expect(desc.parameterTypes, [Type.bigInteger]);
+    });
+    test('with comment', () {
+      final desc = InternalQueryDescription.named(
+          'SELECT id /**/ :: /**/ text, b::\nint8 FROM foo WHERE a = :x:int8/**/::/**/int8',
+          substitution: ':');
+      expect(desc.transformedSql,
+          'SELECT id  ::  text, b::\nint8 FROM foo WHERE a = \$1::int8');
+      expect(desc.namedVariables?.keys, ['x']);
+      expect(desc.parameterTypes, [Type.bigInteger]);
+    });
+  });
+
   test('finds correct end for string literal', () {
     final desc = InternalQueryDescription.named(r"SELECT e'@a\\' @b");
     expect(desc.transformedSql, r"SELECT e'@a\\' $1");

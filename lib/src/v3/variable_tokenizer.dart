@@ -126,55 +126,59 @@ class VariableTokenizer {
       final startIndex = _index;
       final charCode = _consume();
 
-      if (charCode == _variableCodeUnit) {
-        _startVariable(startIndex);
-        continue nextToken;
-      } else {
-        switch (charCode) {
-          case $slash:
-            // `/*`, block comment
-            if (_consumeIfMatches($asterisk)) {
-              _blockComment();
-              continue nextToken;
-            }
-            break;
-          case $minus:
-            // `--`, line comment
-            if (_consumeIfMatches($minus)) {
-              _lineComment();
-              continue nextToken;
-            }
-            break;
-          case $doubleQuote:
-            // Double quote has already been consumed, but is part of the identifier
-            // Note that this also handles identifiers with unicode escape
-            // sequences like `u&"\u1234"` because the `u` and the ampersand are
-            // not interpreted in any other way and we skip to the next double
-            // quote either way.
-            _rewrittenSql.writeCharCode($doubleQuote);
-            _continueEscapedIdentifier();
+      switch (charCode) {
+        case $slash:
+          // `/*`, block comment
+          if (_consumeIfMatches($asterisk)) {
+            _blockComment();
             continue nextToken;
-          case $singleQuote:
-            // Write start of string that has already been consumed
-            _rewrittenSql.writeCharCode($singleQuote);
-            _continueStringLiteral(enableEscapes: false);
+          }
+          break;
+        case $minus:
+          // `--`, line comment
+          if (_consumeIfMatches($minus)) {
+            _lineComment();
             continue nextToken;
-          case $dollar:
-            _rewrittenSql.writeCharCode($dollar);
-            _potentialDollarQuotedString();
-            continue nextToken;
-          case $e:
-          case $E:
-            if (_consumeIfMatches($singleQuote)) {
-              // https://cloud.google.com/spanner/docs/reference/postgresql/lexical#string_constants_with_c-style_escapes
-              _rewrittenSql
-                ..writeCharCode(charCode) // e or E
-                ..writeCharCode($singleQuote);
+          }
+          break;
+        case $doubleQuote:
+          // Double quote has already been consumed, but is part of the identifier
+          // Note that this also handles identifiers with unicode escape
+          // sequences like `u&"\u1234"` because the `u` and the ampersand are
+          // not interpreted in any other way and we skip to the next double
+          // quote either way.
+          _rewrittenSql.writeCharCode($doubleQuote);
+          _continueEscapedIdentifier();
+          continue nextToken;
+        case $singleQuote:
+          // Write start of string that has already been consumed
+          _rewrittenSql.writeCharCode($singleQuote);
+          _continueStringLiteral(enableEscapes: false);
+          continue nextToken;
+        case $dollar:
+          _rewrittenSql.writeCharCode($dollar);
+          _potentialDollarQuotedString();
+          continue nextToken;
+        case $e:
+        case $E:
+          if (_consumeIfMatches($singleQuote)) {
+            // https://cloud.google.com/spanner/docs/reference/postgresql/lexical#string_constants_with_c-style_escapes
+            _rewrittenSql
+              ..writeCharCode(charCode) // e or E
+              ..writeCharCode($singleQuote);
 
-              _continueStringLiteral(enableEscapes: true);
-              continue nextToken;
-            }
-        }
+            _continueStringLiteral(enableEscapes: true);
+            continue nextToken;
+          }
+        default:
+          // `::`, cast operator
+          if (charCode == $colon && _consumeIfMatches($colon)) {
+            _rewrittenSql.write('::');
+            continue nextToken;
+          } else if (charCode == _variableCodeUnit) {
+            _startVariable(startIndex);
+            continue nextToken;
+          }
       }
 
       // This char has no special meaning, add it to the SQL string.
