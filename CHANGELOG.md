@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.1
+
+- Use ':' (colon) for substitution and cast operator together [#309](https://github.com/isoos/postgresql-dart/pull/309) by [xvrh](https://github.com/xvrh).
+
 ## 3.1.0
 
 Added the following PostgreSQL builtin types:
