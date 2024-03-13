@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.2
+
+- `ConnectionSettings.onOpen` callback to initialize a new connection and set
+  connection-level variables.
+
 ## 3.1.1
 
 - Use ':' (colon) for substitution and cast operator together [#309](https://github.com/isoos/postgresql-dart/pull/309) by [xvrh](https://github.com/xvrh).

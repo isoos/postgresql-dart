@@ -39,6 +39,8 @@ class PoolSettings extends ConnectionSettings {
     super.queryTimeout,
     super.queryMode,
     super.ignoreSuperfluousParameters,
+    super.onOpen,
+    super.typeRegistry,
   });
 }
 
