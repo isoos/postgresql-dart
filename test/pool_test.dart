@@ -191,4 +191,22 @@ void main() {
       expect(results, hasLength(10));
     });
   });
+
+  withPostgresServer('Connection settings', (server) {
+    test('runs connection.onOpen callback', () async {
+      final pool = Pool.withEndpoints(
+        [await server.endpoint()],
+        settings: PoolSettings(
+          maxConnectionCount: 1,
+          onOpen: (c) async {
+            await c.execute('SET application_name TO myapp;');
+          },
+        ),
+      );
+      addTearDown(pool.close);
+
+      final name = (await pool.execute('SHOW application_name;')).single.single;
+      expect(name, 'myapp');
+    });
+  });
 }

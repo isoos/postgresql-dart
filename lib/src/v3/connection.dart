@@ -221,6 +221,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     final connection =
         PgConnectionImplementation._(endpoint, settings, channel, secure);
     await connection._startup();
+    if (connection._settings.onOpen != null) {
+      await connection._settings.onOpen!(connection);
+    }
     return connection;
   }
 

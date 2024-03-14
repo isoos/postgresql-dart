@@ -468,6 +468,9 @@ class ConnectionSettings extends SessionSettings {
   /// built-in ones provided by the package.
   final TypeRegistry? typeRegistry;
 
+  /// This callback function will be called after opening the connection.
+  final Future<void> Function(Connection connection)? onOpen;
+
   const ConnectionSettings({
     this.applicationName,
     this.timeZone,
@@ -477,6 +480,7 @@ class ConnectionSettings extends SessionSettings {
     this.replicationMode,
     this.typeRegistry,
     this.securityContext,
+    this.onOpen,
     super.connectTimeout,
     super.queryTimeout,
     super.queryMode,

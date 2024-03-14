@@ -55,6 +55,8 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
   final ReplicationMode replicationMode;
   @override
   final TypeRegistry typeRegistry;
+  @override
+  final Future<void> Function(Connection connection)? onOpen;
 
   ResolvedConnectionSettings(
       ConnectionSettings? super.settings, ConnectionSettings? super.fallback)
@@ -71,7 +73,8 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
             ReplicationMode.none,
         // TODO: consider merging the type registries
         typeRegistry =
-            settings?.typeRegistry ?? fallback?.typeRegistry ?? TypeRegistry();
+            settings?.typeRegistry ?? fallback?.typeRegistry ?? TypeRegistry(),
+        onOpen = settings?.onOpen ?? fallback?.onOpen;
 
   bool isMatchingConnection(ResolvedConnectionSettings other) {
     return isMatchingSession(other) &&
@@ -80,7 +83,8 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
         encoding == other.encoding &&
         sslMode == other.sslMode &&
         transformer == other.transformer &&
-        replicationMode == other.replicationMode;
+        replicationMode == other.replicationMode &&
+        onOpen == other.onOpen;
   }
 }
 
