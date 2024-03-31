@@ -3,6 +3,11 @@ import 'package:postgres/src/types.dart';
 import 'package:postgres/src/types/generic_type.dart';
 import 'package:postgres/src/types/type_registry.dart';
 
+/// The `tsvector` type represents a document in a form optimized for text search.
+/// A [TsVector] is a sorted list of distinct [Lexeme]s.
+///
+/// https://www.postgresql.org/docs/current/datatype-textsearch.html
+/// https://www.postgresql.org/docs/current/textsearch.html
 class TsVector {
   final List<Lexeme> lexemes;
 
@@ -14,6 +19,8 @@ class TsVector {
   String toString() => lexemes.join(' ');
 }
 
+/// A lexeme is a words that have been normalized, alongside with the
+/// positional information.
 class Lexeme {
   final String text;
   final List<LexemePos>? positions;
@@ -27,8 +34,16 @@ class Lexeme {
       ].join(':');
 }
 
+/// The weight of the [Lexeme].
 enum LexemeWeight { a, b, c, d }
 
+/// A position normally indicates the source word's location in the document.
+/// Positional information can be used for proximity ranking. Position values
+/// can range from 1 to 16383; larger numbers are silently set to 16383.
+/// Duplicate positions for the same lexeme are discarded.
+///
+/// Lexemes that have positions can further be labeled with a weight, which
+/// can be A, B, C, or D. D is the default.
 class LexemePos {
   final int position;
   final LexemeWeight weight;
