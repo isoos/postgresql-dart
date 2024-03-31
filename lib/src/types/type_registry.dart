@@ -5,6 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:postgres/src/exceptions.dart';
 import 'package:postgres/src/types/text_codec.dart';
+import 'package:postgres/src/types/text_search.dart';
 
 import '../types.dart';
 import 'generic_type.dart';
@@ -63,6 +64,8 @@ class TypeOid {
 
   /// Please use [TypeOid.timestampTz] instead.
   static const timestampWithTimezone = timestampTz;
+  static const tsquery = 3615;
+  static const tsvector = 3614;
   static const uuid = 2950;
   static const uuidArray = 2951;
   static const varChar = 1043;
@@ -120,6 +123,7 @@ final _builtInTypes = <Type>{
   // Type.numrange,
   Type.timestampRange,
   Type.timestampTzRange,
+  Type.tsvector,
 };
 
 final _builtInTypeNames = <String, Type>{
@@ -165,6 +169,7 @@ final _builtInTypeNames = <String, Type>{
   'timestamptz': Type.timestampWithTimezone,
   'tsrange': Type.timestampRange,
   'tstzrange': Type.timestampTzRange,
+  'tsvector': Type.tsvector,
   'varchar': Type.varChar,
   'uuid': Type.uuid,
   '_bool': Type.booleanArray,
@@ -229,6 +234,8 @@ extension TypeRegistryExt on TypeRegistry {
     switch (type) {
       case GenericType():
         return type.encode(EncodeInput(value: value, encoding: encoding));
+      case TsVectorType():
+        return type.encode(EncodeInput(value: value, encoding: encoding));
       case UnspecifiedType():
         final encoded = _textEncoder.tryConvert(value);
         if (encoded != null) {
@@ -251,6 +258,13 @@ extension TypeRegistryExt on TypeRegistry {
     final type = resolveOid(typeOid);
     switch (type) {
       case GenericType():
+        return type.decode(DecodeInput(
+          bytes: bytes,
+          isBinary: isBinary,
+          encoding: encoding,
+          typeRegistry: this,
+        ));
+      case TsVectorType():
         return type.decode(DecodeInput(
           bytes: bytes,
           isBinary: isBinary,

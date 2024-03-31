@@ -8,6 +8,7 @@ import 'package:meta/meta.dart';
 import 'types/generic_type.dart';
 import 'types/geo_types.dart';
 import 'types/range_types.dart';
+import 'types/text_search.dart';
 import 'types/type_registry.dart';
 
 /// In Postgresql `interval` values are stored as [months], [days], and [microseconds].
@@ -350,6 +351,9 @@ abstract class Type<T extends Object> {
   /// Must be a [List<DateTime>] (microsecond date and time precision)
   static const timestampTzArray =
       GenericType<List<DateTime>>(TypeOid.timestampTzArray);
+
+  /// Must be a [TsVector].
+  static const tsvector = TsVectorType();
 
   /// Must be a [String]
   static const varChar = GenericType<String>(TypeOid.varChar);

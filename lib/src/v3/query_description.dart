@@ -135,9 +135,16 @@ class InternalQueryDescription {
     String? name,
   }) {
     if (value is TypedValue) {
-      return value;
-    } else if (knownType != null) {
+      if (value.type != Type.unspecified) {
+        return value;
+      }
+      knownType = value.type;
+      value = value.value;
+    }
+    if (knownType != null && knownType != Type.unspecified) {
       return TypedValue(knownType, value);
+    } else if (value is TsVector) {
+      return TypedValue(Type.tsvector, value);
     } else {
       return TypedValue(Type.unspecified, value);
     }

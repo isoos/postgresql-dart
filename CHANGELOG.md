@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.2.0
+
+- Support for `tsvector` type.
+
 ## 3.1.2
 
 - `ConnectionSettings.onOpen` callback to initialize a new connection and set
