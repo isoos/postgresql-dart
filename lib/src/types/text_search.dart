@@ -19,7 +19,7 @@ class TsVector {
   String toString() => lexemes.join(' ');
 }
 
-/// A lexeme is a words that have been normalized, alongside with the
+/// A lexeme is a word that have been normalized, alongside with the
 /// positional information.
 class Lexeme {
   final String text;
@@ -62,7 +62,7 @@ class LexemePos {
   @override
   String toString() => [
         position,
-        weight.name.toUpperCase(),
+        if (weight != LexemeWeight.d) weight.name.toUpperCase(),
       ].join();
 }
 

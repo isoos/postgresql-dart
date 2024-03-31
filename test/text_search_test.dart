@@ -11,10 +11,7 @@ void main() {
       final vector = rs.first.first as TsVector;
       expect(vector.lexemes, hasLength(2));
       expect(vector.lexemes.first.text, 'x');
-      expect(
-        vector.lexemes.first.positions?.map((e) => e.toString()).toList(),
-        ['11D', '12D'],
-      );
+      expect(vector.lexemes.first.toString(), 'x:11,12');
       expect(vector.lexemes.last.text, 'yy');
       expect(
         vector.lexemes.last.positions?.map((e) => e.toString()).toList(),
@@ -56,7 +53,7 @@ void main() {
           await c.execute(r'SELECT * FROM t WHERE id = $1', parameters: ['a']);
       final row = rs.single;
       final tsv = row[1] as TsVector;
-      expect(tsv.toString(), 'abc:1D def');
+      expect(tsv.toString(), 'abc:1 def');
     });
   });
 }
