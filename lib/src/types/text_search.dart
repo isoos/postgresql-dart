@@ -1,7 +1,7 @@
-import 'package:postgres/src/buffer.dart';
-import 'package:postgres/src/types.dart';
-import 'package:postgres/src/types/generic_type.dart';
-import 'package:postgres/src/types/type_registry.dart';
+import '../buffer.dart';
+import '../types.dart';
+import 'generic_type.dart';
+import 'type_registry.dart';
 
 /// The `tsvector` type represents a document in a form optimized for text search.
 /// A [TsVector] is a sorted list of distinct [Lexeme]s.
@@ -51,7 +51,10 @@ class LexemePos {
   LexemePos(
     this.position, {
     this.weight = LexemeWeight.d,
-  });
+  }) {
+    assert(position >= 1);
+    assert(position <= 16383);
+  }
 
   factory LexemePos._parse(int value) {
     final pos = value & 0x3fff;

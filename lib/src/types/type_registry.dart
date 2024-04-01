@@ -3,12 +3,12 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
-import 'package:postgres/src/exceptions.dart';
-import 'package:postgres/src/types/text_codec.dart';
-import 'package:postgres/src/types/text_search.dart';
 
+import '../exceptions.dart';
 import '../types.dart';
 import 'generic_type.dart';
+import 'text_codec.dart';
+import 'text_search.dart';
 
 typedef TypeEncoderFn = EncodeOutput Function(EncodeInput input);
 typedef TypeDecoderFn = Object? Function(DecodeInput input);
