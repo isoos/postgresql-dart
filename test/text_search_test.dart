@@ -94,9 +94,9 @@ void main() {
       }
 
       final vector = TsVector(lexemes: [
-        Lexeme('abc', positions: []),
-        Lexeme('cde'),
-        Lexeme('xyz'),
+        Lexeme('abc', positions: [LexemePos(1)]),
+        Lexeme('cde', positions: [LexemePos(2)]),
+        Lexeme('xyz', positions: [LexemePos(3)]),
       ]);
 
       await expectMatch(
