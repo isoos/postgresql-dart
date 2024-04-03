@@ -352,6 +352,9 @@ abstract class Type<T extends Object> {
   static const timestampTzArray =
       GenericType<List<DateTime>>(TypeOid.timestampTzArray);
 
+  /// Must be a [TsQuery].
+  static const tsquery = TsQueryType();
+
   /// Must be a [TsVector].
   static const tsvector = TsVectorType();
 
