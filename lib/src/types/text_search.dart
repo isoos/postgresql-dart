@@ -342,7 +342,9 @@ class _AndTsQuery extends TsQuery {
   }
 
   @override
-  String toString() => '(${_items.join(' & ')})';
+  String toString() => _items
+      .map((e) => (e is _LexemeTsQuery || e is _NotTsQuery) ? e : '($e)')
+      .join(' & ');
 }
 
 class _OrTsQuery extends TsQuery {
@@ -373,7 +375,9 @@ class _OrTsQuery extends TsQuery {
   }
 
   @override
-  String toString() => '(${_items.join(' | ')})';
+  String toString() => _items
+      .map((e) => (e is _LexemeTsQuery || e is _NotTsQuery) ? e : '($e)')
+      .join(' | ');
 }
 
 class _NotTsQuery extends TsQuery {
@@ -392,7 +396,7 @@ class _NotTsQuery extends TsQuery {
   }
 
   @override
-  String toString() => '!$_inner';
+  String toString() => _inner is _LexemeTsQuery ? '!$_inner' : '!($_inner)';
 }
 
 class _PhraseTsQuery extends TsQuery {
@@ -415,7 +419,11 @@ class _PhraseTsQuery extends TsQuery {
   }
 
   @override
-  String toString() => '$_left <$_distance> $_right';
+  String toString() => [
+        _left is _LexemeTsQuery ? _left : '($_left)',
+        '<$_distance>',
+        _right is _LexemeTsQuery ? _right : '($_right)',
+      ].join(' ');
 }
 
 class _Op {

@@ -62,16 +62,16 @@ void main() {
       final queries = <String, String?>{
         'x': "'x'",
         '!x': "!'x'",
-        'x & y': "('x' & 'y')",
-        'x | y': "('x' | 'y')",
+        'x & y': "'x' & 'y'",
+        'x | y': "'x' | 'y'",
         'x <-> y': "'x' <1> 'y'",
         'x <4> y': "'x' <4> 'y'",
-        'x & !(y <2> z)': "('x' & !'y' <2> 'z')",
-        'x & y & z & zz': "('x' & 'y' & 'z' & 'zz')",
+        'x & !(y <2> z)': "'x' & !('y' <2> 'z')",
+        'x & y & z & zz': "'x' & 'y' & 'z' & 'zz'",
         'x:A': "'x':A",
         'x:*': "'x':*",
         'x:A*B': "'x':*AB",
-        'x:B & y:AC': "('x':B & 'y':AC)",
+        'x:B & y:AC': "'x':B & 'y':AC",
       };
       final c = await server.newConnection();
       for (final e in queries.entries) {
