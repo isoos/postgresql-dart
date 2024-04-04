@@ -122,18 +122,34 @@ class TsVectorType extends Type<TsVector> {
 ///
 /// https://www.postgresql.org/docs/current/datatype-textsearch.html
 /// https://www.postgresql.org/docs/current/textsearch.html
-abstract class TsQuery {
+sealed class TsQuery {
   int get _itemCount;
   void _write(PgByteDataWriter writer);
 
   static TsQuery lexeme(String text) => _LexemeTsQuery._(text, 0, 0);
   static TsQuery not(TsQuery query) => _NotTsQuery(query);
 
-  TsQuery or(TsQuery other) => _OrTsQuery._()
+  static TsQuery and(Iterable<TsQuery> items) {
+    final q = _AndTsQuery._();
+    for (final item in items) {
+      q._add(item);
+    }
+    return q;
+  }
+
+  static TsQuery or(Iterable<TsQuery> items) {
+    final q = _OrTsQuery._();
+    for (final item in items) {
+      q._add(item);
+    }
+    return q;
+  }
+
+  TsQuery operator &(TsQuery other) => _AndTsQuery._()
     .._add(this)
     .._add(other);
 
-  TsQuery and(TsQuery other) => _AndTsQuery._()
+  TsQuery operator |(TsQuery other) => _OrTsQuery._()
     .._add(this)
     .._add(other);
 
@@ -154,7 +170,7 @@ class TsQueryType extends Type<TsQuery> {
     return EncodeOutput.bytes(bytes);
   }
 
-  TsQuery? decode(DecodeInput input) {
+  TsQuery decode(DecodeInput input) {
     if (input.isBinary) {
       final reader = PgByteDataReader(encoding: input.encoding)
         ..add(input.bytes);
@@ -203,12 +219,12 @@ class TsQueryType extends Type<TsQuery> {
           if (maybeOp is! _Op) return false;
           if (maybeOp.kind == 2) {
             items.removeLastN(3);
-            items.add(last.and(prev));
+            items.add(last & prev);
             return true;
           }
           if (maybeOp.kind == 3) {
             items.removeLastN(3);
-            items.add(last.or(prev));
+            items.add(last | prev);
             return true;
           }
           if (maybeOp.kind == 4) {
