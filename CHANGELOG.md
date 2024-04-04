@@ -3,7 +3,7 @@
 ## 3.2.0
 
 - Support for `tsvector` type.
-- Partial support for `tsquery` type.
+- Support for `tsquery` type.
 
 ## 3.1.2
 
