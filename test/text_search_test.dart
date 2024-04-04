@@ -9,12 +9,12 @@ void main() {
       final c = await server.newConnection();
       final rs = await c.execute('SELECT \'x:11,12 yy:2A,4C\'::tsvector');
       final vector = rs.first.first as TsVector;
-      expect(vector.lexemes, hasLength(2));
-      expect(vector.lexemes.first.text, 'x');
-      expect(vector.lexemes.first.toString(), 'x:11,12');
-      expect(vector.lexemes.last.text, 'yy');
+      expect(vector.words, hasLength(2));
+      expect(vector.words.first.text, 'x');
+      expect(vector.words.first.toString(), 'x:11,12');
+      expect(vector.words.last.text, 'yy');
       expect(
-        vector.lexemes.last.positions?.map((e) => e.toString()).toList(),
+        vector.words.last.positions?.map((e) => e.toString()).toList(),
         ['2A', '4C'],
       );
     });
@@ -22,17 +22,17 @@ void main() {
     test('encode and decode', () async {
       final c = await server.newConnection();
       final rs = await c.execute(r'SELECT $1::tsvector', parameters: [
-        TsVector(lexemes: [
-          Lexeme('ab'),
-          Lexeme('cd', positions: [LexemePos(4, weight: LexemeWeight.c)]),
+        TsVector(words: [
+          TsWord('ab'),
+          TsWord('cd', positions: [TsWordPos(4, weight: TsWeight.c)]),
         ])
       ]);
       final first = rs.first.first as TsVector;
-      expect(first.lexemes, hasLength(2));
-      expect(first.lexemes.first.text, 'ab');
-      expect(first.lexemes.first.positions, isNull);
-      expect(first.lexemes.last.text, 'cd');
-      expect(first.lexemes.last.positions?.single.toString(), '4C');
+      expect(first.words, hasLength(2));
+      expect(first.words.first.text, 'ab');
+      expect(first.words.first.positions, isNull);
+      expect(first.words.last.text, 'cd');
+      expect(first.words.last.positions?.single.toString(), '4C');
     });
 
     test('store and read', () async {
@@ -43,9 +43,9 @@ void main() {
         r'INSERT INTO t VALUES ($1, $2)',
         parameters: [
           'a',
-          TsVector(lexemes: [
-            Lexeme('abc', positions: [LexemePos(1)]),
-            Lexeme('def'),
+          TsVector(words: [
+            TsWord('abc', positions: [TsWordPos(1)]),
+            TsWord('def'),
           ]),
         ],
       );
@@ -97,25 +97,25 @@ void main() {
         expect(rs.first.first, expectedMatch);
       }
 
-      final vector = TsVector(lexemes: [
-        Lexeme('abc', positions: [LexemePos(1)]),
-        Lexeme('cde', positions: [LexemePos(2)]),
-        Lexeme('xyz', positions: [LexemePos(3)]),
+      final vector = TsVector(words: [
+        TsWord('abc', positions: [TsWordPos(1)]),
+        TsWord('cde', positions: [TsWordPos(2)]),
+        TsWord('xyz', positions: [TsWordPos(3)]),
       ]);
 
       await expectMatch(
         vector,
-        TsQuery.lexeme('cd', prefix: true),
+        TsQuery.word('cd', prefix: true),
         true,
       );
       await expectMatch(
         vector,
-        TsQuery.lexeme('cde').followedBy(TsQuery.lexeme('xyz')),
+        TsQuery.word('cde').followedBy(TsQuery.word('xyz')),
         true,
       );
       await expectMatch(
         vector,
-        TsQuery.lexeme('cde').followedBy(TsQuery.lexeme('efg')),
+        TsQuery.word('cde').followedBy(TsQuery.word('efg')),
         false,
       );
     });
