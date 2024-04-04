@@ -145,6 +145,8 @@ class InternalQueryDescription {
       return TypedValue(knownType, value);
     } else if (value is TsVector) {
       return TypedValue(Type.tsvector, value);
+    } else if (value is TsQuery) {
+      return TypedValue(Type.tsquery, value);
     } else {
       return TypedValue(Type.unspecified, value);
     }

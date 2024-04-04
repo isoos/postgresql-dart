@@ -124,6 +124,7 @@ final _builtInTypes = <Type>{
   Type.timestampRange,
   Type.timestampTzRange,
   Type.tsvector,
+  Type.tsquery,
 };
 
 final _builtInTypeNames = <String, Type>{
@@ -169,6 +170,7 @@ final _builtInTypeNames = <String, Type>{
   'timestamptz': Type.timestampWithTimezone,
   'tsrange': Type.timestampRange,
   'tstzrange': Type.timestampTzRange,
+  'tsquery': Type.tsquery,
   'tsvector': Type.tsvector,
   'varchar': Type.varChar,
   'uuid': Type.uuid,
@@ -236,6 +238,8 @@ extension TypeRegistryExt on TypeRegistry {
         return type.encode(EncodeInput(value: value, encoding: encoding));
       case TsVectorType():
         return type.encode(EncodeInput(value: value, encoding: encoding));
+      case TsQueryType():
+        return type.encode(EncodeInput(value: value, encoding: encoding));
       case UnspecifiedType():
         final encoded = _textEncoder.tryConvert(value);
         if (encoded != null) {
@@ -265,6 +269,13 @@ extension TypeRegistryExt on TypeRegistry {
           typeRegistry: this,
         ));
       case TsVectorType():
+        return type.decode(DecodeInput(
+          bytes: bytes,
+          isBinary: isBinary,
+          encoding: encoding,
+          typeRegistry: this,
+        ));
+      case TsQueryType():
         return type.decode(DecodeInput(
           bytes: bytes,
           isBinary: isBinary,

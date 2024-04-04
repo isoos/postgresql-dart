@@ -56,4 +56,64 @@ void main() {
       expect(tsv.toString(), 'abc:1 def');
     });
   });
+
+  withPostgresServer('tsquery', (server) {
+    test('read and re-read queries', () async {
+      final queries = <String, String?>{
+        'x': null,
+        '!x': null,
+        'x & y': '(x & y)',
+        'x | y': '(x | y)',
+        'x <-> y': 'x <1> y',
+        'x <4> y': null,
+        'x & !(y <2> z)': '(x & !y <2> z)',
+        'x & y & z & zz': '(x & y & z & zz)',
+      };
+      final c = await server.newConnection();
+      for (final e in queries.entries) {
+        final rs = await c.execute("SELECT '${e.key}'::tsquery");
+        final first = rs.first.first;
+        final s1 = first.toString();
+        expect(s1, e.value ?? e.key, reason: e.key);
+        final rs2 = await c.execute(r'SELECT $1::tsquery', parameters: [first]);
+        final s2 = rs2.first.first.toString();
+        expect(s2, s1, reason: e.key);
+      }
+    });
+
+    test('match queries to vectors', () async {
+      final c = await server.newConnection();
+
+      Future<void> expectMatch(
+          TsVector vector, TsQuery query, bool expectedMatch) async {
+        final rs = await c.execute(
+          r'SELECT $1::tsvector @@ $2::tsquery',
+          parameters: [vector, query],
+        );
+        expect(rs.first.first, expectedMatch);
+      }
+
+      final vector = TsVector(lexemes: [
+        Lexeme('abc', positions: [LexemePos(1)]),
+        Lexeme('cde', positions: [LexemePos(2)]),
+        Lexeme('xyz', positions: [LexemePos(3)]),
+      ]);
+
+      await expectMatch(
+        vector,
+        TsQuery.lexeme('cde'),
+        true,
+      );
+      await expectMatch(
+        vector,
+        TsQuery.lexeme('cde').followedBy(TsQuery.lexeme('xyz')),
+        true,
+      );
+      await expectMatch(
+        vector,
+        TsQuery.lexeme('cde').followedBy(TsQuery.lexeme('efg')),
+        false,
+      );
+    });
+  });
 }
