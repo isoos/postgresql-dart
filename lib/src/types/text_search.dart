@@ -37,7 +37,16 @@ class Lexeme {
 }
 
 /// The weight of the [Lexeme].
-enum LexemeWeight { a, b, c, d }
+enum LexemeWeight {
+  a._(1 << 3),
+  b._(1 << 2),
+  c._(1 << 1),
+  d._(1 << 0);
+
+  final int _queryMask;
+
+  const LexemeWeight._(this._queryMask);
+}
 
 /// A position normally indicates the source word's location in the document.
 /// Positional information can be used for proximity ranking. Position values
@@ -126,7 +135,19 @@ sealed class TsQuery {
   int get _itemCount;
   void _write(PgByteDataWriter writer);
 
-  static TsQuery lexeme(String text) => _LexemeTsQuery._(text, 0, 0);
+  static TsQuery lexeme(
+    String text, {
+    Iterable<LexemeWeight>? weights,
+    bool prefix = false,
+  }) {
+    final weightsSet = weights?.toSet();
+    final weightByte = (weightsSet == null || weightsSet.isEmpty)
+        ? 0
+        : weightsSet.fold(0, (p, e) => p | e._queryMask);
+
+    return _LexemeTsQuery._(text, weightByte, prefix ? 1 : 0);
+  }
+
   static TsQuery not(TsQuery query) => _NotTsQuery(query);
 
   static TsQuery and(Iterable<TsQuery> items) {
@@ -256,10 +277,10 @@ extension _ListExt<T> on List<T> {
 
 class _LexemeTsQuery extends TsQuery {
   final String _text;
-  final int _weights;
-  final int _prefix;
+  final int _weightByte;
+  final int _prefixByte;
 
-  _LexemeTsQuery._(this._text, this._weights, this._prefix);
+  _LexemeTsQuery._(this._text, this._weightByte, this._prefixByte);
 
   @override
   int get _itemCount => 1;
@@ -267,13 +288,30 @@ class _LexemeTsQuery extends TsQuery {
   @override
   void _write(PgByteDataWriter writer) {
     writer.writeUint8(1);
-    writer.writeInt8(_weights);
-    writer.writeInt8(_prefix);
+    writer.writeInt8(_weightByte);
+    writer.writeInt8(_prefixByte);
     writer.writeEncodedString(writer.encodeString(_text));
   }
 
+  late final _weights = () {
+    if (_weightByte == 0) return LexemeWeight.values;
+    return LexemeWeight.values
+        .where((e) => e._queryMask & _weightByte == e._queryMask)
+        .toList();
+  }();
+
+  late final _hasWeights =
+      _weights.isNotEmpty && _weights.length != LexemeWeight.values.length;
+  late final _isPrefix = _prefixByte > 0;
+  late final _hasSuffix = _hasWeights || _isPrefix;
+
   @override
-  String toString() => _text;
+  String toString() => [
+        "'$_text'",
+        if (_hasSuffix) ':',
+        if (_isPrefix) '*',
+        if (_hasWeights) ..._weights.map((e) => e.name.toUpperCase()),
+      ].join();
 }
 
 class _AndTsQuery extends TsQuery {
