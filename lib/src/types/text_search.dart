@@ -5,29 +5,28 @@ import '../types.dart';
 import 'generic_type.dart';
 import 'type_registry.dart';
 
-/// The `tsvector` data type stores a list of [Lexeme]s, optionally with
-/// integer positions and weights.
+/// The `tsvector` data type stores a list of [TsWord]s, lexemes with
+/// optional integer positions and weights.
 ///
 /// https://www.postgresql.org/docs/current/datatype-textsearch.html
 /// https://www.postgresql.org/docs/current/textsearch.html
 class TsVector {
-  final List<Lexeme> lexemes;
+  final List<TsWord> words;
 
   TsVector({
-    required this.lexemes,
+    required this.words,
   });
 
   @override
-  String toString() => lexemes.join(' ');
+  String toString() => words.join(' ');
 }
 
-/// A lexeme is a word that have been normalized, alongside with the
-/// positional information.
-class Lexeme {
+/// A normalized word (lexeme), alongside with the positional information.
+class TsWord {
   final String text;
-  final List<LexemePos>? positions;
+  final List<TsWordPos>? positions;
 
-  Lexeme(this.text, {this.positions});
+  TsWord(this.text, {this.positions});
 
   @override
   String toString() => [
@@ -36,8 +35,8 @@ class Lexeme {
       ].join(':');
 }
 
-/// The weight of the [Lexeme].
-enum LexemeWeight {
+/// The weight of the [TsWord].
+enum TsWeight {
   a._(1 << 3),
   b._(1 << 2),
   c._(1 << 1),
@@ -45,7 +44,7 @@ enum LexemeWeight {
 
   final int _queryMask;
 
-  const LexemeWeight._(this._queryMask);
+  const TsWeight._(this._queryMask);
 }
 
 /// A position normally indicates the source word's location in the document.
@@ -55,28 +54,28 @@ enum LexemeWeight {
 ///
 /// Lexemes that have positions can further be labeled with a weight, which
 /// can be A, B, C, or D. D is the default.
-class LexemePos {
+class TsWordPos {
   final int position;
-  final LexemeWeight weight;
+  final TsWeight weight;
 
-  LexemePos(
+  TsWordPos(
     this.position, {
-    this.weight = LexemeWeight.d,
+    this.weight = TsWeight.d,
   }) {
     assert(position >= 1);
     assert(position <= 16383);
   }
 
-  factory LexemePos._parse(int value) {
+  factory TsWordPos._parse(int value) {
     final pos = value & 0x3fff;
     final weight = (value >> 14) & 0x03;
-    return LexemePos(pos, weight: LexemeWeight.values[3 - weight]);
+    return TsWordPos(pos, weight: TsWeight.values[3 - weight]);
   }
 
   @override
   String toString() => [
         position,
-        if (weight != LexemeWeight.d) weight.name.toUpperCase(),
+        if (weight != TsWeight.d) weight.name.toUpperCase(),
       ].join();
 }
 
@@ -86,8 +85,8 @@ class TsVectorType extends Type<TsVector> {
   EncodeOutput encode(EncodeInput input) {
     final v = input.value as TsVector;
     final writer = PgByteDataWriter(encoding: input.encoding);
-    writer.writeUint32(v.lexemes.length);
-    for (final lexeme in v.lexemes) {
+    writer.writeUint32(v.words.length);
+    for (final lexeme in v.words) {
       writer.writeEncodedString(writer.encodeString(lexeme.text));
       final positions = lexeme.positions;
       if (positions == null || positions.isEmpty) {
@@ -109,18 +108,18 @@ class TsVectorType extends Type<TsVector> {
       final reader = PgByteDataReader(encoding: input.encoding)
         ..add(input.bytes);
       final count = reader.readUint32();
-      final lexemes = <Lexeme>[];
+      final lexemes = <TsWord>[];
       for (var i = 0; i < count; i++) {
         final text = reader.readNullTerminatedString();
         final positionCount = reader.readUint16();
         final positions = positionCount == 0
             ? null
             : List.generate(
-                positionCount, (_) => LexemePos._parse(reader.readUint16()));
-        final lexeme = Lexeme(text, positions: positions);
+                positionCount, (_) => TsWordPos._parse(reader.readUint16()));
+        final lexeme = TsWord(text, positions: positions);
         lexemes.add(lexeme);
       }
-      return TsVector(lexemes: lexemes);
+      return TsVector(words: lexemes);
     } else {
       throw UnimplementedError();
     }
@@ -135,9 +134,9 @@ sealed class TsQuery {
   int get _itemCount;
   void _write(PgByteDataWriter writer);
 
-  static TsQuery lexeme(
+  static TsQuery word(
     String text, {
-    Iterable<LexemeWeight>? weights,
+    Iterable<TsWeight>? weights,
     bool prefix = false,
   }) {
     final weightsSet = weights?.toSet();
@@ -145,7 +144,7 @@ sealed class TsQuery {
         ? 0
         : weightsSet.fold(0, (p, e) => p | e._queryMask);
 
-    return _LexemeTsQuery._(text, weightByte, prefix ? 1 : 0);
+    return _WordTsQuery._(text, weightByte, prefix ? 1 : 0);
   }
 
   static TsQuery not(TsQuery query) => _NotTsQuery(query);
@@ -204,7 +203,7 @@ class TsQueryType extends Type<TsQuery> {
             final weight = reader.readUint8();
             final prefix = reader.readUint8();
             final text = reader.readNullTerminatedString();
-            items.add(_LexemeTsQuery._(text, weight, prefix));
+            items.add(_WordTsQuery._(text, weight, prefix));
             break;
           case 2: // operation
             final opKind = reader.readUint8();
@@ -275,12 +274,12 @@ extension _ListExt<T> on List<T> {
   }
 }
 
-class _LexemeTsQuery extends TsQuery {
+class _WordTsQuery extends TsQuery {
   final String _text;
   final int _weightByte;
   final int _prefixByte;
 
-  _LexemeTsQuery._(this._text, this._weightByte, this._prefixByte);
+  _WordTsQuery._(this._text, this._weightByte, this._prefixByte);
 
   @override
   int get _itemCount => 1;
@@ -294,14 +293,14 @@ class _LexemeTsQuery extends TsQuery {
   }
 
   late final _weights = () {
-    if (_weightByte == 0) return LexemeWeight.values;
-    return LexemeWeight.values
+    if (_weightByte == 0) return TsWeight.values;
+    return TsWeight.values
         .where((e) => e._queryMask & _weightByte == e._queryMask)
         .toList();
   }();
 
   late final _hasWeights =
-      _weights.isNotEmpty && _weights.length != LexemeWeight.values.length;
+      _weights.isNotEmpty && _weights.length != TsWeight.values.length;
   late final _isPrefix = _prefixByte > 0;
   late final _hasSuffix = _hasWeights || _isPrefix;
 
@@ -343,7 +342,7 @@ class _AndTsQuery extends TsQuery {
 
   @override
   String toString() => _items
-      .map((e) => (e is _LexemeTsQuery || e is _NotTsQuery) ? e : '($e)')
+      .map((e) => (e is _WordTsQuery || e is _NotTsQuery) ? e : '($e)')
       .join(' & ');
 }
 
@@ -376,7 +375,7 @@ class _OrTsQuery extends TsQuery {
 
   @override
   String toString() => _items
-      .map((e) => (e is _LexemeTsQuery || e is _NotTsQuery) ? e : '($e)')
+      .map((e) => (e is _WordTsQuery || e is _NotTsQuery) ? e : '($e)')
       .join(' | ');
 }
 
@@ -396,7 +395,7 @@ class _NotTsQuery extends TsQuery {
   }
 
   @override
-  String toString() => _inner is _LexemeTsQuery ? '!$_inner' : '!($_inner)';
+  String toString() => _inner is _WordTsQuery ? '!$_inner' : '!($_inner)';
 }
 
 class _PhraseTsQuery extends TsQuery {
@@ -420,9 +419,9 @@ class _PhraseTsQuery extends TsQuery {
 
   @override
   String toString() => [
-        _left is _LexemeTsQuery ? _left : '($_left)',
+        _left is _WordTsQuery ? _left : '($_left)',
         '<$_distance>',
-        _right is _LexemeTsQuery ? _right : '($_right)',
+        _right is _WordTsQuery ? _right : '($_right)',
       ].join(' ');
 }
 

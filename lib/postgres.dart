@@ -20,7 +20,7 @@ export 'src/types.dart';
 export 'src/types/geo_types.dart';
 export 'src/types/range_types.dart';
 export 'src/types/text_search.dart'
-    show TsVector, Lexeme, LexemePos, LexemeWeight, TsQuery;
+    show TsVector, TsWord, TsWordPos, TsWeight, TsQuery;
 export 'src/types/type_registry.dart' show TypeRegistry;
 
 /// A description of a SQL query as interpreted by this package.
