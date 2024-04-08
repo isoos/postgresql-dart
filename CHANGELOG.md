@@ -3,6 +3,7 @@
 ## 3.2.0
 
 - Support for `tsvector` and `tsquery` types.
+- Support for `TypeRegistry(useSqlNull: true)` to return `SqlNull` instead of `NULL` (in Dart: `null`) values.
 
 ## 3.1.2
 

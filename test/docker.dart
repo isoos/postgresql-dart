@@ -62,6 +62,7 @@ class PostgresServer {
   Future<Connection> newConnection({
     ReplicationMode replicationMode = ReplicationMode.none,
     SslMode? sslMode,
+    TypeRegistry? typeRegistry,
   }) async {
     return Connection.open(
       await endpoint(),
@@ -69,8 +70,9 @@ class PostgresServer {
         connectTimeout: Duration(seconds: 3),
         queryTimeout: Duration(seconds: 3),
         replicationMode: replicationMode,
-        transformer: loggingTransformer('conn'),
         sslMode: sslMode,
+        transformer: loggingTransformer('conn'),
+        typeRegistry: typeRegistry,
       ),
     );
   }

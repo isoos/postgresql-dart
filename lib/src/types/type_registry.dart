@@ -13,6 +13,11 @@ import 'text_search.dart';
 typedef TypeEncoderFn = EncodeOutput Function(EncodeInput input);
 typedef TypeDecoderFn = Object? Function(DecodeInput input);
 
+@sealed
+final class SqlNull {
+  const SqlNull();
+}
+
 /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
 class TypeOid {
   static const bigInteger = 20;
@@ -192,8 +197,12 @@ final _builtInTypeNames = <String, Type>{
 class TypeRegistry {
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
+  final bool _strictSqlNull;
 
-  TypeRegistry() {
+  TypeRegistry({
+    /// When set, return [SqlNull] where the SQL query would return a `NULL` value.
+    bool? strictSqlNull,
+  }) : _strictSqlNull = strictSqlNull ?? false {
     for (final t in _builtInTypes) {
       _register(t);
     }
@@ -232,7 +241,13 @@ extension TypeRegistryExt on TypeRegistry {
     required Type type,
     required Encoding encoding,
   }) {
-    if (value == null) return null;
+    if (value == null) {
+      return null;
+    }
+    // encode [SqlNull] unconditionally
+    if (value is SqlNull) {
+      return null;
+    }
     switch (type) {
       case GenericType():
         return type.encode(EncodeInput(value: value, encoding: encoding));
@@ -257,6 +272,9 @@ extension TypeRegistryExt on TypeRegistry {
     required Encoding encoding,
   }) {
     if (bytes == null) {
+      if (_strictSqlNull) {
+        return const SqlNull();
+      }
       return null;
     }
     final type = resolveOid(typeOid);
