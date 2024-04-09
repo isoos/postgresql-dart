@@ -262,11 +262,17 @@ class Result extends UnmodifiableListView<ResultRow> {
 
 class ResultRow extends UnmodifiableListView<Object?> {
   final ResultSchema schema;
+  final List<bool>? _sqlNulls;
 
   ResultRow({
     required List<Object?> values,
     required this.schema,
-  }) : super(values);
+    List<bool>? sqlNulls,
+  })  : _sqlNulls = sqlNulls,
+        super(values);
+
+  /// Returns true if the result at [columnIndex] returned SQL `NULL` value.
+  bool isSqlNull(int columnIndex) => _sqlNulls?[columnIndex] ?? false;
 
   /// Returns a single-level map that maps the column name to the value
   /// returned on that position. When multiple columns have the same name,

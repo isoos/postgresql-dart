@@ -261,4 +261,21 @@ void main() {
       expect((row[1] as UndecodedBytes).asString, 'flutter');
     });
   });
+
+  withPostgresServer('sql null', (server) {
+    test('decode output', () async {
+      final c = await server.newConnection();
+      final rs = await c.execute("SELECT NULL, 'null'::JSONB, NULL::JSONB, 1");
+      final row = rs.single;
+
+      expect(row[0], isNull);
+      expect(row.isSqlNull(0), isTrue);
+      expect(row[1], isNull);
+      expect(row.isSqlNull(1), isFalse);
+      expect(row[2], isNull);
+      expect(row.isSqlNull(2), isTrue);
+      expect(row[3], isNotNull);
+      expect(row.isSqlNull(3), isFalse);
+    });
+  });
 }

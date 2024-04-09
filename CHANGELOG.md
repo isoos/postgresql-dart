@@ -3,6 +3,7 @@
 ## 3.2.0
 
 - Support for `tsvector` and `tsquery` types.
+- `ResultRow.isSqlNull(int)` returns true if the column's value was SQL `NULL`.
 
 ## 3.1.2
 
