@@ -231,9 +231,9 @@ extension TypeRegistryExt on TypeRegistry {
     Object? value, {
     required Type type,
     required Encoding encoding,
-    bool? isSqlNull = false,
+    required bool isSqlNull,
   }) {
-    if (isSqlNull == true || isSqlNull == null && value == null) {
+    if (isSqlNull) {
       return null;
     }
 

@@ -558,8 +558,12 @@ void main() {
       ]);
 
       expect(
-        () =>
-            TypeRegistry().encodeValue(1, type: Type.voidType, encoding: utf8),
+        () => TypeRegistry().encodeValue(
+          1,
+          type: Type.voidType,
+          encoding: utf8,
+          isSqlNull: false,
+        ),
         throwsArgumentError,
       );
     });
