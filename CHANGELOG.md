@@ -4,6 +4,7 @@
 
 - Support for `tsvector` and `tsquery` types.
 - `ResultRow.isSqlNull(int)` returns true if the column's value was SQL `NULL`.
+- `TypedValue.isSqlNull` indicates SQL `NULL` (vs. JSON `null`).
 
 ## 3.1.2
 
