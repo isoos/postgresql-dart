@@ -231,8 +231,12 @@ extension TypeRegistryExt on TypeRegistry {
     Object? value, {
     required Type type,
     required Encoding encoding,
+    required bool isSqlNull,
   }) {
-    if (value == null) return null;
+    if (isSqlNull) {
+      return null;
+    }
+
     switch (type) {
       case GenericType():
         return type.encode(EncodeInput(value: value, encoding: encoding));
