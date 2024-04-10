@@ -870,6 +870,25 @@ void main() {
         expectedDartType: 'DateTimeRange',
       );
     });
+
+    test('ambiguous nulls', () async {
+      final statement =
+          await conn.prepare(Sql.indexed('SELECT @1:json IS NULL'));
+
+      // By default, null values in Dart are mapped to null values in SQL.
+      expect(await statement.run([TypedValue<Object>(Type.json, null)]), [
+        [true]
+      ]);
+
+      // For JSON types with have their own distinct null representation, we
+      // can use that instead:
+      expect(
+          await statement
+              .run([TypedValue<Object>(Type.json, null, isSqlNull: false)]),
+          [
+            [false]
+          ]);
+    });
   });
 
   group('Text encoders', () {

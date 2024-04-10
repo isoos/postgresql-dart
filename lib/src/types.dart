@@ -411,7 +411,15 @@ class TypedValue<T extends Object> {
   final Type<T> type;
   final T? value;
 
-  TypedValue(this.type, this.value);
+  /// Whether this value is deliberately describing a `NULL` value in SQL.
+  ///
+  /// For some types, in particular `json` and `jsonb`, the `null` value in Dart
+  /// can be mapped to a non-null SQL value (a textual or binary representation
+  /// of the `null` value in JSON, respectively).
+  final bool isSqlNull;
+
+  TypedValue(this.type, this.value, {bool? isSqlNull})
+      : isSqlNull = isSqlNull ?? (value == null);
 
   @override
   int get hashCode => Object.hash(type, value);
