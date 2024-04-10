@@ -262,11 +262,23 @@ class Result extends UnmodifiableListView<ResultRow> {
 
 class ResultRow extends UnmodifiableListView<Object?> {
   final ResultSchema schema;
+  final List<bool>? _sqlNulls;
 
   ResultRow({
     required List<Object?> values,
     required this.schema,
-  }) : super(values);
+    List<bool>? sqlNulls,
+  })  : _sqlNulls = sqlNulls,
+        super(values);
+
+  /// Returns true if the result at [columnIndex] returned SQL `NULL` value.
+  ///
+  /// This is not necessarily the same as `this[columnIndex] == null`: For
+  /// instance, JSON columns are automatically parsed and turned into their
+  /// Dart representation. This means that a SQL column storing the JSON value
+  /// `null` would get mapped to `null` in Dart, whereas it technically has a
+  /// non-null value in SQL (`column IS NULL` would be false).
+  bool isSqlNull(int columnIndex) => _sqlNulls?[columnIndex] ?? false;
 
   /// Returns a single-level map that maps the column name to the value
   /// returned on that position. When multiple columns have the same name,

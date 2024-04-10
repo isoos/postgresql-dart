@@ -739,22 +739,28 @@ class _PgResultStreamSubscription
         if (!ignoreRows) {
           final schema = _resultSchema!;
 
-          final columnValues = <Object?>[];
+          final values = List<Object?>.filled(message.values.length, null);
+          List<bool>? sqlNulls;
           for (var i = 0; i < message.values.length; i++) {
             final field = schema.columns[i];
-
             final input = message.values[i];
-            final value =
-                session._connection._settings.typeRegistry.decodeBytes(
+            if (input == null) {
+              sqlNulls ??= List<bool>.filled(values.length, false);
+              sqlNulls[i] = true;
+            }
+            values[i] = session._connection._settings.typeRegistry.decodeBytes(
               input,
               typeOid: field.typeOid,
               isBinary: field.isBinaryEncoding,
               encoding: session.encoding,
             );
-            columnValues.add(value);
           }
 
-          final row = ResultRow(schema: schema, values: columnValues);
+          final row = ResultRow(
+            schema: schema,
+            values: values,
+            sqlNulls: sqlNulls,
+          );
           _controller.add(row);
         }
       case CommandCompleteMessage():
