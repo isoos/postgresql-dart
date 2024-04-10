@@ -893,6 +893,18 @@ void main() {
             [false]
           ]);
     });
+
+    test("can't bind non-null Dart value as null", () async {
+      await expectLater(
+        () async => await conn.execute(
+          Sql.indexed('SELECT @1'),
+          parameters: [
+            TypedValue(Type.json, {'hello': 'world'}, isSqlNull: true)
+          ],
+        ),
+        throwsArgumentError,
+      );
+    });
   });
 
   group('Text encoders', () {

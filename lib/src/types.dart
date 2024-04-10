@@ -419,7 +419,15 @@ class TypedValue<T extends Object> {
   final bool isSqlNull;
 
   TypedValue(this.type, this.value, {bool? isSqlNull})
-      : isSqlNull = isSqlNull ?? (value == null);
+      : isSqlNull = isSqlNull ?? (value == null) {
+    if (isSqlNull == true && value != null) {
+      throw core.ArgumentError(
+        'Using `isSqlNull: true` indicates that a Dart value should be bound '
+        'to `NULL` in SQL. This only makes sense for values that are already '
+        '`null` in Dart.',
+      );
+    }
+  }
 
   @override
   int get hashCode => Object.hash(type, value);
