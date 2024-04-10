@@ -21,7 +21,7 @@ class EncodeOutput {
   bool get isBinary => bytes != null;
 }
 
-class EncodeInput<T extends Object> {
+class EncodeInput<T> {
   final T value;
   final Encoding encoding;
 
@@ -61,7 +61,7 @@ class GenericType<T extends Object> extends Type<T> {
 }
 
 extension GenericTypeExt<T extends Object> on GenericType<T> {
-  EncodeOutput encode(EncodeInput input) {
+  EncodeOutput encode(EncodeInput<T?> input) {
     if (oid != null && oid! > 0) {
       final encoder = PostgresBinaryEncoder(oid!);
       final bytes = encoder.convert(input.value, input.encoding);

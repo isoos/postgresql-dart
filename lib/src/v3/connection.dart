@@ -636,6 +636,7 @@ class _PgResultStreamSubscription
                     e.value,
                     type: e.type,
                     encoding: connection.encoding,
+                    isSqlNull: e.isSqlNull,
                   ))
               .toList(),
           portalName: _portalName,
