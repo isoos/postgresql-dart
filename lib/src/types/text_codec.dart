@@ -253,7 +253,7 @@ class PostgresTextDecoder {
 
       case TypeOid.timestampWithTimezone:
       case TypeOid.timestampWithoutTimezone:
-        final String strTimeStamp = utf8.decode(di.bytes) + 'Z';
+        final String strTimeStamp = '${utf8.decode(di.bytes)}Z';
         return DateTime.parse(strTimeStamp);
 
       case TypeOid.interval:
@@ -263,15 +263,14 @@ class PostgresTextDecoder {
         return double.parse(di.asText);
 
       case TypeOid.date:
-        final String strTimeStamp = utf8.decode(di.bytes) + 'T00:00:00Z';
+        final String strTimeStamp = '${utf8.decode(di.bytes)}T00:00:00Z';
         final DateTime dt = DateTime.parse(strTimeStamp);
         return dt;
 
       case TypeOid.json:
       case TypeOid.jsonb:
         final String strJSON = utf8.decode(di.bytes);
-        return (jsonDecode(strJSON));
-        break;
+        return jsonDecode(strJSON);
 
       case TypeOid.byteArray:
       case TypeOid.uuid:

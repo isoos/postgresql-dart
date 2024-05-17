@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.2.1
+
+- Added some conversions for queryMode: QueryMode.simple (not complete):
+  `timestampWithTimezone`, `timestampWithoutTimezone`, `date`, `interval`, `numeric`, `json`, `jsonb`
+
+- Fixed some conversions for queryMode: QueryMode.simple:
+  `real`, `double`
+
 ## 3.2.0
 
 - Support for `tsvector` and `tsquery` types.
