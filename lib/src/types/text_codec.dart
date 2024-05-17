@@ -138,7 +138,8 @@ class PostgresTextEncoder {
         final timezoneMinuteOffset = value.timeZoneOffset.inMinutes % 60;
 
         var hourComponent = timezoneHourOffset.abs().toString().padLeft(2, '0');
-        final minuteComponent = timezoneMinuteOffset.abs().toString().padLeft(2, '0');
+        final minuteComponent =
+            timezoneMinuteOffset.abs().toString().padLeft(2, '0');
 
         if (timezoneHourOffset >= 0) {
           hourComponent = '+$hourComponent';
@@ -209,7 +210,8 @@ class PostgresTextEncoder {
 
     if (type == Map) {
       return '{${value.map((s) {
-        final escaped = json.encode(s).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+        final escaped =
+            json.encode(s).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
 
         return '"$escaped"';
       }).join(',')}}';
@@ -253,25 +255,19 @@ class PostgresTextDecoder {
 
       case TypeOid.timestampWithTimezone:
       case TypeOid.timestampWithoutTimezone:
-        final String strTimeStamp = '${utf8.decode(di.bytes)}Z';
-        return DateTime.parse(strTimeStamp);
-
-      case TypeOid.interval:
-        return utf8.decode(di.bytes);
+        return DateTime.parse(di.asText);
 
       case TypeOid.numeric:
-        return double.parse(di.asText);
+        return di.asText;
 
       case TypeOid.date:
-        final String strTimeStamp = '${utf8.decode(di.bytes)}T00:00:00Z';
-        final DateTime dt = DateTime.parse(strTimeStamp);
-        return dt;
+        return DateTime.parse(di.asText);
 
       case TypeOid.json:
       case TypeOid.jsonb:
-        final String strJSON = utf8.decode(di.bytes);
-        return jsonDecode(strJSON);
+        return jsonDecode(di.asText);
 
+      case TypeOid.interval:
       case TypeOid.byteArray:
       case TypeOid.uuid:
       case TypeOid.point:

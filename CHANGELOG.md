@@ -2,11 +2,9 @@
 
 ## 3.2.1
 
-- Added some conversions for queryMode: QueryMode.simple (not complete):
-  `timestampWithTimezone`, `timestampWithoutTimezone`, `date`, `interval`, `numeric`, `json`, `jsonb`
-
-- Fixed some conversions for queryMode: QueryMode.simple:
-  `real`, `double`
+- Added or fixed decoders support for `QueryMode.simple`:
+  `double`, `real`, `timestampWithTimezone`, `timestampWithoutTimezone`,
+  `date`, `numeric`, `json`, `jsonb` [#338](https://github.com/isoos/postgresql-dart/pull/338) by [pst9354](https://github.com/pst9354).
 
 ## 3.2.0
 

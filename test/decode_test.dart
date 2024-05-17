@@ -4,6 +4,69 @@ import 'package:test/test.dart';
 import 'docker.dart';
 
 void main() {
+  withPostgresServer('simple query protocol decode', (server) {
+    late Connection conn;
+    setUp(() async {
+      conn = await server.newConnection(queryMode: QueryMode.simple);
+    });
+    tearDown(() async {
+      await conn.close();
+    });
+
+    test('double', () async {
+      final rs = await conn.execute('SELECT 3.14::DOUBLE PRECISION');
+      expect(rs.single.single, 3.14);
+    });
+
+    test('timestamp with time zones', () async {
+      final rs = await conn.execute(
+          "SELECT '1999-01-08 04:05:06 -8:00'::TIMESTAMP WITH TIME ZONE");
+      final item = rs.single.single as DateTime;
+      expect(item.toIso8601String(), '1999-01-08T12:05:06.000Z');
+    });
+
+    test('timestamp without time zones', () async {
+      final rs = await conn
+          .execute("SELECT '1999-01-08 04:05:06'::TIMESTAMP WITHOUT TIME ZONE");
+      final item = rs.single.single as DateTime;
+      expect(item.toIso8601String(), '1999-01-08T04:05:06.000');
+    });
+
+    test('interval', () async {
+      final rs = await conn.execute(
+          "SELECT '2 years 15 months 100 weeks 99 hours 123456789 milliseconds'::INTERVAL");
+      final item = rs.single.single;
+      expect((item as UndecodedBytes).asString,
+          '3 years 3 mons 700 days 133:17:36.789');
+      // should be:
+      // expect(item, Interval(months: 39, days: 700, microseconds: 479856789000));
+    });
+
+    test('numeric', () async {
+      final rs = await conn.execute('SELECT 3.141::NUMERIC(5,2)');
+      final item = rs.single.single;
+      expect(item, '3.14');
+    });
+
+    test('date', () async {
+      final rs = await conn.execute("SELECT '1999-01-08'::DATE");
+      final item = rs.single.single as DateTime;
+      expect(item.toIso8601String(), '1999-01-08T00:00:00.000');
+    });
+
+    test('json', () async {
+      final rs = await conn.execute("SELECT '{\"a\": 1}'::JSON");
+      final item = rs.single.single;
+      expect(item, {'a': 1});
+    });
+
+    test('jsonb', () async {
+      final rs = await conn.execute("SELECT '{\"a\": 1}'::JSONB");
+      final item = rs.single.single;
+      expect(item, {'a': 1});
+    });
+  });
+
   withPostgresServer('decode', (server) {
     late Connection connection;
     setUp(() async {
