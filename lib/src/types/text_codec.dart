@@ -240,7 +240,7 @@ class PostgresTextDecoder {
         return int.parse(di.asText);
       case TypeOid.real:
       case TypeOid.double:
-        return num.parse(di.asText);
+        return double.parse(di.asText);
       case TypeOid.boolean:
         // In text data format when using simple query protocol, "true" & "false"
         // are represented as `t` and `f`,  respectively.
@@ -255,12 +255,31 @@ class PostgresTextDecoder {
 
       case TypeOid.timestampWithTimezone:
       case TypeOid.timestampWithoutTimezone:
-      case TypeOid.interval:
+        final raw = DateTime.parse(di.asText);
+        return DateTime.utc(
+          raw.year,
+          raw.month,
+          raw.day,
+          raw.hour,
+          raw.minute,
+          raw.second,
+          raw.millisecond,
+          raw.microsecond,
+        );
+
       case TypeOid.numeric:
-      case TypeOid.byteArray:
+        return di.asText;
+
       case TypeOid.date:
+        final raw = DateTime.parse(di.asText);
+        return DateTime.utc(raw.year, raw.month, raw.day);
+
       case TypeOid.json:
       case TypeOid.jsonb:
+        return jsonDecode(di.asText);
+
+      case TypeOid.interval:
+      case TypeOid.byteArray:
       case TypeOid.uuid:
       case TypeOid.point:
       case TypeOid.booleanArray:

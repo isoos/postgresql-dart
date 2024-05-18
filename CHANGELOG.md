@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.1
+
+- Added or fixed decoders support for `QueryMode.simple`:
+  `double`, `real`, `timestampWithTimezone`, `timestampWithoutTimezone`,
+  `date`, `numeric`, `json`, `jsonb` [#338](https://github.com/isoos/postgresql-dart/pull/338) by [pst9354](https://github.com/pst9354).
+
 ## 3.2.0
 
 - Support for `tsvector` and `tsquery` types.
