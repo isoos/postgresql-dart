@@ -255,13 +255,24 @@ class PostgresTextDecoder {
 
       case TypeOid.timestampWithTimezone:
       case TypeOid.timestampWithoutTimezone:
-        return DateTime.parse(di.asText);
+        final raw = DateTime.parse(di.asText);
+        return DateTime.utc(
+          raw.year,
+          raw.month,
+          raw.day,
+          raw.hour,
+          raw.minute,
+          raw.second,
+          raw.millisecond,
+          raw.microsecond,
+        );
 
       case TypeOid.numeric:
         return di.asText;
 
       case TypeOid.date:
-        return DateTime.parse(di.asText);
+        final raw = DateTime.parse(di.asText);
+        return DateTime.utc(raw.year, raw.month, raw.day);
 
       case TypeOid.json:
       case TypeOid.jsonb:

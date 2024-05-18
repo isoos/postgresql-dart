@@ -29,7 +29,7 @@ void main() {
       final rs = await conn
           .execute("SELECT '1999-01-08 04:05:06'::TIMESTAMP WITHOUT TIME ZONE");
       final item = rs.single.single as DateTime;
-      expect(item.toIso8601String(), '1999-01-08T04:05:06.000');
+      expect(item.toIso8601String(), '1999-01-08T04:05:06.000Z');
     });
 
     test('interval', () async {
@@ -51,7 +51,7 @@ void main() {
     test('date', () async {
       final rs = await conn.execute("SELECT '1999-01-08'::DATE");
       final item = rs.single.single as DateTime;
-      expect(item.toIso8601String(), '1999-01-08T00:00:00.000');
+      expect(item.toIso8601String(), '1999-01-08T00:00:00.000Z');
     });
 
     test('json', () async {
