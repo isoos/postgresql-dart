@@ -90,6 +90,7 @@ void withPostgresServer(
   String? pgUser,
   String? pgPassword,
   String? pgHbaConfContent,
+  String? timeZone,
 }) {
   group(name, () {
     final server = PostgresServer(
@@ -117,6 +118,7 @@ void withPostgresServer(
           pgUser: pgUser,
           pgPassword: pgPassword,
           pgHbaConfPath: pgHbaConfPath,
+          timeZone: timeZone,
         );
 
         server._containerName.complete(containerName);
@@ -153,6 +155,7 @@ Future<void> _startPostgresContainer({
   String? pgUser,
   String? pgPassword,
   String? pgHbaConfPath,
+  String? timeZone,
 }) async {
   final isRunning = await _isPostgresContainerRunning(containerName);
   if (isRunning) {
@@ -178,6 +181,7 @@ Future<void> _startPostgresContainer({
     ],
     pgHbaConfPath: pgHbaConfPath ?? p.join(configPath, 'pg_hba.conf'),
     postgresqlConfPath: p.join(configPath, 'postgresql.conf'),
+    timeZone: timeZone,
   );
 
   // Setup the database to support all kind of tests
