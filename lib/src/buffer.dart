@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/src/timezone_settings.dart';
 
 /// This class doesn't add much over using `List<int>` instead, however,
 /// it creates a nice explicit type difference from both `String` and `List<int>`,
@@ -43,9 +44,11 @@ const _emptyString = '';
 
 class PgByteDataReader extends ByteDataReader {
   final Encoding encoding;
-
+  final TimeZoneSettings timeZone;
+  
   PgByteDataReader({
     required this.encoding,
+    required this.timeZone,
   });
 
   String readNullTerminatedString() {

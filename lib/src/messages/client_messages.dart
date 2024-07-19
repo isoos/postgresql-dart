@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:charcode/ascii.dart';
+import 'package:postgres/src/timezone_settings.dart';
 import 'package:postgres/src/types/generic_type.dart';
 
 import '../buffer.dart';
@@ -49,12 +50,12 @@ class StartupMessage extends ClientMessage {
 
   StartupMessage({
     required String database,
-    required String timeZone,
+    required TimeZoneSettings timeZone,
     String? username,
     String? applicationName,
     ReplicationMode replication = ReplicationMode.none,
   })  : _databaseName = database,
-        _timeZone = timeZone,
+        _timeZone = timeZone.value,
         _username = username,
         _applicationName = applicationName,
         _replication = replication.value;

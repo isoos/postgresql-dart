@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres/src/timezone_settings.dart';
 
 import '../exceptions.dart';
 import '../types.dart';
@@ -259,6 +260,7 @@ extension TypeRegistryExt on TypeRegistry {
     required int typeOid,
     required bool isBinary,
     required Encoding encoding,
+    required TimeZoneSettings timeZone,
   }) {
     if (bytes == null) {
       return null;
@@ -270,6 +272,7 @@ extension TypeRegistryExt on TypeRegistry {
           bytes: bytes,
           isBinary: isBinary,
           encoding: encoding,
+          timeZone: timeZone,
           typeRegistry: this,
         ));
       case TsVectorType():
@@ -277,6 +280,7 @@ extension TypeRegistryExt on TypeRegistry {
           bytes: bytes,
           isBinary: isBinary,
           encoding: encoding,
+          timeZone: timeZone,
           typeRegistry: this,
         ));
       case TsQueryType():
@@ -284,6 +288,7 @@ extension TypeRegistryExt on TypeRegistry {
           bytes: bytes,
           isBinary: isBinary,
           encoding: encoding,
+          timeZone: timeZone,
           typeRegistry: this,
         ));
       case UnknownType():
@@ -292,6 +297,7 @@ extension TypeRegistryExt on TypeRegistry {
           bytes: bytes,
           isBinary: isBinary,
           encoding: encoding,
+          
         );
     }
     return UndecodedBytes(

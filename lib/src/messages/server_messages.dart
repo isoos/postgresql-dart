@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
+import 'package:postgres/src/timezone_settings.dart';
+
 
 import '../buffer.dart';
 import '../time_converters.dart';
@@ -69,6 +71,9 @@ class ParameterStatusMessage extends ServerMessage {
   factory ParameterStatusMessage.parse(PgByteDataReader reader) {
     final name = reader.readNullTerminatedString();
     final value = reader.readNullTerminatedString();
+    if (name.toLowerCase() == 'timezone') {
+      reader.timeZone.value = value;          
+    }
     return ParameterStatusMessage._(name, value);
   }
 }
@@ -366,8 +371,8 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   /// If [XLogDataMessage.data] is a [LogicalReplicationMessage], then the method
   /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll
   /// return [XLogDataMessage] with raw data.
-  static XLogDataMessage parse(Uint8List bytes, Encoding encoding) {
-    final reader = PgByteDataReader(encoding: encoding)..add(bytes);
+  static XLogDataMessage parse(Uint8List bytes, Encoding encoding, TimeZoneSettings timeZone) {
+    final reader = PgByteDataReader(encoding: encoding, timeZone: timeZone)..add(bytes);
     final walStart = LSN(reader.readUint64());
     final walEnd = LSN(reader.readUint64());
     final time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());

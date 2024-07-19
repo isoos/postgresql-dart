@@ -44,6 +44,7 @@ abstract class _PgSessionBase implements Session {
   PgConnectionImplementation get _connection;
   ResolvedSessionSettings get _settings;
   Encoding get encoding => _connection._settings.encoding;
+  TimeZoneSettings get timeZone => _connection._settings.timeZone;
 
   void _closeSession() {
     if (!_sessionClosed) {
@@ -321,7 +322,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
     return (
       StreamChannel<List<int>>(adaptedStream, outgoingSocket)
-          .transform(messageTransformer(settings.encoding)),
+          .transform(messageTransformer(settings.encoding,settings.timeZone)),
       secure,
     );
   }
@@ -754,6 +755,7 @@ class _PgResultStreamSubscription
               typeOid: field.typeOid,
               isBinary: field.isBinaryEncoding,
               encoding: session.encoding,
+              timeZone: session.timeZone,
             );
           }
 

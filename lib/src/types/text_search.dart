@@ -105,7 +105,7 @@ class TsVectorType extends Type<TsVector> {
 
   TsVector? decode(DecodeInput input) {
     if (input.isBinary) {
-      final reader = PgByteDataReader(encoding: input.encoding)
+      final reader = PgByteDataReader(encoding: input.encoding, timeZone: input.timeZone)
         ..add(input.bytes);
       final count = reader.readUint32();
       final lexemes = <TsWord>[];
@@ -192,7 +192,7 @@ class TsQueryType extends Type<TsQuery> {
 
   TsQuery decode(DecodeInput input) {
     if (input.isBinary) {
-      final reader = PgByteDataReader(encoding: input.encoding)
+      final reader = PgByteDataReader(encoding: input.encoding,timeZone: input.timeZone)
         ..add(input.bytes);
       final count = reader.readUint32();
       final items = [];

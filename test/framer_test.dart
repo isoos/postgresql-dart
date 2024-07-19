@@ -6,12 +6,13 @@ import 'package:postgres/src/message_window.dart';
 import 'package:postgres/src/messages/logical_replication_messages.dart';
 import 'package:postgres/src/messages/server_messages.dart';
 import 'package:postgres/src/messages/shared_messages.dart';
+import 'package:postgres/src/timezone_settings.dart';
 import 'package:test/test.dart';
 
 void main() {
   late MessageFramer framer;
   setUp(() {
-    framer = MessageFramer(utf8);
+    framer = MessageFramer(utf8, TimeZoneSettings('UTC'));
   });
 
   tearDown(() {

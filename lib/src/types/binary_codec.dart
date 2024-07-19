@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/src/timezone_settings.dart' as tz;
 import 'package:postgres/src/types/generic_type.dart';
 
 import '../buffer.dart';
@@ -760,6 +761,7 @@ class PostgresBinaryDecoder {
 
   Object? convert(DecodeInput dinput) {
     final encoding = dinput.encoding;
+
     final input = dinput.bytes;
     late final buffer =
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
@@ -785,9 +787,92 @@ class PostgresBinaryDecoder {
       case TypeOid.time:
         return Time.fromMicroseconds(buffer.getInt64(0));
       case TypeOid.timestampWithoutTimezone:
+        final value = buffer.getInt64(0);
+        //infinity || -infinity
+        if (value == 9223372036854775807 || value == -9223372036854775808) {
+          return null;
+        }
+       
+        //remove Z from timestamp Without Timezone decode
+        final date = DateTime(2000).add(Duration(microseconds: value));
+        return date;
       case TypeOid.timestampWithTimezone:
-        return DateTime.utc(2000)
-            .add(Duration(microseconds: buffer.getInt64(0)));
+        
+        final value = buffer.getInt64(0);
+
+        //infinity || -infinity
+        if (value == 9223372036854775807 || value == -9223372036854775808) {
+          return null;
+        }
+
+        var datetime = DateTime.utc(2000).add(Duration(microseconds: value));
+        if (dinput.timeZone.value.toLowerCase() == 'utc') {
+          return datetime;
+        }
+        
+        final pgTimeZone = dinput.timeZone.value.toLowerCase();
+        final tzLocations = tz.timeZoneDatabase.locations.entries
+            .where((e) {
+              return e.key.toLowerCase() == pgTimeZone ||
+                  e.value.currentTimeZone.abbreviation.toLowerCase() ==
+                      pgTimeZone;
+            })
+            .map((e) => e.value)
+            .toList();
+
+        if (tzLocations.isEmpty) {
+          throw tz.LocationNotFoundException(
+              'Location with the name "$pgTimeZone" doesn\'t exist');
+        }
+        final tzLocation = tzLocations.first;
+
+        final offsetInMilliseconds = tzLocation.currentTimeZone.offset;
+        // Conversion of milliseconds to hours
+        final double offset = offsetInMilliseconds / (1000 * 60 * 60);
+
+        if (offset < 0) {
+          final subtr = Duration(
+              hours: offset.abs().truncate(),
+              minutes: ((offset.abs() % 1) * 60).round());
+          datetime = datetime.subtract(subtr);
+          final specificDate = tz.TZDateTime(
+              tzLocation,
+              datetime.year,
+              datetime.month,
+              datetime.day,
+              datetime.hour,
+              datetime.minute,
+              datetime.second,
+              datetime.millisecond,
+              datetime.microsecond);
+          return specificDate ;
+        } else if (offset > 0) {
+          final addr = Duration(
+              hours: offset.truncate(), minutes: ((offset % 1) * 60).round());
+          datetime = datetime.add(addr);
+          final specificDate = tz.TZDateTime(
+              tzLocation,
+              datetime.year,
+              datetime.month,
+              datetime.day,
+              datetime.hour,
+              datetime.minute,
+              datetime.second,
+              datetime.millisecond,
+              datetime.microsecond);
+          return specificDate;
+        }
+
+        return datetime;
+
+      case TypeOid.date:
+        final value = buffer.getInt32(0);
+        //infinity || -infinity
+        if (value == 2147483647 || value == -2147483648) {
+          return null;
+        }               
+        final date = DateTime(2000).add(Duration(days: value));
+        return date;
 
       case TypeOid.interval:
         return Interval(
@@ -798,9 +883,6 @@ class PostgresBinaryDecoder {
 
       case TypeOid.numeric:
         return _decodeNumeric(input);
-
-      case TypeOid.date:
-        return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0)));
 
       case TypeOid.jsonb:
         {
@@ -1051,6 +1133,7 @@ class PostgresBinaryDecoder {
         bytes: bytes,
         isBinary: dinput.isBinary,
         encoding: dinput.encoding,
+        timeZone: dinput.timeZone,
         typeRegistry: dinput.typeRegistry)) as T;
   }
 

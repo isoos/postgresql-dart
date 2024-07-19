@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
+import 'package:postgres/src/timezone_settings.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../buffer.dart';
@@ -34,9 +35,9 @@ class AggregatedClientMessage extends ClientMessage {
 }
 
 StreamChannelTransformer<Message, List<int>> messageTransformer(
-    Encoding encoding) {
+    Encoding encoding, TimeZoneSettings timeZone) {
   return StreamChannelTransformer(
-    _readMessages(encoding),
+    _readMessages(encoding, timeZone),
     StreamSinkTransformer.fromHandlers(
       handleData: (message, out) {
         if (message is! ClientMessage) {
@@ -53,10 +54,11 @@ StreamChannelTransformer<Message, List<int>> messageTransformer(
   );
 }
 
-StreamTransformer<Uint8List, ServerMessage> _readMessages(Encoding encoding) {
+StreamTransformer<Uint8List, ServerMessage> _readMessages(
+    Encoding encoding, TimeZoneSettings timeZone) {
   return StreamTransformer.fromBind((rawStream) {
     return Stream.multi((listener) {
-      final framer = MessageFramer(encoding);
+      final framer = MessageFramer(encoding, timeZone);
 
       var paused = false;
 
