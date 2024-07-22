@@ -1,7 +1,18 @@
+/// A class to configure time zone settings for decoding timestamps and dates.
 class TimeZoneSettings {
+  /// The default time zone value.
+  /// 
+  /// The [value] represents the name of the time zone location. Default is 'UTC'.
   String value = 'UTC';
 
-  /// [value] location name
+  /// Creates a new instance of [TimeZoneSettings].
+  /// 
+  /// [value] is the name of the time zone location.
+  /// 
+  /// The optional named parameters:
+  /// - [forceDecodeTimestamptzAsUTC]: if true, decodes timestamps with timezone (timestamptz) as UTC. If false, decodes them using the timezone defined in the connection.
+  /// - [forceDecodeTimestampAsUTC]: if true, decodes timestamps without timezone (timestamp) as UTC. If false, decodes them as local datetime.
+  /// - [forceDecodeDateAsUTC]: if true, decodes dates as UTC. If false, decodes them as local datetime.
   TimeZoneSettings(
     this.value, {
     this.forceDecodeTimestamptzAsUTC = true,
@@ -9,12 +20,15 @@ class TimeZoneSettings {
     this.forceDecodeDateAsUTC = true,
   });
 
-  /// if true decodes the timestamp with timezone as UTC if false decodes the timestamp with timezone as the timezone defined in the connection
+  /// If true, decodes the timestamp with timezone (timestamptz) as UTC.
+  /// If false, decodes the timestamp with timezone using the timezone defined in the connection.
   bool forceDecodeTimestamptzAsUTC = true;
 
-  /// if true decodes timestamp without timezone as UTC if false decodes timestamp without timezone as local datetime
+  /// If true, decodes the timestamp without timezone (timestamp) as UTC.
+  /// If false, decodes the timestamp without timezone as local datetime.
   bool forceDecodeTimestampAsUTC = true;
 
-  /// if true decodes date as UTC if false decodes date as local datetime
+  /// If true, decodes the date as UTC.
+  /// If false, decodes the date as local datetime.
   bool forceDecodeDateAsUTC = true;
 }
