@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:pg_timezone/pg_timezone.dart' as tz;
+import 'package:pg_timezone/timezone.dart' as tzenv;
 import 'package:postgres/src/types/generic_type.dart';
 
 import '../buffer.dart';
@@ -839,6 +840,8 @@ class PostgresBinaryDecoder {
               'Location with the name "$pgTimeZone" doesn\'t exist');
         }
         final tzLocation = tzLocations.first;
+        //define location for TZDateTime.toLocal()
+        tzenv.setLocalLocation(tzLocation);
 
         final offsetInMilliseconds = tzLocation.currentTimeZone.offset;
         // Conversion of milliseconds to hours
