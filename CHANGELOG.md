@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.2.2
+
+- Added support for binary `pgoutput` replication by [wolframm](https://github.com/Wolframm-Activities-OU).
+
 ## 3.2.1
 
 - Added or fixed decoders support for `QueryMode.simple`:
