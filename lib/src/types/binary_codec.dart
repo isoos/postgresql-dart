@@ -796,7 +796,15 @@ class PostgresBinaryDecoder {
         if (dinput.timeZone.forceDecodeDateAsUTC) {
           return DateTime.utc(2000).add(Duration(days: value));
         }
-        return DateTime(2000).add(Duration(days: value));
+        // https://github.com/dart-lang/sdk/issues/56312
+        // ignore past timestamp transitions and use only current timestamp in local datetime
+        final nowDt = DateTime.now();
+        var baseDt = DateTime(2000);
+        if (baseDt.timeZoneOffset != nowDt.timeZoneOffset) {
+          final difference = baseDt.timeZoneOffset - nowDt.timeZoneOffset;
+          baseDt = baseDt.add(difference);
+        }
+        return baseDt.add(Duration(days: value));
       case TypeOid.timestampWithoutTimezone:
         final value = buffer.getInt64(0);
         //infinity || -infinity
@@ -807,7 +815,15 @@ class PostgresBinaryDecoder {
         if (dinput.timeZone.forceDecodeTimestampAsUTC) {
           return DateTime.utc(2000).add(Duration(microseconds: value));
         }
-        return DateTime(2000).add(Duration(microseconds: value));
+        // https://github.com/dart-lang/sdk/issues/56312
+        // ignore previous timestamp transitions and use only the current system timestamp in local date and time so that the behavior is correct on Windows and Linux
+        final nowDt = DateTime.now();
+        var baseDt = DateTime(2000);
+        if (baseDt.timeZoneOffset != nowDt.timeZoneOffset) {
+          final difference = baseDt.timeZoneOffset - nowDt.timeZoneOffset;
+          baseDt = baseDt.add(difference);
+        }
+        return baseDt.add(Duration(microseconds: value));
 
       case TypeOid.timestampWithTimezone:
         final value = buffer.getInt64(0);
