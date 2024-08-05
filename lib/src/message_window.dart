@@ -15,73 +15,34 @@ const int _headerByteSize = 5;
 typedef _ServerMessageFn = ServerMessage Function(
     PgByteDataReader reader, int length);
 
-// Map<int, _ServerMessageFn> _messageTypeMap = {
-//   49: (_, __) => ParseCompleteMessage(),
-//   50: (_, __) => BindCompleteMessage(),
-//   65: (r, _) => NotificationResponseMessage.parse(r),
-//   67: (r, _) => CommandCompleteMessage.parse(r),
-//   68: (r, _) => DataRowMessage.parse(r),
-//   69: ErrorResponseMessage.parse,
-//   75: (r, _) => BackendKeyMessage.parse(r),
-//   82: AuthenticationMessage.parse,
-//   83: (r, l) => ParameterStatusMessage.parse(r),
-//   84: (r, _) => RowDescriptionMessage.parse(r),
-//   87: (r, _) => CopyBothResponseMessage.parse(r),
-//   90: ReadyForQueryMessage.parse,
-//   100: _parseCopyDataMessage,
-//   110: (_, __) => NoDataMessage(),
-//   116: (r, _) => ParameterDescriptionMessage.parse(r),
-//   $3: (_, __) => CloseCompleteMessage(),
-//   $N: NoticeMessage.parse,
-// };
+Map<int, _ServerMessageFn> _messageTypeMap = {
+  49: (_, __) => ParseCompleteMessage(),
+  50: (_, __) => BindCompleteMessage(),
+  65: (r, _) => NotificationResponseMessage.parse(r),
+  67: (r, _) => CommandCompleteMessage.parse(r),
+  68: (r, _) => DataRowMessage.parse(r),
+  69: ErrorResponseMessage.parse,
+  75: (r, _) => BackendKeyMessage.parse(r),
+  82: AuthenticationMessage.parse,
+  83: (r, l) => ParameterStatusMessage.parse(r),
+  84: (r, _) => RowDescriptionMessage.parse(r),
+  87: (r, _) => CopyBothResponseMessage.parse(r),
+  90: ReadyForQueryMessage.parse,
+  100: _parseCopyDataMessage,
+  110: (_, __) => NoDataMessage(),
+  116: (r, _) => ParameterDescriptionMessage.parse(r),
+  $3: (_, __) => CloseCompleteMessage(),
+  $N: NoticeMessage.parse,
+};
 
 class MessageFramer {
   final Encoding _encoding;
   TimeZoneSettings timeZone;
-  late final _reader = PgByteDataReader(encoding: _encoding, timeZone: timeZone);
+  late final _reader =
+      PgByteDataReader(encoding: _encoding, timeZone: timeZone);
   final messageQueue = Queue<ServerMessage>();
 
   MessageFramer(this._encoding, this.timeZone);
-
-  _ServerMessageFn? _messageTypeMap(int? messageType) {
-    switch (messageType) {
-      case 49:
-        return (_, __) => ParseCompleteMessage();
-      case 50:
-        return (_, __) => BindCompleteMessage();
-      case 65:
-        return (r, _) => NotificationResponseMessage.parse(r);
-      case 67:
-        return (r, _) => CommandCompleteMessage.parse(r);
-      case 68:
-        return (r, _) => DataRowMessage.parse(r);
-      case 69:
-        return ErrorResponseMessage.parse;
-      case 75:
-        return (r, _) => BackendKeyMessage.parse(r);
-      case 82:
-        return AuthenticationMessage.parse;
-      case 83:
-        return (r, l) => ParameterStatusMessage.parse(r);
-      case 84:
-        return (r, _) => RowDescriptionMessage.parse(r);
-      case 87:
-        return (r, _) => CopyBothResponseMessage.parse(r);
-      case 90:
-        return ReadyForQueryMessage.parse;
-      case 100:
-        return _parseCopyDataMessage;
-      case 110:
-        return (_, __) => NoDataMessage();
-      case 116:
-        return (r, _) => ParameterDescriptionMessage.parse(r);
-      case $3:
-        return (_, __) => CloseCompleteMessage();
-      case $N:
-        return NoticeMessage.parse;
-    }
-    return null;
-  }
 
   int? _type;
   int _expectedLength = 0;
@@ -111,7 +72,7 @@ class MessageFramer {
       }
 
       if (_hasReadHeader && _isComplete) {
-        final msgMaker = _messageTypeMap(_type);
+        final msgMaker = _messageTypeMap[_type];
         if (msgMaker == null) {
           _addMsg(UnknownMessage(_type!, _reader.read(_expectedLength)));
           continue;
@@ -158,7 +119,8 @@ ServerMessage _parseCopyDataMessage(PgByteDataReader reader, int length) {
   if (code == ReplicationMessageId.primaryKeepAlive) {
     return PrimaryKeepAliveMessage.parse(reader);
   } else if (code == ReplicationMessageId.xLogData) {
-    return XLogDataMessage.parse(reader.read(length - 1), reader.encoding, reader.timeZone);
+    return XLogDataMessage.parse(
+        reader.read(length - 1), reader.encoding, reader.timeZone);
   } else {
     final bb = BytesBuffer();
     bb.addByte(code);

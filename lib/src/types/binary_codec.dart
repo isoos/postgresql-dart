@@ -796,14 +796,8 @@ class PostgresBinaryDecoder {
         if (dinput.timeZone.forceDecodeDateAsUTC) {
           return DateTime.utc(2000).add(Duration(days: value));
         }
-        // https://github.com/dart-lang/sdk/issues/56312
-        // ignore past timestamp transitions and use only current timestamp in local datetime
-        final nowDt = DateTime.now();
-        var baseDt = DateTime(2000);
-        if (baseDt.timeZoneOffset != nowDt.timeZoneOffset) {
-          final difference = baseDt.timeZoneOffset - nowDt.timeZoneOffset;
-          baseDt = baseDt.add(difference);
-        }
+
+        final baseDt = _getPostgreSQLEpochBaseDate();
         return baseDt.add(Duration(days: value));
       case TypeOid.timestampWithoutTimezone:
         final value = buffer.getInt64(0);
@@ -815,14 +809,8 @@ class PostgresBinaryDecoder {
         if (dinput.timeZone.forceDecodeTimestampAsUTC) {
           return DateTime.utc(2000).add(Duration(microseconds: value));
         }
-        // https://github.com/dart-lang/sdk/issues/56312
-        // ignore previous timestamp transitions and use only the current system timestamp in local date and time so that the behavior is correct on Windows and Linux
-        final nowDt = DateTime.now();
-        var baseDt = DateTime(2000);
-        if (baseDt.timeZoneOffset != nowDt.timeZoneOffset) {
-          final difference = baseDt.timeZoneOffset - nowDt.timeZoneOffset;
-          baseDt = baseDt.add(difference);
-        }
+
+        final baseDt = _getPostgreSQLEpochBaseDate();
         return baseDt.add(Duration(microseconds: value));
 
       case TypeOid.timestampWithTimezone:
@@ -1052,6 +1040,29 @@ class PostgresBinaryDecoder {
       isBinary: true,
       encoding: encoding,
     );
+  }
+
+  /// Returns a base DateTime object representing the PostgreSQL epoch
+  /// (January 1, 2000), adjusted to the current system's timezone offset.
+  ///
+  /// This method ensures that the base DateTime object is consistent across
+  /// different system environments (e.g., Windows, Linux) by adjusting the
+  /// base DateTime's timezone offset to match the current system's timezone
+  /// offset. This adjustment is necessary due to potential differences in
+  /// how different operating systems handle timezone transitions.
+  /// Returns:
+  /// - A `DateTime` object representing January 1, 2000, adjusted to the
+  ///   current system's timezone offset.
+  DateTime _getPostgreSQLEpochBaseDate() {
+    // https://github.com/dart-lang/sdk/issues/56312
+    // ignore past timestamp transitions and use only current timestamp in local datetime
+    final nowDt = DateTime.now();
+    var baseDt = DateTime(2000);
+    if (baseDt.timeZoneOffset != nowDt.timeZoneOffset) {
+      final difference = baseDt.timeZoneOffset - nowDt.timeZoneOffset;
+      baseDt = baseDt.add(difference);
+    }
+    return baseDt;
   }
 
   List<V> readListBytes<V>(Uint8List data,
