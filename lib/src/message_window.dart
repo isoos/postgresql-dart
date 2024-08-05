@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
+import 'package:postgres/src/timezone_settings.dart';
 
 import 'buffer.dart';
 import 'messages/server_messages.dart';
@@ -36,10 +37,12 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
 
 class MessageFramer {
   final Encoding _encoding;
-  late final _reader = PgByteDataReader(encoding: _encoding);
+  TimeZoneSettings timeZone;
+  late final _reader =
+      PgByteDataReader(encoding: _encoding, timeZone: timeZone);
   final messageQueue = Queue<ServerMessage>();
 
-  MessageFramer(this._encoding);
+  MessageFramer(this._encoding, this.timeZone);
 
   int? _type;
   int _expectedLength = 0;
@@ -116,7 +119,8 @@ ServerMessage _parseCopyDataMessage(PgByteDataReader reader, int length) {
   if (code == ReplicationMessageId.primaryKeepAlive) {
     return PrimaryKeepAliveMessage.parse(reader);
   } else if (code == ReplicationMessageId.xLogData) {
-    return XLogDataMessage.parse(reader.read(length - 1), reader.encoding);
+    return XLogDataMessage.parse(
+        reader.read(length - 1), reader.encoding, reader.timeZone);
   } else {
     final bb = BytesBuffer();
     bb.addByte(code);

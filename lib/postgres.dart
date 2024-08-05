@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres/src/timezone_settings.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/replication.dart';
@@ -16,6 +17,9 @@ import 'src/v3/query_description.dart';
 export 'src/exceptions.dart';
 export 'src/pool/pool_api.dart';
 export 'src/replication.dart';
+
+export 'src/timezone_settings.dart';
+
 export 'src/types.dart';
 export 'src/types/geo_types.dart';
 export 'src/types/range_types.dart';
@@ -440,7 +444,7 @@ enum SslMode {
 
 class ConnectionSettings extends SessionSettings {
   final String? applicationName;
-  final String? timeZone;
+  final TimeZoneSettings? timeZone;
   final Encoding? encoding;
   final SslMode? sslMode;
 

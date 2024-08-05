@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:postgres/src/timezone_settings.dart';
+
 import '../types.dart';
 import 'binary_codec.dart';
 import 'text_codec.dart';
@@ -36,11 +38,13 @@ class DecodeInput {
   final bool isBinary;
   final Encoding encoding;
   final TypeRegistry typeRegistry;
+  final TimeZoneSettings timeZone;
 
   DecodeInput({
     required this.bytes,
     required this.isBinary,
     required this.encoding,
+    required this.timeZone,
     required this.typeRegistry,
   });
 

@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:pg_timezone/pg_timezone.dart' as tz;
+import 'package:pg_timezone/timezone.dart' as tzenv;
 import 'package:postgres/src/types/generic_type.dart';
 
 import '../buffer.dart';
@@ -760,6 +762,7 @@ class PostgresBinaryDecoder {
 
   Object? convert(DecodeInput dinput) {
     final encoding = dinput.encoding;
+
     final input = dinput.bytes;
     late final buffer =
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
@@ -784,10 +787,104 @@ class PostgresBinaryDecoder {
         return buffer.getFloat64(0);
       case TypeOid.time:
         return Time.fromMicroseconds(buffer.getInt64(0));
+      case TypeOid.date:
+        final value = buffer.getInt32(0);
+        //infinity || -infinity
+        if (value == 2147483647 || value == -2147483648) {
+          return null;
+        }
+        if (dinput.timeZone.forceDecodeDateAsUTC) {
+          return DateTime.utc(2000).add(Duration(days: value));
+        }
+
+        final baseDt = _getPostgreSQLEpochBaseDate();
+        return baseDt.add(Duration(days: value));
       case TypeOid.timestampWithoutTimezone:
+        final value = buffer.getInt64(0);
+        //infinity || -infinity
+        if (value == 9223372036854775807 || value == -9223372036854775808) {
+          return null;
+        }
+
+        if (dinput.timeZone.forceDecodeTimestampAsUTC) {
+          return DateTime.utc(2000).add(Duration(microseconds: value));
+        }
+
+        final baseDt = _getPostgreSQLEpochBaseDate();
+        return baseDt.add(Duration(microseconds: value));
+
       case TypeOid.timestampWithTimezone:
-        return DateTime.utc(2000)
-            .add(Duration(microseconds: buffer.getInt64(0)));
+        final value = buffer.getInt64(0);
+
+        //infinity || -infinity
+        if (value == 9223372036854775807 || value == -9223372036854775808) {
+          return null;
+        }
+
+        var datetime = DateTime.utc(2000).add(Duration(microseconds: value));
+        if (dinput.timeZone.value.toLowerCase() == 'utc') {
+          return datetime;
+        }
+        if (dinput.timeZone.forceDecodeTimestamptzAsUTC) {
+          return datetime;
+        }
+
+        final pgTimeZone = dinput.timeZone.value.toLowerCase();
+        final tzLocations = tz.timeZoneDatabase.locations.entries
+            .where((e) {
+              return e.key.toLowerCase() == pgTimeZone ||
+                  e.value.currentTimeZone.abbreviation.toLowerCase() ==
+                      pgTimeZone;
+            })
+            .map((e) => e.value)
+            .toList();
+
+        if (tzLocations.isEmpty) {
+          throw tz.LocationNotFoundException(
+              'Location with the name "$pgTimeZone" doesn\'t exist');
+        }
+        final tzLocation = tzLocations.first;
+        //define location for TZDateTime.toLocal()
+        tzenv.setLocalLocation(tzLocation);
+
+        final offsetInMilliseconds = tzLocation.currentTimeZone.offset;
+        // Conversion of milliseconds to hours
+        final double offset = offsetInMilliseconds / (1000 * 60 * 60);
+
+        if (offset < 0) {
+          final subtr = Duration(
+              hours: offset.abs().truncate(),
+              minutes: ((offset.abs() % 1) * 60).round());
+          datetime = datetime.subtract(subtr);
+          final specificDate = tz.TZDateTime(
+              tzLocation,
+              datetime.year,
+              datetime.month,
+              datetime.day,
+              datetime.hour,
+              datetime.minute,
+              datetime.second,
+              datetime.millisecond,
+              datetime.microsecond);
+          return specificDate;
+        } else if (offset > 0) {
+          final addr = Duration(
+              hours: offset.truncate(), minutes: ((offset % 1) * 60).round());
+          datetime = datetime.add(addr);
+          final specificDate = tz.TZDateTime(
+              tzLocation,
+              datetime.year,
+              datetime.month,
+              datetime.day,
+              datetime.hour,
+              datetime.minute,
+              datetime.second,
+              datetime.millisecond,
+              datetime.microsecond);
+          return specificDate;
+        }
+
+        return datetime;
 
       case TypeOid.interval:
         return Interval(
@@ -798,9 +895,6 @@ class PostgresBinaryDecoder {
 
       case TypeOid.numeric:
         return _decodeNumeric(input);
-
-      case TypeOid.date:
-        return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0)));
 
       case TypeOid.jsonb:
         {
@@ -948,6 +1042,29 @@ class PostgresBinaryDecoder {
     );
   }
 
+  /// Returns a base DateTime object representing the PostgreSQL epoch
+  /// (January 1, 2000), adjusted to the current system's timezone offset.
+  ///
+  /// This method ensures that the base DateTime object is consistent across
+  /// different system environments (e.g., Windows, Linux) by adjusting the
+  /// base DateTime's timezone offset to match the current system's timezone
+  /// offset. This adjustment is necessary due to potential differences in
+  /// how different operating systems handle timezone transitions.
+  /// Returns:
+  /// - A `DateTime` object representing January 1, 2000, adjusted to the
+  ///   current system's timezone offset.
+  DateTime _getPostgreSQLEpochBaseDate() {
+    // https://github.com/dart-lang/sdk/issues/56312
+    // ignore past timestamp transitions and use only current timestamp in local datetime
+    final nowDt = DateTime.now();
+    var baseDt = DateTime(2000);
+    if (baseDt.timeZoneOffset != nowDt.timeZoneOffset) {
+      final difference = baseDt.timeZoneOffset - nowDt.timeZoneOffset;
+      baseDt = baseDt.add(difference);
+    }
+    return baseDt;
+  }
+
   List<V> readListBytes<V>(Uint8List data,
       V Function(ByteDataReader reader, int length) valueDecoder) {
     if (data.length < 16) {
@@ -1051,6 +1168,7 @@ class PostgresBinaryDecoder {
         bytes: bytes,
         isBinary: dinput.isBinary,
         encoding: dinput.encoding,
+        timeZone: dinput.timeZone,
         typeRegistry: dinput.typeRegistry)) as T;
   }
 

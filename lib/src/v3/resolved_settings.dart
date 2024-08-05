@@ -42,7 +42,7 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
   @override
   final String? applicationName;
   @override
-  final String timeZone;
+  final TimeZoneSettings timeZone;
   @override
   final Encoding encoding;
   @override
@@ -62,7 +62,7 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
       ConnectionSettings? super.settings, ConnectionSettings? super.fallback)
       : applicationName =
             settings?.applicationName ?? fallback?.applicationName,
-        timeZone = settings?.timeZone ?? fallback?.timeZone ?? 'UTC',
+        timeZone = settings?.timeZone ?? fallback?.timeZone ?? TimeZoneSettings('UTC'),
         encoding = settings?.encoding ?? fallback?.encoding ?? utf8,
         sslMode = settings?.sslMode ?? fallback?.sslMode ?? SslMode.require,
         securityContext = settings?.securityContext,

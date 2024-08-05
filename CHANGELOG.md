@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.3.0
+
+- timeZone option in ConnectionSettings is now a TimeZoneSettings type instead of String
+- add more flexibility on how timestamp and timestaptz types are decoded by adding flags to the TimeZoneSettings 
+- opcional decode timestamp without timezone as local DateTime and decode timestamp with timezone respecting the timezone defined in the connection
+
 ## 3.2.1
 
 - Added or fixed decoders support for `QueryMode.simple`:
