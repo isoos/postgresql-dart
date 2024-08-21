@@ -1,9 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:collection/collection.dart';
-import 'package:meta/meta.dart';
-
 import '../exceptions.dart';
 import '../types.dart';
 import 'generic_type.dart';
@@ -211,21 +208,11 @@ class TypeRegistry {
 final _textEncoder = const PostgresTextEncoder();
 
 extension TypeRegistryExt on TypeRegistry {
-  String? lookupTypeName(Type type) {
-    return _bySubstitutionName.entries
-        .firstWhereOrNull((e) => e.value == type)
-        ?.key;
-  }
-
   Type resolveOid(int oid) {
     return _byTypeOid[oid] ?? UnknownType(oid);
   }
 
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
-
-  /// Note: this returns only types with oids.
-  @internal
-  Iterable<Type> get registered => _byTypeOid.values;
 
   EncodeOutput? encodeValue(
     Object? value, {

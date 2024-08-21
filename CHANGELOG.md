@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.3.0
+
+**Removed legacy v2 APIs.** These APIs were meant to be removed in `3.1.0`, but
+were kept for a bit longer, as they didn't have any drawback to be around.
+However, a planned redesign of the type customization would require to touch the
+v2 codebase and it is not worth the effort to keep it much longer.
+
 ## 3.2.1
 
 - Added or fixed decoders support for `QueryMode.simple`:
