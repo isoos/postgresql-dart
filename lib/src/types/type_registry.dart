@@ -1,5 +1,7 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:typed_data';
+
+import 'package:buffer/buffer.dart';
 
 import '../exceptions.dart';
 import '../types.dart';
@@ -7,8 +9,11 @@ import 'generic_type.dart';
 import 'text_codec.dart';
 import 'text_search.dart';
 
-typedef TypeEncoderFn = EncodeOutput Function(EncodeInput input);
-typedef TypeDecoderFn = Object? Function(DecodeInput input);
+typedef TypeEncoderFn = FutureOr<EncodedValue?> Function(
+    TypeCodecContext context, Object? value);
+
+typedef TypeDecoderFn = FutureOr<Object?> Function(
+    TypeCodecContext context, EncodedValue input);
 
 /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
 class TypeOid {
@@ -191,16 +196,11 @@ class TypeRegistry {
   final _bySubstitutionName = <String, Type>{};
 
   TypeRegistry() {
-    for (final t in _builtInTypes) {
-      _register(t);
-    }
-  }
-
-  /// Registers a type.
-  void _register(Type type) {
     _bySubstitutionName.addAll(_builtInTypeNames);
-    if (type.oid != null && type.oid! > 0) {
-      _byTypeOid[type.oid!] = type;
+    for (final type in _builtInTypes) {
+      if (type.oid != null && type.oid! > 0) {
+        _byTypeOid[type.oid!] = type;
+      }
     }
   }
 }
@@ -214,78 +214,63 @@ extension TypeRegistryExt on TypeRegistry {
 
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
 
-  EncodeOutput? encodeValue(
-    Object? value, {
-    required Type type,
-    required Encoding encoding,
-    required bool isSqlNull,
+  FutureOr<EncodedValue> encodeValue({
+    required TypeCodecContext context,
+    required TypedValue typedValue,
   }) {
-    if (isSqlNull) {
-      return null;
-    }
-
+    final type = typedValue.type;
+    final value = typedValue.value;
     switch (type) {
       case GenericType():
-        return type.encode(EncodeInput(value: value, encoding: encoding));
+        return type.encode(context, value);
       case TsVectorType():
-        return type.encode(EncodeInput(value: value, encoding: encoding));
+        return type.encode(context, value);
       case TsQueryType():
-        return type.encode(EncodeInput(value: value, encoding: encoding));
+        return type.encode(context, value);
       case UnspecifiedType():
         final encoded = _textEncoder.tryConvert(value);
         if (encoded != null) {
-          return EncodeOutput.text(encoded);
+          return EncodedValue(
+            bytes: castBytes(context.encoding.encode(encoded)),
+            isBinary: false,
+          );
         }
         break;
     }
     throw PgException("Could not infer type of value '$value'.");
   }
 
-  Object? decodeBytes(
+  FutureOr<Object?> decodeBytes(
     Uint8List? bytes, {
+    required TypeCodecContext context,
     required int typeOid,
     required bool isBinary,
-    required Encoding encoding,
   }) {
     if (bytes == null) {
       return null;
     }
     final type = resolveOid(typeOid);
+    final value = EncodedValue(bytes: bytes, isBinary: isBinary);
     switch (type) {
       case GenericType():
-        return type.decode(DecodeInput(
-          bytes: bytes,
-          isBinary: isBinary,
-          encoding: encoding,
-          typeRegistry: this,
-        ));
+        return type.decode(context, value);
       case TsVectorType():
-        return type.decode(DecodeInput(
-          bytes: bytes,
-          isBinary: isBinary,
-          encoding: encoding,
-          typeRegistry: this,
-        ));
+        return type.decode(context, value);
       case TsQueryType():
-        return type.decode(DecodeInput(
-          bytes: bytes,
-          isBinary: isBinary,
-          encoding: encoding,
-          typeRegistry: this,
-        ));
+        return type.decode(context, value);
       case UnknownType():
         return UndecodedBytes(
           typeOid: typeOid,
           bytes: bytes,
           isBinary: isBinary,
-          encoding: encoding,
+          encoding: context.encoding,
         );
     }
     return UndecodedBytes(
       typeOid: typeOid,
       bytes: bytes,
       isBinary: isBinary,
-      encoding: encoding,
+      encoding: context.encoding,
     );
   }
 }

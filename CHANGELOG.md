@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.0
+
+- Updated `TypeRegistry`:
+  - (internal) `encode` and `decode` methods may be asynchronous
+  - (internal) using `EncodedValue` instead of `EncodeOutput`
+
 ## 3.3.0
 
 **Removed legacy v2 APIs.** These APIs were meant to be removed in `3.1.0`, but

@@ -175,7 +175,7 @@ class DescribeMessage extends ClientMessage {
 }
 
 class BindMessage extends ClientMessage {
-  final List<EncodeOutput?> _parameters;
+  final List<EncodedValue?> _parameters;
   final String _portalName;
   final String _statementName;
 
@@ -192,10 +192,6 @@ class BindMessage extends ClientMessage {
     final portalName = buffer.encodeString(_portalName);
     final statementName = buffer.encodeString(_statementName);
 
-    final encodedBytes = _parameters.map((e) {
-      if (e == null) return null;
-      return e.isBinary ? e.bytes! : buffer.encoding.encode(e.text!);
-    }).toList();
     final binaryCount = _parameters.where((p) => p?.isBinary ?? false).length;
     final isAllBinary = binaryCount == _parameters.length;
     final isAllText = binaryCount == 0;
@@ -206,7 +202,8 @@ class BindMessage extends ClientMessage {
     length += statementName.bytesLength;
     length += portalName.bytesLength;
     length += inputParameterElementCount * 2;
-    length += encodedBytes.fold<int>(0, (len, v) => len + 4 + (v?.length ?? 0));
+    length +=
+        _parameters.fold<int>(0, (len, v) => len + 4 + (v?.bytes?.length ?? 0));
 
     buffer.writeUint32(length);
 
@@ -237,7 +234,8 @@ class BindMessage extends ClientMessage {
 
     // This must be the number of $n's in the query.
     buffer.writeUint16(_parameters.length);
-    for (final bytes in encodedBytes) {
+    for (final p in _parameters) {
+      final bytes = p?.bytes;
       if (bytes == null) {
         buffer.writeInt32(-1);
       } else {

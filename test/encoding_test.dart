@@ -557,12 +557,10 @@ void main() {
         [null]
       ]);
 
-      expect(
-        () => TypeRegistry().encodeValue(
-          1,
-          type: Type.voidType,
-          encoding: utf8,
-          isSqlNull: false,
+      await expectLater(
+        () => conn.execute(
+          Sql(r'SELECT $1 AS r', types: [Type.voidType]),
+          parameters: [1],
         ),
         throwsArgumentError,
       );
