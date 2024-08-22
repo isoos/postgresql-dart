@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:postgres/src/types/generic_type.dart';
 
@@ -222,32 +223,30 @@ class PostgresTextEncoder {
 }
 
 class PostgresTextDecoder {
-  final int _typeOid;
-
-  const PostgresTextDecoder(this._typeOid);
-
-  Object? convert(DecodeInput di) {
+  static Object? convert(TypeCodecContext context, int typeOid, Uint8List di) {
+    String asText() => context.encoding.decode(di);
     // ignore: unnecessary_cast
-    switch (_typeOid) {
+    switch (typeOid) {
       case TypeOid.character:
       case TypeOid.name:
       case TypeOid.text:
       case TypeOid.varChar:
-        return di.asText;
+        return asText();
       case TypeOid.integer:
       case TypeOid.smallInteger:
       case TypeOid.bigInteger:
-        return int.parse(di.asText);
+        return int.parse(asText());
       case TypeOid.real:
       case TypeOid.double:
-        return double.parse(di.asText);
+        return double.parse(asText());
       case TypeOid.boolean:
         // In text data format when using simple query protocol, "true" & "false"
         // are represented as `t` and `f`,  respectively.
         // we will check for both just in case
         // TODO: should we check for other representations (e.g. `1`, `on`, `y`,
         // and `yes`)?
-        return di.asText == 't' || di.asText == 'true';
+        final t = asText();
+        return t == 't' || t == 'true';
 
       case TypeOid.voidType:
         // TODO: is returning `null` here is the appripriate thing to do?
@@ -255,7 +254,7 @@ class PostgresTextDecoder {
 
       case TypeOid.timestampWithTimezone:
       case TypeOid.timestampWithoutTimezone:
-        final raw = DateTime.parse(di.asText);
+        final raw = DateTime.parse(asText());
         return DateTime.utc(
           raw.year,
           raw.month,
@@ -268,15 +267,15 @@ class PostgresTextDecoder {
         );
 
       case TypeOid.numeric:
-        return di.asText;
+        return asText();
 
       case TypeOid.date:
-        final raw = DateTime.parse(di.asText);
+        final raw = DateTime.parse(asText());
         return DateTime.utc(raw.year, raw.month, raw.day);
 
       case TypeOid.json:
       case TypeOid.jsonb:
-        return jsonDecode(di.asText);
+        return jsonDecode(asText());
 
       case TypeOid.interval:
       case TypeOid.byteArray:
@@ -292,17 +291,17 @@ class PostgresTextDecoder {
       case TypeOid.regtype:
         // TODO: implement proper decoding of the above
         return UndecodedBytes(
-          typeOid: _typeOid,
-          bytes: di.bytes,
+          typeOid: typeOid,
+          bytes: di,
           isBinary: false,
-          encoding: di.encoding,
+          encoding: context.encoding,
         );
     }
     return UndecodedBytes(
-      typeOid: _typeOid,
-      bytes: di.bytes,
+      typeOid: typeOid,
+      bytes: di,
       isBinary: false,
-      encoding: di.encoding,
+      encoding: context.encoding,
     );
   }
 }

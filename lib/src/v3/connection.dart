@@ -7,6 +7,7 @@ import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
 import 'package:meta/meta.dart';
 import 'package:pool/pool.dart' as pool;
+import 'package:postgres/src/types/generic_type.dart';
 import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 
@@ -629,16 +630,27 @@ class _PgResultStreamSubscription
     _scheduleStatement(() async {
       connection._pending = this;
 
+      final encodedFutures = <Future<EncodedValue?>>[];
+      final context = TypeCodecContext(
+        encoding: connection.encoding,
+        typeRegistry: connection._settings.typeRegistry,
+      );
+      for (final e in statement.parameters) {
+        if (e.isSqlNull) {
+          encodedFutures.add(Future.value(null));
+          continue;
+        }
+        final f = context.typeRegistry.encodeValue(
+          context: context,
+          typedValue: e,
+        );
+        encodedFutures.add(Future<EncodedValue?>.value(f));
+      }
+      final encodedValues = await Future.wait(encodedFutures);
+
       connection._channel.sink.add(AggregatedClientMessage([
         BindMessage(
-          statement.parameters
-              .map((e) => connection._settings.typeRegistry.encodeValue(
-                    e.value,
-                    type: e.type,
-                    encoding: connection.encoding,
-                    isSqlNull: e.isSqlNull,
-                  ))
-              .toList(),
+          encodedValues,
           portalName: _portalName,
           statementName: statement.statement._name,
         ),
@@ -740,22 +752,29 @@ class _PgResultStreamSubscription
         if (!ignoreRows) {
           final schema = _resultSchema!;
 
-          final values = List<Object?>.filled(message.values.length, null);
+          final columnCount = message.values.length;
+          final futures = <Future>[];
           List<bool>? sqlNulls;
+          final context = TypeCodecContext(
+            encoding: session.encoding,
+            typeRegistry: session._connection._settings.typeRegistry,
+          );
           for (var i = 0; i < message.values.length; i++) {
             final field = schema.columns[i];
             final input = message.values[i];
             if (input == null) {
-              sqlNulls ??= List<bool>.filled(values.length, false);
+              sqlNulls ??= List<bool>.filled(columnCount, false);
               sqlNulls[i] = true;
             }
-            values[i] = session._connection._settings.typeRegistry.decodeBytes(
+            final futureOr = context.typeRegistry.decodeBytes(
               input,
+              context: context,
               typeOid: field.typeOid,
               isBinary: field.isBinaryEncoding,
-              encoding: session.encoding,
             );
+            futures.add(futureOr is Future ? futureOr : Future.value(futureOr));
           }
+          final values = await Future.wait(futures);
 
           final row = ResultRow(
             schema: schema,

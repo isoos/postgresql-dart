@@ -82,9 +82,9 @@ class TsWordPos {
 class TsVectorType extends Type<TsVector> {
   const TsVectorType() : super(TypeOid.tsvector);
 
-  EncodeOutput encode(EncodeInput input) {
-    final v = input.value as TsVector;
-    final writer = PgByteDataWriter(encoding: input.encoding);
+  EncodedValue encode(TypeCodecContext context, Object? value) {
+    final v = value as TsVector;
+    final writer = context.newPgByteDataWriter();
     writer.writeUint32(v.words.length);
     for (final lexeme in v.words) {
       writer.writeEncodedString(writer.encodeString(lexeme.text));
@@ -100,13 +100,12 @@ class TsVectorType extends Type<TsVector> {
       }
     }
     final bytes = writer.toBytes();
-    return EncodeOutput.bytes(bytes);
+    return EncodedValue(bytes: bytes, isBinary: true);
   }
 
-  TsVector? decode(DecodeInput input) {
+  TsVector? decode(TypeCodecContext context, EncodedValue input) {
     if (input.isBinary) {
-      final reader = PgByteDataReader(encoding: input.encoding)
-        ..add(input.bytes);
+      final reader = context.newPgByteDataReader(input.bytes);
       final count = reader.readUint32();
       final lexemes = <TsWord>[];
       for (var i = 0; i < count; i++) {
@@ -180,20 +179,19 @@ sealed class TsQuery {
 class TsQueryType extends Type<TsQuery> {
   const TsQueryType() : super(TypeOid.tsquery);
 
-  EncodeOutput encode(EncodeInput input) {
-    final v = input.value as TsQuery;
-    final writer = PgByteDataWriter(encoding: input.encoding);
+  EncodedValue encode(TypeCodecContext context, Object? value) {
+    final v = value as TsQuery;
+    final writer = context.newPgByteDataWriter();
     writer.writeUint32(v._itemCount);
     v._write(writer);
 
     final bytes = writer.toBytes();
-    return EncodeOutput.bytes(bytes);
+    return EncodedValue(bytes: bytes, isBinary: true);
   }
 
-  TsQuery decode(DecodeInput input) {
+  TsQuery decode(TypeCodecContext context, EncodedValue input) {
     if (input.isBinary) {
-      final reader = PgByteDataReader(encoding: input.encoding)
-        ..add(input.bytes);
+      final reader = context.newPgByteDataReader(input.bytes);
       final count = reader.readUint32();
       final items = [];
       for (var i = 0; i < count; i++) {

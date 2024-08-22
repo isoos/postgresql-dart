@@ -538,21 +538,21 @@ class PostgresBinaryEncoder {
 
       case TypeOid.integerRange:
         if (input is IntRange) {
-          return _encodeRange(input, encoding, Type.integer.oid!);
+          return _encodeRange(input, encoding, TypeOid.integer);
         }
         throw FormatException(
             'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}');
 
       case TypeOid.bigIntegerRange:
         if (input is IntRange) {
-          return _encodeRange(input, encoding, Type.bigInteger.oid!);
+          return _encodeRange(input, encoding, TypeOid.bigInteger);
         }
         throw FormatException(
             'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}');
 
       case TypeOid.dateRange:
         if (input is DateRange) {
-          return _encodeRange(input, encoding, Type.date.oid!);
+          return _encodeRange(input, encoding, TypeOid.date);
         }
         throw FormatException(
             'Invalid type for parameter value. Expected: DateRange Got: ${input.runtimeType}');
@@ -560,14 +560,14 @@ class PostgresBinaryEncoder {
       case TypeOid.timestampRange:
         if (input is DateTimeRange) {
           return _encodeRange(
-              input, encoding, Type.timestampWithoutTimezone.oid!);
+              input, encoding, TypeOid.timestampWithoutTimezone);
         }
         throw FormatException(
             'Invalid type for parameter value. Expected: DateTimeRange Got: ${input.runtimeType}');
 
       case TypeOid.timestampTzRange:
         if (input is DateTimeRange) {
-          return _encodeRange(input, encoding, Type.timestampWithTimezone.oid!);
+          return _encodeRange(input, encoding, TypeOid.timestampWithTimezone);
         }
         throw FormatException(
             'Invalid type for parameter value. Expected: DateTimeRange Got: ${input.runtimeType}');
@@ -754,13 +754,8 @@ class PostgresBinaryEncoder {
 }
 
 class PostgresBinaryDecoder {
-  final int typeOid;
-
-  PostgresBinaryDecoder(this.typeOid);
-
-  Object? convert(DecodeInput dinput) {
-    final encoding = dinput.encoding;
-    final input = dinput.bytes;
+  static Object? convert(
+      TypeCodecContext context, int typeOid, Uint8List input) {
     late final buffer =
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
 
@@ -769,7 +764,7 @@ class PostgresBinaryDecoder {
       case TypeOid.name:
       case TypeOid.text:
       case TypeOid.varChar:
-        return encoding.decode(input);
+        return context.encoding.decode(input);
       case TypeOid.boolean:
         return (buffer.getInt8(0) != 0);
       case TypeOid.smallInteger:
@@ -807,11 +802,11 @@ class PostgresBinaryDecoder {
           // Removes version which is first character and currently always '1'
           final bytes = input.buffer
               .asUint8List(input.offsetInBytes + 1, input.lengthInBytes - 1);
-          return _jsonFusedEncoding(encoding).decode(bytes);
+          return _jsonFusedEncoding(context.encoding).decode(bytes);
         }
 
       case TypeOid.json:
-        return _jsonFusedEncoding(encoding).decode(input);
+        return _jsonFusedEncoding(context.encoding).decode(input);
 
       case TypeOid.byteArray:
         return input;
@@ -825,7 +820,7 @@ class PostgresBinaryDecoder {
       case TypeOid.regtype:
         final data = input.buffer.asByteData(input.offsetInBytes, input.length);
         final oid = data.getInt32(0);
-        return dinput.typeRegistry.resolveOid(oid);
+        return context.typeRegistry.resolveOid(oid);
       case TypeOid.voidType:
         return null;
 
@@ -898,7 +893,7 @@ class PostgresBinaryDecoder {
       case TypeOid.varCharArray:
       case TypeOid.textArray:
         return readListBytes<String>(input, (reader, length) {
-          return encoding.decode(length > 0 ? reader.read(length) : []);
+          return context.encoding.decode(length > 0 ? reader.read(length) : []);
         });
 
       case TypeOid.doubleArray:
@@ -909,33 +904,33 @@ class PostgresBinaryDecoder {
         return readListBytes<dynamic>(input, (reader, length) {
           reader.read(1);
           final bytes = reader.read(length - 1);
-          return _jsonFusedEncoding(encoding).decode(bytes);
+          return _jsonFusedEncoding(context.encoding).decode(bytes);
         });
 
       case TypeOid.integerRange:
-        final range = _decodeRange(buffer, dinput, Type.integer.oid!);
+        final range = _decodeRange(context, buffer, input, TypeOid.integer);
         return range == null
             ? IntRange.empty()
             : IntRange(range.$1, range.$2, range.$3);
       case TypeOid.bigIntegerRange:
-        final range = _decodeRange(buffer, dinput, Type.bigInteger.oid!);
+        final range = _decodeRange(context, buffer, input, TypeOid.bigInteger);
         return range == null
             ? IntRange.empty()
             : IntRange(range.$1, range.$2, range.$3);
       case TypeOid.dateRange:
-        final range = _decodeRange(buffer, dinput, Type.date.oid!);
+        final range = _decodeRange(context, buffer, input, TypeOid.date);
         return range == null
             ? DateRange.empty()
             : DateRange(range.$1, range.$2, range.$3);
       case TypeOid.timestampRange:
-        final range =
-            _decodeRange(buffer, dinput, Type.timestampWithoutTimezone.oid!);
+        final range = _decodeRange(
+            context, buffer, input, TypeOid.timestampWithoutTimezone);
         return range == null
             ? DateTimeRange.empty()
             : DateTimeRange(range.$1, range.$2, range.$3);
       case TypeOid.timestampTzRange:
         final range =
-            _decodeRange(buffer, dinput, Type.timestampWithTimezone.oid!);
+            _decodeRange(context, buffer, input, TypeOid.timestampWithTimezone);
         return range == null
             ? DateTimeRange.empty()
             : DateTimeRange(range.$1, range.$2, range.$3);
@@ -944,11 +939,11 @@ class PostgresBinaryDecoder {
       typeOid: typeOid,
       bytes: input,
       isBinary: true,
-      encoding: encoding,
+      encoding: context.encoding,
     );
   }
 
-  List<V> readListBytes<V>(Uint8List data,
+  static List<V> readListBytes<V>(Uint8List data,
       V Function(ByteDataReader reader, int length) valueDecoder) {
     if (data.length < 16) {
       return [];
@@ -1017,25 +1012,25 @@ class PostgresBinaryDecoder {
     return result;
   }
 
-  (T?, T?, Bounds)? _decodeRange<T>(
-      ByteData buffer, DecodeInput dinput, int elementTypeOid) {
+  static (T?, T?, Bounds)? _decodeRange<T>(TypeCodecContext context,
+      ByteData buffer, Uint8List dinput, int elementTypeOid) {
     final flag = buffer.getInt8(0);
     final bounds = Bounds.fromFlag(flag);
     switch (flag) {
       case 0 || 2 || 4 || 6:
         final lowerLength = buffer.getInt32(1);
-        final lowerBytes = dinput.bytes.sublist(5, 5 + lowerLength);
-        final lower = _decodeRangeElement(dinput, elementTypeOid, lowerBytes);
-        final upperBytes = dinput.bytes.sublist(9 + lowerLength);
-        final upper = _decodeRangeElement(dinput, elementTypeOid, upperBytes);
+        final lowerBytes = dinput.sublist(5, 5 + lowerLength);
+        final lower = _decodeRangeElement(context, elementTypeOid, lowerBytes);
+        final upperBytes = dinput.sublist(9 + lowerLength);
+        final upper = _decodeRangeElement(context, elementTypeOid, upperBytes);
         return (lower, upper, bounds);
       case 8 || 12:
-        final bytes = dinput.bytes.sublist(5);
-        final upper = _decodeRangeElement(dinput, elementTypeOid, bytes);
+        final bytes = dinput.sublist(5);
+        final upper = _decodeRangeElement(context, elementTypeOid, bytes);
         return (null, upper, bounds);
       case 16 || 18:
-        final bytes = dinput.bytes.sublist(5);
-        final lower = _decodeRangeElement(dinput, elementTypeOid, bytes);
+        final bytes = dinput.sublist(5);
+        final lower = _decodeRangeElement(context, elementTypeOid, bytes);
         return (lower, null, bounds);
       case 24:
         return (null, null, bounds);
@@ -1044,17 +1039,12 @@ class PostgresBinaryDecoder {
     }
   }
 
-  T _decodeRangeElement<T>(
-      DecodeInput dinput, int elementTypeOid, Uint8List bytes) {
-    final decoder = PostgresBinaryDecoder(elementTypeOid);
-    return decoder.convert(DecodeInput(
-        bytes: bytes,
-        isBinary: dinput.isBinary,
-        encoding: dinput.encoding,
-        typeRegistry: dinput.typeRegistry)) as T;
+  static T _decodeRangeElement<T>(
+      TypeCodecContext context, int elementTypeOid, Uint8List bytes) {
+    return convert(context, elementTypeOid, bytes) as T;
   }
 
-  String _decodeUuid(Uint8List bytes) {
+  static String _decodeUuid(Uint8List bytes) {
     late final buffer =
         ByteData.view(bytes.buffer, bytes.offsetInBytes, bytes.lengthInBytes);
     final buf = StringBuffer();
