@@ -79,9 +79,10 @@ class TsWordPos {
       ].join();
 }
 
-class TsVectorType extends Type<TsVector> {
+class TsVectorType extends Type<TsVector> implements TypeCodec<TsVector> {
   const TsVectorType() : super(TypeOid.tsvector);
 
+  @override
   EncodedValue encode(TypeCodecContext context, Object? value) {
     final v = value as TsVector;
     final writer = context.newPgByteDataWriter();
@@ -103,6 +104,7 @@ class TsVectorType extends Type<TsVector> {
     return EncodedValue(bytes: bytes, isBinary: true);
   }
 
+  @override
   TsVector? decode(TypeCodecContext context, EncodedValue input) {
     if (input.isBinary) {
       final reader = context.newPgByteDataReader(input.bytes);
@@ -176,9 +178,10 @@ sealed class TsQuery {
       _PhraseTsQuery(this, other, distance ?? 1);
 }
 
-class TsQueryType extends Type<TsQuery> {
+class TsQueryType extends Type<TsQuery> implements TypeCodec<TsQuery> {
   const TsQueryType() : super(TypeOid.tsquery);
 
+  @override
   EncodedValue encode(TypeCodecContext context, Object? value) {
     final v = value as TsQuery;
     final writer = context.newPgByteDataWriter();
@@ -189,6 +192,7 @@ class TsQueryType extends Type<TsQuery> {
     return EncodedValue(bytes: bytes, isBinary: true);
   }
 
+  @override
   TsQuery decode(TypeCodecContext context, EncodedValue input) {
     if (input.isBinary) {
       final reader = context.newPgByteDataReader(input.bytes);

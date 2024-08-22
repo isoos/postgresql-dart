@@ -50,11 +50,11 @@ class UnspecifiedType extends Type<Object> {
 }
 
 /// NOTE: do not use this type in client code.
-class GenericType<T extends Object> extends Type<T> {
+class GenericType<T extends Object> extends Type<T>
+    implements TypeCodec<Object> {
   const GenericType(super.oid);
-}
 
-extension GenericTypeExt<T extends Object> on GenericType<T> {
+  @override
   EncodedValue encode(TypeCodecContext context, Object? value) {
     if (oid != null && oid! > 0) {
       final encoder = PostgresBinaryEncoder(oid!);
@@ -68,11 +68,12 @@ extension GenericTypeExt<T extends Object> on GenericType<T> {
     }
   }
 
-  T? decode(TypeCodecContext context, EncodedValue input) {
+  @override
+  Object? decode(TypeCodecContext context, EncodedValue input) {
     if (input.isBinary) {
-      return PostgresBinaryDecoder.convert(context, oid!, input.bytes!) as T?;
+      return PostgresBinaryDecoder.convert(context, oid!, input.bytes!);
     } else {
-      return PostgresTextDecoder.convert(context, oid!, input.bytes!) as T?;
+      return PostgresTextDecoder.convert(context, oid!, input.bytes!);
     }
   }
 }

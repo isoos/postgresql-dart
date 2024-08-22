@@ -7,7 +7,6 @@ import '../exceptions.dart';
 import '../types.dart';
 import 'generic_type.dart';
 import 'text_codec.dart';
-import 'text_search.dart';
 
 typedef TypeEncoderFn = FutureOr<EncodedValue?> Function(
     TypeCodecContext context, Object? value);
@@ -191,15 +190,24 @@ final _builtInTypeNames = <String, Type>{
   '_varchar': Type.varCharArray,
 };
 
+abstract class TypeCodec<T> {
+  FutureOr<EncodedValue?> encode(TypeCodecContext context, T? value);
+  FutureOr<T?> decode(TypeCodecContext context, EncodedValue input);
+}
+
 class TypeRegistry {
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
+  final _codecs = <int, TypeCodec>{};
 
   TypeRegistry() {
     _bySubstitutionName.addAll(_builtInTypeNames);
     for (final type in _builtInTypes) {
       if (type.oid != null && type.oid! > 0) {
         _byTypeOid[type.oid!] = type;
+        if (type is TypeCodec) {
+          _codecs[type.oid!] = type as TypeCodec;
+        }
       }
     }
   }
@@ -214,28 +222,22 @@ extension TypeRegistryExt on TypeRegistry {
 
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
 
-  FutureOr<EncodedValue> encodeValue({
+  FutureOr<EncodedValue?> encodeValue({
     required TypeCodecContext context,
     required TypedValue typedValue,
-  }) {
+  }) async {
     final type = typedValue.type;
     final value = typedValue.value;
-    switch (type) {
-      case GenericType():
-        return type.encode(context, value);
-      case TsVectorType():
-        return type.encode(context, value);
-      case TsQueryType():
-        return type.encode(context, value);
-      case UnspecifiedType():
-        final encoded = _textEncoder.tryConvert(value);
-        if (encoded != null) {
-          return EncodedValue(
-            bytes: castBytes(context.encoding.encode(encoded)),
-            isBinary: false,
-          );
-        }
-        break;
+    if (type is TypeCodec) {
+      return await (type as TypeCodec).encode(context, value);
+    } else if (type is UnspecifiedType) {
+      final encoded = _textEncoder.tryConvert(value);
+      if (encoded != null) {
+        return EncodedValue(
+          bytes: castBytes(context.encoding.encode(encoded)),
+          isBinary: false,
+        );
+      }
     }
     throw PgException("Could not infer type of value '$value'.");
   }
@@ -245,32 +247,21 @@ extension TypeRegistryExt on TypeRegistry {
     required TypeCodecContext context,
     required int typeOid,
     required bool isBinary,
-  }) {
+  }) async {
     if (bytes == null) {
       return null;
     }
-    final type = resolveOid(typeOid);
     final value = EncodedValue(bytes: bytes, isBinary: isBinary);
-    switch (type) {
-      case GenericType():
-        return type.decode(context, value);
-      case TsVectorType():
-        return type.decode(context, value);
-      case TsQueryType():
-        return type.decode(context, value);
-      case UnknownType():
-        return UndecodedBytes(
-          typeOid: typeOid,
-          bytes: bytes,
-          isBinary: isBinary,
-          encoding: context.encoding,
-        );
+    final codec = _codecs[typeOid];
+    if (codec != null) {
+      return await codec.decode(context, value);
+    } else {
+      return UndecodedBytes(
+        typeOid: typeOid,
+        bytes: bytes,
+        isBinary: isBinary,
+        encoding: context.encoding,
+      );
     }
-    return UndecodedBytes(
-      typeOid: typeOid,
-      bytes: bytes,
-      isBinary: isBinary,
-      encoding: context.encoding,
-    );
   }
 }

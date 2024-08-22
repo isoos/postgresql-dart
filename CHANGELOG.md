@@ -5,6 +5,7 @@
 - Updated `TypeRegistry`:
   - (internal) `encode` and `decode` methods may be asynchronous
   - (internal) using `EncodedValue` instead of `EncodeOutput`
+- Updated most types to implement the (internal) `TypeCodec` interface. (may become public)
 
 ## 3.3.0
 
