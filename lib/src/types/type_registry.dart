@@ -2,18 +2,12 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/src/types/text_search.dart';
 
 import '../exceptions.dart';
 import '../types.dart';
 import 'generic_type.dart';
 import 'text_codec.dart';
-import 'text_search.dart';
-
-typedef TypeEncoderFn = FutureOr<EncodedValue?> Function(
-    TypeCodecContext context, Object? value);
-
-typedef TypeDecoderFn = FutureOr<Object?> Function(
-    TypeCodecContext context, EncodedValue input);
 
 /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
 class TypeOid {
@@ -129,6 +123,61 @@ final _builtInTypes = <Type>{
   Type.tsquery,
 };
 
+final _builtInCodecs = <int, TypeCodec>{
+  TypeOid.character: GenericTypeCodec(TypeOid.character),
+  TypeOid.name: GenericTypeCodec(TypeOid.name),
+  TypeOid.text: GenericTypeCodec(TypeOid.text),
+  TypeOid.varChar: GenericTypeCodec(TypeOid.varChar),
+  TypeOid.integer: GenericTypeCodec(TypeOid.integer),
+  TypeOid.smallInteger: GenericTypeCodec(TypeOid.smallInteger),
+  TypeOid.bigInteger: GenericTypeCodec(TypeOid.bigInteger),
+  TypeOid.real: GenericTypeCodec(TypeOid.real),
+  TypeOid.double: GenericTypeCodec(TypeOid.double),
+  TypeOid.boolean: GenericTypeCodec(TypeOid.boolean),
+  TypeOid.voidType: GenericTypeCodec(TypeOid.voidType),
+  TypeOid.time: GenericTypeCodec(TypeOid.time),
+  TypeOid.timestampWithTimezone:
+      GenericTypeCodec(TypeOid.timestampWithTimezone),
+  TypeOid.timestampWithoutTimezone:
+      GenericTypeCodec(TypeOid.timestampWithoutTimezone),
+  TypeOid.interval: GenericTypeCodec(TypeOid.interval),
+  TypeOid.numeric: GenericTypeCodec(TypeOid.numeric),
+  TypeOid.byteArray: GenericTypeCodec(TypeOid.byteArray),
+  TypeOid.date: GenericTypeCodec(TypeOid.date),
+  TypeOid.json: GenericTypeCodec(TypeOid.json, encodesNull: true),
+  TypeOid.jsonb: GenericTypeCodec(TypeOid.jsonb, encodesNull: true),
+  TypeOid.uuid: GenericTypeCodec(TypeOid.uuid),
+  TypeOid.point: GenericTypeCodec(TypeOid.point),
+  TypeOid.line: GenericTypeCodec(TypeOid.line),
+  TypeOid.lineSegment: GenericTypeCodec(TypeOid.lineSegment),
+  TypeOid.box: GenericTypeCodec(TypeOid.box),
+  TypeOid.polygon: GenericTypeCodec(TypeOid.polygon),
+  TypeOid.path: GenericTypeCodec(TypeOid.path),
+  TypeOid.circle: GenericTypeCodec(TypeOid.circle),
+  TypeOid.booleanArray: GenericTypeCodec(TypeOid.booleanArray),
+  TypeOid.smallIntegerArray: GenericTypeCodec(TypeOid.smallIntegerArray),
+  TypeOid.integerArray: GenericTypeCodec(TypeOid.integerArray),
+  TypeOid.bigIntegerArray: GenericTypeCodec(TypeOid.bigIntegerArray),
+  TypeOid.textArray: GenericTypeCodec(TypeOid.textArray),
+  TypeOid.doubleArray: GenericTypeCodec(TypeOid.doubleArray),
+  TypeOid.dateArray: GenericTypeCodec(TypeOid.dateArray),
+  TypeOid.timeArray: GenericTypeCodec(TypeOid.timeArray),
+  TypeOid.timestampArray: GenericTypeCodec(TypeOid.timestampArray),
+  TypeOid.timestampTzArray: GenericTypeCodec(TypeOid.timestampTzArray),
+  TypeOid.uuidArray: GenericTypeCodec(TypeOid.uuidArray),
+  TypeOid.varCharArray: GenericTypeCodec(TypeOid.varCharArray),
+  TypeOid.jsonbArray: GenericTypeCodec(TypeOid.jsonbArray),
+  TypeOid.regtype: GenericTypeCodec(TypeOid.regtype),
+  TypeOid.integerRange: GenericTypeCodec(TypeOid.integerRange),
+  TypeOid.bigIntegerRange: GenericTypeCodec(TypeOid.bigIntegerRange),
+  TypeOid.dateRange: GenericTypeCodec(TypeOid.dateRange),
+  // TypeOid.numrange: GenericTypeCodec(TypeOid.numrange),
+  TypeOid.timestampRange: GenericTypeCodec(TypeOid.timestampRange),
+  TypeOid.timestampTzRange: GenericTypeCodec(TypeOid.timestampTzRange),
+  TypeOid.tsvector: TsVectorTypeCodec(),
+  TypeOid.tsquery: TsQueryTypeCodec(),
+};
+
 final _builtInTypeNames = <String, Type>{
   'bigint': Type.bigInteger,
   'boolean': Type.boolean,
@@ -191,12 +240,45 @@ final _builtInTypeNames = <String, Type>{
   '_varchar': Type.varCharArray,
 };
 
+abstract class TypeCodec<T> {
+  /// Whether the `null` value is handled as a special case by this codec.
+  ///
+  /// By default Dart `null` values are encoded as SQL `NULL` values, and
+  /// [TypeCodec] will not recieve the `null` value on its [encode] method.
+  ///
+  /// When the flag is set (`true`) the [TypeCodec.encode] will recieve `null`
+  /// as `input` value.
+  final bool encodesNull;
+
+  /// Whether the SQL `NULL` value is handled as a special case by this codec.
+  ///
+  /// By default SQL `NULL` values are decoded as Dart `null` values, and
+  /// [TypeCodec] will not recieve the `null` value on its [decode] method.
+  ///
+  /// When the flag is set (`true`) the [TypeCodec.decode] will recieve `null`
+  /// as `input` value ([EncodedValue.bytes] will be `null`).
+  final bool decodesNull;
+
+  TypeCodec({
+    this.encodesNull = false,
+    this.decodesNull = false,
+  });
+
+  /// Encodes the [input] value and returns an [EncodedValue] object.
+  FutureOr<EncodedValue?> encode(TypeCodecContext context, T? input);
+
+  /// Decodes the [input] value and returns a Dart value object.
+  FutureOr<T?> decode(TypeCodecContext context, EncodedValue input);
+}
+
 class TypeRegistry {
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
+  final _codecs = <int, TypeCodec>{};
 
   TypeRegistry() {
     _bySubstitutionName.addAll(_builtInTypeNames);
+    _codecs.addAll(_builtInCodecs);
     for (final type in _builtInTypes) {
       if (type.oid != null && type.oid! > 0) {
         _byTypeOid[type.oid!] = type;
@@ -214,28 +296,27 @@ extension TypeRegistryExt on TypeRegistry {
 
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
 
-  FutureOr<EncodedValue> encodeValue({
+  FutureOr<EncodedValue?> encodeValue({
     required TypeCodecContext context,
     required TypedValue typedValue,
-  }) {
+  }) async {
     final type = typedValue.type;
     final value = typedValue.value;
-    switch (type) {
-      case GenericType():
-        return type.encode(context, value);
-      case TsVectorType():
-        return type.encode(context, value);
-      case TsQueryType():
-        return type.encode(context, value);
-      case UnspecifiedType():
-        final encoded = _textEncoder.tryConvert(value);
-        if (encoded != null) {
-          return EncodedValue(
-            bytes: castBytes(context.encoding.encode(encoded)),
-            isBinary: false,
-          );
-        }
-        break;
+    final oid = type.oid;
+    final codec = oid == null ? null : _codecs[oid];
+    if (codec != null) {
+      if (!codec.encodesNull && value == null) {
+        return null;
+      }
+      return await codec.encode(context, value);
+    } else {
+      final encoded = _textEncoder.tryConvert(value);
+      if (encoded != null) {
+        return EncodedValue(
+          bytes: castBytes(context.encoding.encode(encoded)),
+          isBinary: false,
+        );
+      }
     }
     throw PgException("Could not infer type of value '$value'.");
   }
@@ -245,32 +326,24 @@ extension TypeRegistryExt on TypeRegistry {
     required TypeCodecContext context,
     required int typeOid,
     required bool isBinary,
-  }) {
-    if (bytes == null) {
-      return null;
+  }) async {
+    final codec = _codecs[typeOid];
+    if (codec != null) {
+      if (!codec.decodesNull && bytes == null) {
+        return null;
+      }
+      final value = EncodedValue(bytes: bytes, isBinary: isBinary);
+      return await codec.decode(context, value);
+    } else {
+      if (bytes == null) {
+        return null;
+      }
+      return UndecodedBytes(
+        typeOid: typeOid,
+        bytes: bytes,
+        isBinary: isBinary,
+        encoding: context.encoding,
+      );
     }
-    final type = resolveOid(typeOid);
-    final value = EncodedValue(bytes: bytes, isBinary: isBinary);
-    switch (type) {
-      case GenericType():
-        return type.decode(context, value);
-      case TsVectorType():
-        return type.decode(context, value);
-      case TsQueryType():
-        return type.decode(context, value);
-      case UnknownType():
-        return UndecodedBytes(
-          typeOid: typeOid,
-          bytes: bytes,
-          isBinary: isBinary,
-          encoding: context.encoding,
-        );
-    }
-    return UndecodedBytes(
-      typeOid: typeOid,
-      bytes: bytes,
-      isBinary: isBinary,
-      encoding: context.encoding,
-    );
   }
 }

@@ -5,6 +5,7 @@
 - Updated `TypeRegistry`:
   - (internal) `encode` and `decode` methods may be asynchronous
   - (internal) using `EncodedValue` instead of `EncodeOutput`
+- `TypeCodec` interface (may become public) is used for encoding/decoding value by OIDs.
 
 ## 3.3.0
 

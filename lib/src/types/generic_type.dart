@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:buffer/buffer.dart';
 import 'package:postgres/src/buffer.dart';
 
 import '../types.dart';
@@ -54,25 +53,28 @@ class GenericType<T extends Object> extends Type<T> {
   const GenericType(super.oid);
 }
 
-extension GenericTypeExt<T extends Object> on GenericType<T> {
+class GenericTypeCodec extends TypeCodec<Object> {
+  final int oid;
+
+  GenericTypeCodec(
+    this.oid, {
+    super.encodesNull,
+    super.decodesNull,
+  });
+
+  @override
   EncodedValue encode(TypeCodecContext context, Object? value) {
-    if (oid != null && oid! > 0) {
-      final encoder = PostgresBinaryEncoder(oid!);
-      final bytes = encoder.convert(value, context.encoding);
-      return EncodedValue(bytes: bytes, isBinary: true);
-    } else {
-      const converter = PostgresTextEncoder();
-      final text = converter.convert(value, escapeStrings: false);
-      return EncodedValue(
-          bytes: castBytes(context.encoding.encode(text)), isBinary: false);
-    }
+    final encoder = PostgresBinaryEncoder(oid);
+    final bytes = encoder.convert(value, context.encoding);
+    return EncodedValue(bytes: bytes, isBinary: true);
   }
 
-  T? decode(TypeCodecContext context, EncodedValue input) {
+  @override
+  Object? decode(TypeCodecContext context, EncodedValue input) {
     if (input.isBinary) {
-      return PostgresBinaryDecoder.convert(context, oid!, input.bytes!) as T?;
+      return PostgresBinaryDecoder.convert(context, oid, input.bytes!);
     } else {
-      return PostgresTextDecoder.convert(context, oid!, input.bytes!) as T?;
+      return PostgresTextDecoder.convert(context, oid, input.bytes!);
     }
   }
 }
