@@ -144,8 +144,8 @@ final _builtInCodecs = <int, TypeCodec>{
   TypeOid.numeric: GenericTypeCodec(TypeOid.numeric),
   TypeOid.byteArray: GenericTypeCodec(TypeOid.byteArray),
   TypeOid.date: GenericTypeCodec(TypeOid.date),
-  TypeOid.json: GenericTypeCodec(TypeOid.json, handlesNull: true),
-  TypeOid.jsonb: GenericTypeCodec(TypeOid.jsonb, handlesNull: true),
+  TypeOid.json: GenericTypeCodec(TypeOid.json, encodesNull: true),
+  TypeOid.jsonb: GenericTypeCodec(TypeOid.jsonb, encodesNull: true),
   TypeOid.uuid: GenericTypeCodec(TypeOid.uuid),
   TypeOid.point: GenericTypeCodec(TypeOid.point),
   TypeOid.line: GenericTypeCodec(TypeOid.line),
@@ -241,17 +241,33 @@ final _builtInTypeNames = <String, Type>{
 };
 
 abstract class TypeCodec<T> {
-  /// Whether the `null` value is handled by this codec.
+  /// Whether the `null` value is handled as a special case by this codec.
   ///
-  /// By default (`false`), Dart `null` values are encoded as SQL `NULL`,
-  /// and similarly SQL `NULL` is decoded as Dart `null`. In such cases the
-  /// [TypeCodec] will no recieve the null values on its input.
+  /// By default Dart `null` values are encoded as SQL `NULL` values, and
+  /// [TypeCodec] will not recieve the `null` value on its [encode] method.
   ///
-  /// When the flag is set (`true`) the [TypeCodec] will recieve `null`
-  /// values at both encode and decode, and it may return a different value
-  /// depending on the needs of the type.
-  bool get handlesNull => false;
-  FutureOr<EncodedValue?> encode(TypeCodecContext context, T? value);
+  /// When the flag is set (`true`) the [TypeCodec.encode] will recieve `null`
+  /// as `input` value.
+  final bool encodesNull;
+
+  /// Whether the SQL `NULL` value is handled as a special case by this codec.
+  ///
+  /// By default SQL `NULL` values are decoded as Dart `null` values, and
+  /// [TypeCodec] will not recieve the `null` value on its [decode] method.
+  ///
+  /// When the flag is set (`true`) the [TypeCodec.decode] will recieve `null`
+  /// as `input` value ([EncodedValue.bytes] will be `null`).
+  final bool decodesNull;
+
+  TypeCodec({
+    this.encodesNull = false,
+    this.decodesNull = false,
+  });
+
+  /// Encodes the [input] value and returns an [EncodedValue] object.
+  FutureOr<EncodedValue?> encode(TypeCodecContext context, T? input);
+
+  /// Decodes the [input] value and returns a Dart value object.
   FutureOr<T?> decode(TypeCodecContext context, EncodedValue input);
 }
 
@@ -289,7 +305,7 @@ extension TypeRegistryExt on TypeRegistry {
     final oid = type.oid;
     final codec = oid == null ? null : _codecs[oid];
     if (codec != null) {
-      if (!codec.handlesNull && value == null) {
+      if (!codec.encodesNull && value == null) {
         return null;
       }
       return await codec.encode(context, value);
@@ -313,7 +329,7 @@ extension TypeRegistryExt on TypeRegistry {
   }) async {
     final codec = _codecs[typeOid];
     if (codec != null) {
-      if (!codec.handlesNull && bytes == null) {
+      if (!codec.decodesNull && bytes == null) {
         return null;
       }
       final value = EncodedValue(bytes: bytes, isBinary: isBinary);

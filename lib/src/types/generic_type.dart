@@ -55,12 +55,11 @@ class GenericType<T extends Object> extends Type<T> {
 
 class GenericTypeCodec extends TypeCodec<Object> {
   final int oid;
-  @override
-  final bool handlesNull;
 
   GenericTypeCodec(
     this.oid, {
-    this.handlesNull = false,
+    super.encodesNull,
+    super.decodesNull,
   });
 
   @override
@@ -72,14 +71,10 @@ class GenericTypeCodec extends TypeCodec<Object> {
 
   @override
   Object? decode(TypeCodecContext context, EncodedValue input) {
-    final bytes = input.bytes;
-    if (bytes == null) {
-      return null;
-    }
     if (input.isBinary) {
-      return PostgresBinaryDecoder.convert(context, oid, bytes);
+      return PostgresBinaryDecoder.convert(context, oid, input.bytes!);
     } else {
-      return PostgresTextDecoder.convert(context, oid, bytes);
+      return PostgresTextDecoder.convert(context, oid, input.bytes!);
     }
   }
 }
