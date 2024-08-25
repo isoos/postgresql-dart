@@ -79,9 +79,11 @@ class TsWordPos {
       ].join();
 }
 
-class TsVectorType extends Type<TsVector> implements TypeCodec<TsVector> {
+class TsVectorType extends Type<TsVector> {
   const TsVectorType() : super(TypeOid.tsvector);
+}
 
+class TsVectorTypeCodec extends TypeCodec {
   @override
   EncodedValue encode(TypeCodecContext context, Object? value) {
     final v = value as TsVector;
@@ -178,9 +180,11 @@ sealed class TsQuery {
       _PhraseTsQuery(this, other, distance ?? 1);
 }
 
-class TsQueryType extends Type<TsQuery> implements TypeCodec<TsQuery> {
+class TsQueryType extends Type<TsQuery> {
   const TsQueryType() : super(TypeOid.tsquery);
+}
 
+class TsQueryTypeCodec extends TypeCodec {
   @override
   EncodedValue encode(TypeCodecContext context, Object? value) {
     final v = value as TsQuery;
