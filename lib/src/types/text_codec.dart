@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:postgres/src/types/generic_type.dart';
-
 import '../exceptions.dart';
 import '../types.dart';
 import 'geo_types.dart';
+import 'type_codec.dart';
 import 'type_registry.dart';
 
 class PostgresTextEncoder {

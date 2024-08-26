@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/types/text_search.dart';
 
 import '../exceptions.dart';
 import '../types.dart';
 import 'generic_type.dart';
 import 'text_codec.dart';
+import 'text_search.dart';
+import 'type_codec.dart';
 
 /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
 class TypeOid {
@@ -239,48 +240,6 @@ final _builtInTypeNames = <String, Type>{
   '_uuid': Type.uuidArray,
   '_varchar': Type.varCharArray,
 };
-
-/// Encoder and decoder for a given type (OID).
-abstract class TypeCodec {
-  /// Whether the `null` value is handled as a special case by this codec.
-  ///
-  /// By default Dart `null` values are encoded as SQL `NULL` values, and
-  /// [TypeCodec] will not recieve the `null` value on its [encode] method.
-  ///
-  /// When the flag is set (`true`) the [TypeCodec.encode] will recieve `null`
-  /// as `input` value.
-  final bool encodesNull;
-
-  /// Whether the SQL `NULL` value is handled as a special case by this codec.
-  ///
-  /// By default SQL `NULL` values are decoded as Dart `null` values, and
-  /// [TypeCodec] will not recieve the `null` value on its [decode] method.
-  ///
-  /// When the flag is set (`true`) the [TypeCodec.decode] will recieve `null`
-  /// as `input` value ([EncodedValue.bytes] will be `null`).
-  final bool decodesNull;
-
-  TypeCodec({
-    this.encodesNull = false,
-    this.decodesNull = false,
-  });
-
-  /// Encodes the [input] value and returns an [EncodedValue] object.
-  ///
-  /// May return `null` if the codec is not able to encode the [input].
-  FutureOr<EncodedValue?> encode(TypeCodecContext context, Object? input);
-
-  /// Decodes the [input] value and returns a Dart value object.
-  ///
-  /// May return [UndecodedBytes] if the codec is not able to decode the [input].
-  FutureOr<Object?> decode(TypeCodecContext context, EncodedValue input);
-}
-
-/// Encodes the [input] value and returns an [EncodedValue] object.
-///
-/// May return `null` if the codec is not able to encode the [input].
-typedef TypeEncoderFn = FutureOr<EncodedValue?> Function(
-    TypeCodecContext context, Object? input);
 
 class TypeRegistry {
   final _byTypeOid = <int, Type>{};

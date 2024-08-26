@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/types/generic_type.dart';
 
 import '../buffer.dart';
 import '../types.dart';
 import 'geo_types.dart';
 import 'range_types.dart';
+import 'type_codec.dart';
 import 'type_registry.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;

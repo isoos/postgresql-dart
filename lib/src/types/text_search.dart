@@ -1,8 +1,7 @@
-import 'package:postgres/src/exceptions.dart';
-
 import '../buffer.dart';
+import '../exceptions.dart';
 import '../types.dart';
-import 'generic_type.dart';
+import 'type_codec.dart';
 import 'type_registry.dart';
 
 /// The `tsvector` data type stores a list of [TsWord]s, lexemes with
