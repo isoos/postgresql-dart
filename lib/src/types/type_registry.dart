@@ -240,7 +240,8 @@ final _builtInTypeNames = <String, Type>{
   '_varchar': Type.varCharArray,
 };
 
-abstract class TypeCodec<T> {
+/// Encoder and decoder for a given type (OID).
+abstract class TypeCodec {
   /// Whether the `null` value is handled as a special case by this codec.
   ///
   /// By default Dart `null` values are encoded as SQL `NULL` values, and
@@ -265,16 +266,27 @@ abstract class TypeCodec<T> {
   });
 
   /// Encodes the [input] value and returns an [EncodedValue] object.
-  FutureOr<EncodedValue?> encode(TypeCodecContext context, T? input);
+  ///
+  /// May return `null` if the codec is not able to encode the [input].
+  FutureOr<EncodedValue?> encode(TypeCodecContext context, Object? input);
 
   /// Decodes the [input] value and returns a Dart value object.
-  FutureOr<T?> decode(TypeCodecContext context, EncodedValue input);
+  ///
+  /// May return [UndecodedBytes] if the codec is not able to decode the [input].
+  FutureOr<Object?> decode(TypeCodecContext context, EncodedValue input);
 }
+
+/// Encodes the [input] value and returns an [EncodedValue] object.
+///
+/// May return `null` if the codec is not able to encode the [input].
+typedef TypeEncoderFn = FutureOr<EncodedValue?> Function(
+    TypeCodecContext context, Object? input);
 
 class TypeRegistry {
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
   final _codecs = <int, TypeCodec>{};
+  final _genericTypeEncoders = <TypeEncoderFn>[];
 
   TypeRegistry() {
     _bySubstitutionName.addAll(_builtInTypeNames);
@@ -284,6 +296,9 @@ class TypeRegistry {
         _byTypeOid[type.oid!] = type;
       }
     }
+    _genericTypeEncoders.addAll([
+      _defaultGenericTypeEncoder,
+    ]);
   }
 }
 
@@ -310,12 +325,11 @@ extension TypeRegistryExt on TypeRegistry {
       }
       return await codec.encode(context, value);
     } else {
-      final encoded = _textEncoder.tryConvert(value);
-      if (encoded != null) {
-        return EncodedValue(
-          bytes: castBytes(context.encoding.encode(encoded)),
-          isBinary: false,
-        );
+      for (final encoder in _genericTypeEncoders) {
+        final encoded = await encoder(context, value);
+        if (encoded != null) {
+          return encoded;
+        }
       }
     }
     throw PgException("Could not infer type of value '$value'.");
@@ -345,5 +359,18 @@ extension TypeRegistryExt on TypeRegistry {
         encoding: context.encoding,
       );
     }
+  }
+}
+
+EncodedValue? _defaultGenericTypeEncoder(
+    TypeCodecContext context, Object? input) {
+  final encoded = _textEncoder.tryConvert(input);
+  if (encoded != null) {
+    return EncodedValue(
+      bytes: castBytes(context.encoding.encode(encoded)),
+      isBinary: false,
+    );
+  } else {
+    return null;
   }
 }

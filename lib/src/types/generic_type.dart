@@ -53,7 +53,7 @@ class GenericType<T extends Object> extends Type<T> {
   const GenericType(super.oid);
 }
 
-class GenericTypeCodec extends TypeCodec<Object> {
+class GenericTypeCodec extends TypeCodec {
   final int oid;
 
   GenericTypeCodec(
