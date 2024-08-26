@@ -6,6 +6,7 @@
   - (internal) `encode` and `decode` methods may be asynchronous
   - (internal) using `EncodedValue` instead of `EncodeOutput`
 - `TypeCodec` interface (may become public) is used for encoding/decoding value by OIDs.
+- `TypeEncoderFn` type definition for generic Dart -> Postgres object encoders (where type is not specified as parameter).
 
 ## 3.3.0
 
