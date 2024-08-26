@@ -1,44 +1,7 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:postgres/src/buffer.dart';
-
 import '../types.dart';
 import 'binary_codec.dart';
 import 'text_codec.dart';
-import 'type_registry.dart';
-
-class EncodedValue {
-  final Uint8List? bytes;
-  final bool isBinary;
-
-  EncodedValue({
-    required this.bytes,
-    required this.isBinary,
-  });
-}
-
-class TypeCodecContext {
-  final Encoding encoding;
-  final TypeRegistry typeRegistry;
-
-  TypeCodecContext({
-    required this.encoding,
-    required this.typeRegistry,
-  });
-
-  PgByteDataReader newPgByteDataReader([Uint8List? bytes]) {
-    final reader = PgByteDataReader(encoding: encoding);
-    if (bytes != null) {
-      reader.add(bytes);
-    }
-    return reader;
-  }
-
-  PgByteDataWriter newPgByteDataWriter() {
-    return PgByteDataWriter(encoding: encoding);
-  }
-}
+import 'type_codec.dart';
 
 class UnknownType extends Type<Object> {
   const UnknownType(super.oid);

@@ -7,12 +7,12 @@ import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
 import 'package:meta/meta.dart';
 import 'package:pool/pool.dart' as pool;
-import 'package:postgres/src/types/generic_type.dart';
-import 'package:postgres/src/types/type_registry.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
 import '../auth/auth.dart';
+import '../types/type_codec.dart';
+import '../types/type_registry.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 import 'resolved_settings.dart';

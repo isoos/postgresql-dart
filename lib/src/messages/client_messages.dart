@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:charcode/ascii.dart';
-import 'package:postgres/src/types/generic_type.dart';
 
 import '../buffer.dart';
 import '../replication.dart';
 import '../time_converters.dart';
 import '../types.dart';
+import '../types/type_codec.dart';
 import 'shared_messages.dart';
 
 abstract class ClientMessageFormat {
