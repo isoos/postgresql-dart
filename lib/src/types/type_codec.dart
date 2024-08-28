@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -47,12 +48,49 @@ abstract class TypeCodec {
   FutureOr<Object?> decode(TypeCodecContext context, EncodedValue input);
 }
 
+/// The read-only, passive view of the Postgresql's runtime/session parameters.
+///
+/// Postgresql server reports certain parameter values at opening a connection
+/// or whenever their values change. Such parameters may include:
+/// - `application_name`
+/// - `server_version`
+/// - `server_encoding`
+/// - `client_encoding`
+/// - `is_superuser`
+/// - `session_authorization`
+/// - `DateStyle`
+/// - `TimeZone`
+/// - `integer_datetimes`
+///
+/// This class holds the latest parameter values send by the server.
+/// The values are not queried or updated actively.
+///
+/// The available parameters may be discovered following the instructions on these URLs:
+/// - https://www.postgresql.org/docs/current/sql-show.html
+/// - https://www.postgresql.org/docs/current/runtime-config.html
+/// - https://www.postgresql.org/docs/current/libpq-status.html#LIBPQ-PQPARAMETERSTATUS
+class RuntimeParameters {
+  /// The latest values of the runtime parameters.
+  ///
+  /// The backing map may be behind an [UnmodifiableMapView], clients may not
+  /// update these values directly.
+  final Map<String, String> latestValues;
+
+  RuntimeParameters({
+    required this.latestValues,
+  });
+
+  String? get applicationName => latestValues['application_name'];
+}
+
 class TypeCodecContext {
   final Encoding encoding;
+  final RuntimeParameters runtimeParameters;
   final TypeRegistry typeRegistry;
 
   TypeCodecContext({
     required this.encoding,
+    required this.runtimeParameters,
     required this.typeRegistry,
   });
 

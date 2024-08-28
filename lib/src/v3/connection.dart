@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -343,6 +344,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   _TransactionSession? _activeTransaction;
 
   final _parameters = <String, String>{};
+  @internal
+  late final runtimeParameters =
+      RuntimeParameters(latestValues: UnmodifiableMapView(_parameters));
 
   var _statementCounter = 0;
   var _portalCounter = 0;
@@ -533,6 +537,14 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   void _closeAfterError([PgException? cause]) {
     _close(true, cause);
   }
+
+  TypeCodecContext createTypeCodecContext() {
+    return TypeCodecContext(
+      encoding: encoding,
+      runtimeParameters: runtimeParameters,
+      typeRegistry: _settings.typeRegistry,
+    );
+  }
 }
 
 class _PreparedStatement extends Statement {
@@ -631,10 +643,7 @@ class _PgResultStreamSubscription
       connection._pending = this;
 
       final encodedFutures = <Future<EncodedValue?>>[];
-      final context = TypeCodecContext(
-        encoding: connection.encoding,
-        typeRegistry: connection._settings.typeRegistry,
-      );
+      final context = connection.createTypeCodecContext();
       for (final e in statement.parameters) {
         if (e.isSqlNull) {
           encodedFutures.add(Future.value(null));
@@ -755,10 +764,7 @@ class _PgResultStreamSubscription
           final columnCount = message.values.length;
           final futures = <Future>[];
           List<bool>? sqlNulls;
-          final context = TypeCodecContext(
-            encoding: session.encoding,
-            typeRegistry: session._connection._settings.typeRegistry,
-          );
+          final context = session._connection.createTypeCodecContext();
           for (var i = 0; i < message.values.length; i++) {
             final field = schema.columns[i];
             final input = message.values[i];
