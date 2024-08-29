@@ -247,7 +247,13 @@ class TypeRegistry {
   final _codecs = <int, TypeCodec>{};
   final _genericTypeEncoders = <TypeEncoderFn>[];
 
-  TypeRegistry() {
+  TypeRegistry({
+    /// Override or extend the built-in type codecs.
+    Map<int, TypeCodec>? typeCodecs,
+
+    /// Prepend the built-in type encoders with custom encoders.
+    Iterable<TypeEncoderFn>? typeEncoderFns,
+  }) {
     _bySubstitutionName.addAll(_builtInTypeNames);
     _codecs.addAll(_builtInCodecs);
     for (final type in _builtInTypes) {
@@ -255,7 +261,11 @@ class TypeRegistry {
         _byTypeOid[type.oid!] = type;
       }
     }
+    if (typeCodecs != null) {
+      _codecs.addAll(typeCodecs);
+    }
     _genericTypeEncoders.addAll([
+      ...?typeEncoderFns,
       _defaultGenericTypeEncoder,
     ]);
   }

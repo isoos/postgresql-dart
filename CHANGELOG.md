@@ -2,12 +2,11 @@
 
 ## 3.4.0
 
-- Updated `TypeRegistry`:
-  - (internal) `encode` and `decode` methods may be asynchronous
-  - (internal) using `EncodedValue` instead of `EncodeOutput`
-- `TypeCodec` interface (may become public) is used for encoding/decoding value by OIDs.
-- `TypeEncoderFn` type definition for generic Dart -> Postgres object encoders (where type is not specified as parameter).
-- `RuntimeParameters` (accessible through `TypeCodecContext`) to access server-provided parameter status values.
+- Allowing custom type codecs to be registered when creating the `TypeRegistry`.
+- `TypeCodec` interface is used for encoding/decoding value by OIDs.
+  Gets a reference to `TypeCodecContext` which contains `encoding` and runtime parameters.
+- `TypeEncoderFn` value converter for generic Dart -> Postgres object encoders (where type is not specified as parameter).
+- `RuntimeParameters` to access server-provided parameter status values.
 
 ## 3.3.0
 
