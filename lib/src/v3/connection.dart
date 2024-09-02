@@ -12,10 +12,12 @@ import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
 import '../auth/auth.dart';
+import '../messages/logical_replication_messages.dart';
 import '../types/type_codec.dart';
 import '../types/type_registry.dart';
 import 'protocol.dart';
 import 'query_description.dart';
+import 'relation_tracker.dart';
 import 'resolved_settings.dart';
 
 const _debugLog = false;
@@ -348,6 +350,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   late final runtimeParameters =
       RuntimeParameters(latestValues: UnmodifiableMapView(_parameters));
 
+  // TODO: share this between pooled connections
+  final _relationTracker = RelationTracker();
+
   var _statementCounter = 0;
   var _portalCounter = 0;
   var _queryCount = 0;
@@ -405,6 +410,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     _serverMessages.pause();
     try {
       message as ServerMessage;
+
+      if (message is XLogDataLogicalMessage) {
+        final embedded = message.message;
+        if (embedded is RelationMessage) {
+          _relationTracker.addRelationMessage(embedded);
+        }
+      }
 
       if (message is ParameterStatusMessage) {
         _parameters[message.name] = message.value;
@@ -541,6 +553,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   TypeCodecContext createTypeCodecContext() {
     return TypeCodecContext(
       encoding: encoding,
+      relationTracker: _relationTracker,
       runtimeParameters: runtimeParameters,
       typeRegistry: _settings.typeRegistry,
     );

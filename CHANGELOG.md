@@ -6,6 +6,7 @@
 - `TypeCodec` interface is used for encoding/decoding value by OIDs.
   Gets a reference to `TypeCodecContext` which contains `encoding` and runtime parameters.
 - `TypeEncoderFn` value converter for generic Dart -> Postgres object encoders (where type is not specified as parameter).
+- `RelationTracker` tracks information about relations (currently limited to `RelationMessage` caching).
 - `RuntimeParameters` to access server-provided parameter status values.
 
 ## 3.3.0
