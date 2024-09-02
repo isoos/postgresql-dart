@@ -3,6 +3,8 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:postgres/src/v3/relation_tracker.dart';
+
 import '../buffer.dart';
 import 'type_registry.dart';
 
@@ -85,11 +87,13 @@ class RuntimeParameters {
 
 class TypeCodecContext {
   final Encoding encoding;
+  final RelationTracker relationTracker;
   final RuntimeParameters runtimeParameters;
   final TypeRegistry typeRegistry;
 
   TypeCodecContext({
     required this.encoding,
+    required this.relationTracker,
     required this.runtimeParameters,
     required this.typeRegistry,
   });
