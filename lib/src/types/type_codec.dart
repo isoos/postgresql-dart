@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -11,7 +10,7 @@ import 'type_registry.dart';
 /// Encodes the [input] value and returns an [EncodedValue] object.
 ///
 /// May return `null` if the codec is not able to encode the [input].
-typedef TypeEncoderFn = FutureOr<EncodedValue?> Function(
+typedef TypeEncoderFn = EncodedValue? Function(
     TypeCodecContext context, Object? input);
 
 /// Encoder and decoder for a given type (OID).
@@ -42,12 +41,12 @@ abstract class TypeCodec {
   /// Encodes the [input] value and returns an [EncodedValue] object.
   ///
   /// May return `null` if the codec is not able to encode the [input].
-  FutureOr<EncodedValue?> encode(TypeCodecContext context, Object? input);
+  EncodedValue? encode(TypeCodecContext context, Object? input);
 
   /// Decodes the [input] value and returns a Dart value object.
   ///
   /// May return [UndecodedBytes] if the codec is not able to decode the [input].
-  FutureOr<Object?> decode(TypeCodecContext context, EncodedValue input);
+  Object? decode(TypeCodecContext context, EncodedValue input);
 }
 
 /// The read-only, passive view of the Postgresql's runtime/session parameters.

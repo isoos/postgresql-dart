@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
@@ -280,10 +279,10 @@ extension TypeRegistryExt on TypeRegistry {
 
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
 
-  FutureOr<EncodedValue?> encodeValue({
+  EncodedValue? encodeValue({
     required TypeCodecContext context,
     required TypedValue typedValue,
-  }) async {
+  }) {
     final type = typedValue.type;
     final value = typedValue.value;
     final oid = type.oid;
@@ -292,10 +291,10 @@ extension TypeRegistryExt on TypeRegistry {
       if (!codec.encodesNull && value == null) {
         return null;
       }
-      return await codec.encode(context, value);
+      return codec.encode(context, value);
     } else {
       for (final encoder in _genericTypeEncoders) {
-        final encoded = await encoder(context, value);
+        final encoded = encoder(context, value);
         if (encoded != null) {
           return encoded;
         }
@@ -304,19 +303,19 @@ extension TypeRegistryExt on TypeRegistry {
     throw PgException("Could not infer type of value '$value'.");
   }
 
-  FutureOr<Object?> decodeBytes(
+  Object? decodeBytes(
     Uint8List? bytes, {
     required TypeCodecContext context,
     required int typeOid,
     required bool isBinary,
-  }) async {
+  }) {
     final codec = _codecs[typeOid];
     if (codec != null) {
       if (!codec.decodesNull && bytes == null) {
         return null;
       }
       final value = EncodedValue(bytes: bytes, isBinary: isBinary);
-      return await codec.decode(context, value);
+      return codec.decode(context, value);
     } else {
       if (bytes == null) {
         return null;
