@@ -1,9 +1,9 @@
 import 'dart:collection';
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 import 'package:charcode/ascii.dart';
+import 'package:postgres/src/types/type_codec.dart';
 
 import 'buffer.dart';
 import 'messages/server_messages.dart';
@@ -35,11 +35,11 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
 };
 
 class MessageFramer {
-  final Encoding _encoding;
-  late final _reader = PgByteDataReader(encoding: _encoding);
+  final TypeCodecContext _typeCodecContext;
+  late final _reader = PgByteDataReader(typeCodecContext: _typeCodecContext);
   final messageQueue = Queue<ServerMessage>();
 
-  MessageFramer(this._encoding);
+  MessageFramer(this._typeCodecContext);
 
   int? _type;
   int _expectedLength = 0;
@@ -116,7 +116,11 @@ ServerMessage _parseCopyDataMessage(PgByteDataReader reader, int length) {
   if (code == ReplicationMessageId.primaryKeepAlive) {
     return PrimaryKeepAliveMessage.parse(reader);
   } else if (code == ReplicationMessageId.xLogData) {
-    return XLogDataMessage.parse(reader.read(length - 1), reader.encoding);
+    return XLogDataMessage.parse(
+      reader.read(length - 1),
+      reader.encoding,
+      typeCodecContext: reader.typeCodecContext,
+    );
   } else {
     final bb = BytesBuffer();
     bb.addByte(code);

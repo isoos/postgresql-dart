@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
+import 'package:postgres/src/types/type_codec.dart';
 
 import '../buffer.dart';
 import '../time_converters.dart';
@@ -366,8 +367,19 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   /// If [XLogDataMessage.data] is a [LogicalReplicationMessage], then the method
   /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll
   /// return [XLogDataMessage] with raw data.
-  static XLogDataMessage parse(Uint8List bytes, Encoding encoding) {
-    final reader = PgByteDataReader(encoding: encoding)..add(bytes);
+  ///
+  @Deprecated(
+      'It is likely that this method signature will change or will be removed in '
+      'an upcoming release. Please file a new issue on GitHub if you are using it.')
+  static XLogDataMessage parse(
+    Uint8List bytes,
+    Encoding encoding, {
+    TypeCodecContext? typeCodecContext,
+  }) {
+    final reader = PgByteDataReader(
+        typeCodecContext: typeCodecContext ??
+            TypeCodecContext.withDefaults(encoding: encoding))
+      ..add(bytes);
     final walStart = LSN(reader.readUint64());
     final walEnd = LSN(reader.readUint64());
     final time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
