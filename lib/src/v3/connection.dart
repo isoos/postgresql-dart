@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -222,8 +221,15 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       channel = channel.transform(settings.transformer!);
     }
 
-    final connection =
-        PgConnectionImplementation._(endpoint, settings, channel, secure);
+    final connection = PgConnectionImplementation._(
+      endpoint,
+      settings,
+      channel,
+      secure,
+      // TODO: share this between pooled connections
+      relationTracker: RelationTracker(),
+      runtimeParameters: RuntimeParameters(),
+    );
     await connection._startup();
     if (connection._settings.onOpen != null) {
       await connection._settings.onOpen!(connection);
@@ -334,6 +340,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   @override
   final ResolvedConnectionSettings _settings;
   final StreamChannel<Message> _channel;
+  final RelationTracker _relationTracker;
+  @internal
+  final RuntimeParameters runtimeParameters;
 
   /// Whether [_channel] is backed by a TLS connection.
   final bool _channelIsSecure;
@@ -344,14 +353,6 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   // Errors happening while a transaction is active will roll back the
   // transaction and should be reporte to the user.
   _TransactionSession? _activeTransaction;
-
-  final _parameters = <String, String>{};
-  @internal
-  late final runtimeParameters =
-      RuntimeParameters(latestValues: UnmodifiableMapView(_parameters));
-
-  // TODO: share this between pooled connections
-  final _relationTracker = RelationTracker();
 
   var _statementCounter = 0;
   var _portalCounter = 0;
@@ -369,7 +370,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   PgConnectionImplementation get _connection => this;
 
   PgConnectionImplementation._(
-      this._endpoint, this._settings, this._channel, this._channelIsSecure) {
+    this._endpoint,
+    this._settings,
+    this._channel,
+    this._channelIsSecure, {
+    required RelationTracker relationTracker,
+    required this.runtimeParameters,
+  }) : _relationTracker = relationTracker {
     _serverMessages = _channel.stream
         .listen(_handleMessage, onDone: _socketClosed, onError: (e, s) {
       _close(
@@ -419,7 +426,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       }
 
       if (message is ParameterStatusMessage) {
-        _parameters[message.name] = message.value;
+        runtimeParameters.setValue(message.name, message.value);
       } else if (message is BackendKeyMessage || message is NoticeMessage) {
         // ignore for now
       } else if (message is NotificationResponseMessage) {

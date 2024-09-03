@@ -25,7 +25,7 @@ class RelationTracker {
   }
 }
 
-extension RelationInfoViewExt on RelationTracker {
+extension RelationTrackerExt on RelationTracker {
   void addRelationMessage(RelationMessage message) {
     _relationMessages[message.relationId] = message;
   }
