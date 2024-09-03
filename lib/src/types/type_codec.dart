@@ -72,17 +72,24 @@ abstract class TypeCodec {
 /// - https://www.postgresql.org/docs/current/runtime-config.html
 /// - https://www.postgresql.org/docs/current/libpq-status.html#LIBPQ-PQPARAMETERSTATUS
 class RuntimeParameters {
-  /// The latest values of the runtime parameters.
-  ///
-  /// The backing map may be behind an [UnmodifiableMapView], clients may not
-  /// update these values directly.
-  final Map<String, String> latestValues;
+  final _values = <String, String>{};
 
-  RuntimeParameters({
-    required this.latestValues,
-  });
+  RuntimeParameters({Map<String, String>? initialValues}) {
+    if (initialValues != null) {
+      _values.addAll(initialValues);
+    }
+  }
+
+  /// The latest values of the runtime parameters. The map is read-only.
+  late final latestValues = UnmodifiableMapView(_values);
 
   String? get applicationName => latestValues['application_name'];
+}
+
+extension RuntimeParametersExt on RuntimeParameters {
+  void setValue(String name, String value) {
+    _values[name] = value;
+  }
 }
 
 class TypeCodecContext {
