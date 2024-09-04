@@ -17,18 +17,18 @@ export 'src/exceptions.dart';
 export 'src/pool/pool_api.dart';
 export 'src/replication.dart';
 export 'src/types.dart';
+export 'src/types/codec.dart'
+    show
+        Codec,
+        CodecContext,
+        EncodedValue,
+        EncoderFn,
+        EncodingFormat,
+        RuntimeParameters;
 export 'src/types/geo_types.dart';
 export 'src/types/range_types.dart';
 export 'src/types/text_search.dart'
     show TsVector, TsWord, TsWordPos, TsWeight, TsQuery;
-export 'src/types/type_codec.dart'
-    show
-        EncodedValue,
-        EncoderFn,
-        EncodingFormat,
-        RuntimeParameters,
-        Codec,
-        CodecContext;
 export 'src/types/type_registry.dart' show TypeRegistry;
 
 /// A description of a SQL query as interpreted by this package.

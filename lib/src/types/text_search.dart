@@ -1,7 +1,7 @@
 import '../buffer.dart';
 import '../exceptions.dart';
 import '../types.dart';
-import 'type_codec.dart';
+import 'codec.dart';
 import 'type_registry.dart';
 
 /// The `tsvector` data type stores a list of [TsWord]s, lexemes with

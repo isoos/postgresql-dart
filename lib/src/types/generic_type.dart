@@ -1,7 +1,7 @@
 import '../types.dart';
 import 'binary_codec.dart';
+import 'codec.dart';
 import 'text_codec.dart';
-import 'type_codec.dart';
 
 class UnknownType extends Type<Object> {
   const UnknownType(super.oid);

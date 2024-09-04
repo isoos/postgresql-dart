@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:buffer/buffer.dart';
-import 'package:postgres/src/types/type_codec.dart';
+import 'package:postgres/src/types/codec.dart';
 
 /// This class doesn't add much over using `List<int>` instead, however,
 /// it creates a nice explicit type difference from both `String` and `List<int>`,

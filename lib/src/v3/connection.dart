@@ -12,7 +12,7 @@ import 'package:stream_channel/stream_channel.dart';
 import '../../postgres.dart';
 import '../auth/auth.dart';
 import '../messages/logical_replication_messages.dart';
-import '../types/type_codec.dart';
+import '../types/codec.dart';
 import '../types/type_registry.dart';
 import 'protocol.dart';
 import 'query_description.dart';

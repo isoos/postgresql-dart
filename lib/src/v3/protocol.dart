@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
-import 'package:postgres/src/types/type_codec.dart';
+import 'package:postgres/src/types/codec.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../buffer.dart';

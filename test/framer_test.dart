@@ -5,7 +5,7 @@ import 'package:postgres/src/message_window.dart';
 import 'package:postgres/src/messages/logical_replication_messages.dart';
 import 'package:postgres/src/messages/server_messages.dart';
 import 'package:postgres/src/messages/shared_messages.dart';
-import 'package:postgres/src/types/type_codec.dart';
+import 'package:postgres/src/types/codec.dart';
 import 'package:test/test.dart';
 
 void main() {

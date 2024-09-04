@@ -6,9 +6,9 @@ import 'package:buffer/buffer.dart';
 
 import '../buffer.dart';
 import '../types.dart';
+import 'codec.dart';
 import 'geo_types.dart';
 import 'range_types.dart';
-import 'type_codec.dart';
 import 'type_registry.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;

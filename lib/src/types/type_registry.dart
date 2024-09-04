@@ -2,10 +2,10 @@ import 'package:buffer/buffer.dart';
 
 import '../exceptions.dart';
 import '../types.dart';
+import 'codec.dart';
 import 'generic_type.dart';
 import 'text_codec.dart';
 import 'text_search.dart';
-import 'type_codec.dart';
 
 /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
 class TypeOid {

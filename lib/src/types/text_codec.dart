@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import '../exceptions.dart';
 import '../types.dart';
+import 'codec.dart';
 import 'geo_types.dart';
-import 'type_codec.dart';
 import 'type_registry.dart';
 
 class PostgresTextEncoder {
