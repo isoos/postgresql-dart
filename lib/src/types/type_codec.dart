@@ -26,6 +26,7 @@ class EncodedValue {
 
   EncodedValue.binary(this.bytes) : format = EncodingFormat.binary;
   EncodedValue.text(this.bytes) : format = EncodingFormat.text;
+  EncodedValue.null$({this.format = EncodingFormat.binary}) : bytes = null;
 
   bool get isBinary => format == EncodingFormat.binary;
   bool get isText => format == EncodingFormat.text;
@@ -44,9 +45,11 @@ enum EncodingFormat {
 
 /// Encodes the [input] value and returns an [EncodedValue] object.
 ///
-/// May return `null` if the codec is not able to encode the [input].
-typedef TypeEncoderFn = EncodedValue? Function(
-    TypeCodecContext context, Object? input);
+/// May return `null` if the encoder is not able to convert the [input] value.
+typedef EncoderFn = EncodedValue? Function(
+  Object? input,
+  TypeCodecContext context,
+);
 
 /// Encoder and decoder for a given type (OID).
 abstract class TypeCodec {

@@ -242,14 +242,15 @@ class TypeRegistry {
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
   final _codecs = <int, TypeCodec>{};
-  final _genericTypeEncoders = <TypeEncoderFn>[];
+  final _encoders = <EncoderFn>[];
 
   TypeRegistry({
     /// Override or extend the built-in type codecs.
     Map<int, TypeCodec>? typeCodecs,
 
-    /// Prepend the built-in type encoders with custom encoders.
-    Iterable<TypeEncoderFn>? typeEncoderFns,
+    /// When encoding an untyped parameter for a query, try to use these encoders
+    /// before the built-in (generic) text encoders.
+    Iterable<EncoderFn>? encoders,
   }) {
     _bySubstitutionName.addAll(_builtInTypeNames);
     _codecs.addAll(_builtInCodecs);
@@ -261,9 +262,9 @@ class TypeRegistry {
     if (typeCodecs != null) {
       _codecs.addAll(typeCodecs);
     }
-    _genericTypeEncoders.addAll([
-      ...?typeEncoderFns,
-      _defaultGenericTypeEncoder,
+    _encoders.addAll([
+      ...?encoders,
+      _defaultTextEncoder,
     ]);
   }
 }
@@ -291,8 +292,8 @@ extension TypeRegistryExt on TypeRegistry {
       }
       return codec.encode(context, value);
     } else {
-      for (final encoder in _genericTypeEncoders) {
-        final encoded = encoder(context, value);
+      for (final encoder in _encoders) {
+        final encoded = encoder(value, context);
         if (encoded != null) {
           return encoded;
         }
@@ -302,17 +303,17 @@ extension TypeRegistryExt on TypeRegistry {
   }
 
   Object? decodeBytes({
-    required EncodedValue encodedValue,
-    required TypeCodecContext context,
     required int typeOid,
+    required EncodedValue value,
+    required TypeCodecContext context,
   }) {
-    final bytes = encodedValue.bytes;
     final codec = _codecs[typeOid];
+    final bytes = value.bytes;
     if (codec != null) {
       if (!codec.decodesNull && bytes == null) {
         return null;
       }
-      return codec.decode(context, encodedValue);
+      return codec.decode(context, value);
     } else {
       if (bytes == null) {
         return null;
@@ -320,15 +321,14 @@ extension TypeRegistryExt on TypeRegistry {
       return UndecodedBytes(
         typeOid: typeOid,
         bytes: bytes,
-        isBinary: encodedValue.isBinary,
+        isBinary: value.isBinary,
         encoding: context.encoding,
       );
     }
   }
 }
 
-EncodedValue? _defaultGenericTypeEncoder(
-    TypeCodecContext context, Object? input) {
+EncodedValue? _defaultTextEncoder(Object? input, TypeCodecContext context) {
   final encoded = _textEncoder.tryConvert(input);
   if (encoded != null) {
     return EncodedValue.text(castBytes(context.encoding.encode(encoded)));

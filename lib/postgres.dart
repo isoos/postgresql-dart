@@ -24,11 +24,11 @@ export 'src/types/text_search.dart'
 export 'src/types/type_codec.dart'
     show
         EncodedValue,
+        EncoderFn,
         EncodingFormat,
         RuntimeParameters,
         TypeCodec,
-        TypeCodecContext,
-        TypeEncoderFn;
+        TypeCodecContext;
 export 'src/types/type_registry.dart' show TypeRegistry;
 
 /// A description of a SQL query as interpreted by this package.

@@ -804,7 +804,7 @@ class _PgResultStreamSubscription
               sqlNulls[i] = true;
             }
             final futureOr = context.typeRegistry.decodeBytes(
-              encodedValue: EncodedValue(
+              value: EncodedValue(
                 input,
                 format: EncodingFormat.fromBinaryFlag(field.isBinaryEncoding),
               ),
