@@ -2,7 +2,7 @@
 
 ## 3.4.0
 
-- Allowing custom type codecs to be registered when creating the `TypeRegistry`.
+- Allowing custom type codecs to be registered.
 - `TypeCodec` interface is used for encoding/decoding value by OIDs.
   Gets a reference to `TypeCodecContext` which contains `encoding` and runtime parameters.
 - `TypeEncoderFn` value converter for generic Dart -> Postgres object encoders (where type is not specified as parameter).

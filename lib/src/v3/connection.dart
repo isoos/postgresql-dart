@@ -804,10 +804,12 @@ class _PgResultStreamSubscription
               sqlNulls[i] = true;
             }
             final futureOr = context.typeRegistry.decodeBytes(
-              input,
+              encodedValue: EncodedValue(
+                input,
+                format: EncodingFormat.fromBinaryFlag(field.isBinaryEncoding),
+              ),
               context: context,
               typeOid: field.typeOid,
-              isBinary: field.isBinaryEncoding,
             );
             futures.add(futureOr is Future ? futureOr : Future.value(futureOr));
           }

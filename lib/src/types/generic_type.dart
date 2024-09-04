@@ -29,7 +29,7 @@ class GenericTypeCodec extends TypeCodec {
   EncodedValue encode(TypeCodecContext context, Object? value) {
     final encoder = PostgresBinaryEncoder(oid);
     final bytes = encoder.convert(value, context.encoding);
-    return EncodedValue(bytes: bytes, isBinary: true);
+    return EncodedValue.binary(bytes);
   }
 
   @override

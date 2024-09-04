@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:buffer/buffer.dart';
 
 import '../exceptions.dart';
@@ -303,19 +301,18 @@ extension TypeRegistryExt on TypeRegistry {
     throw PgException("Could not infer type of value '$value'.");
   }
 
-  Object? decodeBytes(
-    Uint8List? bytes, {
+  Object? decodeBytes({
+    required EncodedValue encodedValue,
     required TypeCodecContext context,
     required int typeOid,
-    required bool isBinary,
   }) {
+    final bytes = encodedValue.bytes;
     final codec = _codecs[typeOid];
     if (codec != null) {
       if (!codec.decodesNull && bytes == null) {
         return null;
       }
-      final value = EncodedValue(bytes: bytes, isBinary: isBinary);
-      return codec.decode(context, value);
+      return codec.decode(context, encodedValue);
     } else {
       if (bytes == null) {
         return null;
@@ -323,7 +320,7 @@ extension TypeRegistryExt on TypeRegistry {
       return UndecodedBytes(
         typeOid: typeOid,
         bytes: bytes,
-        isBinary: isBinary,
+        isBinary: encodedValue.isBinary,
         encoding: context.encoding,
       );
     }
@@ -334,10 +331,7 @@ EncodedValue? _defaultGenericTypeEncoder(
     TypeCodecContext context, Object? input) {
   final encoded = _textEncoder.tryConvert(input);
   if (encoded != null) {
-    return EncodedValue(
-      bytes: castBytes(context.encoding.encode(encoded)),
-      isBinary: false,
-    );
+    return EncodedValue.text(castBytes(context.encoding.encode(encoded)));
   } else {
     return null;
   }

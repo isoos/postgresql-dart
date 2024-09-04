@@ -22,7 +22,13 @@ export 'src/types/range_types.dart';
 export 'src/types/text_search.dart'
     show TsVector, TsWord, TsWordPos, TsWeight, TsQuery;
 export 'src/types/type_codec.dart'
-    show RuntimeParameters, TypeCodec, TypeCodecContext, TypeEncoderFn;
+    show
+        EncodedValue,
+        EncodingFormat,
+        RuntimeParameters,
+        TypeCodec,
+        TypeCodecContext,
+        TypeEncoderFn;
 export 'src/types/type_registry.dart' show TypeRegistry;
 
 /// A description of a SQL query as interpreted by this package.

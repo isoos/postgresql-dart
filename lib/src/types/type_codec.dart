@@ -7,6 +7,41 @@ import 'package:postgres/src/v3/relation_tracker.dart';
 import '../buffer.dart';
 import 'type_registry.dart';
 
+/// Represents the [bytes] of a parameter value that is sent to a query or returned
+/// as a result.
+///
+/// The [format] describes whether the [bytes] are formatted as text (e.g. `12`)
+/// or bytes (e.g. `0x0c`).
+class EncodedValue {
+  /// The encoded bytes of the value.
+  final Uint8List? bytes;
+
+  /// The format of the [bytes].
+  final EncodingFormat format;
+
+  EncodedValue(
+    this.bytes, {
+    required this.format,
+  });
+
+  EncodedValue.binary(this.bytes) : format = EncodingFormat.binary;
+  EncodedValue.text(this.bytes) : format = EncodingFormat.text;
+
+  bool get isBinary => format == EncodingFormat.binary;
+  bool get isText => format == EncodingFormat.text;
+}
+
+/// Describes whether the bytes are formatted as [text] (e.g. `12`) or
+/// [binary] (e.g. `0x0c`)
+enum EncodingFormat {
+  binary,
+  text,
+  ;
+
+  static EncodingFormat fromBinaryFlag(bool isBinary) =>
+      isBinary ? binary : text;
+}
+
 /// Encodes the [input] value and returns an [EncodedValue] object.
 ///
 /// May return `null` if the codec is not able to encode the [input].
@@ -129,14 +164,4 @@ class TypeCodecContext {
   PgByteDataWriter newPgByteDataWriter() {
     return PgByteDataWriter(encoding: encoding);
   }
-}
-
-class EncodedValue {
-  final Uint8List? bytes;
-  final bool isBinary;
-
-  EncodedValue({
-    required this.bytes,
-    required this.isBinary,
-  });
 }

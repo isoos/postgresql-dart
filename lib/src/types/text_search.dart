@@ -102,7 +102,7 @@ class TsVectorTypeCodec extends TypeCodec {
       }
     }
     final bytes = writer.toBytes();
-    return EncodedValue(bytes: bytes, isBinary: true);
+    return EncodedValue.binary(bytes);
   }
 
   @override
@@ -192,7 +192,7 @@ class TsQueryTypeCodec extends TypeCodec {
     v._write(writer);
 
     final bytes = writer.toBytes();
-    return EncodedValue(bytes: bytes, isBinary: true);
+    return EncodedValue.binary(bytes);
   }
 
   @override
