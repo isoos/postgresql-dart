@@ -104,8 +104,22 @@ class TypeCodecContext {
     required this.typeRegistry,
   });
 
+  factory TypeCodecContext.withDefaults({
+    Encoding? encoding,
+    RelationTracker? relationTracker,
+    RuntimeParameters? runtimeParameters,
+    TypeRegistry? typeRegistry,
+  }) {
+    return TypeCodecContext(
+      encoding: encoding ?? utf8,
+      relationTracker: relationTracker ?? RelationTracker(),
+      runtimeParameters: runtimeParameters ?? RuntimeParameters(),
+      typeRegistry: typeRegistry ?? TypeRegistry(),
+    );
+  }
+
   PgByteDataReader newPgByteDataReader([Uint8List? bytes]) {
-    final reader = PgByteDataReader(encoding: encoding);
+    final reader = PgByteDataReader(typeCodecContext: this);
     if (bytes != null) {
       reader.add(bytes);
     }

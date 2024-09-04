@@ -200,7 +200,18 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     final settings = connectionSettings is ResolvedConnectionSettings
         ? connectionSettings
         : ResolvedConnectionSettings(connectionSettings, null);
-    var (channel, secure) = await _connect(endpoint, settings);
+    final typeCodecContext = TypeCodecContext(
+      encoding: settings.encoding,
+      // TODO: share this between pooled connections
+      relationTracker: RelationTracker(),
+      runtimeParameters: RuntimeParameters(),
+      typeRegistry: settings.typeRegistry,
+    );
+    var (channel, secure) = await _connect(
+      endpoint,
+      settings,
+      typeCodecContext: typeCodecContext,
+    );
 
     if (_debugLog) {
       channel = channel.transform(StreamChannelTransformer(
@@ -226,9 +237,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       settings,
       channel,
       secure,
-      // TODO: share this between pooled connections
-      relationTracker: RelationTracker(),
-      runtimeParameters: RuntimeParameters(),
+      relationTracker: typeCodecContext.relationTracker,
+      runtimeParameters: typeCodecContext.runtimeParameters,
     );
     await connection._startup();
     if (connection._settings.onOpen != null) {
@@ -239,8 +249,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   static Future<(StreamChannel<Message>, bool)> _connect(
     Endpoint endpoint,
-    ResolvedConnectionSettings settings,
-  ) async {
+    ResolvedConnectionSettings settings, {
+    required TypeCodecContext typeCodecContext,
+  }) async {
     final host = endpoint.host;
     final port = endpoint.port;
 
@@ -331,7 +342,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
     return (
       StreamChannel<List<int>>(adaptedStream, outgoingSocket)
-          .transform(messageTransformer(settings.encoding)),
+          .transform(messageTransformer(typeCodecContext)),
       secure,
     );
   }

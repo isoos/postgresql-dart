@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/src/types/type_codec.dart';
 
 /// This class doesn't add much over using `List<int>` instead, however,
 /// it creates a nice explicit type difference from both `String` and `List<int>`,
@@ -42,17 +43,19 @@ class PgByteDataWriter extends ByteDataWriter {
 const _emptyString = '';
 
 class PgByteDataReader extends ByteDataReader {
-  final Encoding encoding;
+  final TypeCodecContext typeCodecContext;
 
   PgByteDataReader({
-    required this.encoding,
+    required this.typeCodecContext,
   });
+
+  Encoding get encoding => typeCodecContext.encoding;
 
   String readNullTerminatedString() {
     final bytes = readUntilTerminatingByte(0);
     if (bytes.isEmpty) {
       return _emptyString;
     }
-    return encoding.decode(bytes);
+    return typeCodecContext.encoding.decode(bytes);
   }
 }

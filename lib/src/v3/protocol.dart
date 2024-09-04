@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:async/async.dart';
+import 'package:postgres/src/types/type_codec.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../buffer.dart';
@@ -34,9 +34,9 @@ class AggregatedClientMessage extends ClientMessage {
 }
 
 StreamChannelTransformer<Message, List<int>> messageTransformer(
-    Encoding encoding) {
+    TypeCodecContext typeCodecContext) {
   return StreamChannelTransformer(
-    _readMessages(encoding),
+    _readMessages(typeCodecContext),
     StreamSinkTransformer.fromHandlers(
       handleData: (message, out) {
         if (message is! ClientMessage) {
@@ -47,16 +47,17 @@ StreamChannelTransformer<Message, List<int>> messageTransformer(
           return;
         }
 
-        out.add(message.asBytes(encoding: encoding));
+        out.add(message.asBytes(encoding: typeCodecContext.encoding));
       },
     ),
   );
 }
 
-StreamTransformer<Uint8List, ServerMessage> _readMessages(Encoding encoding) {
+StreamTransformer<Uint8List, ServerMessage> _readMessages(
+    TypeCodecContext typeCodecContext) {
   return StreamTransformer.fromBind((rawStream) {
     return Stream.multi((listener) {
-      final framer = MessageFramer(encoding);
+      final framer = MessageFramer(typeCodecContext);
 
       var paused = false;
 
