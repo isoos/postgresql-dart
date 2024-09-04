@@ -48,7 +48,7 @@ enum EncodingFormat {
 /// May return `null` if the encoder is not able to convert the [input] value.
 typedef EncoderFn = EncodedValue? Function(
   Object? input,
-  TypeCodecContext context,
+  CodecContext context,
 );
 
 /// Encoder and decoder for a value stored in Postgresql.
@@ -79,12 +79,53 @@ abstract class Codec {
   /// Encodes the [input] value and returns an [EncodedValue] object.
   ///
   /// May return `null` if the codec is not able to encode the [input].
-  EncodedValue? encode(Object? input, TypeCodecContext context);
+  EncodedValue? encode(Object? input, CodecContext context);
 
   /// Decodes the [input] value and returns a Dart value object.
   ///
   /// May return [UndecodedBytes] if the codec is not able to decode the [input].
-  Object? decode(EncodedValue input, TypeCodecContext context);
+  Object? decode(EncodedValue input, CodecContext context);
+}
+
+/// Provides access to connection and database information, and also to additional codecs.
+class CodecContext {
+  final Encoding encoding;
+  final RelationTracker relationTracker;
+  final RuntimeParameters runtimeParameters;
+  final TypeRegistry typeRegistry;
+
+  CodecContext({
+    required this.encoding,
+    required this.relationTracker,
+    required this.runtimeParameters,
+    required this.typeRegistry,
+  });
+
+  factory CodecContext.withDefaults({
+    Encoding? encoding,
+    RelationTracker? relationTracker,
+    RuntimeParameters? runtimeParameters,
+    TypeRegistry? typeRegistry,
+  }) {
+    return CodecContext(
+      encoding: encoding ?? utf8,
+      relationTracker: relationTracker ?? RelationTracker(),
+      runtimeParameters: runtimeParameters ?? RuntimeParameters(),
+      typeRegistry: typeRegistry ?? TypeRegistry(),
+    );
+  }
+
+  PgByteDataReader newPgByteDataReader([Uint8List? bytes]) {
+    final reader = PgByteDataReader(codecContext: this);
+    if (bytes != null) {
+      reader.add(bytes);
+    }
+    return reader;
+  }
+
+  PgByteDataWriter newPgByteDataWriter() {
+    return PgByteDataWriter(encoding: encoding);
+  }
 }
 
 /// The read-only, passive view of the Postgresql's runtime/session parameters.
@@ -126,45 +167,5 @@ class RuntimeParameters {
 extension RuntimeParametersExt on RuntimeParameters {
   void setValue(String name, String value) {
     _values[name] = value;
-  }
-}
-
-class TypeCodecContext {
-  final Encoding encoding;
-  final RelationTracker relationTracker;
-  final RuntimeParameters runtimeParameters;
-  final TypeRegistry typeRegistry;
-
-  TypeCodecContext({
-    required this.encoding,
-    required this.relationTracker,
-    required this.runtimeParameters,
-    required this.typeRegistry,
-  });
-
-  factory TypeCodecContext.withDefaults({
-    Encoding? encoding,
-    RelationTracker? relationTracker,
-    RuntimeParameters? runtimeParameters,
-    TypeRegistry? typeRegistry,
-  }) {
-    return TypeCodecContext(
-      encoding: encoding ?? utf8,
-      relationTracker: relationTracker ?? RelationTracker(),
-      runtimeParameters: runtimeParameters ?? RuntimeParameters(),
-      typeRegistry: typeRegistry ?? TypeRegistry(),
-    );
-  }
-
-  PgByteDataReader newPgByteDataReader([Uint8List? bytes]) {
-    final reader = PgByteDataReader(typeCodecContext: this);
-    if (bytes != null) {
-      reader.add(bytes);
-    }
-    return reader;
-  }
-
-  PgByteDataWriter newPgByteDataWriter() {
-    return PgByteDataWriter(encoding: encoding);
   }
 }

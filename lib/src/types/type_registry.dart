@@ -279,7 +279,7 @@ extension TypeRegistryExt on TypeRegistry {
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
 
   EncodedValue? encodeValue({
-    required TypeCodecContext context,
+    required CodecContext context,
     required TypedValue typedValue,
   }) {
     final type = typedValue.type;
@@ -305,7 +305,7 @@ extension TypeRegistryExt on TypeRegistry {
   Object? decodeBytes({
     required int typeOid,
     required EncodedValue value,
-    required TypeCodecContext context,
+    required CodecContext context,
   }) {
     final codec = _codecs[typeOid];
     final bytes = value.bytes;
@@ -328,7 +328,7 @@ extension TypeRegistryExt on TypeRegistry {
   }
 }
 
-EncodedValue? _defaultTextEncoder(Object? input, TypeCodecContext context) {
+EncodedValue? _defaultTextEncoder(Object? input, CodecContext context) {
   final encoded = _textEncoder.tryConvert(input);
   if (encoded != null) {
     return EncodedValue.text(castBytes(context.encoding.encode(encoded)));

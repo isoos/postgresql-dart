@@ -755,8 +755,7 @@ class PostgresBinaryEncoder {
 }
 
 class PostgresBinaryDecoder {
-  static Object? convert(
-      TypeCodecContext context, int typeOid, Uint8List input) {
+  static Object? convert(CodecContext context, int typeOid, Uint8List input) {
     late final buffer =
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
 
@@ -1013,7 +1012,7 @@ class PostgresBinaryDecoder {
     return result;
   }
 
-  static (T?, T?, Bounds)? _decodeRange<T>(TypeCodecContext context,
+  static (T?, T?, Bounds)? _decodeRange<T>(CodecContext context,
       ByteData buffer, Uint8List dinput, int elementTypeOid) {
     final flag = buffer.getInt8(0);
     final bounds = Bounds.fromFlag(flag);
@@ -1041,7 +1040,7 @@ class PostgresBinaryDecoder {
   }
 
   static T _decodeRangeElement<T>(
-      TypeCodecContext context, int elementTypeOid, Uint8List bytes) {
+      CodecContext context, int elementTypeOid, Uint8List bytes) {
     return convert(context, elementTypeOid, bytes) as T;
   }
 

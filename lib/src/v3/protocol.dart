@@ -34,9 +34,9 @@ class AggregatedClientMessage extends ClientMessage {
 }
 
 StreamChannelTransformer<Message, List<int>> messageTransformer(
-    TypeCodecContext typeCodecContext) {
+    CodecContext codecContext) {
   return StreamChannelTransformer(
-    _readMessages(typeCodecContext),
+    _readMessages(codecContext),
     StreamSinkTransformer.fromHandlers(
       handleData: (message, out) {
         if (message is! ClientMessage) {
@@ -47,17 +47,17 @@ StreamChannelTransformer<Message, List<int>> messageTransformer(
           return;
         }
 
-        out.add(message.asBytes(encoding: typeCodecContext.encoding));
+        out.add(message.asBytes(encoding: codecContext.encoding));
       },
     ),
   );
 }
 
 StreamTransformer<Uint8List, ServerMessage> _readMessages(
-    TypeCodecContext typeCodecContext) {
+    CodecContext codecContext) {
   return StreamTransformer.fromBind((rawStream) {
     return Stream.multi((listener) {
-      final framer = MessageFramer(typeCodecContext);
+      final framer = MessageFramer(codecContext);
 
       var paused = false;
 

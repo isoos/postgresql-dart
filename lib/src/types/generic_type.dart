@@ -26,14 +26,14 @@ class GenericTypeCodec extends Codec {
   });
 
   @override
-  EncodedValue encode(Object? value, TypeCodecContext context) {
+  EncodedValue encode(Object? value, CodecContext context) {
     final encoder = PostgresBinaryEncoder(oid);
     final bytes = encoder.convert(value, context.encoding);
     return EncodedValue.binary(bytes);
   }
 
   @override
-  Object? decode(EncodedValue input, TypeCodecContext context) {
+  Object? decode(EncodedValue input, CodecContext context) {
     if (input.isBinary) {
       return PostgresBinaryDecoder.convert(context, oid, input.bytes!);
     } else {

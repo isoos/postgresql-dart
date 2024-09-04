@@ -11,7 +11,7 @@ import 'package:test/test.dart';
 void main() {
   late MessageFramer framer;
   setUp(() {
-    framer = MessageFramer(TypeCodecContext.withDefaults());
+    framer = MessageFramer(CodecContext.withDefaults());
   });
 
   tearDown(() {

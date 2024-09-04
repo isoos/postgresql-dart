@@ -222,7 +222,7 @@ class PostgresTextEncoder {
 }
 
 class PostgresTextDecoder {
-  static Object? convert(TypeCodecContext context, int typeOid, Uint8List di) {
+  static Object? convert(CodecContext context, int typeOid, Uint8List di) {
     String asText() => context.encoding.decode(di);
     // ignore: unnecessary_cast
     switch (typeOid) {

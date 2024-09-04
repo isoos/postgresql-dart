@@ -28,7 +28,7 @@ export 'src/types/type_codec.dart'
         EncodingFormat,
         RuntimeParameters,
         Codec,
-        TypeCodecContext;
+        CodecContext;
 export 'src/types/type_registry.dart' show TypeRegistry;
 
 /// A description of a SQL query as interpreted by this package.

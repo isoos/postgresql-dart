@@ -43,19 +43,19 @@ class PgByteDataWriter extends ByteDataWriter {
 const _emptyString = '';
 
 class PgByteDataReader extends ByteDataReader {
-  final TypeCodecContext typeCodecContext;
+  final CodecContext codecContext;
 
   PgByteDataReader({
-    required this.typeCodecContext,
+    required this.codecContext,
   });
 
-  Encoding get encoding => typeCodecContext.encoding;
+  Encoding get encoding => codecContext.encoding;
 
   String readNullTerminatedString() {
     final bytes = readUntilTerminatingByte(0);
     if (bytes.isEmpty) {
       return _emptyString;
     }
-    return typeCodecContext.encoding.decode(bytes);
+    return codecContext.encoding.decode(bytes);
   }
 }
