@@ -51,27 +51,27 @@ typedef EncoderFn = EncodedValue? Function(
   TypeCodecContext context,
 );
 
-/// Encoder and decoder for a given type (OID).
-abstract class TypeCodec {
+/// Encoder and decoder for a value stored in Postgresql.
+abstract class Codec {
   /// Whether the `null` value is handled as a special case by this codec.
   ///
   /// By default Dart `null` values are encoded as SQL `NULL` values, and
-  /// [TypeCodec] will not recieve the `null` value on its [encode] method.
+  /// [Codec] will not recieve the `null` value on its [encode] method.
   ///
-  /// When the flag is set (`true`) the [TypeCodec.encode] will recieve `null`
+  /// When the flag is set (`true`) the [Codec.encode] will recieve `null`
   /// as `input` value.
   final bool encodesNull;
 
   /// Whether the SQL `NULL` value is handled as a special case by this codec.
   ///
   /// By default SQL `NULL` values are decoded as Dart `null` values, and
-  /// [TypeCodec] will not recieve the `null` value on its [decode] method.
+  /// [Codec] will not recieve the `null` value on its [decode] method.
   ///
-  /// When the flag is set (`true`) the [TypeCodec.decode] will recieve `null`
+  /// When the flag is set (`true`) the [Codec.decode] will recieve `null`
   /// as `input` value ([EncodedValue.bytes] will be `null`).
   final bool decodesNull;
 
-  TypeCodec({
+  Codec({
     this.encodesNull = false,
     this.decodesNull = false,
   });
@@ -79,12 +79,12 @@ abstract class TypeCodec {
   /// Encodes the [input] value and returns an [EncodedValue] object.
   ///
   /// May return `null` if the codec is not able to encode the [input].
-  EncodedValue? encode(TypeCodecContext context, Object? input);
+  EncodedValue? encode(Object? input, TypeCodecContext context);
 
   /// Decodes the [input] value and returns a Dart value object.
   ///
   /// May return [UndecodedBytes] if the codec is not able to decode the [input].
-  Object? decode(TypeCodecContext context, EncodedValue input);
+  Object? decode(EncodedValue input, TypeCodecContext context);
 }
 
 /// The read-only, passive view of the Postgresql's runtime/session parameters.

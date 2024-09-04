@@ -121,7 +121,7 @@ final _builtInTypes = <Type>{
   Type.tsquery,
 };
 
-final _builtInCodecs = <int, TypeCodec>{
+final _builtInCodecs = <int, Codec>{
   TypeOid.character: GenericTypeCodec(TypeOid.character),
   TypeOid.name: GenericTypeCodec(TypeOid.name),
   TypeOid.text: GenericTypeCodec(TypeOid.text),
@@ -241,12 +241,12 @@ final _builtInTypeNames = <String, Type>{
 class TypeRegistry {
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
-  final _codecs = <int, TypeCodec>{};
+  final _codecs = <int, Codec>{};
   final _encoders = <EncoderFn>[];
 
   TypeRegistry({
-    /// Override or extend the built-in type codecs.
-    Map<int, TypeCodec>? typeCodecs,
+    /// Override or extend the built-in codecs using the type OID as key.
+    Map<int, Codec>? codecs,
 
     /// When encoding an untyped parameter for a query, try to use these encoders
     /// before the built-in (generic) text encoders.
@@ -259,8 +259,8 @@ class TypeRegistry {
         _byTypeOid[type.oid!] = type;
       }
     }
-    if (typeCodecs != null) {
-      _codecs.addAll(typeCodecs);
+    if (codecs != null) {
+      _codecs.addAll(codecs);
     }
     _encoders.addAll([
       ...?encoders,
@@ -290,7 +290,7 @@ extension TypeRegistryExt on TypeRegistry {
       if (!codec.encodesNull && value == null) {
         return null;
       }
-      return codec.encode(context, value);
+      return codec.encode(value, context);
     } else {
       for (final encoder in _encoders) {
         final encoded = encoder(value, context);
@@ -313,7 +313,7 @@ extension TypeRegistryExt on TypeRegistry {
       if (!codec.decodesNull && bytes == null) {
         return null;
       }
-      return codec.decode(context, value);
+      return codec.decode(value, context);
     } else {
       if (bytes == null) {
         return null;

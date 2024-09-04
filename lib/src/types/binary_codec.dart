@@ -1,4 +1,5 @@
-import 'dart:convert';
+import 'dart:convert' hide Codec;
+import 'dart:convert' as convert;
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
@@ -39,7 +40,7 @@ final _trailingZerosRegExp = RegExp(r'0+$');
 // that doesn't allocate intermediate strings.
 final _jsonUtf8Codec = json.fuse(utf8);
 
-Codec<Object?, List<int>> _jsonFusedEncoding(Encoding encoding) {
+convert.Codec<Object?, List<int>> _jsonFusedEncoding(Encoding encoding) {
   if (encoding == utf8) {
     return _jsonUtf8Codec;
   } else {

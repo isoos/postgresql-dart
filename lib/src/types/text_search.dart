@@ -82,9 +82,9 @@ class TsVectorType extends Type<TsVector> {
   const TsVectorType() : super(TypeOid.tsvector);
 }
 
-class TsVectorTypeCodec extends TypeCodec {
+class TsVectorTypeCodec extends Codec {
   @override
-  EncodedValue encode(TypeCodecContext context, Object? value) {
+  EncodedValue encode(Object? value, TypeCodecContext context) {
     final v = value as TsVector;
     final writer = context.newPgByteDataWriter();
     writer.writeUint32(v.words.length);
@@ -106,7 +106,7 @@ class TsVectorTypeCodec extends TypeCodec {
   }
 
   @override
-  TsVector? decode(TypeCodecContext context, EncodedValue input) {
+  TsVector? decode(EncodedValue input, TypeCodecContext context) {
     if (input.isBinary) {
       final reader = context.newPgByteDataReader(input.bytes);
       final count = reader.readUint32();
@@ -183,9 +183,9 @@ class TsQueryType extends Type<TsQuery> {
   const TsQueryType() : super(TypeOid.tsquery);
 }
 
-class TsQueryTypeCodec extends TypeCodec {
+class TsQueryTypeCodec extends Codec {
   @override
-  EncodedValue encode(TypeCodecContext context, Object? value) {
+  EncodedValue encode(Object? value, TypeCodecContext context) {
     final v = value as TsQuery;
     final writer = context.newPgByteDataWriter();
     writer.writeUint32(v._itemCount);
@@ -196,7 +196,7 @@ class TsQueryTypeCodec extends TypeCodec {
   }
 
   @override
-  TsQuery decode(TypeCodecContext context, EncodedValue input) {
+  TsQuery decode(EncodedValue input, TypeCodecContext context) {
     if (input.isBinary) {
       final reader = context.newPgByteDataReader(input.bytes);
       final count = reader.readUint32();

@@ -27,7 +27,7 @@ export 'src/types/type_codec.dart'
         EncoderFn,
         EncodingFormat,
         RuntimeParameters,
-        TypeCodec,
+        Codec,
         TypeCodecContext;
 export 'src/types/type_registry.dart' show TypeRegistry;
 
