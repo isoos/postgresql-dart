@@ -806,9 +806,9 @@ class _PgResultStreamSubscription
               value: EncodedValue(
                 input,
                 format: EncodingFormat.fromBinaryFlag(field.isBinaryEncoding),
+                typeOid: field.typeOid,
               ),
               context: context,
-              typeOid: field.typeOid,
             );
             futures.add(futureOr is Future ? futureOr : Future.value(futureOr));
           }

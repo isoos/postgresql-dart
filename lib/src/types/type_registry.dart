@@ -303,10 +303,10 @@ extension TypeRegistryExt on TypeRegistry {
   }
 
   Object? decodeBytes({
-    required int typeOid,
     required EncodedValue value,
     required CodecContext context,
   }) {
+    final typeOid = value.typeOid!;
     final codec = _codecs[typeOid];
     final bytes = value.bytes;
     if (codec != null) {

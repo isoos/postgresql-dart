@@ -7,8 +7,7 @@ import 'package:postgres/src/v3/relation_tracker.dart';
 import '../buffer.dart';
 import 'type_registry.dart';
 
-/// Represents the [bytes] of a parameter value that is sent to a query or returned
-/// as a result.
+/// Represents the [bytes] of a received (field) or sent (parameter) value.
 ///
 /// The [format] describes whether the [bytes] are formatted as text (e.g. `12`)
 /// or bytes (e.g. `0x0c`).
@@ -19,14 +18,29 @@ class EncodedValue {
   /// The format of the [bytes].
   final EncodingFormat format;
 
+  /// The type OID - if available.
+  final int? typeOid;
+
   EncodedValue(
     this.bytes, {
     required this.format,
+    this.typeOid,
   });
 
-  EncodedValue.binary(this.bytes) : format = EncodingFormat.binary;
-  EncodedValue.text(this.bytes) : format = EncodingFormat.text;
-  EncodedValue.null$({this.format = EncodingFormat.binary}) : bytes = null;
+  EncodedValue.binary(
+    this.bytes, {
+    this.typeOid,
+  }) : format = EncodingFormat.binary;
+
+  EncodedValue.text(
+    this.bytes, {
+    this.typeOid,
+  }) : format = EncodingFormat.text;
+
+  EncodedValue.null$({
+    this.format = EncodingFormat.binary,
+    this.typeOid,
+  }) : bytes = null;
 
   bool get isBinary => format == EncodingFormat.binary;
   bool get isText => format == EncodingFormat.text;
