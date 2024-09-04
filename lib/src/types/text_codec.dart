@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import '../exceptions.dart';
 import '../types.dart';
+import 'codec.dart';
 import 'geo_types.dart';
-import 'type_codec.dart';
 import 'type_registry.dart';
 
 class PostgresTextEncoder {
@@ -222,7 +222,7 @@ class PostgresTextEncoder {
 }
 
 class PostgresTextDecoder {
-  static Object? convert(TypeCodecContext context, int typeOid, Uint8List di) {
+  static Object? convert(CodecContext context, int typeOid, Uint8List di) {
     String asText() => context.encoding.decode(di);
     // ignore: unnecessary_cast
     switch (typeOid) {

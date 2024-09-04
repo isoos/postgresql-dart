@@ -1,7 +1,7 @@
 import '../buffer.dart';
 import '../exceptions.dart';
 import '../types.dart';
-import 'type_codec.dart';
+import 'codec.dart';
 import 'type_registry.dart';
 
 /// The `tsvector` data type stores a list of [TsWord]s, lexemes with
@@ -82,9 +82,9 @@ class TsVectorType extends Type<TsVector> {
   const TsVectorType() : super(TypeOid.tsvector);
 }
 
-class TsVectorTypeCodec extends TypeCodec {
+class TsVectorTypeCodec extends Codec {
   @override
-  EncodedValue encode(TypeCodecContext context, Object? value) {
+  EncodedValue encode(Object? value, CodecContext context) {
     final v = value as TsVector;
     final writer = context.newPgByteDataWriter();
     writer.writeUint32(v.words.length);
@@ -102,11 +102,11 @@ class TsVectorTypeCodec extends TypeCodec {
       }
     }
     final bytes = writer.toBytes();
-    return EncodedValue(bytes: bytes, isBinary: true);
+    return EncodedValue.binary(bytes);
   }
 
   @override
-  TsVector? decode(TypeCodecContext context, EncodedValue input) {
+  TsVector? decode(EncodedValue input, CodecContext context) {
     if (input.isBinary) {
       final reader = context.newPgByteDataReader(input.bytes);
       final count = reader.readUint32();
@@ -183,20 +183,20 @@ class TsQueryType extends Type<TsQuery> {
   const TsQueryType() : super(TypeOid.tsquery);
 }
 
-class TsQueryTypeCodec extends TypeCodec {
+class TsQueryTypeCodec extends Codec {
   @override
-  EncodedValue encode(TypeCodecContext context, Object? value) {
+  EncodedValue encode(Object? value, CodecContext context) {
     final v = value as TsQuery;
     final writer = context.newPgByteDataWriter();
     writer.writeUint32(v._itemCount);
     v._write(writer);
 
     final bytes = writer.toBytes();
-    return EncodedValue(bytes: bytes, isBinary: true);
+    return EncodedValue.binary(bytes);
   }
 
   @override
-  TsQuery decode(TypeCodecContext context, EncodedValue input) {
+  TsQuery decode(EncodedValue input, CodecContext context) {
     if (input.isBinary) {
       final reader = context.newPgByteDataReader(input.bytes);
       final count = reader.readUint32();

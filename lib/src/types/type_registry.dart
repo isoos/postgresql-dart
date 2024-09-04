@@ -1,13 +1,11 @@
-import 'dart:typed_data';
-
 import 'package:buffer/buffer.dart';
 
 import '../exceptions.dart';
 import '../types.dart';
+import 'codec.dart';
 import 'generic_type.dart';
 import 'text_codec.dart';
 import 'text_search.dart';
-import 'type_codec.dart';
 
 /// See: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.dat
 class TypeOid {
@@ -123,7 +121,7 @@ final _builtInTypes = <Type>{
   Type.tsquery,
 };
 
-final _builtInCodecs = <int, TypeCodec>{
+final _builtInCodecs = <int, Codec>{
   TypeOid.character: GenericTypeCodec(TypeOid.character),
   TypeOid.name: GenericTypeCodec(TypeOid.name),
   TypeOid.text: GenericTypeCodec(TypeOid.text),
@@ -243,15 +241,16 @@ final _builtInTypeNames = <String, Type>{
 class TypeRegistry {
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
-  final _codecs = <int, TypeCodec>{};
-  final _genericTypeEncoders = <TypeEncoderFn>[];
+  final _codecs = <int, Codec>{};
+  final _encoders = <EncoderFn>[];
 
   TypeRegistry({
-    /// Override or extend the built-in type codecs.
-    Map<int, TypeCodec>? typeCodecs,
+    /// Override or extend the built-in codecs using the type OID as key.
+    Map<int, Codec>? codecs,
 
-    /// Prepend the built-in type encoders with custom encoders.
-    Iterable<TypeEncoderFn>? typeEncoderFns,
+    /// When encoding an untyped parameter for a query, try to use these encoders
+    /// before the built-in (generic) text encoders.
+    Iterable<EncoderFn>? encoders,
   }) {
     _bySubstitutionName.addAll(_builtInTypeNames);
     _codecs.addAll(_builtInCodecs);
@@ -260,12 +259,12 @@ class TypeRegistry {
         _byTypeOid[type.oid!] = type;
       }
     }
-    if (typeCodecs != null) {
-      _codecs.addAll(typeCodecs);
+    if (codecs != null) {
+      _codecs.addAll(codecs);
     }
-    _genericTypeEncoders.addAll([
-      ...?typeEncoderFns,
-      _defaultGenericTypeEncoder,
+    _encoders.addAll([
+      ...?encoders,
+      _defaultTextEncoder,
     ]);
   }
 }
@@ -280,7 +279,7 @@ extension TypeRegistryExt on TypeRegistry {
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
 
   EncodedValue? encodeValue({
-    required TypeCodecContext context,
+    required CodecContext context,
     required TypedValue typedValue,
   }) {
     final type = typedValue.type;
@@ -291,10 +290,10 @@ extension TypeRegistryExt on TypeRegistry {
       if (!codec.encodesNull && value == null) {
         return null;
       }
-      return codec.encode(context, value);
+      return codec.encode(value, context);
     } else {
-      for (final encoder in _genericTypeEncoders) {
-        final encoded = encoder(context, value);
+      for (final encoder in _encoders) {
+        final encoded = encoder(value, context);
         if (encoded != null) {
           return encoded;
         }
@@ -303,19 +302,18 @@ extension TypeRegistryExt on TypeRegistry {
     throw PgException("Could not infer type of value '$value'.");
   }
 
-  Object? decodeBytes(
-    Uint8List? bytes, {
-    required TypeCodecContext context,
-    required int typeOid,
-    required bool isBinary,
+  Object? decodeBytes({
+    required EncodedValue value,
+    required CodecContext context,
   }) {
+    final typeOid = value.typeOid!;
     final codec = _codecs[typeOid];
+    final bytes = value.bytes;
     if (codec != null) {
       if (!codec.decodesNull && bytes == null) {
         return null;
       }
-      final value = EncodedValue(bytes: bytes, isBinary: isBinary);
-      return codec.decode(context, value);
+      return codec.decode(value, context);
     } else {
       if (bytes == null) {
         return null;
@@ -323,21 +321,17 @@ extension TypeRegistryExt on TypeRegistry {
       return UndecodedBytes(
         typeOid: typeOid,
         bytes: bytes,
-        isBinary: isBinary,
+        isBinary: value.isBinary,
         encoding: context.encoding,
       );
     }
   }
 }
 
-EncodedValue? _defaultGenericTypeEncoder(
-    TypeCodecContext context, Object? input) {
+EncodedValue? _defaultTextEncoder(Object? input, CodecContext context) {
   final encoded = _textEncoder.tryConvert(input);
   if (encoded != null) {
-    return EncodedValue(
-      bytes: castBytes(context.encoding.encode(encoded)),
-      isBinary: false,
-    );
+    return EncodedValue.text(castBytes(context.encoding.encode(encoded)));
   } else {
     return null;
   }

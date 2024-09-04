@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
-import 'package:postgres/src/types/type_codec.dart';
+import 'package:postgres/src/types/codec.dart';
 
 import '../buffer.dart';
 import '../time_converters.dart';
@@ -374,11 +374,11 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   static XLogDataMessage parse(
     Uint8List bytes,
     Encoding encoding, {
-    TypeCodecContext? typeCodecContext,
+    CodecContext? codecContext,
   }) {
     final reader = PgByteDataReader(
-        typeCodecContext: typeCodecContext ??
-            TypeCodecContext.withDefaults(encoding: encoding))
+        codecContext:
+            codecContext ?? CodecContext.withDefaults(encoding: encoding))
       ..add(bytes);
     final walStart = LSN(reader.readUint64());
     final walEnd = LSN(reader.readUint64());

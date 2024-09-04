@@ -12,7 +12,7 @@ import 'package:stream_channel/stream_channel.dart';
 import '../../postgres.dart';
 import '../auth/auth.dart';
 import '../messages/logical_replication_messages.dart';
-import '../types/type_codec.dart';
+import '../types/codec.dart';
 import '../types/type_registry.dart';
 import 'protocol.dart';
 import 'query_description.dart';
@@ -200,7 +200,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     final settings = connectionSettings is ResolvedConnectionSettings
         ? connectionSettings
         : ResolvedConnectionSettings(connectionSettings, null);
-    final typeCodecContext = TypeCodecContext(
+    final codecContext = CodecContext(
       encoding: settings.encoding,
       // TODO: share this between pooled connections
       relationTracker: RelationTracker(),
@@ -210,7 +210,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     var (channel, secure) = await _connect(
       endpoint,
       settings,
-      typeCodecContext: typeCodecContext,
+      codecContext: codecContext,
     );
 
     if (_debugLog) {
@@ -237,8 +237,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       settings,
       channel,
       secure,
-      relationTracker: typeCodecContext.relationTracker,
-      runtimeParameters: typeCodecContext.runtimeParameters,
+      relationTracker: codecContext.relationTracker,
+      runtimeParameters: codecContext.runtimeParameters,
     );
     await connection._startup();
     if (connection._settings.onOpen != null) {
@@ -250,7 +250,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   static Future<(StreamChannel<Message>, bool)> _connect(
     Endpoint endpoint,
     ResolvedConnectionSettings settings, {
-    required TypeCodecContext typeCodecContext,
+    required CodecContext codecContext,
   }) async {
     final host = endpoint.host;
     final port = endpoint.port;
@@ -342,7 +342,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
     return (
       StreamChannel<List<int>>(adaptedStream, outgoingSocket)
-          .transform(messageTransformer(typeCodecContext)),
+          .transform(messageTransformer(codecContext)),
       secure,
     );
   }
@@ -354,6 +354,14 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   final RelationTracker _relationTracker;
   @internal
   final RuntimeParameters runtimeParameters;
+
+  @internal
+  late final codecContext = CodecContext(
+    encoding: encoding,
+    relationTracker: _relationTracker,
+    runtimeParameters: runtimeParameters,
+    typeRegistry: _settings.typeRegistry,
+  );
 
   /// Whether [_channel] is backed by a TLS connection.
   final bool _channelIsSecure;
@@ -567,15 +575,6 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   void _closeAfterError([PgException? cause]) {
     _close(true, cause);
   }
-
-  TypeCodecContext createTypeCodecContext() {
-    return TypeCodecContext(
-      encoding: encoding,
-      relationTracker: _relationTracker,
-      runtimeParameters: runtimeParameters,
-      typeRegistry: _settings.typeRegistry,
-    );
-  }
 }
 
 class _PreparedStatement extends Statement {
@@ -674,7 +673,7 @@ class _PgResultStreamSubscription
       connection._pending = this;
 
       final encodedFutures = <Future<EncodedValue?>>[];
-      final context = connection.createTypeCodecContext();
+      final context = connection.codecContext;
       for (final e in statement.parameters) {
         if (e.isSqlNull) {
           encodedFutures.add(Future.value(null));
@@ -795,7 +794,7 @@ class _PgResultStreamSubscription
           final columnCount = message.values.length;
           final futures = <Future>[];
           List<bool>? sqlNulls;
-          final context = session._connection.createTypeCodecContext();
+          final context = session._connection.codecContext;
           for (var i = 0; i < message.values.length; i++) {
             final field = schema.columns[i];
             final input = message.values[i];
@@ -804,10 +803,12 @@ class _PgResultStreamSubscription
               sqlNulls[i] = true;
             }
             final futureOr = context.typeRegistry.decodeBytes(
-              input,
+              value: EncodedValue(
+                input,
+                format: EncodingFormat.fromBinaryFlag(field.isBinaryEncoding),
+                typeOid: field.typeOid,
+              ),
               context: context,
-              typeOid: field.typeOid,
-              isBinary: field.isBinaryEncoding,
             );
             futures.add(futureOr is Future ? futureOr : Future.value(futureOr));
           }

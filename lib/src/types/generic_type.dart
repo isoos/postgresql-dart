@@ -1,7 +1,7 @@
 import '../types.dart';
 import 'binary_codec.dart';
+import 'codec.dart';
 import 'text_codec.dart';
-import 'type_codec.dart';
 
 class UnknownType extends Type<Object> {
   const UnknownType(super.oid);
@@ -16,7 +16,7 @@ class GenericType<T extends Object> extends Type<T> {
   const GenericType(super.oid);
 }
 
-class GenericTypeCodec extends TypeCodec {
+class GenericTypeCodec extends Codec {
   final int oid;
 
   GenericTypeCodec(
@@ -26,14 +26,14 @@ class GenericTypeCodec extends TypeCodec {
   });
 
   @override
-  EncodedValue encode(TypeCodecContext context, Object? value) {
+  EncodedValue encode(Object? value, CodecContext context) {
     final encoder = PostgresBinaryEncoder(oid);
     final bytes = encoder.convert(value, context.encoding);
-    return EncodedValue(bytes: bytes, isBinary: true);
+    return EncodedValue.binary(bytes);
   }
 
   @override
-  Object? decode(TypeCodecContext context, EncodedValue input) {
+  Object? decode(EncodedValue input, CodecContext context) {
     if (input.isBinary) {
       return PostgresBinaryDecoder.convert(context, oid, input.bytes!);
     } else {

@@ -1,13 +1,14 @@
-import 'dart:convert';
+import 'dart:convert' hide Codec;
+import 'dart:convert' as convert;
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
 import '../buffer.dart';
 import '../types.dart';
+import 'codec.dart';
 import 'geo_types.dart';
 import 'range_types.dart';
-import 'type_codec.dart';
 import 'type_registry.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;
@@ -39,7 +40,7 @@ final _trailingZerosRegExp = RegExp(r'0+$');
 // that doesn't allocate intermediate strings.
 final _jsonUtf8Codec = json.fuse(utf8);
 
-Codec<Object?, List<int>> _jsonFusedEncoding(Encoding encoding) {
+convert.Codec<Object?, List<int>> _jsonFusedEncoding(Encoding encoding) {
   if (encoding == utf8) {
     return _jsonUtf8Codec;
   } else {
@@ -754,8 +755,7 @@ class PostgresBinaryEncoder {
 }
 
 class PostgresBinaryDecoder {
-  static Object? convert(
-      TypeCodecContext context, int typeOid, Uint8List input) {
+  static Object? convert(CodecContext context, int typeOid, Uint8List input) {
     late final buffer =
         ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
 
@@ -1012,7 +1012,7 @@ class PostgresBinaryDecoder {
     return result;
   }
 
-  static (T?, T?, Bounds)? _decodeRange<T>(TypeCodecContext context,
+  static (T?, T?, Bounds)? _decodeRange<T>(CodecContext context,
       ByteData buffer, Uint8List dinput, int elementTypeOid) {
     final flag = buffer.getInt8(0);
     final bounds = Bounds.fromFlag(flag);
@@ -1040,7 +1040,7 @@ class PostgresBinaryDecoder {
   }
 
   static T _decodeRangeElement<T>(
-      TypeCodecContext context, int elementTypeOid, Uint8List bytes) {
+      CodecContext context, int elementTypeOid, Uint8List bytes) {
     return convert(context, elementTypeOid, bytes) as T;
   }
 

@@ -430,11 +430,14 @@ class TypedValue<T extends Object> {
   }
 
   @override
-  int get hashCode => Object.hash(type, value);
+  int get hashCode => Object.hash(type, value, isSqlNull);
 
   @override
   bool operator ==(Object other) {
-    return other is TypedValue && other.type == type && other.value == value;
+    return other is TypedValue &&
+        other.type == type &&
+        other.value == value &&
+        other.isSqlNull == isSqlNull;
   }
 
   @override

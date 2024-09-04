@@ -7,7 +7,7 @@ import '../buffer.dart';
 import '../replication.dart';
 import '../time_converters.dart';
 import '../types.dart';
-import '../types/type_codec.dart';
+import '../types/codec.dart';
 import 'shared_messages.dart';
 
 abstract class ClientMessageFormat {
