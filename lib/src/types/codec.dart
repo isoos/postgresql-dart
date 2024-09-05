@@ -1,10 +1,10 @@
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
 
 import '../buffer.dart';
 import '../types.dart';
 import '../v3/relation_tracker.dart';
+import '../v3/runtime_parameters.dart';
 import 'type_registry.dart';
 
 /// Represents the [bytes] of a received (field) or sent (parameter) value.
@@ -115,47 +115,5 @@ class CodecContext {
 
   PgByteDataWriter newPgByteDataWriter() {
     return PgByteDataWriter(encoding: encoding);
-  }
-}
-
-/// The read-only, passive view of the Postgresql's runtime/session parameters.
-///
-/// Postgresql server reports certain parameter values at opening a connection
-/// or whenever their values change. Such parameters may include:
-/// - `application_name`
-/// - `server_version`
-/// - `server_encoding`
-/// - `client_encoding`
-/// - `is_superuser`
-/// - `session_authorization`
-/// - `DateStyle`
-/// - `TimeZone`
-/// - `integer_datetimes`
-///
-/// This class holds the latest parameter values send by the server.
-/// The values are not queried or updated actively.
-///
-/// The available parameters may be discovered following the instructions on these URLs:
-/// - https://www.postgresql.org/docs/current/sql-show.html
-/// - https://www.postgresql.org/docs/current/runtime-config.html
-/// - https://www.postgresql.org/docs/current/libpq-status.html#LIBPQ-PQPARAMETERSTATUS
-class RuntimeParameters {
-  final _values = <String, String>{};
-
-  RuntimeParameters({Map<String, String>? initialValues}) {
-    if (initialValues != null) {
-      _values.addAll(initialValues);
-    }
-  }
-
-  /// The latest values of the runtime parameters. The map is read-only.
-  late final latestValues = UnmodifiableMapView(_values);
-
-  String? get applicationName => latestValues['application_name'];
-}
-
-extension RuntimeParametersExt on RuntimeParameters {
-  void setValue(String name, String value) {
-    _values[name] = value;
   }
 }
