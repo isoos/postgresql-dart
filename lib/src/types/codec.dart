@@ -2,9 +2,9 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:postgres/src/v3/relation_tracker.dart';
-
 import '../buffer.dart';
+import '../types.dart';
+import '../v3/relation_tracker.dart';
 import 'type_registry.dart';
 
 /// Represents the [bytes] of a received (field) or sent (parameter) value.
@@ -61,43 +61,19 @@ enum EncodingFormat {
 ///
 /// May return `null` if the encoder is not able to convert the [input] value.
 typedef EncoderFn = EncodedValue? Function(
-  Object? input,
-  CodecContext context,
-);
+    TypedValue input, CodecContext context);
 
 /// Encoder and decoder for a value stored in Postgresql.
 abstract class Codec {
-  /// Whether the `null` value is handled as a special case by this codec.
-  ///
-  /// By default Dart `null` values are encoded as SQL `NULL` values, and
-  /// [Codec] will not recieve the `null` value on its [encode] method.
-  ///
-  /// When the flag is set (`true`) the [Codec.encode] will recieve `null`
-  /// as `input` value.
-  final bool encodesNull;
-
-  /// Whether the SQL `NULL` value is handled as a special case by this codec.
-  ///
-  /// By default SQL `NULL` values are decoded as Dart `null` values, and
-  /// [Codec] will not recieve the `null` value on its [decode] method.
-  ///
-  /// When the flag is set (`true`) the [Codec.decode] will recieve `null`
-  /// as `input` value ([EncodedValue.bytes] will be `null`).
-  final bool decodesNull;
-
-  Codec({
-    this.encodesNull = false,
-    this.decodesNull = false,
-  });
-
   /// Encodes the [input] value and returns an [EncodedValue] object.
   ///
   /// May return `null` if the codec is not able to encode the [input].
-  EncodedValue? encode(Object? input, CodecContext context);
+  EncodedValue? encode(TypedValue input, CodecContext context);
 
   /// Decodes the [input] value and returns a Dart value object.
   ///
-  /// May return [UndecodedBytes] if the codec is not able to decode the [input].
+  /// May return [UndecodedBytes] or the same [input] instance if the codec
+  /// is not able to decode the [input].
   Object? decode(EncodedValue input, CodecContext context);
 }
 

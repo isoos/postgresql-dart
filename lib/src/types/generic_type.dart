@@ -16,17 +16,29 @@ class GenericType<T extends Object> extends Type<T> {
   const GenericType(super.oid);
 }
 
-class GenericTypeCodec extends Codec {
+class GenericCodec extends Codec {
   final int oid;
 
-  GenericTypeCodec(
+  /// Whether the `null` value is handled as a special case by this codec.
+  ///
+  /// By default Dart `null` values are encoded as SQL `NULL` values, and
+  /// [Codec] will not recieve the `null` value on its [encode] method.
+  ///
+  /// When the flag is set (`true`) the [Codec.encode] will recieve `null`
+  /// as `input` value.
+  final bool encodesNull;
+
+  GenericCodec(
     this.oid, {
-    super.encodesNull,
-    super.decodesNull,
+    this.encodesNull = false,
   });
 
   @override
-  EncodedValue encode(Object? value, CodecContext context) {
+  EncodedValue? encode(TypedValue input, CodecContext context) {
+    final value = input.value;
+    if (!encodesNull && value == null) {
+      return null;
+    }
     final encoder = PostgresBinaryEncoder(oid);
     final bytes = encoder.convert(value, context.encoding);
     return EncodedValue.binary(bytes);
@@ -34,10 +46,14 @@ class GenericTypeCodec extends Codec {
 
   @override
   Object? decode(EncodedValue input, CodecContext context) {
+    final bytes = input.bytes;
+    if (bytes == null) {
+      return null;
+    }
     if (input.isBinary) {
-      return PostgresBinaryDecoder.convert(context, oid, input.bytes!);
+      return PostgresBinaryDecoder.convert(context, oid, bytes);
     } else {
-      return PostgresTextDecoder.convert(context, oid, input.bytes!);
+      return PostgresTextDecoder.convert(context, oid, bytes);
     }
   }
 }
