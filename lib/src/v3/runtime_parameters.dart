@@ -14,7 +14,7 @@ import 'dart:collection';
 /// - `TimeZone`
 /// - `integer_datetimes`
 ///
-/// This class holds the latest parameter values send by the server.
+/// This class holds the latest parameter values send by the server on a single connection.
 /// The values are not queried or updated actively.
 ///
 /// The available parameters may be discovered following the instructions on these URLs:
