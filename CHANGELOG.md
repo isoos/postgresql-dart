@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.4.0
+## 3.4.0-dev.1
 
 **Allowing custom type codecs**:
 
