@@ -122,58 +122,57 @@ final _builtInTypes = <Type>{
 };
 
 final _builtInCodecs = <int, Codec>{
-  TypeOid.character: GenericTypeCodec(TypeOid.character),
-  TypeOid.name: GenericTypeCodec(TypeOid.name),
-  TypeOid.text: GenericTypeCodec(TypeOid.text),
-  TypeOid.varChar: GenericTypeCodec(TypeOid.varChar),
-  TypeOid.integer: GenericTypeCodec(TypeOid.integer),
-  TypeOid.smallInteger: GenericTypeCodec(TypeOid.smallInteger),
-  TypeOid.bigInteger: GenericTypeCodec(TypeOid.bigInteger),
-  TypeOid.real: GenericTypeCodec(TypeOid.real),
-  TypeOid.double: GenericTypeCodec(TypeOid.double),
-  TypeOid.boolean: GenericTypeCodec(TypeOid.boolean),
-  TypeOid.voidType: GenericTypeCodec(TypeOid.voidType),
-  TypeOid.time: GenericTypeCodec(TypeOid.time),
-  TypeOid.timestampWithTimezone:
-      GenericTypeCodec(TypeOid.timestampWithTimezone),
+  TypeOid.character: GenericCodec(TypeOid.character),
+  TypeOid.name: GenericCodec(TypeOid.name),
+  TypeOid.text: GenericCodec(TypeOid.text),
+  TypeOid.varChar: GenericCodec(TypeOid.varChar),
+  TypeOid.integer: GenericCodec(TypeOid.integer),
+  TypeOid.smallInteger: GenericCodec(TypeOid.smallInteger),
+  TypeOid.bigInteger: GenericCodec(TypeOid.bigInteger),
+  TypeOid.real: GenericCodec(TypeOid.real),
+  TypeOid.double: GenericCodec(TypeOid.double),
+  TypeOid.boolean: GenericCodec(TypeOid.boolean),
+  TypeOid.voidType: GenericCodec(TypeOid.voidType),
+  TypeOid.time: GenericCodec(TypeOid.time),
+  TypeOid.timestampWithTimezone: GenericCodec(TypeOid.timestampWithTimezone),
   TypeOid.timestampWithoutTimezone:
-      GenericTypeCodec(TypeOid.timestampWithoutTimezone),
-  TypeOid.interval: GenericTypeCodec(TypeOid.interval),
-  TypeOid.numeric: GenericTypeCodec(TypeOid.numeric),
-  TypeOid.byteArray: GenericTypeCodec(TypeOid.byteArray),
-  TypeOid.date: GenericTypeCodec(TypeOid.date),
-  TypeOid.json: GenericTypeCodec(TypeOid.json, encodesNull: true),
-  TypeOid.jsonb: GenericTypeCodec(TypeOid.jsonb, encodesNull: true),
-  TypeOid.uuid: GenericTypeCodec(TypeOid.uuid),
-  TypeOid.point: GenericTypeCodec(TypeOid.point),
-  TypeOid.line: GenericTypeCodec(TypeOid.line),
-  TypeOid.lineSegment: GenericTypeCodec(TypeOid.lineSegment),
-  TypeOid.box: GenericTypeCodec(TypeOid.box),
-  TypeOid.polygon: GenericTypeCodec(TypeOid.polygon),
-  TypeOid.path: GenericTypeCodec(TypeOid.path),
-  TypeOid.circle: GenericTypeCodec(TypeOid.circle),
-  TypeOid.booleanArray: GenericTypeCodec(TypeOid.booleanArray),
-  TypeOid.smallIntegerArray: GenericTypeCodec(TypeOid.smallIntegerArray),
-  TypeOid.integerArray: GenericTypeCodec(TypeOid.integerArray),
-  TypeOid.bigIntegerArray: GenericTypeCodec(TypeOid.bigIntegerArray),
-  TypeOid.textArray: GenericTypeCodec(TypeOid.textArray),
-  TypeOid.doubleArray: GenericTypeCodec(TypeOid.doubleArray),
-  TypeOid.dateArray: GenericTypeCodec(TypeOid.dateArray),
-  TypeOid.timeArray: GenericTypeCodec(TypeOid.timeArray),
-  TypeOid.timestampArray: GenericTypeCodec(TypeOid.timestampArray),
-  TypeOid.timestampTzArray: GenericTypeCodec(TypeOid.timestampTzArray),
-  TypeOid.uuidArray: GenericTypeCodec(TypeOid.uuidArray),
-  TypeOid.varCharArray: GenericTypeCodec(TypeOid.varCharArray),
-  TypeOid.jsonbArray: GenericTypeCodec(TypeOid.jsonbArray),
-  TypeOid.regtype: GenericTypeCodec(TypeOid.regtype),
-  TypeOid.integerRange: GenericTypeCodec(TypeOid.integerRange),
-  TypeOid.bigIntegerRange: GenericTypeCodec(TypeOid.bigIntegerRange),
-  TypeOid.dateRange: GenericTypeCodec(TypeOid.dateRange),
+      GenericCodec(TypeOid.timestampWithoutTimezone),
+  TypeOid.interval: GenericCodec(TypeOid.interval),
+  TypeOid.numeric: GenericCodec(TypeOid.numeric),
+  TypeOid.byteArray: GenericCodec(TypeOid.byteArray),
+  TypeOid.date: GenericCodec(TypeOid.date),
+  TypeOid.json: GenericCodec(TypeOid.json, encodesNull: true),
+  TypeOid.jsonb: GenericCodec(TypeOid.jsonb, encodesNull: true),
+  TypeOid.uuid: GenericCodec(TypeOid.uuid),
+  TypeOid.point: GenericCodec(TypeOid.point),
+  TypeOid.line: GenericCodec(TypeOid.line),
+  TypeOid.lineSegment: GenericCodec(TypeOid.lineSegment),
+  TypeOid.box: GenericCodec(TypeOid.box),
+  TypeOid.polygon: GenericCodec(TypeOid.polygon),
+  TypeOid.path: GenericCodec(TypeOid.path),
+  TypeOid.circle: GenericCodec(TypeOid.circle),
+  TypeOid.booleanArray: GenericCodec(TypeOid.booleanArray),
+  TypeOid.smallIntegerArray: GenericCodec(TypeOid.smallIntegerArray),
+  TypeOid.integerArray: GenericCodec(TypeOid.integerArray),
+  TypeOid.bigIntegerArray: GenericCodec(TypeOid.bigIntegerArray),
+  TypeOid.textArray: GenericCodec(TypeOid.textArray),
+  TypeOid.doubleArray: GenericCodec(TypeOid.doubleArray),
+  TypeOid.dateArray: GenericCodec(TypeOid.dateArray),
+  TypeOid.timeArray: GenericCodec(TypeOid.timeArray),
+  TypeOid.timestampArray: GenericCodec(TypeOid.timestampArray),
+  TypeOid.timestampTzArray: GenericCodec(TypeOid.timestampTzArray),
+  TypeOid.uuidArray: GenericCodec(TypeOid.uuidArray),
+  TypeOid.varCharArray: GenericCodec(TypeOid.varCharArray),
+  TypeOid.jsonbArray: GenericCodec(TypeOid.jsonbArray),
+  TypeOid.regtype: GenericCodec(TypeOid.regtype),
+  TypeOid.integerRange: GenericCodec(TypeOid.integerRange),
+  TypeOid.bigIntegerRange: GenericCodec(TypeOid.bigIntegerRange),
+  TypeOid.dateRange: GenericCodec(TypeOid.dateRange),
   // TypeOid.numrange: GenericTypeCodec(TypeOid.numrange),
-  TypeOid.timestampRange: GenericTypeCodec(TypeOid.timestampRange),
-  TypeOid.timestampTzRange: GenericTypeCodec(TypeOid.timestampTzRange),
-  TypeOid.tsvector: TsVectorTypeCodec(),
-  TypeOid.tsquery: TsQueryTypeCodec(),
+  TypeOid.timestampRange: GenericCodec(TypeOid.timestampRange),
+  TypeOid.timestampTzRange: GenericCodec(TypeOid.timestampTzRange),
+  TypeOid.tsvector: TsVectorCodec(),
+  TypeOid.tsquery: TsQueryCodec(),
 };
 
 final _builtInTypeNames = <String, Type>{
@@ -267,6 +266,55 @@ class TypeRegistry {
       _defaultTextEncoder,
     ]);
   }
+
+  EncodedValue? encode(TypedValue input, CodecContext context) {
+    // check for codec
+    final typeOid = input.type.oid;
+    final codec = typeOid == null ? null : _codecs[typeOid];
+    if (codec != null) {
+      final r = codec.encode(input, context);
+      if (r != null) {
+        return r;
+      }
+    }
+
+    // fallback encoders
+    for (final encoder in _encoders) {
+      final encoded = encoder(input, context);
+      if (encoded != null) {
+        return encoded;
+      }
+    }
+    throw PgException("Could not infer type of value '${input.value}'.");
+  }
+
+  Object? decode(EncodedValue value, CodecContext context) {
+    final typeOid = value.typeOid;
+    if (typeOid == null) {
+      throw ArgumentError('`EncodedValue.typeOid` was not provided.');
+    }
+
+    // check for codec
+    final codec = _codecs[typeOid];
+    if (codec != null) {
+      final r = codec.decode(value, context);
+      if (r != value && r is! UndecodedBytes) {
+        return r;
+      }
+    }
+
+    // fallback decoding
+    final bytes = value.bytes;
+    if (bytes == null) {
+      return null;
+    }
+    return UndecodedBytes(
+      typeOid: typeOid,
+      bytes: bytes,
+      isBinary: value.isBinary,
+      encoding: context.encoding,
+    );
+  }
 }
 
 final _textEncoder = const PostgresTextEncoder();
@@ -277,59 +325,11 @@ extension TypeRegistryExt on TypeRegistry {
   }
 
   Type? resolveSubstitution(String name) => _bySubstitutionName[name];
-
-  EncodedValue? encodeValue({
-    required CodecContext context,
-    required TypedValue typedValue,
-  }) {
-    final type = typedValue.type;
-    final value = typedValue.value;
-    final oid = type.oid;
-    final codec = oid == null ? null : _codecs[oid];
-    if (codec != null) {
-      if (!codec.encodesNull && value == null) {
-        return null;
-      }
-      return codec.encode(value, context);
-    } else {
-      for (final encoder in _encoders) {
-        final encoded = encoder(value, context);
-        if (encoded != null) {
-          return encoded;
-        }
-      }
-    }
-    throw PgException("Could not infer type of value '$value'.");
-  }
-
-  Object? decodeBytes({
-    required EncodedValue value,
-    required CodecContext context,
-  }) {
-    final typeOid = value.typeOid!;
-    final codec = _codecs[typeOid];
-    final bytes = value.bytes;
-    if (codec != null) {
-      if (!codec.decodesNull && bytes == null) {
-        return null;
-      }
-      return codec.decode(value, context);
-    } else {
-      if (bytes == null) {
-        return null;
-      }
-      return UndecodedBytes(
-        typeOid: typeOid,
-        bytes: bytes,
-        isBinary: value.isBinary,
-        encoding: context.encoding,
-      );
-    }
-  }
 }
 
-EncodedValue? _defaultTextEncoder(Object? input, CodecContext context) {
-  final encoded = _textEncoder.tryConvert(input);
+EncodedValue? _defaultTextEncoder(TypedValue input, CodecContext context) {
+  final value = input.value;
+  final encoded = _textEncoder.tryConvert(value);
   if (encoded != null) {
     return EncodedValue.text(castBytes(context.encoding.encode(encoded)));
   } else {

@@ -30,6 +30,7 @@ export 'src/types/range_types.dart';
 export 'src/types/text_search.dart'
     show TsVector, TsWord, TsWordPos, TsWeight, TsQuery;
 export 'src/types/type_registry.dart' show TypeRegistry;
+export 'src/v3/relation_tracker.dart' show RelationTracker;
 
 /// A description of a SQL query as interpreted by this package.
 ///

@@ -82,9 +82,13 @@ class TsVectorType extends Type<TsVector> {
   const TsVectorType() : super(TypeOid.tsvector);
 }
 
-class TsVectorTypeCodec extends Codec {
+class TsVectorCodec extends Codec {
   @override
-  EncodedValue encode(Object? value, CodecContext context) {
+  EncodedValue? encode(TypedValue input, CodecContext context) {
+    final value = input.value;
+    if (value == null) {
+      return null;
+    }
     final v = value as TsVector;
     final writer = context.newPgByteDataWriter();
     writer.writeUint32(v.words.length);
@@ -107,8 +111,12 @@ class TsVectorTypeCodec extends Codec {
 
   @override
   TsVector? decode(EncodedValue input, CodecContext context) {
+    final bytes = input.bytes;
+    if (bytes == null) {
+      return null;
+    }
     if (input.isBinary) {
-      final reader = context.newPgByteDataReader(input.bytes);
+      final reader = context.newPgByteDataReader(bytes);
       final count = reader.readUint32();
       final lexemes = <TsWord>[];
       for (var i = 0; i < count; i++) {
@@ -183,9 +191,13 @@ class TsQueryType extends Type<TsQuery> {
   const TsQueryType() : super(TypeOid.tsquery);
 }
 
-class TsQueryTypeCodec extends Codec {
+class TsQueryCodec extends Codec {
   @override
-  EncodedValue encode(Object? value, CodecContext context) {
+  EncodedValue? encode(TypedValue input, CodecContext context) {
+    final value = input.value;
+    if (value == null) {
+      return null;
+    }
     final v = value as TsQuery;
     final writer = context.newPgByteDataWriter();
     writer.writeUint32(v._itemCount);
@@ -196,9 +208,13 @@ class TsQueryTypeCodec extends Codec {
   }
 
   @override
-  TsQuery decode(EncodedValue input, CodecContext context) {
+  TsQuery? decode(EncodedValue input, CodecContext context) {
+    final bytes = input.bytes;
+    if (bytes == null) {
+      return null;
+    }
     if (input.isBinary) {
-      final reader = context.newPgByteDataReader(input.bytes);
+      final reader = context.newPgByteDataReader(bytes);
       final count = reader.readUint32();
       final items = [];
       for (var i = 0; i < count; i++) {
