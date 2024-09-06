@@ -101,4 +101,22 @@ void main() {
       expect(Future.delayed(Duration(seconds: 2)), completes);
     });
   });
+
+  // Note: to fix this, we may consider cancelling the currently running statements:
+  //       https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-CANCELING-REQUESTS
+  // withPostgresServer('timeout race conditions', (server) {
+  //   test('two transactions for update', () async {
+  //     final c1 = await server.newConnection();
+  //     final c2 = await server.newConnection();
+  //     await c1.execute('CREATE TABLE t (id INT PRIMARY KEY);');
+  //     await c1.execute('INSERT INTO t (id) values (1);');
+  //     await c1.execute('BEGIN');
+  //     await c1.execute('SELECT * FROM t WHERE id=1 FOR UPDATE');
+  //     await c2.execute('BEGIN');
+  //     await c2.execute('SELECT * FROM t WHERE id=1 FOR UPDATE',
+  //         timeout: Duration(seconds: 1));
+  //     await c1.execute('ROLLBACK');
+  //     await c2.execute('ROLLBACK');
+  //   });
+  // });
 }
