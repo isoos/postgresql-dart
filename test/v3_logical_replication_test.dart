@@ -36,7 +36,13 @@ void main() {
   // - Two PostgreSQL connections are needed for testing replication.
   //    - One for listening to streaming replications (this connection will be locked).
   //    - The other one to modify the database (e.g. insert, delete, update, truncate)
-  withPostgresServer('test logical replication with pgoutput for decoding',
+  _testReplication(true);
+  _testReplication(false);
+}
+
+_testReplication(bool binary) {
+  withPostgresServer(
+      'test logical replication with pgoutput for decoding (binary:$binary)',
       initSqls: replicationSchemaInit, (server) {
     // use this for listening to messages
     late final Connection replicationConn;
@@ -117,7 +123,7 @@ void main() {
 
       // start replication process
       final statement = 'START_REPLICATION SLOT $slotName LOGICAL $xlogpos '
-          "(proto_version '1', publication_names '$publicationName')";
+          "(proto_version '1', publication_names '$publicationName', binary '$binary')";
 
       await replicationConn.execute(statement);
     });

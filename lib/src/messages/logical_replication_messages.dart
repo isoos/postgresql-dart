@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/src/types/codec.dart';
 
 import '../buffer.dart';
 import '../time_converters.dart';
@@ -341,15 +342,25 @@ class TupleDataColumn {
   ///	 Byte1('b') Identifies the data as binary value.
   final int typeId;
   final int length;
+  final int? typeOid;
 
   /// Data is the value of the column, in text format.
   /// n is the above length.
+  @Deprecated(
+      'Use `value` instead. This field will be removed in a Future version.')
   final String data;
+
+  /// The (best-effort) decoded value of the column.
+  ///
+  /// May contain `null`, [UndecodedBytes] or [Future].
+  final Object? value;
 
   TupleDataColumn({
     required this.typeId,
     required this.length,
+    required this.typeOid,
     required this.data,
+    required this.value,
   });
 
   @override
@@ -370,7 +381,7 @@ class TupleData {
   /// TupleData does not consume the entire bytes
   ///
   /// It'll read until the types are generated.
-  factory TupleData._parse(PgByteDataReader reader) {
+  factory TupleData._parse(PgByteDataReader reader, int relationId) {
     final columnCount = reader.readUint16();
     final columns = <TupleDataColumn>[];
     for (var i = 0; i < columnCount; i++) {
@@ -379,11 +390,33 @@ class TupleData {
       final tupleDataType = TupleDataType.fromByte(typeId);
       late final int length;
       late final String data;
+      final typeOid = reader.codecContext.relationTracker
+          .getCachedTypeOidForRelationColumn(relationId, i);
+      Object? value;
       switch (tupleDataType) {
         case TupleDataType.text:
-        case TupleDataType.binary:
           length = reader.readUint32();
           data = reader.encoding.decode(reader.read(length));
+          value = data;
+          break;
+        case TupleDataType.binary:
+          length = reader.readUint32();
+          final bytes = reader.read(length);
+          value = typeOid == null
+              ? UndecodedBytes(
+                  typeOid: 0,
+                  isBinary: true,
+                  bytes: bytes,
+                  encoding: reader.codecContext.encoding,
+                )
+              : reader.codecContext.typeRegistry.decode(
+                  EncodedValue.binary(
+                    bytes,
+                    typeOid: typeOid,
+                  ),
+                  reader.codecContext,
+                );
+          data = value.toString();
           break;
         case TupleDataType.null_:
         case TupleDataType.toast:
@@ -395,7 +428,9 @@ class TupleData {
         TupleDataColumn(
           typeId: typeId,
           length: length,
+          typeOid: typeOid,
           data: data,
+          value: value,
         ),
       );
     }
@@ -422,7 +457,7 @@ class InsertMessage implements LogicalReplicationMessage {
     if (tupleType != 'N'.codeUnitAt(0)) {
       throw Exception("InsertMessage must have 'N' tuple type");
     }
-    tuple = TupleData._parse(reader);
+    tuple = TupleData._parse(reader, relationId);
   }
 
   @override
@@ -484,7 +519,7 @@ class UpdateMessage implements LogicalReplicationMessage {
     if (tupleType == UpdateMessageTuple.oldType ||
         tupleType == UpdateMessageTuple.keyType) {
       oldTupleType = tupleType;
-      oldTuple = TupleData._parse(reader);
+      oldTuple = TupleData._parse(reader, relationId);
       tupleType = UpdateMessageTuple.fromByte(reader.readUint8());
     } else {
       oldTupleType = null;
@@ -492,7 +527,7 @@ class UpdateMessage implements LogicalReplicationMessage {
     }
 
     if (tupleType == UpdateMessageTuple.newType) {
-      newTuple = TupleData._parse(reader);
+      newTuple = TupleData._parse(reader, relationId);
     } else {
       throw Exception('Invalid Tuple Type for UpdateMessage');
     }
@@ -555,7 +590,7 @@ class DeleteMessage implements LogicalReplicationMessage {
     switch (oldTupleType) {
       case DeleteMessageTuple.keyType:
       case DeleteMessageTuple.oldType:
-        oldTuple = TupleData._parse(reader);
+        oldTuple = TupleData._parse(reader, relationId);
         break;
       case DeleteMessageTuple.unknown:
         throw Exception('Unknown tuple type for DeleteMessage');
