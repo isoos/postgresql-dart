@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
@@ -187,4 +188,20 @@ ServerException buildExceptionFromErrorFields(List<ErrorField> errorFields) {
     fileName: findString(ErrorFieldId.file),
     routineName: findString(ErrorFieldId.routine),
   );
+}
+
+PgException transformServerException(ServerException ex) {
+  if (ex.code == '57014' &&
+      ex.message == 'canceling statement due to statement timeout') {
+    return _PgTimeoutException(
+        [ex.message, ex.trace].whereType<String>().join(' '));
+  }
+  return ex;
+}
+
+class _PgTimeoutException extends PgException implements TimeoutException {
+  @override
+  late final duration = null;
+
+  _PgTimeoutException(super.message) : super(severity: Severity.error);
 }

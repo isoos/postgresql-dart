@@ -452,7 +452,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       } else if (message is NotificationResponseMessage) {
         _channels.deliverNotification(message);
       } else if (message is ErrorResponseMessage) {
-        final exception = buildExceptionFromErrorFields(message.fields);
+        final exception = transformServerException(
+            buildExceptionFromErrorFields(message.fields));
 
         // Close the connection in response to fatal errors or if we get them
         // out of nowhere.

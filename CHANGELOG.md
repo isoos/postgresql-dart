@@ -12,7 +12,9 @@
     (for values where type is not specified).
   - `RelationTracker` tracks information about relations (currently limited to `RelationMessage` caching).
   - `RuntimeParameters` to access server-provided parameter status values.
-- **Removed** `@internal`-annotated methods from the public API of `ServerException` and `Severity`.
+- **Behaviour / soft-breaking changes**:
+  - Removed `@internal`-annotated methods from the public API of `ServerException` and `Severity`.
+  - `ServerException` may be transformed into `_PgTimeoutException` which is both `PgException` and `TimeoutException` (but no longer `ServerException`).
 
 ## 3.3.0
 
