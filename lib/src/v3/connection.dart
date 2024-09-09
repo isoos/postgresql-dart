@@ -170,7 +170,12 @@ abstract class _PgSessionBase implements Session {
   }
 
   @override
-  Future<Statement> prepare(Object query) async => await _prepare(query);
+  Future<Statement> prepare(
+    Object query, {
+    Duration? timeout,
+  }) async {
+    return await _prepare(query, timeout: timeout);
+  }
 
   Future<_PreparedStatement> _prepare(
     Object query, {
