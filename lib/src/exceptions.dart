@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:collection/collection.dart';
-import 'package:meta/meta.dart';
 
 import 'messages/server_messages.dart';
 
@@ -37,9 +36,8 @@ enum Severity {
   unknown,
   ;
 
-  @internal
-  static Severity parseServerString(String? str) {
-    switch (str) {
+  static Severity _parseServerMessage(String? value) {
+    switch (value) {
       case 'ERROR':
         return Severity.error;
       case 'FATAL':
@@ -139,49 +137,6 @@ class ServerException extends PgException {
     this.routineName,
   });
 
-  @internal
-  ServerException(
-    String message, {
-    Severity? severity,
-  }) : this._(
-          message,
-          severity: severity ?? Severity.error,
-        );
-
-  @internal
-  factory ServerException.fromFields(List<ErrorField> errorFields) {
-    String? findString(int identifier) => errorFields
-        .firstWhereOrNull((ErrorField e) => e.id == identifier)
-        ?.text;
-
-    int? findInt(int identifier) {
-      final i = findString(identifier);
-      return i == null ? null : int.parse(i);
-    }
-
-    return ServerException._(
-      findString(ErrorFieldId.message) ?? 'Server error.',
-      severity: Severity.parseServerString(
-        findString(ErrorFieldId.severity),
-      ),
-      position: findInt(ErrorFieldId.position),
-      internalPosition: findInt(ErrorFieldId.internalPosition),
-      lineNumber: findInt(ErrorFieldId.line),
-      code: findString(ErrorFieldId.code),
-      detail: findString(ErrorFieldId.detail),
-      hint: findString(ErrorFieldId.hint),
-      internalQuery: findString(ErrorFieldId.internalQuery),
-      trace: findString(ErrorFieldId.where),
-      schemaName: findString(ErrorFieldId.schema),
-      tableName: findString(ErrorFieldId.table),
-      columnName: findString(ErrorFieldId.column),
-      dataTypeName: findString(ErrorFieldId.dataType),
-      constraintName: findString(ErrorFieldId.constraint),
-      fileName: findString(ErrorFieldId.file),
-      routineName: findString(ErrorFieldId.routine),
-    );
-  }
-
   @override
   String toString() {
     final buff = StringBuffer('$severity $code: $message');
@@ -202,4 +157,34 @@ class ServerException extends PgException {
     }
     return buff.toString();
   }
+}
+
+ServerException buildExceptionFromErrorFields(List<ErrorField> errorFields) {
+  String? findString(int identifier) =>
+      errorFields.firstWhereOrNull((ErrorField e) => e.id == identifier)?.text;
+
+  int? findInt(int identifier) {
+    final i = findString(identifier);
+    return i == null ? null : int.parse(i);
+  }
+
+  return ServerException._(
+    findString(ErrorFieldId.message) ?? 'Server error.',
+    severity: Severity._parseServerMessage(findString(ErrorFieldId.severity)),
+    position: findInt(ErrorFieldId.position),
+    internalPosition: findInt(ErrorFieldId.internalPosition),
+    lineNumber: findInt(ErrorFieldId.line),
+    code: findString(ErrorFieldId.code),
+    detail: findString(ErrorFieldId.detail),
+    hint: findString(ErrorFieldId.hint),
+    internalQuery: findString(ErrorFieldId.internalQuery),
+    trace: findString(ErrorFieldId.where),
+    schemaName: findString(ErrorFieldId.schema),
+    tableName: findString(ErrorFieldId.table),
+    columnName: findString(ErrorFieldId.column),
+    dataTypeName: findString(ErrorFieldId.dataType),
+    constraintName: findString(ErrorFieldId.constraint),
+    fileName: findString(ErrorFieldId.file),
+    routineName: findString(ErrorFieldId.routine),
+  );
 }

@@ -13,7 +13,8 @@ import 'src/v3/connection.dart';
 import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
 
-export 'src/exceptions.dart';
+export 'src/exceptions.dart'
+    show BadCertificateException, Severity, PgException, ServerException;
 export 'src/pool/pool_api.dart';
 export 'src/replication.dart';
 export 'src/types.dart';

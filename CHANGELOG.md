@@ -12,6 +12,7 @@
     (for values where type is not specified).
   - `RelationTracker` tracks information about relations (currently limited to `RelationMessage` caching).
   - `RuntimeParameters` to access server-provided parameter status values.
+- **Removed** `@internal`-annotated methods from the public API of `ServerException` and `Severity`.
 
 ## 3.3.0
 
