@@ -194,7 +194,8 @@ PgException transformServerException(ServerException ex) {
   if (ex.code == '57014' &&
       ex.message == 'canceling statement due to statement timeout') {
     return _PgTimeoutException(
-        [ex.message, ex.trace].whereType<String>().join(' '));
+      ['${ex.code}:', ex.message, ex.trace].whereType<String>().join(' '),
+    );
   }
   return ex;
 }
