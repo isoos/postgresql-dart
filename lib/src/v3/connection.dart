@@ -11,6 +11,7 @@ import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
 import '../auth/auth.dart';
+import '../exceptions.dart';
 import '../messages/logical_replication_messages.dart';
 import '../types/type_registry.dart';
 import 'protocol.dart';
@@ -451,7 +452,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       } else if (message is NotificationResponseMessage) {
         _channels.deliverNotification(message);
       } else if (message is ErrorResponseMessage) {
-        final exception = ServerException.fromFields(message.fields);
+        final exception = buildExceptionFromErrorFields(message.fields);
 
         // Close the connection in response to fatal errors or if we get them
         // out of nowhere.
@@ -1141,7 +1142,8 @@ class _AuthenticationProcedure extends _PendingOperation {
   @override
   Future<void> handleMessage(ServerMessage message) async {
     if (message is ErrorResponseMessage) {
-      _done.completeError(ServerException.fromFields(message.fields), _trace);
+      _done.completeError(
+          buildExceptionFromErrorFields(message.fields), _trace);
     } else if (message is AuthenticationMessage) {
       switch (message.type) {
         case AuthenticationMessageType.ok:
@@ -1153,7 +1155,10 @@ class _AuthenticationProcedure extends _PendingOperation {
           if (!_hasSecureTransport &&
               !connection._settings.sslMode.allowCleartextPassword) {
             _done.completeError(
-              ServerException('Refused to send clear text password to server'),
+              PgException(
+                'Refused to send clear text password to server',
+                severity: Severity.fatal,
+              ),
               _trace,
             );
             return;
