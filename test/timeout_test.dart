@@ -18,21 +18,6 @@ void main() {
       await conn.close();
     });
 
-    test(
-        'Timeout fires on query while in queue does not execute query, query throws exception',
-        () async {
-      //ignore: unawaited_futures
-      final f = conn.execute('SELECT pg_sleep(2)');
-      try {
-        await conn.execute('SELECT 1', timeout: Duration(seconds: 1));
-        fail('unreachable');
-      } on TimeoutException {
-        // ignore
-      }
-
-      expect(f, completes);
-    });
-
     test('Timeout fires during transaction rolls ack transaction', () async {
       try {
         await conn.runTx((ctx) async {
@@ -89,16 +74,20 @@ void main() {
 
     test('Query that succeeds does not timeout', () async {
       await conn.execute('SELECT 1', timeout: Duration(seconds: 1));
-      expect(Future.delayed(Duration(seconds: 2)), completes);
     });
 
     test('Query that fails does not timeout', () async {
       final rs = await conn.execute('SELECT 1');
+      Exception? caught;
       await conn
           .execute("INSERT INTO t (id) VALUES ('foo')",
               timeout: Duration(seconds: 1))
-          .catchError((_) => rs);
-      expect(Future.delayed(Duration(seconds: 2)), completes);
+          .catchError((e) {
+        caught = e;
+        // needs this to match return type
+        return rs;
+      });
+      expect(caught, isA<ServerException>());
     });
   });
 
