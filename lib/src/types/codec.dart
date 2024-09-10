@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -60,7 +61,7 @@ enum EncodingFormat {
 /// Encodes the [input] value and returns an [EncodedValue] object.
 ///
 /// May return `null` if the encoder is not able to convert the [input] value.
-typedef EncoderFn = EncodedValue? Function(
+typedef EncoderFn = FutureOr<EncodedValue?> Function(
     TypedValue input, CodecContext context);
 
 /// Encoder and decoder for a value stored in Postgresql.
@@ -68,13 +69,13 @@ abstract class Codec {
   /// Encodes the [input] value and returns an [EncodedValue] object.
   ///
   /// May return `null` if the codec is not able to encode the [input].
-  EncodedValue? encode(TypedValue input, CodecContext context);
+  FutureOr<EncodedValue?> encode(TypedValue input, CodecContext context);
 
   /// Decodes the [input] value and returns a Dart value object.
   ///
   /// May return [UndecodedBytes] or the same [input] instance if the codec
   /// is not able to decode the [input].
-  Object? decode(EncodedValue input, CodecContext context);
+  FutureOr<Object?> decode(EncodedValue input, CodecContext context);
 }
 
 /// Provides access to connection and database information, and also to additional codecs.

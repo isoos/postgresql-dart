@@ -527,7 +527,7 @@ class TupleData {
                   bytes: bytes,
                   encoding: reader.codecContext.encoding,
                 )
-              : reader.codecContext.typeRegistry.decode(
+              : await reader.codecContext.typeRegistry.decode(
                   EncodedValue.binary(
                     bytes,
                     typeOid: typeOid,
