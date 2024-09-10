@@ -14,11 +14,11 @@ import '../auth/auth.dart';
 import '../exceptions.dart';
 import '../messages/logical_replication_messages.dart';
 import '../types/type_registry.dart';
+import 'connection_info.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 import 'relation_tracker.dart';
 import 'resolved_settings.dart';
-import 'runtime_parameters.dart';
 
 const _debugLog = false;
 
@@ -207,10 +207,10 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         ? connectionSettings
         : ResolvedConnectionSettings(connectionSettings, null);
     final codecContext = CodecContext(
+      connectionInfo: ConnectionInfo(),
       encoding: settings.encoding,
       // TODO: share this between pooled connections
       relationTracker: RelationTracker(),
-      runtimeParameters: RuntimeParameters(),
       typeRegistry: settings.typeRegistry,
     );
     var (channel, secure) = await _connect(
@@ -244,7 +244,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       channel,
       secure,
       relationTracker: codecContext.relationTracker,
-      runtimeParameters: codecContext.runtimeParameters,
+      info: codecContext.connectionInfo,
     );
     await connection._startup();
     if (connection._settings.onOpen != null) {
@@ -358,14 +358,14 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   final ResolvedConnectionSettings _settings;
   final StreamChannel<Message> _channel;
   final RelationTracker _relationTracker;
-  @internal
-  final RuntimeParameters runtimeParameters;
+  @override
+  final ConnectionInfo info;
 
   @internal
   late final codecContext = CodecContext(
     encoding: encoding,
     relationTracker: _relationTracker,
-    runtimeParameters: runtimeParameters,
+    connectionInfo: info,
     typeRegistry: _settings.typeRegistry,
   );
 
@@ -400,7 +400,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     this._channel,
     this._channelIsSecure, {
     required RelationTracker relationTracker,
-    required this.runtimeParameters,
+    required this.info,
   }) : _relationTracker = relationTracker {
     _serverMessages = _channel.stream
         .listen(_handleMessage, onDone: _socketClosed, onError: (e, s) {
@@ -451,7 +451,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       }
 
       if (message is ParameterStatusMessage) {
-        runtimeParameters.setValue(message.name, message.value);
+        info.setParameter(message.name, message.value);
       } else if (message is BackendKeyMessage || message is NoticeMessage) {
         // ignore for now
       } else if (message is NotificationResponseMessage) {

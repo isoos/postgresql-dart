@@ -2,6 +2,8 @@
 
 ## 3.4.0-dev.2
 
+- `Connection.info` (through `ConnectionInfo` class) exposes read-only connection-level information,
+  e.g. acessing access server-provided parameter status values.
 - Support for binary `pgoutput` replication by [wolframm](https://github.com/Wolframm-Activities-OU).
 - **Allowing custom type codecs**:
   - `Codec` interface is used for encoding/decoding value by type OIDs or Dart values.
@@ -10,7 +12,6 @@
   - `EncoderFn` value converter for generic Dart object -> Postgres-encoded bytes
     (for values where type is not specified).
   - `RelationTracker` tracks information about relations (currently limited to `RelationMessage` caching).
-  - `RuntimeParameters` to access server-provided parameter status values.
 - **Behaviour / soft-breaking changes**:
   - Deprecated `TupleDataColumn.data`, use `.value` instead (for binary protocol messages).
   - Deprecated some logical replication message parsing method.

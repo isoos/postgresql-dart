@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:async/async.dart';
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart';
-import 'package:postgres/src/v3/connection.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
 
@@ -28,8 +27,7 @@ void main() {
     tearDown(() => connection.close());
 
     test('runtime parameters', () async {
-      final c = connection as PgConnectionImplementation;
-      final p = c.runtimeParameters;
+      final p = connection.info.parameters;
       expect(p.applicationName, 'test_app');
     });
 

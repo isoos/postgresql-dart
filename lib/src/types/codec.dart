@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import '../buffer.dart';
 import '../types.dart';
+import '../v3/connection_info.dart';
 import '../v3/relation_tracker.dart';
-import '../v3/runtime_parameters.dart';
 import 'type_registry.dart';
 
 /// Represents the [bytes] of a received (field) or sent (parameter) value.
@@ -80,28 +80,28 @@ abstract class Codec {
 
 /// Provides access to connection and database information, and also to additional codecs.
 class CodecContext {
+  final ConnectionInfo connectionInfo;
   final Encoding encoding;
   final RelationTracker relationTracker;
-  final RuntimeParameters runtimeParameters;
   final TypeRegistry typeRegistry;
 
   CodecContext({
+    required this.connectionInfo,
     required this.encoding,
     required this.relationTracker,
-    required this.runtimeParameters,
     required this.typeRegistry,
   });
 
   factory CodecContext.withDefaults({
+    ConnectionInfo? connectionInfo,
     Encoding? encoding,
     RelationTracker? relationTracker,
-    RuntimeParameters? runtimeParameters,
     TypeRegistry? typeRegistry,
   }) {
     return CodecContext(
+      connectionInfo: connectionInfo ?? ConnectionInfo(),
       encoding: encoding ?? utf8,
       relationTracker: relationTracker ?? RelationTracker(),
-      runtimeParameters: runtimeParameters ?? RuntimeParameters(),
       typeRegistry: typeRegistry ?? TypeRegistry(),
     );
   }
