@@ -112,7 +112,8 @@ class MessageFramer {
 /// such as replication messages.
 /// Returns a [ReplicationMessage] if the message contains such message.
 /// Otherwise, it'll just return the provided bytes as [CopyDataMessage].
-ServerMessage _parseCopyDataMessage(PgByteDataReader reader, int length) {
+Future<ServerMessage> _parseCopyDataMessage(
+    PgByteDataReader reader, int length) async {
   final code = reader.readUint8();
   if (code == ReplicationMessageId.primaryKeepAlive) {
     return PrimaryKeepAliveMessage.parse(reader);
