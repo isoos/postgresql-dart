@@ -80,28 +80,28 @@ abstract class Codec {
 
 /// Provides access to connection and database information, and also to additional codecs.
 class CodecContext {
+  final ConnectionInfo connectionInfo;
   final Encoding encoding;
   final RelationTracker relationTracker;
-  final RuntimeParameters runtimeParameters;
   final TypeRegistry typeRegistry;
 
   CodecContext({
+    required this.connectionInfo,
     required this.encoding,
     required this.relationTracker,
-    required this.runtimeParameters,
     required this.typeRegistry,
   });
 
   factory CodecContext.withDefaults({
+    ConnectionInfo? connectionInfo,
     Encoding? encoding,
     RelationTracker? relationTracker,
-    RuntimeParameters? runtimeParameters,
     TypeRegistry? typeRegistry,
   }) {
     return CodecContext(
+      connectionInfo: connectionInfo ?? ConnectionInfo(),
       encoding: encoding ?? utf8,
       relationTracker: relationTracker ?? RelationTracker(),
-      runtimeParameters: runtimeParameters ?? RuntimeParameters(),
       typeRegistry: typeRegistry ?? TypeRegistry(),
     );
   }

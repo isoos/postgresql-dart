@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres/src/v3/connection_info.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/replication.dart';
@@ -25,7 +26,7 @@ export 'src/types/range_types.dart';
 export 'src/types/text_search.dart'
     show TsVector, TsWord, TsWordPos, TsWeight, TsQuery;
 export 'src/types/type_registry.dart' show TypeRegistry;
-export 'src/v3/connection_info.dart' show RuntimeParameters;
+export 'src/v3/connection_info.dart' show ConnectionInfo;
 export 'src/v3/relation_tracker.dart' show RelationTracker;
 
 /// A description of a SQL query as interpreted by this package.
@@ -228,6 +229,7 @@ abstract class Connection implements Session, SessionExecutor {
         connectionSettings: settings);
   }
 
+  ConnectionInfo get info;
   Channels get channels;
 }
 

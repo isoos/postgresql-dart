@@ -269,6 +269,9 @@ class _PoolConnection implements Connection {
   Future<void> get closed => _connection.closed;
 
   @override
+  ConnectionInfo get info => _connection.info;
+
+  @override
   Channels get channels {
     throw UnsupportedError(
       'Channels are not supported in pools because they would require keeping '

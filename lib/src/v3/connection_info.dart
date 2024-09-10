@@ -1,4 +1,12 @@
-import 'dart:collection';
+/// Provides runtime information about the current connection.
+class ConnectionInfo {
+  /// The read-only, passive view of the Postgresql's runtime/session parameters.
+  final ConnectionParametersView parameters;
+
+  ConnectionInfo({
+    Map<String, String>? parameters,
+  }) : parameters = ConnectionParametersView(values: parameters);
+}
 
 /// The read-only, passive view of the Postgresql's runtime/session parameters.
 ///
@@ -21,29 +29,31 @@ import 'dart:collection';
 /// - https://www.postgresql.org/docs/current/sql-show.html
 /// - https://www.postgresql.org/docs/current/runtime-config.html
 /// - https://www.postgresql.org/docs/current/libpq-status.html#LIBPQ-PQPARAMETERSTATUS
-class RuntimeParameters {
+class ConnectionParametersView {
   final _values = <String, String>{};
 
-  RuntimeParameters({Map<String, String>? initialValues}) {
-    if (initialValues != null) {
-      _values.addAll(initialValues);
+  ConnectionParametersView({
+    Map<String, String>? values,
+  }) {
+    if (values != null) {
+      _values.addAll(values);
     }
   }
 
-  /// The latest values of the runtime parameters. The map is read-only.
-  late final latestValues = UnmodifiableMapView(_values);
+  Iterable<String> get keys => _values.keys;
+  String? operator [](String key) => _values[key];
 
-  String? get applicationName => latestValues['application_name'];
-  String? get clientEncoding => latestValues['client_encoding'];
-  String? get dateStyle => latestValues['DateStyle'];
-  String? get integerDatetimes => latestValues['integer_datetimes'];
-  String? get serverEncoding => latestValues['server_encoding'];
-  String? get serverVersion => latestValues['server_version'];
-  String? get timeZone => latestValues['TimeZone'];
+  String? get applicationName => _values['application_name'];
+  String? get clientEncoding => _values['client_encoding'];
+  String? get dateStyle => _values['DateStyle'];
+  String? get integerDatetimes => _values['integer_datetimes'];
+  String? get serverEncoding => _values['server_encoding'];
+  String? get serverVersion => _values['server_version'];
+  String? get timeZone => _values['TimeZone'];
 }
 
-extension RuntimeParametersExt on RuntimeParameters {
-  void setValue(String name, String value) {
-    _values[name] = value;
+extension ConnectionInfoExt on ConnectionInfo {
+  void setParameter(String name, String value) {
+    parameters._values[name] = value;
   }
 }
