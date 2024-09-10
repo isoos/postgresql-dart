@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:typed_data';
 
@@ -11,7 +12,7 @@ import 'messages/shared_messages.dart';
 
 const int _headerByteSize = 5;
 
-typedef _ServerMessageFn = ServerMessage Function(
+typedef _ServerMessageFn = FutureOr<ServerMessage> Function(
     PgByteDataReader reader, int length);
 
 Map<int, _ServerMessageFn> _messageTypeMap = {
@@ -50,7 +51,7 @@ class MessageFramer {
   bool get _isComplete =>
       _expectedLength == 0 || _expectedLength <= _reader.remainingLength;
 
-  void addBytes(Uint8List bytes) {
+  Future<void> addBytes(Uint8List bytes) async {
     _reader.add(bytes);
 
     while (true) {
@@ -76,7 +77,7 @@ class MessageFramer {
         }
 
         final targetRemainingLength = _reader.remainingLength - _expectedLength;
-        final msg = msgMaker(_reader, _expectedLength);
+        final msg = await msgMaker(_reader, _expectedLength);
         if (_reader.remainingLength > targetRemainingLength) {
           throw StateError(
               'Message parser consumed more bytes than expected. type=$_type expectedLength=$_expectedLength');

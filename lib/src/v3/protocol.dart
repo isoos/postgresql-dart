@@ -69,8 +69,8 @@ StreamTransformer<Uint8List, ServerMessage> _readMessages(
         }
       }
 
-      void handleChunk(Uint8List bytes) {
-        framer.addBytes(bytes);
+      Future<void> handleChunk(Uint8List bytes) async {
+        await framer.addBytes(bytes);
         emitFinishedMessages();
       }
 
