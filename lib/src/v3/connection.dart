@@ -14,11 +14,11 @@ import '../auth/auth.dart';
 import '../exceptions.dart';
 import '../messages/logical_replication_messages.dart';
 import '../types/type_registry.dart';
+import 'connection_info.dart';
 import 'protocol.dart';
 import 'query_description.dart';
 import 'relation_tracker.dart';
 import 'resolved_settings.dart';
-import 'runtime_parameters.dart';
 
 const _debugLog = false;
 

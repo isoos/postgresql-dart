@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import '../buffer.dart';
 import '../types.dart';
+import '../v3/connection_info.dart';
 import '../v3/relation_tracker.dart';
-import '../v3/runtime_parameters.dart';
 import 'type_registry.dart';
 
 /// Represents the [bytes] of a received (field) or sent (parameter) value.
