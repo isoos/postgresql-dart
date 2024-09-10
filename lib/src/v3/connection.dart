@@ -135,37 +135,45 @@ abstract class _PgSessionBase implements Session {
     }
 
     if (isSimple || (ignoreRows && variables.isEmpty)) {
-      _connection._queryCount++;
-      // Great, we can just run a simple query.
-      final controller = StreamController<ResultRow>();
-      final items = <ResultRow>[];
-
-      final querySubscription = _PgResultStreamSubscription.simpleQueryProtocol(
-        description.transformedSql,
-        this,
-        controller,
-        controller.stream.listen(items.add),
-        ignoreRows,
-      );
-      try {
-        await querySubscription.asFuture().optionalTimeout(timeout);
-        return Result(
-          rows: items,
-          affectedRows: await querySubscription.affectedRows,
-          schema: await querySubscription.schema,
-        );
-      } finally {
-        await querySubscription.cancel();
-      }
+      await _connection._updateTimeoutIfNeeded(timeout);
+      return await _doExecuteSimpleQuery(description, ignoreRows);
     } else {
       // The simple query protocol does not support variables. So when we have
       // parameters, we need an explicit prepare.
       final prepared = await _prepare(description, timeout: timeout);
       try {
-        return await prepared.run(variables, timeout: timeout);
+        return await prepared.run(variables);
       } finally {
         await prepared.dispose();
       }
+    }
+  }
+
+  Future<Result> _doExecuteSimpleQuery(
+    InternalQueryDescription description,
+    bool ignoreRows,
+  ) async {
+    _connection._queryCount++;
+    // Great, we can just run a simple query.
+    final controller = StreamController<ResultRow>();
+    final items = <ResultRow>[];
+
+    final querySubscription = _PgResultStreamSubscription.simpleQueryProtocol(
+      description.transformedSql,
+      this,
+      controller,
+      controller.stream.listen(items.add),
+      ignoreRows,
+    );
+    try {
+      await querySubscription.asFuture();
+      return Result(
+        rows: items,
+        affectedRows: await querySubscription.affectedRows,
+        schema: await querySubscription.schema,
+      );
+    } finally {
+      await querySubscription.cancel();
     }
   }
 
@@ -182,6 +190,7 @@ abstract class _PgSessionBase implements Session {
     Duration? timeout,
   }) async {
     final conn = _connection;
+    await conn._updateTimeoutIfNeeded(timeout);
     final name = 's/${conn._statementCounter++}';
     final description = InternalQueryDescription.wrap(
       query,
@@ -192,7 +201,7 @@ abstract class _PgSessionBase implements Session {
       description.transformedSql,
       statementName: name,
       typeOids: description.parameterTypes?.map((e) => e?.oid).toList(),
-    )).optionalTimeout(timeout);
+    ));
 
     return _PreparedStatement(description, name, this);
   }
@@ -220,15 +229,16 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     );
 
     if (_debugLog) {
+      final hash = channel.hashCode;
       channel = channel.transform(StreamChannelTransformer(
         StreamTransformer.fromHandlers(
           handleData: (msg, sink) {
-            print('[in] $msg');
+            print('[$hash in] $msg');
             sink.add(msg);
           },
         ),
         async.StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
-          print('[out] $msg');
+          print('[$hash out] $msg');
           sink.add(msg);
         }),
       ));
@@ -394,6 +404,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   @override
   PgConnectionImplementation get _connection => this;
 
+  // The last known value of statement_timeout we have sent to the server through any API-requested timeout parameter.
+  Duration? _lastStatementTimeout;
+
   PgConnectionImplementation._(
     this._endpoint,
     this._settings,
@@ -474,6 +487,28 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       }
     } finally {
       _serverMessages.resume();
+    }
+  }
+
+  Future<void> _updateTimeoutIfNeeded(Duration? timeout) async {
+    timeout ??= _settings.queryTimeout;
+    if (timeout.isNegative) return;
+    if (timeout == _lastStatementTimeout) return;
+
+    try {
+      await _doExecuteSimpleQuery(
+        InternalQueryDescription.direct(
+            'SET statement_timeout TO ${timeout.inMilliseconds};'),
+        true,
+      );
+      _lastStatementTimeout = timeout;
+    } on ServerException catch (e) {
+      // we ignore error messages if they happen inside a failed transaction block
+      if (e.code == '25P02') {
+        return;
+      }
+      // rethrow otherwise
+      rethrow;
     }
   }
 
