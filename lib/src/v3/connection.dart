@@ -679,16 +679,17 @@ class _PgResultStreamSubscription
     _scheduleStatement(() async {
       connection._pending = this;
 
-      final encodedValues = <EncodedValue?>[];
+      final encodedFutures = <Future<EncodedValue?>>[];
       final context = connection.codecContext;
       for (final e in statement.parameters) {
         if (e.isSqlNull) {
-          encodedValues.add(null);
+          encodedFutures.add(Future.value(null));
           continue;
         }
         final f = context.typeRegistry.encode(e, context);
-        encodedValues.add(f);
+        encodedFutures.add(f);
       }
+      final encodedValues = await Future.wait(encodedFutures);
 
       connection._channel.sink.add(AggregatedClientMessage([
         BindMessage(
@@ -805,7 +806,7 @@ class _PgResultStreamSubscription
               sqlNulls ??= List<bool>.filled(columnCount, false);
               sqlNulls[i] = true;
             }
-            final futureOr = context.typeRegistry.decode(
+            final futureValue = context.typeRegistry.decode(
               EncodedValue(
                 input,
                 format: EncodingFormat.fromBinaryFlag(field.isBinaryEncoding),
@@ -813,7 +814,7 @@ class _PgResultStreamSubscription
               ),
               context,
             );
-            futures.add(futureOr is Future ? futureOr : Future.value(futureOr));
+            futures.add(futureValue);
           }
           final values = await Future.wait(futures);
 
