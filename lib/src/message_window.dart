@@ -44,6 +44,8 @@ class MessageFramer {
 
   int? _type;
   int _expectedLength = 0;
+  bool _isProcessing = false;
+  Queue<Uint8List>? _pendingChunks;
 
   bool get _hasReadHeader => _type != null;
   bool get _canReadHeader => _reader.remainingLength >= _headerByteSize;
@@ -52,6 +54,31 @@ class MessageFramer {
       _expectedLength == 0 || _expectedLength <= _reader.remainingLength;
 
   Future<void> addBytes(Uint8List bytes) async {
+    // Since the message framing became async, the message processing may overlap
+    // with the chunk arrival, and we may need to defend against race conditions
+    // that would defeat the expected vs remaining length checks.
+    // This solution queues up the pending bytes, while the alternative would require
+    // us to pre-frame the bytes into fixed message chunks.
+    if (_isProcessing) {
+      _pendingChunks ??= Queue<Uint8List>();
+      _pendingChunks!.add(bytes);
+      return;
+    }
+    _isProcessing = true;
+    try {
+      await _addBytes(bytes);
+      if (_pendingChunks != null) {
+        while (_pendingChunks!.isNotEmpty) {
+          await _addBytes(_pendingChunks!.removeFirst());
+        }
+        _pendingChunks = null;
+      }
+    } finally {
+      _isProcessing = false;
+    }
+  }
+
+  Future<void> _addBytes(Uint8List bytes) async {
     _reader.add(bytes);
 
     while (true) {
