@@ -77,10 +77,7 @@ StreamTransformer<Uint8List, ServerMessage> _readMessages(
       // they'll unsubscribe in time after we forward it synchronously.
       final rawSubscription =
           rawStream.asyncMap(handleChunk).listen((_) {}, cancelOnError: false)
-            ..onError((e, st) {
-              print('x $e $st');
-              listener.addErrorSync(e, st);
-            })
+            ..onError(listener.addErrorSync)
             ..onDone(() async {
               await framer.addBytes(Uint8List(0));
               emitFinishedMessages();
