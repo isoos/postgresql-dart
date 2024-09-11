@@ -63,6 +63,9 @@ StreamTransformer<Uint8List, ServerMessage> _readMessages(
 
       void emitFinishedMessages() {
         while (framer.hasMessage) {
+          if (listener.isClosed) {
+            break;
+          }
           listener.addSync(framer.popMessage());
 
           if (paused) break;
