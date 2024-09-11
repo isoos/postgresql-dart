@@ -59,16 +59,12 @@ StreamTransformer<Uint8List, ServerMessage> _readMessages(
     return Stream.multi((listener) {
       final framer = MessageFramer(codecContext);
 
-      var paused = false;
-
       void emitFinishedMessages() {
         while (framer.hasMessage) {
           if (listener.isClosed) {
             break;
           }
           listener.addSync(framer.popMessage());
-
-          if (paused) break;
         }
       }
 
@@ -80,27 +76,19 @@ StreamTransformer<Uint8List, ServerMessage> _readMessages(
       // Don't cancel this subscription on error! If the listener wants that,
       // they'll unsubscribe in time after we forward it synchronously.
       final rawSubscription =
-          rawStream.listen(handleChunk, cancelOnError: false)
-            ..onError(listener.addErrorSync)
-            ..onDone(listener.closeSync);
+          rawStream.asyncMap(handleChunk).listen((_) {}, cancelOnError: false)
+            ..onError((e, st) {
+              print('x $e $st');
+              listener.addErrorSync(e, st);
+            })
+            ..onDone(() async {
+              await framer.addBytes(Uint8List(0));
+              emitFinishedMessages();
+              await listener.close();
+            });
 
-      listener.onPause = () {
-        paused = true;
-        rawSubscription.pause();
-      };
-
-      listener.onResume = () {
-        paused = false;
-        emitFinishedMessages();
-
-        if (!paused) {
-          rawSubscription.resume();
-        }
-      };
-
-      listener.onCancel = () {
-        paused = true;
-        rawSubscription.cancel();
+      listener.onCancel = () async {
+        await rawSubscription.cancel();
       };
     });
   });

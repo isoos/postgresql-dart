@@ -403,7 +403,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     required this.info,
   }) : _relationTracker = relationTracker {
     _serverMessages = _channel.stream
-        .listen(_handleMessage, onDone: _socketClosed, onError: (e, s) {
+        .asyncMap(_handleMessage)
+        .listen((_) {}, onDone: _socketClosed, onError: (e, s) {
       _close(
         true,
         PgException('Socket error: $e'),
@@ -438,8 +439,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     );
   }
 
-  Future<void> _handleMessage(Message message) async {
-    _serverMessages.pause();
+  Future<Message> _handleMessage(Message message) async {
     try {
       message as ServerMessage;
 
@@ -472,9 +472,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       } else if (_pending != null) {
         await _pending!.handleMessage(message);
       }
-    } finally {
-      _serverMessages.resume();
-    }
+      return message;
+    } finally {}
   }
 
   @override
