@@ -371,7 +371,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   /// Whether [_channel] is backed by a TLS connection.
   final bool _channelIsSecure;
-  late final StreamSubscription<Message> _serverMessages;
+  late final StreamSubscription _serverMessages;
   bool _isClosing = false;
 
   _PendingOperation? _pending;
@@ -439,10 +439,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     );
   }
 
-  Future<Message> _handleMessage(Message message) async {
-    try {
-      message as ServerMessage;
-
+  Future<void> _handleMessage(Message message) async {
+    if (message is ServerMessage) {
       if (message is XLogDataLogicalMessage) {
         final embedded = message.message;
         if (embedded is RelationMessage) {
@@ -472,8 +470,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       } else if (_pending != null) {
         await _pending!.handleMessage(message);
       }
-      return message;
-    } finally {}
+    } else {
+      throw UnimplementedError('Unknown message: $message');
+    }
   }
 
   @override
