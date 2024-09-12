@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:collection';
 import 'dart:typed_data';
 
@@ -12,7 +11,7 @@ import 'messages/shared_messages.dart';
 
 const int _headerByteSize = 5;
 
-typedef _ServerMessageFn = FutureOr<ServerMessage> Function(
+typedef _ServerMessageFn = ServerMessage Function(
     PgByteDataReader reader, int length);
 
 Map<int, _ServerMessageFn> _messageTypeMap = {
@@ -51,7 +50,7 @@ class MessageFramer {
   bool get _isComplete =>
       _expectedLength == 0 || _expectedLength <= _reader.remainingLength;
 
-  Future<void> addBytes(Uint8List bytes) async {
+  void addBytes(Uint8List bytes) {
     _reader.add(bytes);
 
     while (true) {
@@ -77,7 +76,7 @@ class MessageFramer {
         }
 
         final targetRemainingLength = _reader.remainingLength - _expectedLength;
-        final msg = await msgMaker(_reader, _expectedLength);
+        final msg = msgMaker(_reader, _expectedLength);
         if (_reader.remainingLength > targetRemainingLength) {
           throw StateError(
               'Message parser consumed more bytes than expected. type=$_type expectedLength=$_expectedLength');
@@ -112,8 +111,7 @@ class MessageFramer {
 /// such as replication messages.
 /// Returns a [ReplicationMessage] if the message contains such message.
 /// Otherwise, it'll just return the provided bytes as [CopyDataMessage].
-Future<ServerMessage> _parseCopyDataMessage(
-    PgByteDataReader reader, int length) async {
+ServerMessage _parseCopyDataMessage(PgByteDataReader reader, int length) {
   final code = reader.readUint8();
   if (code == ReplicationMessageId.primaryKeepAlive) {
     return PrimaryKeepAliveMessage.parse(reader);
