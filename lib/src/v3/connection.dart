@@ -15,9 +15,9 @@ import '../exceptions.dart';
 import '../messages/logical_replication_messages.dart';
 import '../types/type_registry.dart';
 import 'connection_info.dart';
+import 'database_info.dart';
 import 'protocol.dart';
 import 'query_description.dart';
-import 'relation_tracker.dart';
 import 'resolved_settings.dart';
 
 const _debugLog = false;
@@ -208,9 +208,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         : ResolvedConnectionSettings(connectionSettings, null);
     final codecContext = CodecContext(
       connectionInfo: ConnectionInfo(),
-      encoding: settings.encoding,
       // TODO: share this between pooled connections
-      relationTracker: RelationTracker(),
+      databaseInfo: DatabaseInfo(),
+      encoding: settings.encoding,
       typeRegistry: settings.typeRegistry,
     );
     var (channel, secure) = await _connect(
@@ -243,7 +243,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       settings,
       channel,
       secure,
-      relationTracker: codecContext.relationTracker,
+      databaseInfo: codecContext.databaseInfo,
       info: codecContext.connectionInfo,
     );
     await connection._startup();
@@ -357,14 +357,14 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   @override
   final ResolvedConnectionSettings _settings;
   final StreamChannel<Message> _channel;
-  final RelationTracker _relationTracker;
+  final DatabaseInfo _databaseInfo;
   @override
   final ConnectionInfo info;
 
   @internal
   late final codecContext = CodecContext(
     encoding: encoding,
-    relationTracker: _relationTracker,
+    databaseInfo: _databaseInfo,
     connectionInfo: info,
     typeRegistry: _settings.typeRegistry,
   );
@@ -399,9 +399,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     this._settings,
     this._channel,
     this._channelIsSecure, {
-    required RelationTracker relationTracker,
+    required DatabaseInfo databaseInfo,
     required this.info,
-  }) : _relationTracker = relationTracker {
+  }) : _databaseInfo = databaseInfo {
     _serverMessages = _channel.stream
         .listen(_handleMessage, onDone: _socketClosed, onError: (e, s) {
       _close(
@@ -446,7 +446,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       if (message is XLogDataLogicalMessage) {
         final embedded = message.message;
         if (embedded is RelationMessage) {
-          _relationTracker.addRelationMessage(embedded);
+          _databaseInfo.addRelationMessage(embedded);
         }
       }
 

@@ -12,7 +12,7 @@
      access to `encoding`, observed runtime parameters and the `TypeRegistry`.
   - `EncoderFn` value converter for generic Dart object -> Postgres-encoded bytes
     (for values where type is not specified).
-  - `RelationTracker` tracks information about relations (currently limited to `RelationMessage` caching).
+  - `DatabaseInfo` tracks information about relations and oids (currently limited to `RelationMessage` caching).
 - **Behaviour / soft-breaking changes**:
   - Removed `@internal`-annotated methods from the public API of `ServerException` and `Severity`.
   - `ServerException` may be transformed into `_PgTimeoutException` which is both `PgException` and `TimeoutException` (but no longer `ServerException`).

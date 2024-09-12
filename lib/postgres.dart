@@ -27,7 +27,7 @@ export 'src/types/text_search.dart'
     show TsVector, TsWord, TsWordPos, TsWeight, TsQuery;
 export 'src/types/type_registry.dart' show TypeRegistry;
 export 'src/v3/connection_info.dart' show ConnectionInfo;
-export 'src/v3/relation_tracker.dart' show RelationTracker;
+export 'src/v3/database_info.dart' show DatabaseInfo;
 
 /// A description of a SQL query as interpreted by this package.
 ///
