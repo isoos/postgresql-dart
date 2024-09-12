@@ -390,7 +390,7 @@ class TupleData {
       final tupleDataType = TupleDataType.fromByte(typeId);
       late final int length;
       late final String data;
-      final typeOid = reader.codecContext.relationTracker
+      final typeOid = reader.codecContext.databaseInfo
           .getCachedTypeOidForRelationColumn(relationId, i);
       Object? value;
       switch (tupleDataType) {

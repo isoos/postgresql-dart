@@ -10,7 +10,7 @@ import 'package:postgres/src/messages/logical_replication_messages.dart';
 /// TODO: Implement active querying using `pg_class` like the below query:
 ///       "SELECT relname FROM pg_class WHERE relkind='r' AND oid = ?",
 ///       https://www.postgresql.org/docs/current/catalog-pg-class.html
-class RelationTracker {
+class DatabaseInfo {
   final _relationMessages = <int, RelationMessage>{};
 
   /// Returns the type OID for [relationId] and [columnIndex].
@@ -32,7 +32,7 @@ class RelationTracker {
   }
 }
 
-extension RelationTrackerExt on RelationTracker {
+extension DatabaseInfoExt on DatabaseInfo {
   void addRelationMessage(RelationMessage message) {
     _relationMessages[message.relationId] = message;
   }
