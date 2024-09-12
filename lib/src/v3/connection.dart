@@ -202,6 +202,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   static Future<PgConnectionImplementation> connect(
     Endpoint endpoint, {
     ConnectionSettings? connectionSettings,
+    @visibleForTesting
+    StreamTransformer<Uint8List, Uint8List>? incomingBytesTransformer,
   }) async {
     final settings = connectionSettings is ResolvedConnectionSettings
         ? connectionSettings
@@ -217,6 +219,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       endpoint,
       settings,
       codecContext: codecContext,
+      incomingBytesTransformer: incomingBytesTransformer,
     );
 
     if (_debugLog) {
@@ -257,6 +260,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     Endpoint endpoint,
     ResolvedConnectionSettings settings, {
     required CodecContext codecContext,
+    StreamTransformer<Uint8List, Uint8List>? incomingBytesTransformer,
   }) async {
     final host = endpoint.host;
     final port = endpoint.port;
@@ -335,6 +339,10 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       // We've listened to the stream already and sockets are single-subscription
       // streams. Expose it as a new stream.
       adaptedStream = async.SubscriptionStream(subscription);
+    }
+
+    if (incomingBytesTransformer != null) {
+      adaptedStream = adaptedStream.transform(incomingBytesTransformer);
     }
 
     final outgoingSocket = async.StreamSinkExtensions(socket)

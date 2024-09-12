@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:async/async.dart';
 import 'package:docker_process/containers/postgres.dart';
@@ -8,8 +9,11 @@ import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 import 'package:postgres/messages.dart';
 import 'package:postgres/postgres.dart';
+import 'package:postgres/src/v3/connection.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:test/test.dart';
+
+final _splitAndDelayBytes = false;
 
 // We log all packets sent to and received from the postgres server. This can be
 // used to debug failing tests. To view logs, something like this can be put
@@ -64,9 +68,9 @@ class PostgresServer {
     SslMode? sslMode,
     QueryMode? queryMode,
   }) async {
-    return Connection.open(
+    return await PgConnectionImplementation.connect(
       await endpoint(),
-      settings: ConnectionSettings(
+      connectionSettings: ConnectionSettings(
         connectTimeout: Duration(seconds: 3),
         queryTimeout: Duration(seconds: 3),
         replicationMode: replicationMode,
@@ -74,12 +78,38 @@ class PostgresServer {
         sslMode: sslMode,
         queryMode: queryMode,
       ),
+      incomingBytesTransformer:
+          _splitAndDelayBytes ? _transformIncomingBytes() : null,
     );
   }
 
   Future<void> kill() async {
     await Process.run('docker', ['kill', await _containerName.future]);
   }
+}
+
+StreamTransformer<Uint8List, Uint8List> _transformIncomingBytes() {
+  return StreamTransformer.fromBind((s) => s.asyncExpand((u) {
+        if (u.length <= 2) {
+          return Stream.value(u);
+        }
+        final hash = u.hashCode.abs();
+        final split = hash % u.length;
+        if (split == 0 || split >= u.length - 1) {
+          return Stream.value(u);
+        }
+
+        final p1 = u.sublist(0, split);
+        final p2 = u.sublist(split);
+
+        return Stream.fromFutures([
+          Future.value(p1),
+          Future.delayed(
+            Duration(milliseconds: 50),
+            () => p2,
+          )
+        ]);
+      }));
 }
 
 @isTestGroup
