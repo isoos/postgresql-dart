@@ -368,8 +368,9 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll
   /// return [XLogDataMessage] with raw data.
   ///
-  @Deprecated('This method will be removed from public API. '
-      'Please file a new issue on GitHub if you are using it.')
+  @Deprecated(
+      'It is likely that this method signature will change or will be removed in '
+      'an upcoming release. Please file a new issue on GitHub if you are using it.')
   static XLogDataMessage parse(
     Uint8List bytes,
     Encoding encoding, {
@@ -406,45 +407,6 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   @override
   String toString() =>
       'XLogDataMessage(walStart: $walStart, walEnd: $walEnd, time: $time, data: $data)';
-}
-
-/// Parses the XLogDataMessage
-///
-/// If [XLogDataMessage.data] is a [LogicalReplicationMessage], then the method
-/// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll
-/// return [XLogDataMessage] with raw data.
-@internal
-Future<XLogDataMessage> parseXLogDataMessage(
-  Uint8List bytes,
-  Encoding encoding, {
-  CodecContext? codecContext,
-}) async {
-  final reader = PgByteDataReader(
-      codecContext:
-          codecContext ?? CodecContext.withDefaults(encoding: encoding))
-    ..add(bytes);
-  final walStart = LSN(reader.readUint64());
-  final walEnd = LSN(reader.readUint64());
-  final time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
-
-  final message = await tryAsyncParseLogicalReplicationMessage(
-      reader, reader.remainingLength);
-  if (message != null) {
-    return XLogDataLogicalMessage(
-      message: message,
-      bytes: bytes,
-      time: time,
-      walEnd: walEnd,
-      walStart: walStart,
-    );
-  } else {
-    return XLogDataMessage(
-      bytes: bytes,
-      time: time,
-      walEnd: walEnd,
-      walStart: walStart,
-    );
-  }
 }
 
 class UnknownMessage extends ServerMessage {

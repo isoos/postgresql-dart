@@ -267,12 +267,12 @@ class TypeRegistry {
     ]);
   }
 
-  Future<EncodedValue?> encode(TypedValue input, CodecContext context) async {
+  EncodedValue? encode(TypedValue input, CodecContext context) {
     // check for codec
     final typeOid = input.type.oid;
     final codec = typeOid == null ? null : _codecs[typeOid];
     if (codec != null) {
-      final r = await codec.encode(input, context);
+      final r = codec.encode(input, context);
       if (r != null) {
         return r;
       }
@@ -280,7 +280,7 @@ class TypeRegistry {
 
     // fallback encoders
     for (final encoder in _encoders) {
-      final encoded = await encoder(input, context);
+      final encoded = encoder(input, context);
       if (encoded != null) {
         return encoded;
       }
@@ -288,7 +288,7 @@ class TypeRegistry {
     throw PgException("Could not infer type of value '${input.value}'.");
   }
 
-  Future<Object?> decode(EncodedValue value, CodecContext context) async {
+  Object? decode(EncodedValue value, CodecContext context) {
     final typeOid = value.typeOid;
     if (typeOid == null) {
       throw ArgumentError('`EncodedValue.typeOid` was not provided.');
@@ -297,7 +297,7 @@ class TypeRegistry {
     // check for codec
     final codec = _codecs[typeOid];
     if (codec != null) {
-      final r = await codec.decode(value, context);
+      final r = codec.decode(value, context);
       if (r != value && r is! UndecodedBytes) {
         return r;
       }

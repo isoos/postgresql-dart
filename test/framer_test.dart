@@ -14,12 +14,12 @@ void main() {
     framer = MessageFramer(CodecContext.withDefaults());
   });
 
-  tearDown(() async {
-    await flush(framer);
+  tearDown(() {
+    flush(framer);
   });
 
-  test('Perfectly sized message in one buffer', () async {
-    await framer.addBytes(bufferWithMessages([
+  test('Perfectly sized message in one buffer', () {
+    framer.addBytes(bufferWithMessages([
       messageWithBytes([1, 2, 3], 1)
     ]));
 
@@ -29,8 +29,8 @@ void main() {
     ]);
   });
 
-  test('Two perfectly sized messages in one buffer', () async {
-    await framer.addBytes(bufferWithMessages([
+  test('Two perfectly sized messages in one buffer', () {
+    framer.addBytes(bufferWithMessages([
       messageWithBytes([1, 2, 3], 1),
       messageWithBytes([1, 2, 3, 4], 2)
     ]));
@@ -42,13 +42,13 @@ void main() {
     ]);
   });
 
-  test('Header fragment', () async {
+  test('Header fragment', () {
     final message = messageWithBytes([1, 2, 3], 1);
     final fragments = fragmentedMessageBuffer(message, 2);
-    await framer.addBytes(fragments.first);
+    framer.addBytes(fragments.first);
     expect(framer.messageQueue, isEmpty);
 
-    await framer.addBytes(fragments.last);
+    framer.addBytes(fragments.last);
 
     final messages = framer.messageQueue.toList();
     expect(messages, [
@@ -56,18 +56,18 @@ void main() {
     ]);
   });
 
-  test('Two header fragments', () async {
+  test('Two header fragments', () {
     final message = messageWithBytes([1, 2, 3], 1);
     final fragments = fragmentedMessageBuffer(message, 2);
     final moreFragments = fragmentedMessageBuffer(fragments.first, 1);
 
-    await framer.addBytes(moreFragments.first);
+    framer.addBytes(moreFragments.first);
     expect(framer.messageQueue, isEmpty);
 
-    await framer.addBytes(moreFragments.last);
+    framer.addBytes(moreFragments.last);
     expect(framer.messageQueue, isEmpty);
 
-    await framer.addBytes(fragments.last);
+    framer.addBytes(fragments.last);
 
     final messages = framer.messageQueue.toList();
     expect(messages, [
@@ -75,17 +75,16 @@ void main() {
     ]);
   });
 
-  test('One message + header fragment', () async {
+  test('One message + header fragment', () {
     final message1 = messageWithBytes([1, 2, 3], 1);
     final message2 = messageWithBytes([2, 2, 3], 2);
     final message2Fragments = fragmentedMessageBuffer(message2, 3);
 
-    await framer
-        .addBytes(bufferWithMessages([message1, message2Fragments.first]));
+    framer.addBytes(bufferWithMessages([message1, message2Fragments.first]));
 
     expect(framer.messageQueue.length, 1);
 
-    await framer.addBytes(message2Fragments.last);
+    framer.addBytes(message2Fragments.last);
 
     final messages = framer.messageQueue.toList();
     expect(messages, [
@@ -94,17 +93,16 @@ void main() {
     ]);
   });
 
-  test('Message + header, missing rest of buffer', () async {
+  test('Message + header, missing rest of buffer', () {
     final message1 = messageWithBytes([1, 2, 3], 1);
     final message2 = messageWithBytes([2, 2, 3], 2);
     final message2Fragments = fragmentedMessageBuffer(message2, 5);
 
-    await framer
-        .addBytes(bufferWithMessages([message1, message2Fragments.first]));
+    framer.addBytes(bufferWithMessages([message1, message2Fragments.first]));
 
     expect(framer.messageQueue.length, 1);
 
-    await framer.addBytes(message2Fragments.last);
+    framer.addBytes(message2Fragments.last);
 
     final messages = framer.messageQueue.toList();
     expect(messages, [
@@ -113,13 +111,13 @@ void main() {
     ]);
   });
 
-  test('Message body spans two packets', () async {
+  test('Message body spans two packets', () {
     final message = messageWithBytes([1, 2, 3, 4, 5, 6, 7], 1);
     final fragments = fragmentedMessageBuffer(message, 8);
-    await framer.addBytes(fragments.first);
+    framer.addBytes(fragments.first);
     expect(framer.messageQueue, isEmpty);
 
-    await framer.addBytes(fragments.last);
+    framer.addBytes(fragments.last);
 
     final messages = framer.messageQueue.toList();
     expect(messages, [
@@ -129,15 +127,15 @@ void main() {
 
   test(
       'Message spans two packets, started in a packet that contained another message',
-      () async {
+      () {
     final earlierMessage = messageWithBytes([1, 2], 0);
     final message = messageWithBytes([1, 2, 3, 4, 5, 6, 7], 1);
 
-    await framer.addBytes(bufferWithMessages(
+    framer.addBytes(bufferWithMessages(
         [earlierMessage, fragmentedMessageBuffer(message, 8).first]));
     expect(framer.messageQueue, hasLength(1));
 
-    await framer.addBytes(fragmentedMessageBuffer(message, 8).last);
+    framer.addBytes(fragmentedMessageBuffer(message, 8).last);
 
     final messages = framer.messageQueue.toList();
     expect(messages, [
@@ -146,22 +144,21 @@ void main() {
     ]);
   });
 
-  test('Message spans three packets, only part of header in the first',
-      () async {
+  test('Message spans three packets, only part of header in the first', () {
     final earlierMessage = messageWithBytes([1, 2], 0);
     final message =
         messageWithBytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 1);
 
-    await framer.addBytes(bufferWithMessages(
+    framer.addBytes(bufferWithMessages(
         [earlierMessage, fragmentedMessageBuffer(message, 3).first]));
     expect(framer.messageQueue, hasLength(1));
 
-    await framer.addBytes(
+    framer.addBytes(
         fragmentedMessageBuffer(fragmentedMessageBuffer(message, 3).last, 6)
             .first);
     expect(framer.messageQueue, hasLength(1));
 
-    await framer.addBytes(
+    framer.addBytes(
         fragmentedMessageBuffer(fragmentedMessageBuffer(message, 3).last, 6)
             .last);
 
@@ -173,43 +170,41 @@ void main() {
     ]);
   });
 
-  test('Frame with no data', () async {
-    await framer.addBytes(bufferWithMessages([messageWithBytes([], 10)]));
+  test('Frame with no data', () {
+    framer.addBytes(bufferWithMessages([messageWithBytes([], 10)]));
 
     final messages = framer.messageQueue.toList();
     expect(messages, [UnknownMessage(10, Uint8List(0))]);
   });
 
-  test('Identify CopyDoneMessage with length equals size length (min)',
-      () async {
+  test('Identify CopyDoneMessage with length equals size length (min)', () {
     // min length
     final length = [0, 0, 0, 4]; // min length (4 bytes) as 32-bit
     final bytes = Uint8List.fromList([
       SharedMessageId.copyDone,
       ...length,
     ]);
-    await framer.addBytes(bytes);
+    framer.addBytes(bytes);
 
     final message = framer.messageQueue.toList().first;
     expect(message, isA<CopyDoneMessage>());
     expect((message as CopyDoneMessage).length, 4);
   });
 
-  test('Identify CopyDoneMessage when length larger than size length',
-      () async {
+  test('Identify CopyDoneMessage when length larger than size length', () {
     final length = (ByteData(4)..setUint32(0, 42)).buffer.asUint8List();
     final bytes = Uint8List.fromList([
       SharedMessageId.copyDone,
       ...length,
     ]);
-    await framer.addBytes(bytes);
+    framer.addBytes(bytes);
 
     final message = framer.messageQueue.toList().first;
     expect(message, isA<CopyDoneMessage>());
     expect((message as CopyDoneMessage).length, 42);
   });
 
-  test('Adds XLogDataMessage to queue', () async {
+  test('Adds XLogDataMessage to queue', () {
     final bits64 = (ByteData(8)..setUint64(0, 42)).buffer.asUint8List();
     // random data bytes
     final dataBytes = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -232,13 +227,13 @@ void main() {
       ...xlogDataMessage,
     ];
 
-    await framer.addBytes(Uint8List.fromList(copyDataBytes));
+    framer.addBytes(Uint8List.fromList(copyDataBytes));
     final message = framer.messageQueue.toList().first;
     expect(message, isA<XLogDataMessage>());
     expect(message, isNot(isA<XLogDataLogicalMessage>()));
   });
 
-  test('Adds XLogDataLogicalMessage with JsonMessage to queue', () async {
+  test('Adds XLogDataLogicalMessage with JsonMessage to queue', () {
     final bits64 = (ByteData(8)..setUint64(0, 42)).buffer.asUint8List();
 
     /// represent an empty json object so we should get a XLogDataLogicalMessage
@@ -264,13 +259,13 @@ void main() {
       ...xlogDataMessage,
     ];
 
-    await framer.addBytes(Uint8List.fromList(copyDataMessage));
+    framer.addBytes(Uint8List.fromList(copyDataMessage));
     final message = framer.messageQueue.toList().first;
     expect(message, isA<XLogDataLogicalMessage>());
     expect((message as XLogDataLogicalMessage).message, isA<JsonMessage>());
   });
 
-  test('Adds PrimaryKeepAliveMessage to queue', () async {
+  test('Adds PrimaryKeepAliveMessage to queue', () {
     final bits64 = (ByteData(8)..setUint64(0, 42)).buffer.asUint8List();
 
     /// This represent a raw [PrimaryKeepAliveMessage]
@@ -290,12 +285,12 @@ void main() {
       ...xlogDataMessage,
     ];
 
-    await framer.addBytes(Uint8List.fromList(copyDataMessage));
+    framer.addBytes(Uint8List.fromList(copyDataMessage));
     final message = framer.messageQueue.toList().first;
     expect(message, isA<PrimaryKeepAliveMessage>());
   });
 
-  test('Adds raw CopyDataMessage for unknown stream message', () async {
+  test('Adds raw CopyDataMessage for unknown stream message', () {
     final xlogDataBytes = <int>[
       -1, // unknown id
     ];
@@ -310,7 +305,7 @@ void main() {
       ...xlogDataBytes,
     ];
 
-    await framer.addBytes(Uint8List.fromList(copyDataMessage));
+    framer.addBytes(Uint8List.fromList(copyDataMessage));
     final message = framer.messageQueue.toList().first;
     expect(message, isA<CopyDataMessage>());
   });
@@ -336,9 +331,9 @@ Uint8List bufferWithMessages(List<List<int>> messages) {
   return Uint8List.fromList(messages.expand((l) => l).toList());
 }
 
-Future<void> flush(MessageFramer framer) async {
+void flush(MessageFramer framer) {
   framer.messageQueue.clear();
-  await framer.addBytes(bufferWithMessages([
+  framer.addBytes(bufferWithMessages([
     messageWithBytes([1, 2, 3], 1)
   ]));
 
