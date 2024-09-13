@@ -18,14 +18,6 @@
   - Deprecated some logical replication message parsing method.
   - Removed `@internal`-annotated methods from the public API of `ServerException` and `Severity`.
   - `ServerException` may be transformed into `_PgTimeoutException` which is both `PgException` and `TimeoutException` (but no longer `ServerException`).
-  - The `timeout` parameters and the `SessionSettings.queryTimeout` has only a somewhat
-    acceptable behaviour: it triggers a timeout only in the local `Future` object, but
-    keeps the statement running on the server. Updated documentation, deprecated the
-    parameter where it doesn't make long-term sense.
-    
-    **Do not rely on the combination of timeouts and query statement queueing!**
-    We are planning to adopt a `statement_timeout`-based implementation, which will be a
-    breaking change for queuing-related timeouts.
 
 ## 3.3.0
 
