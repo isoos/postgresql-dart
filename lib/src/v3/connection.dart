@@ -168,7 +168,7 @@ abstract class _PgSessionBase implements Session {
     } else {
       // The simple query protocol does not support variables. So when we have
       // parameters, we need an explicit prepare.
-      final prepared = await _prepare(description, timeout: timeout);
+      final prepared = await _prepare(description);
       try {
         return await prepared.run(variables, timeout: timeout);
       } finally {
@@ -178,18 +178,12 @@ abstract class _PgSessionBase implements Session {
   }
 
   @override
-  Future<Statement> prepare(
-    Object query, {
-    Duration? timeout,
-  }) async {
+  Future<Statement> prepare(Object query) async {
     _verifyStateBeforeQuery();
-    return await _prepare(query, timeout: timeout);
+    return await _prepare(query);
   }
 
-  Future<_PreparedStatement> _prepare(
-    Object query, {
-    Duration? timeout,
-  }) async {
+  Future<_PreparedStatement> _prepare(Object query) async {
     final conn = _connection;
     final name = 's/${conn._statementCounter++}';
     final description = InternalQueryDescription.wrap(
@@ -201,7 +195,7 @@ abstract class _PgSessionBase implements Session {
       description.transformedSql,
       statementName: name,
       typeOids: description.parameterTypes?.map((e) => e?.oid).toList(),
-    )).optionalTimeout(timeout);
+    ));
 
     return _PreparedStatement(description, name, this);
   }

@@ -145,12 +145,7 @@ abstract class Session {
   ///
   /// When the returned future completes, the statement must eventually be freed
   /// using [Statement.dispose] to avoid resource leaks.
-  Future<Statement> prepare(
-    Object /* String | Sql */ query, {
-    /// NOTE: setting the timeout here affects only the local [Future] object and
-    ///       it does not cancel the pending statement. This may change in the future.
-    Duration? timeout,
-  });
+  Future<Statement> prepare(Object /* String | Sql */ query);
 
   /// Executes the [query] with the given [parameters].
   ///
@@ -178,9 +173,6 @@ abstract class Session {
         parameters,
     bool ignoreRows = false,
     QueryMode? queryMode,
-
-    /// NOTE: setting the timeout here affects only the local [Future] object and
-    ///       it does not cancel the pending statement. This may change in the future.
     Duration? timeout,
   });
 }
@@ -258,10 +250,6 @@ abstract class Statement {
   Future<Result> run(
     Object? /* List<Object?|TypedValue> | Map<String, Object?|TypedValue> */
         parameters, {
-    /// NOTE: setting the timeout here affects only the local [Future] object and
-    ///       it does not cancel the pending statement. This may change in the future.
-    @Deprecated('Use the `prepare` methods\'s `timeout` parameter instead. '
-        'Setting this parameter may throw an error in the future, and it may be removed in a future version.')
     Duration? timeout,
   });
 

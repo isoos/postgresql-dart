@@ -71,17 +71,14 @@ class PoolImplementation<L> implements Pool<L> {
   }
 
   @override
-  Future<Statement> prepare(
-    Object query, {
-    Duration? timeout,
-  }) async {
+  Future<Statement> prepare(Object query) async {
     final statementCompleter = Completer<Statement>();
 
     unawaited(withConnection((connection) async {
       _PoolStatement? poolStatement;
 
       try {
-        final statement = await connection.prepare(query, timeout: timeout);
+        final statement = await connection.prepare(query);
         poolStatement = _PoolStatement(statement);
       } on Object catch (e, s) {
         // Could not prepare the statement, inform the caller and stop occupying
@@ -303,11 +300,8 @@ class _PoolConnection implements Connection {
   }
 
   @override
-  Future<Statement> prepare(
-    Object query, {
-    Duration? timeout,
-  }) {
-    return _connection.prepare(query, timeout: timeout);
+  Future<Statement> prepare(Object query) {
+    return _connection.prepare(query);
   }
 
   @override
