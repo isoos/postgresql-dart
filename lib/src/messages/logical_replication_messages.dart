@@ -439,7 +439,7 @@ class TupleData {
   /// It'll read until the types are generated.
   ///
   /// NOTE: do not use, will be removed.
-  factory TupleData._syncParse(PgByteDataReader reader, int relationId) {
+  factory TupleData._syncParse(PgByteDataReader reader) {
     final columnCount = reader.readUint16();
     final columns = <TupleDataColumn>[];
     for (var i = 0; i < columnCount; i++) {
@@ -448,33 +448,13 @@ class TupleData {
       final tupleDataType = TupleDataType.fromByte(typeId);
       late final int length;
       late final String data;
-      final typeOid = reader.codecContext.databaseInfo
-          .getCachedTypeOidForRelationColumn(relationId, i);
       Object? value;
       switch (tupleDataType) {
         case TupleDataType.text:
+        case TupleDataType.binary:
           length = reader.readUint32();
           data = reader.encoding.decode(reader.read(length));
           value = data;
-          break;
-        case TupleDataType.binary:
-          length = reader.readUint32();
-          final bytes = reader.read(length);
-          value = typeOid == null
-              ? UndecodedBytes(
-                  typeOid: 0,
-                  isBinary: true,
-                  bytes: bytes,
-                  encoding: reader.codecContext.encoding,
-                )
-              : reader.codecContext.typeRegistry.decode(
-                  EncodedValue.binary(
-                    bytes,
-                    typeOid: typeOid,
-                  ),
-                  reader.codecContext,
-                );
-          data = value.toString();
           break;
         case TupleDataType.null_:
         case TupleDataType.toast:
@@ -486,7 +466,7 @@ class TupleData {
         TupleDataColumn(
           typeId: typeId,
           length: length,
-          typeOid: typeOid,
+          typeOid: null,
           data: data,
           value: value,
         ),
@@ -508,8 +488,11 @@ class TupleData {
       final tupleDataType = TupleDataType.fromByte(typeId);
       late final int length;
       late final String data;
-      final typeOid = reader.codecContext.relationTracker
-          .getCachedTypeOidForRelationColumn(relationId, i);
+      final typeOid = await reader.codecContext.databaseInfo
+          .getColumnTypeOidByRelationIdAndColumnIndex(
+        relationId: relationId,
+        columnIndex: i,
+      );
       Object? value;
       switch (tupleDataType) {
         case TupleDataType.text:
@@ -578,7 +561,7 @@ class InsertMessage implements LogicalReplicationMessage {
     if (tupleType != 'N'.codeUnitAt(0)) {
       throw Exception("InsertMessage must have 'N' tuple type");
     }
-    tuple = TupleData._syncParse(reader, relationId);
+    tuple = TupleData._syncParse(reader);
   }
 
   static Future<InsertMessage> _parse(PgByteDataReader reader) async {
@@ -654,7 +637,7 @@ class UpdateMessage implements LogicalReplicationMessage {
     if (tupleType == UpdateMessageTuple.oldType ||
         tupleType == UpdateMessageTuple.keyType) {
       oldTupleType = tupleType;
-      oldTuple = TupleData._syncParse(reader, relationId);
+      oldTuple = TupleData._syncParse(reader);
       tupleType = UpdateMessageTuple.fromByte(reader.readUint8());
     } else {
       oldTupleType = null;
@@ -662,7 +645,7 @@ class UpdateMessage implements LogicalReplicationMessage {
     }
 
     if (tupleType == UpdateMessageTuple.newType) {
-      newTuple = TupleData._syncParse(reader, relationId);
+      newTuple = TupleData._syncParse(reader);
     } else {
       throw Exception('Invalid Tuple Type for UpdateMessage');
     }
@@ -754,7 +737,7 @@ class DeleteMessage implements LogicalReplicationMessage {
     switch (oldTupleType) {
       case DeleteMessageTuple.keyType:
       case DeleteMessageTuple.oldType:
-        oldTuple = TupleData._syncParse(reader, relationId);
+        oldTuple = TupleData._syncParse(reader);
         break;
       case DeleteMessageTuple.unknown:
         throw Exception('Unknown tuple type for DeleteMessage');
