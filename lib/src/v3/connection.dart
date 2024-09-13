@@ -202,6 +202,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   static Future<PgConnectionImplementation> connect(
     Endpoint endpoint, {
     ConnectionSettings? connectionSettings,
+    @visibleForTesting
+    StreamTransformer<Uint8List, Uint8List>? incomingBytesTransformer,
   }) async {
     final settings = connectionSettings is ResolvedConnectionSettings
         ? connectionSettings
@@ -217,6 +219,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       endpoint,
       settings,
       codecContext: codecContext,
+      incomingBytesTransformer: incomingBytesTransformer,
     );
 
     if (_debugLog) {
@@ -257,6 +260,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     Endpoint endpoint,
     ResolvedConnectionSettings settings, {
     required CodecContext codecContext,
+    StreamTransformer<Uint8List, Uint8List>? incomingBytesTransformer,
   }) async {
     final host = endpoint.host;
     final port = endpoint.port;
@@ -337,6 +341,10 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       adaptedStream = async.SubscriptionStream(subscription);
     }
 
+    if (incomingBytesTransformer != null) {
+      adaptedStream = adaptedStream.transform(incomingBytesTransformer);
+    }
+
     final outgoingSocket = async.StreamSinkExtensions(socket)
         .transform<Uint8List>(
             async.StreamSinkTransformer.fromHandlers(handleDone: (out) {
@@ -373,6 +381,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   final bool _channelIsSecure;
   late final StreamSubscription<Message> _serverMessages;
   bool _isClosing = false;
+  bool _socketIsBroken = false;
 
   _PendingOperation? _pending;
   // Errors happening while a transaction is active will roll back the
@@ -558,19 +567,21 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   Future<void> _close(bool interruptRunning, PgException? cause,
       {bool socketIsBroken = false}) async {
+    _socketIsBroken = _socketIsBroken || socketIsBroken;
     if (!_isClosing) {
       _isClosing = true;
 
       if (interruptRunning) {
         _pending?.handleConnectionClosed(cause);
-        if (!socketIsBroken) {
+        if (!_socketIsBroken) {
           _channel.sink.add(const TerminateMessage());
         }
       } else {
         // Wait for the previous operation to complete by using the lock
         await _operationLock.withResource(() {
-          // Use lock to await earlier operations
-          _channel.sink.add(const TerminateMessage());
+          if (!_socketIsBroken) {
+            _channel.sink.add(const TerminateMessage());
+          }
         });
       }
 
@@ -580,7 +591,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   }
 
   void _closeAfterError([PgException? cause]) {
-    _close(true, cause);
+    _close(
+      true,
+      cause,
+      socketIsBroken: cause?.willAbortConnection ?? false,
+    );
   }
 }
 
