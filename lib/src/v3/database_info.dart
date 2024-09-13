@@ -17,13 +17,16 @@ class DatabaseInfo {
   ///
   /// Returns `null` if the [relationId] is unknown or the [columnIndex]
   /// is out of bounds.
-  int? getCachedTypeOidForRelationColumn(int relationId, int columnIndex) {
+  Future<int?> getColumnTypeOidByRelationIdAndColumnIndex({
+    required int relationId,
+    required int columnIndex,
+  }) async {
+    if (columnIndex < 0) {
+      throw ArgumentError('columnIndex must not be negative');
+    }
     final m = _relationMessages[relationId];
     if (m == null) {
       return null;
-    }
-    if (columnIndex < 0) {
-      throw ArgumentError('columnIndex must not be negative');
     }
     if (columnIndex > m.columns.length) {
       return null;
