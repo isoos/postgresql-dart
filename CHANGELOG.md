@@ -5,7 +5,6 @@
 - `Connection.info` (through `ConnectionInfo` class) exposes read-only connection-level information,
   e.g. acessing access server-provided parameter status values.
 - Support for binary `pgoutput` replication by [wolframm](https://github.com/Wolframm-Activities-OU).
-- Deprecated `TupleDataColumn.data`, use `.value` instead (for binary protocol messages).
 - **Allowing custom type codecs**:
   - `Codec` interface is used for encoding/decoding value by type OIDs or Dart values.
   - `Codec.encode` and `Codec.decode` gets a reference to `CodecContext` which provides
@@ -14,6 +13,8 @@
     (for values where type is not specified).
   - `DatabaseInfo` tracks information about relations and oids (currently limited to `RelationMessage` caching).
 - **Behaviour / soft-breaking changes**:
+  - Deprecated `TupleDataColumn.data`, use `.value` instead (for binary protocol messages).
+  - Deprecated some logical replication message parsing method.
   - Removed `@internal`-annotated methods from the public API of `ServerException` and `Severity`.
   - `ServerException` may be transformed into `_PgTimeoutException` which is both `PgException` and `TimeoutException` (but no longer `ServerException`).
   - The `timeout` parameters and the `SessionSettings.queryTimeout` has only a somewhat
