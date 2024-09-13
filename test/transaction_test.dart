@@ -50,38 +50,19 @@ void main() {
       ]);
     });
 
-    test('Query during transaction must wait until transaction is finished',
-        () async {
-      final orderEnsurer = [];
-      final nextCompleter = Completer.sync();
-      final outResult = conn.runTx((c) async {
-        orderEnsurer.add(1);
-        await c.execute('INSERT INTO t (id) VALUES (1)');
-        orderEnsurer.add(2);
-        nextCompleter.complete();
-        final result = await c.execute('SELECT id FROM t');
-        orderEnsurer.add(3);
+    test('Connection query during transaction will throw exception.', () async {
+      try {
+        await conn.runTx((ctx) async {
+          await conn.execute('SELECT 1');
+          await ctx.execute('INSERT INTO t (id) VALUES (1)');
+        });
+        fail('unreachable');
+      } on PgException catch (e) {
+        expect(e.message, contains('runTx'));
+        // ignore
+      }
 
-        return result;
-      });
-
-      await nextCompleter.future;
-      orderEnsurer.add(11);
-      await conn.execute('INSERT INTO t (id) VALUES (2)');
-      orderEnsurer.add(12);
-      final laterResults = await conn.execute('SELECT id FROM t');
-      orderEnsurer.add(13);
-
-      final firstResult = await outResult;
-
-      expect(orderEnsurer, [1, 2, 11, 3, 12, 13]);
-      expect(firstResult, [
-        [1]
-      ]);
-      expect(laterResults, [
-        [1],
-        [2]
-      ]);
+      expect(await conn.execute('SELECT * from t'), hasLength(0));
     });
 
     test('Make sure two simultaneous transactions cannot be interwoven',

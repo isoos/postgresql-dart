@@ -43,8 +43,7 @@ void main() {
       expect(await conn.execute('SELECT * from t'), hasLength(0));
     });
 
-    test(
-        'Query on parent context for transaction completes (with error) after timeout',
+    test('Timeout is ignored when new statement is run on parent context',
         () async {
       try {
         await conn.runTx((ctx) async {
@@ -52,7 +51,8 @@ void main() {
           await ctx.execute('INSERT INTO t (id) VALUES (1)');
         });
         fail('unreachable');
-      } on TimeoutException {
+      } on PgException catch (e) {
+        expect(e.message, contains('runTx'));
         // ignore
       }
 
