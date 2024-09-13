@@ -398,3 +398,33 @@ class HotStandbyFeedbackMessage extends ClientMessage
     buffer.writeUint32(epochCatalogXminXid);
   }
 }
+
+class CancelRequestMessage extends ClientMessage {
+  /// The process ID of the target backend.
+  final int processId;
+
+  /// The secret key for the target backend.
+  final int secretKey;
+
+  CancelRequestMessage({
+    required this.processId,
+    required this.secretKey,
+  });
+
+  @override
+  void applyToBuffer(PgByteDataWriter buffer) {
+    // Length of message contents in bytes, including self.
+    buffer.writeInt32(16);
+    // The cancel request code. The value is chosen to contain 1234 in the most significant 16 bits,
+    // and 5678 in the least significant 16 bits.
+    // (To avoid confusion, this code must not be the same as any protocol version number.)
+    buffer.writeInt32(80877102);
+    buffer.writeUint32(processId);
+    buffer.writeUint32(secretKey);
+  }
+
+  @override
+  String toString() {
+    return 'CancelRequestMessage: $processId $secretKey';
+  }
+}

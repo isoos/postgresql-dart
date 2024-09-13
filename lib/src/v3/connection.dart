@@ -222,20 +222,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       incomingBytesTransformer: incomingBytesTransformer,
     );
 
-    if (_debugLog) {
-      channel = channel.transform(StreamChannelTransformer(
-        StreamTransformer.fromHandlers(
-          handleData: (msg, sink) {
-            print('[in] $msg');
-            sink.add(msg);
-          },
-        ),
-        async.StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
-          print('[out] $msg');
-          sink.add(msg);
-        }),
-      ));
-    }
+    channel = _debugChannel(channel);
 
     if (settings.transformer != null) {
       channel = channel.transform(settings.transformer!);
@@ -254,6 +241,25 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       await connection._settings.onOpen!(connection);
     }
     return connection;
+  }
+
+  static StreamChannel<Message> _debugChannel(StreamChannel<Message> channel) {
+    if (!_debugLog) {
+      return channel;
+    }
+    final hash = channel.hashCode.abs().toRadixString(16);
+    return channel.transform(StreamChannelTransformer(
+      StreamTransformer.fromHandlers(
+        handleData: (msg, sink) {
+          print('[$hash][in] $msg');
+          sink.add(msg);
+        },
+      ),
+      async.StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
+        print('[$hash][out] $msg');
+        sink.add(msg);
+      }),
+    ));
   }
 
   static Future<(StreamChannel<Message>, bool)> _connect(
@@ -380,6 +386,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   /// Whether [_channel] is backed by a TLS connection.
   final bool _channelIsSecure;
   late final StreamSubscription<Message> _serverMessages;
+  BackendKeyMessage? _backendKeyMessage;
   bool _isClosing = false;
   bool _socketIsBroken = false;
 
@@ -461,7 +468,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
       if (message is ParameterStatusMessage) {
         info.setParameter(message.name, message.value);
-      } else if (message is BackendKeyMessage || message is NoticeMessage) {
+      } else if (message is BackendKeyMessage) {
+        _backendKeyMessage = message;
+      } else if (message is NoticeMessage) {
         // ignore for now
       } else if (message is NotificationResponseMessage) {
         _channels.deliverNotification(message);
@@ -596,6 +605,23 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       cause,
       socketIsBroken: cause?.willAbortConnection ?? false,
     );
+  }
+
+  @internal
+  Future<void> cancelPendingStatement() async {
+    var (channel, _) =
+        await _connect(_endpoint, _settings, codecContext: codecContext);
+    if (_backendKeyMessage == null) {
+      throw PgException(
+          'Unable to cancel pending statement: no backend key available.');
+    }
+    channel = _debugChannel(channel);
+    channel.sink.add(CancelRequestMessage(
+      processId: _backendKeyMessage!.processId,
+      secretKey: _backendKeyMessage!.secretKey,
+    ));
+    // Waiting for the server to close connection.
+    await channel.stream.listen((_) {}).asFuture();
   }
 }
 
