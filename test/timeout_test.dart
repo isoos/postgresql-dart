@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:postgres/postgres.dart';
+import 'package:postgres/src/v3/connection.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -16,6 +17,15 @@ void main() {
 
     tearDown(() async {
       await conn.close();
+    });
+
+    test('Cancel current statement through a new connection', () async {
+      final f = conn.execute('SELECT pg_sleep(2);');
+      await (conn as PgConnectionImplementation).cancelPendingStatement();
+      await expectLater(f, throwsA(isA<ServerException>()));
+      // connection is still usable
+      final rs = await conn.execute('SELECT 1;');
+      expect(rs[0][0], 1);
     });
 
     test('Timeout fires during transaction rolls ack transaction', () async {
