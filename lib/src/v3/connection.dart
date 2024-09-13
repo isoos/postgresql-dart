@@ -105,6 +105,17 @@ abstract class _PgSessionBase implements Session {
   @override
   Future<void> get closed => _sessionClosedCompleter.future;
 
+  void _verifyStateBeforeQuery() {
+    if (_connection._isClosing || _sessionClosed) {
+      throw PgException(
+          'Attempting to execute query, but connection is not open.');
+    }
+    if (this == _connection && _connection._activeTransaction != null) {
+      throw PgException(
+          'Attempting to execute query on connection while inside a `runTx` call.');
+    }
+  }
+
   @override
   Future<Result> execute(
     Object query, {
@@ -113,10 +124,7 @@ abstract class _PgSessionBase implements Session {
     QueryMode? queryMode,
     Duration? timeout,
   }) async {
-    if (_connection._isClosing || _sessionClosed) {
-      throw PgException(
-          'Attempting to execute query, but connection is not open.');
-    }
+    _verifyStateBeforeQuery();
     final description = InternalQueryDescription.wrap(
       query,
       typeRegistry: _connection._settings.typeRegistry,
@@ -174,6 +182,7 @@ abstract class _PgSessionBase implements Session {
     Object query, {
     Duration? timeout,
   }) async {
+    _verifyStateBeforeQuery();
     return await _prepare(query, timeout: timeout);
   }
 

@@ -249,40 +249,6 @@ void main() {
         ]);
       });
 
-      test('Query during transaction must wait until transaction is finished',
-          () async {
-        final orderEnsurer = [];
-        final nextCompleter = Completer.sync();
-        final outResult = connection.runTx((c) async {
-          orderEnsurer.add(1);
-          await c.execute('INSERT INTO t (id) VALUES (1)');
-          orderEnsurer.add(2);
-          nextCompleter.complete();
-          final result = await c.execute('SELECT id FROM t');
-          orderEnsurer.add(3);
-
-          return result;
-        });
-
-        await nextCompleter.future;
-        orderEnsurer.add(11);
-        await connection.execute('INSERT INTO t (id) VALUES (2)');
-        orderEnsurer.add(12);
-        final laterResults = await connection.execute('SELECT id FROM t');
-        orderEnsurer.add(13);
-
-        final firstResult = await outResult;
-
-        expect(orderEnsurer, [1, 2, 11, 3, 12, 13]);
-        expect(firstResult, [
-          [1]
-        ]);
-        expect(laterResults, [
-          [1],
-          [2]
-        ]);
-      });
-
       test('Make sure two simultaneous transactions cannot be interwoven',
           () async {
         final orderEnsurer = [];
