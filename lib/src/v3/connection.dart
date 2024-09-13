@@ -156,11 +156,9 @@ abstract class _PgSessionBase implements Session {
         ignoreRows,
       );
       try {
-        await querySubscription.asFuture().optionalTimeout(timeout);
-        return Result(
-          rows: items,
-          affectedRows: await querySubscription.affectedRows,
-          schema: await querySubscription.schema,
+        return await querySubscription._waitForResult(
+          items: items,
+          timeout: timeout,
         );
       } finally {
         await querySubscription.cancel();
@@ -260,6 +258,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       ),
       async.StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
         print('[$hash][out] $msg');
+        print('[out] $msg');
         sink.add(msg);
       }),
     ));
@@ -655,16 +654,13 @@ class _PreparedStatement extends Statement {
     final items = <ResultRow>[];
     final subscription = bind(parameters).listen(items.add);
     try {
-      await subscription.asFuture().optionalTimeout(timeout);
+      return await (subscription as _PgResultStreamSubscription)._waitForResult(
+        items: items,
+        timeout: timeout,
+      );
     } finally {
       await subscription.cancel();
     }
-
-    return Result(
-      rows: items,
-      affectedRows: await subscription.affectedRows,
-      schema: await subscription.schema,
-    );
   }
 
   @override
@@ -889,6 +885,34 @@ class _PgResultStreamSubscription
         // Unexpected message - either a severe bug in this package or in the
         // connection. We better close it.
         session._connection._closeAfterError();
+    }
+  }
+
+  Future<Result> _waitForResult({
+    required List<ResultRow> items,
+    required Duration? timeout,
+  }) async {
+    bool timeoutTriggered = false;
+    final cancelTimer = timeout == null
+        ? null
+        : Timer(timeout, () async {
+            timeoutTriggered = true;
+            await connection.cancelPendingStatement();
+          });
+    try {
+      await asFuture();
+      return Result(
+        rows: items,
+        affectedRows: await affectedRows,
+        schema: await schema,
+      );
+    } on ServerException catch (e) {
+      if (timeoutTriggered) {
+        throw transformServerException(e, timeoutTriggered: timeoutTriggered);
+      }
+      rethrow;
+    } finally {
+      cancelTimer?.cancel();
     }
   }
 
