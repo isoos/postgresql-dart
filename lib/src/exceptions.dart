@@ -190,9 +190,17 @@ ServerException buildExceptionFromErrorFields(List<ErrorField> errorFields) {
   );
 }
 
-PgException transformServerException(ServerException ex) {
+PgException transformServerException(
+  ServerException ex, {
+  bool timeoutTriggered = false,
+}) {
   if (ex.code == '57014' &&
       ex.message == 'canceling statement due to statement timeout') {
+    return _PgTimeoutException(
+      ['${ex.code}:', ex.message, ex.trace].whereType<String>().join(' '),
+    );
+  }
+  if (ex.code == '57014' && timeoutTriggered) {
     return _PgTimeoutException(
       ['${ex.code}:', ex.message, ex.trace].whereType<String>().join(' '),
     );

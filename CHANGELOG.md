@@ -14,6 +14,7 @@
   - `DatabaseInfo` tracks information about relations and oids (currently limited to `RelationMessage` caching).
 - **Behaviour / soft-breaking changes**:
   - Preparing/executing a stamement on the main connection while in a `runTx` callback will throw an exception.
+  - Setting `timeout` will try to actively cancel the current statement using a new connection.
   - Deprecated `TupleDataColumn.data`, use `.value` instead (for binary protocol messages).
   - Deprecated some logical replication message parsing method.
   - Removed `@internal`-annotated methods from the public API of `ServerException` and `Severity`.
