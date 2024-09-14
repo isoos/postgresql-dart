@@ -405,6 +405,14 @@ abstract class Type<T extends Object> {
 
   @override
   String toString() => 'Type(oid:$oid)';
+
+  @override
+  int get hashCode => oid ?? -1;
+
+  @override
+  bool operator ==(Object other) {
+    return (other is Type) && (other.oid == oid);
+  }
 }
 
 class TypedValue<T extends Object> {

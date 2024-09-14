@@ -237,6 +237,8 @@ final _builtInTypeNames = <String, Type>{
   '_varchar': Type.varCharArray,
 };
 
+/// Contains the static registry of type mapping from substitution names to
+/// type OIDs, their codec and the generic type encoders (for un-typed values).
 class TypeRegistry {
   final _byTypeOid = <int, Type>{};
   final _bySubstitutionName = <String, Type>{};
@@ -247,8 +249,9 @@ class TypeRegistry {
     /// Override or extend the built-in codecs using the type OID as key.
     Map<int, Codec>? codecs,
 
-    /// When encoding an untyped parameter for a query, try to use these encoders
-    /// before the built-in (generic) text encoders.
+    /// When encoding a non-typed parameter for a query, try to use these
+    /// encoders in their specified order. The encoders will be called
+    /// before the the built-in (generic) text encoders.
     Iterable<EncoderFn>? encoders,
   }) {
     _bySubstitutionName.addAll(_builtInTypeNames);

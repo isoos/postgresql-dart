@@ -53,7 +53,12 @@ See the API documentation: https://pub.dev/documentation/postgres/latest/
 The library supports connection pooling (and masking the connection pool as
 regular session executor).
 
-## Additional Capabilities
+## Custom type codecs
+
+The library supports registering custom type codecs (and generic object encoders)
+through the`ConnectionSettings.typeRegistry`.
+
+## Streaming replication protocol
 
 The library supports connecting to PostgreSQL using the [Streaming Replication Protocol][].
 See [Connection][] documentation for more info.
