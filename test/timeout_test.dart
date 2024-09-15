@@ -22,7 +22,15 @@ void main() {
     test('Cancel current statement through a new connection', () async {
       final f = conn.execute('SELECT pg_sleep(2);');
       await (conn as PgConnectionImplementation).cancelPendingStatement();
-      await expectLater(f, throwsA(isA<ServerException>()));
+      await expectLater(
+        f,
+        throwsA(
+          allOf(
+            isA<PgException>(),
+            isA<TimeoutException>(),
+          ),
+        ),
+      );
       // connection is still usable
       final rs = await conn.execute('SELECT 1;');
       expect(rs[0][0], 1);

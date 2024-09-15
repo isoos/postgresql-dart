@@ -12,13 +12,14 @@
   - `EncoderFn` value converter for generic Dart object -> Postgres-encoded bytes
     (for values where type is not specified).
   - `DatabaseInfo` tracks information about relations and oids (currently limited to `RelationMessage` caching).
-- **Behaviour / soft-breaking changes**:
+- **Behaviour changes**, may be breaking in some cases:
   - Preparing/executing a stamement on the main connection while in a `runTx` callback will throw an exception.
   - Setting `timeout` will try to actively cancel the current statement using a new connection.
+  - `ServerException` may be transformed into `_PgQueryCancelledException` which is both `PgException` and `TimeoutException` (but no longer `ServerException`).
+- **API deprecations**:
   - Deprecated `TupleDataColumn.data`, use `.value` instead (for binary protocol messages).
   - Deprecated some logical replication message parsing method.
   - Removed `@internal`-annotated methods from the public API of `ServerException` and `Severity`.
-  - `ServerException` may be transformed into `_PgTimeoutException` which is both `PgException` and `TimeoutException` (but no longer `ServerException`).
 
 ## 3.3.0
 
