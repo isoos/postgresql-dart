@@ -892,11 +892,9 @@ class _PgResultStreamSubscription
     required List<ResultRow> items,
     required Duration? timeout,
   }) async {
-    bool timeoutTriggered = false;
     final cancelTimer = timeout == null
         ? null
         : Timer(timeout, () async {
-            timeoutTriggered = true;
             await connection.cancelPendingStatement();
           });
     try {
@@ -906,11 +904,6 @@ class _PgResultStreamSubscription
         affectedRows: await affectedRows,
         schema: await schema,
       );
-    } on ServerException catch (e) {
-      if (timeoutTriggered) {
-        throw transformServerException(e, timeoutTriggered: timeoutTriggered);
-      }
-      rethrow;
     } finally {
       cancelTimer?.cancel();
     }

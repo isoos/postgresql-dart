@@ -190,27 +190,23 @@ ServerException buildExceptionFromErrorFields(List<ErrorField> errorFields) {
   );
 }
 
-PgException transformServerException(
-  ServerException ex, {
-  bool timeoutTriggered = false,
-}) {
-  if (ex.code == '57014' &&
-      ex.message == 'canceling statement due to statement timeout') {
-    return _PgTimeoutException(
+PgException transformServerException(ServerException ex) {
+  if (ex.code == '57014') {
+    return _PgQueryCancelledException(
       ['${ex.code}:', ex.message, ex.trace].whereType<String>().join(' '),
-    );
-  }
-  if (ex.code == '57014' && timeoutTriggered) {
-    return _PgTimeoutException(
-      ['${ex.code}:', ex.message, ex.trace].whereType<String>().join(' '),
+      severity: ex.severity,
     );
   }
   return ex;
 }
 
-class _PgTimeoutException extends PgException implements TimeoutException {
+class _PgQueryCancelledException extends PgException
+    implements TimeoutException {
   @override
   late final duration = null;
 
-  _PgTimeoutException(super.message) : super(severity: Severity.error);
+  _PgQueryCancelledException(
+    super.message, {
+    required super.severity,
+  });
 }
