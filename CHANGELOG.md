@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.4.0-dev.2
+## 3.4.0
 
 - `Connection.info` (through `ConnectionInfo` class) exposes read-only connection-level information,
   e.g. acessing access server-provided parameter status values.
@@ -12,7 +12,7 @@
   - `EncoderFn` value converter for generic Dart object -> Postgres-encoded bytes
     (for values where type is not specified).
   - `DatabaseInfo` tracks information about relations and oids (currently limited to `RelationMessage` caching).
-- **Behaviour changes**, may be breaking in some cases:
+- **Timeout-related behaviour changes**, may be breaking in some cases:
   - Preparing/executing a stamement on the main connection while in a `runTx` callback will throw an exception.
   - Setting `timeout` will try to actively cancel the current statement using a new connection.
   - `ServerException` may be transformed into `_PgQueryCancelledException` which is both `PgException` and `TimeoutException` (but no longer `ServerException`).
