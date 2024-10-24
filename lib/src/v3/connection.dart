@@ -20,7 +20,7 @@ import 'protocol.dart';
 import 'query_description.dart';
 import 'resolved_settings.dart';
 
-const _debugLog = false;
+const _debugLog = true;
 
 String _identifier(String source) {
   // To avoid complex ambiguity rules, we always wrap identifier in double
@@ -28,6 +28,16 @@ String _identifier(String source) {
   // in the source.
   final escaped = source.replaceAll('"', '""');
   return '"$escaped"';
+}
+
+void _log(String message, [error, stackTrace]) {
+  print(message);
+  if (error != null) {
+    print(error);
+  }
+  if (stackTrace != null) {
+    print(stackTrace);
+  }
 }
 
 abstract class _PgSessionBase implements Session {
@@ -73,7 +83,10 @@ abstract class _PgSessionBase implements Session {
       assert(_connection._pending == null,
           'Previous operation ${_connection._pending} did not clean up.');
 
-      return Future(callback).whenComplete(() {
+      return Future(callback).catchError((error, stack) {
+        _log('psql: Unhandled error', error, stack);
+        throw error;
+      }).whenComplete(() {
         _connection._pending = null;
       });
     });
@@ -270,6 +283,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     required CodecContext codecContext,
     StreamTransformer<Uint8List, Uint8List>? incomingBytesTransformer,
   }) async {
+    _log('psq: _connect start');
     final host = endpoint.host;
     final port = endpoint.port;
 
@@ -297,19 +311,23 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         sslCompleter.complete(data.first);
       },
       onDone: () {
+        _log('psq: sub.onDone (sslCompleted: ${sslCompleter.isCompleted}');
         if (sslCompleter.isCompleted) {
           return;
         }
         sslCompleter.completeError(PgException(
             'Could not initialize SSL connection, connection closed during handshake.'));
       },
-      onError: (e) {
+      onError: (e, s) {
         if (sslCompleter.isCompleted) {
+          _log('psq: sub.onError', e, s);
           return;
         }
+        _log('psq: sub.onError', e, s);
         sslCompleter.completeError(e);
       },
     );
+    _log('psql: subscribed to socket stream');
 
     Stream<Uint8List> adaptedStream;
     var secure = false;
@@ -422,12 +440,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   }) : _databaseInfo = databaseInfo {
     _serverMessages = _channel.stream
         .listen(_handleMessage, onDone: _socketClosed, onError: (e, s) {
+      _log('psql: server message error, will call close', e, s);
       _close(
         true,
         PgException('Socket error: $e'),
         socketIsBroken: true,
       );
-    });
+    }, cancelOnError: true);
   }
 
   Future<void> _startup() {
@@ -581,23 +600,26 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     _socketIsBroken = _socketIsBroken || socketIsBroken;
     if (!_isClosing) {
       _isClosing = true;
-
-      if (interruptRunning) {
-        _pending?.handleConnectionClosed(cause);
-        if (!_socketIsBroken) {
-          _channel.sink.add(const TerminateMessage());
-        }
-      } else {
-        // Wait for the previous operation to complete by using the lock
-        await _operationLock.withResource(() {
+      try {
+        if (interruptRunning) {
+          _pending?.handleConnectionClosed(cause);
           if (!_socketIsBroken) {
             _channel.sink.add(const TerminateMessage());
           }
-        });
-      }
+        } else {
+          // Wait for the previous operation to complete by using the lock
+          await _operationLock.withResource(() {
+            if (!_socketIsBroken) {
+              _channel.sink.add(const TerminateMessage());
+            }
+          });
+        }
 
-      await Future.wait([_channel.sink.close(), _serverMessages.cancel()]);
-      _closeSession();
+        await Future.wait([_channel.sink.close(), _serverMessages.cancel()]);
+        _closeSession();
+      } catch (err, stack) {
+        _log('psql: error in _close(), silencing', err, stack);
+      }
     }
   }
 
