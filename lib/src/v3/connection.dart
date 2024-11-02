@@ -581,23 +581,27 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     _socketIsBroken = _socketIsBroken || socketIsBroken;
     if (!_isClosing) {
       _isClosing = true;
-
-      if (interruptRunning) {
-        _pending?.handleConnectionClosed(cause);
-        if (!_socketIsBroken) {
-          _channel.sink.add(const TerminateMessage());
-        }
-      } else {
-        // Wait for the previous operation to complete by using the lock
-        await _operationLock.withResource(() {
+      try {
+        if (interruptRunning) {
+          _pending?.handleConnectionClosed(cause);
           if (!_socketIsBroken) {
             _channel.sink.add(const TerminateMessage());
           }
-        });
-      }
+        } else {
+          // Wait for the previous operation to complete by using the lock
+          await _operationLock.withResource(() {
+            if (!_socketIsBroken) {
+              _channel.sink.add(const TerminateMessage());
+            }
+          });
+        }
 
-      await Future.wait([_channel.sink.close(), _serverMessages.cancel()]);
-      _closeSession();
+        await Future.wait([_channel.sink.close(), _serverMessages.cancel()]);
+        _closeSession();
+      } catch (err) {
+        // error in _close(), silencing since the connection is no longer
+        // usable anyway
+      }
     }
   }
 
