@@ -563,7 +563,17 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         return result;
       } catch (e) {
         if (!transaction._sessionClosed) {
-          await transaction._sendAndMarkClosed('ROLLBACK;');
+          try {
+            await transaction._sendAndMarkClosed('ROLLBACK;');
+          } catch (_) {
+            // checking the outer exception
+            if (e is PgException) {
+              // Ignore exception of rollback, as the earlier exception takes precedence.
+            } else {
+              // Do not ignore the exception here, it may be an implementation bug we are swallowing.
+              rethrow;
+            }
+          }
         }
 
         rethrow;
