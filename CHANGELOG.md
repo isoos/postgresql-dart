@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.2
+
+- Fix: When a transaction is rolled back, do not expose the exception on rollback, rather the original exception from the transaction.
+
 ## 3.4.1
 
 - Do not allow exceptions escape when closing broken connection. [#384](https://github.com/isoos/postgresql-dart/pull/384) by [pulyaevskiy](https://github.com/pulyaevskiy).
