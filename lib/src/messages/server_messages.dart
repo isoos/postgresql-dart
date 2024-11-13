@@ -182,6 +182,8 @@ class DataRowMessage extends ServerMessage {
         values.add(Uint8List(0));
       } else if (dataSize == -1) {
         values.add(null);
+      } else if (dataSize < -1) {
+        throw AssertionError('Bad data size for field $i: $dataSize');
       } else {
         final rawBytes = reader.read(dataSize);
         values.add(rawBytes);
