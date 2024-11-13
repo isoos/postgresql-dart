@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.3
+
+- Fix: prevent hanging state by forwarding protocol-level parsing errors into the message stream.
+
 ## 3.4.2
 
 - Fix: When a transaction is rolled back, do not expose the exception on rollback, rather the original exception from the transaction.

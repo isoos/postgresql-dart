@@ -70,8 +70,12 @@ StreamTransformer<Uint8List, ServerMessage> _readMessages(
       }
 
       Future<void> handleChunk(Uint8List bytes) async {
-        await framer.addBytes(bytes);
-        emitFinishedMessages();
+        try {
+          await framer.addBytes(bytes);
+          emitFinishedMessages();
+        } catch (e, st) {
+          listener.addErrorSync(e, st);
+        }
       }
 
       // Don't cancel this subscription on error! If the listener wants that,
