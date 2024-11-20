@@ -470,6 +470,39 @@ void main() {
       expect(isClosed, isTrue);
     });
   });
+
+  withPostgresServer('issue 390', (server) {
+    test(
+        'issue 390 - Cannot ALTER TABLE because it is being used by active queries in this session',
+        () async {
+      final conn = await server.newConnection();
+      const tableToAlter = 'table_to_alter';
+      const otherTable = 'other_table';
+
+      await conn.execute('''
+        CREATE TABLE $tableToAlter (
+            a_id INTEGER PRIMARY KEY NOT NULL,
+            a_other_id INTEGER NOT NULL
+        );''');
+
+      await conn.execute(
+          'CREATE TABLE $otherTable (other_id INTEGER PRIMARY KEY NOT NULL);');
+
+      await conn.runTx((tx) async {
+        // Select from the table that will be altered
+        await tx.execute('SELECT * FROM $tableToAlter;');
+
+        // Add a foreign key constraint
+        await tx.execute('''
+          ALTER TABLE $tableToAlter
+          ADD CONSTRAINT fk_other 
+            FOREIGN KEY (a_other_id) 
+              REFERENCES $otherTable(other_id);''');
+      });
+
+      // Should not throw
+    }, skip: 'investigation needed');
+  });
 }
 
 final _isPostgresException = isA<PgException>();
