@@ -2,7 +2,7 @@
 
 ## 3.4.4
 
-- Fix: explicit closing of prepared statement portals in transactions to release table locks.
+- Fix: explicit closing of prepared statement portals in transactions to release table locks. [#393](https://github.com/isoos/postgresql-dart/pull/393)
 
 ## 3.4.3
 
