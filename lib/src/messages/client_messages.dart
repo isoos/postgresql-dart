@@ -172,6 +172,9 @@ class DescribeMessage extends ClientMessage {
     buffer.writeUint8(_isPortal ? $P : $S);
     buffer.writeEncodedString(name); // Name of prepared statement
   }
+
+  @override
+  String toString() => 'DescribeMessage(name=$_name, portal=$_isPortal)';
 }
 
 class BindMessage extends ClientMessage {
@@ -248,6 +251,12 @@ class BindMessage extends ClientMessage {
     buffer.writeUint16(1);
     buffer.writeUint16(1);
   }
+
+  @override
+  String toString() => 'BindMessage(${[
+        if (_portalName.isNotEmpty) 'portal=$_portalName',
+        if (_statementName.isNotEmpty) 'stmt=$_statementName',
+      ].join(',')})';
 }
 
 class ExecuteMessage extends ClientMessage {
@@ -263,6 +272,9 @@ class ExecuteMessage extends ClientMessage {
     buffer.writeEncodedString(portalName);
     buffer.writeUint32(0);
   }
+
+  @override
+  String toString() => 'ExecuteMessage(portal=$_portalName)';
 }
 
 class CloseMessage extends ClientMessage {
@@ -288,6 +300,9 @@ class CloseMessage extends ClientMessage {
       ..writeUint8(_isForPortal ? $P : $S);
     buffer.writeEncodedString(name);
   }
+
+  @override
+  String toString() => 'CloseMessage(name=$_name, portal=$_isForPortal)';
 }
 
 class SyncMessage extends ClientMessage {
@@ -298,6 +313,9 @@ class SyncMessage extends ClientMessage {
     buffer.writeUint8(ClientMessageId.sync);
     buffer.writeUint32(4);
   }
+
+  @override
+  String toString() => 'SyncMessage';
 }
 
 class TerminateMessage extends ClientMessage {

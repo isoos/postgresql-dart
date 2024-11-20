@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -258,7 +259,6 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       ),
       async.StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
         print('[$hash][out] $msg');
-        print('[out] $msg');
         sink.add(msg);
       }),
     ));
@@ -646,6 +646,14 @@ class _PreparedStatement extends Statement {
   final String _name;
   final _PgSessionBase _session;
 
+  /// Apparently, when we are in a transaction and using extended query mode,
+  /// one needs to close the portals to release the locks on tables.
+  /// This queue will collect the portal names to close and they will be closed
+  /// when the prepared statement is disposed or a run call completes.
+  ///
+  /// See more in https://github.com/isoos/postgresql-dart/issues/390
+  Queue<String>? _portalsToClose;
+
   _PreparedStatement(this._description, this._name, this._session);
 
   @override
@@ -674,6 +682,7 @@ class _PreparedStatement extends Statement {
       );
     } finally {
       await subscription.cancel();
+      await _closePendingPortals();
     }
   }
 
@@ -681,8 +690,23 @@ class _PreparedStatement extends Statement {
   Future<void> dispose() async {
     // Don't send a dispose message if the connection is already closed.
     if (!_session._connection._isClosing) {
+      await _closePendingPortals();
       await _session._sendAndWaitForQuery<CloseCompleteMessage>(
           CloseMessage.statement(_name));
+    }
+  }
+
+  void _addPortalToClose(String portalName) {
+    _portalsToClose ??= Queue();
+    _portalsToClose!.add(portalName);
+  }
+
+  Future<void> _closePendingPortals() async {
+    final list = _portalsToClose;
+    while (list != null && list.isNotEmpty) {
+      final portalName = list.removeFirst();
+      await _session._sendAndWaitForQuery<CloseCompleteMessage>(
+          CloseMessage.portal(portalName));
     }
   }
 }
@@ -718,6 +742,7 @@ class _PgResultStreamSubscription
   final _schema = Completer<ResultSchema>();
   final _done = Completer<void>();
   ResultSchema? _resultSchema;
+  _BoundStatement? _boundStatement;
 
   @override
   PgConnectionImplementation get connection => session._connection;
@@ -729,6 +754,7 @@ class _PgResultStreamSubscription
       _BoundStatement statement, this._controller, this._source)
       : session = statement.statement._session,
         ignoreRows = false,
+        _boundStatement = statement,
         _trace = StackTrace.current {
     _scheduleStatement(() async {
       connection._pending = this;
@@ -885,6 +911,11 @@ class _PgResultStreamSubscription
         // we'll get this more than once.
         _affectedRowsSoFar += message.rowsAffected;
       case ReadyForQueryMessage():
+        // It looks like simple query protocol statements, or statements outside of a transaction
+        // do not need the portal to be closed explicitly.
+        if (message.state == ReadyForQueryMessageState.transaction) {
+          _boundStatement?.statement._addPortalToClose(_portalName);
+        }
         await _completeQuery();
       case CopyBothResponseMessage():
         // This message indicates a successful start for Streaming Replication.

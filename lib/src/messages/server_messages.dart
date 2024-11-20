@@ -270,7 +270,7 @@ class CloseCompleteMessage extends ServerMessage {
   CloseCompleteMessage();
 
   @override
-  String toString() => 'Bind Complete Message';
+  String toString() => 'Close Complete Message';
 }
 
 class ParameterDescriptionMessage extends ServerMessage {
