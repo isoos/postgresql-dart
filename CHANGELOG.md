@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.4
+
+- Fix: explicit closing of prepared statement portals in transactions to release table locks. [#393](https://github.com/isoos/postgresql-dart/pull/393)
+
 ## 3.4.3
 
 - Fix: prevent hanging state by forwarding protocol-level parsing errors into the message stream.
