@@ -582,8 +582,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   }
 
   @override
-  Future<void> close() async {
-    await _close(false, null);
+  Future<void> close({bool interruptRunning = false}) async {
+    await _close(interruptRunning, null);
   }
 
   Future<void> _close(bool interruptRunning, PgException? cause,

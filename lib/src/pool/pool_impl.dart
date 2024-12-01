@@ -41,14 +41,14 @@ class PoolImplementation<L> implements Pool<L> {
   Future<void> get closed => _semaphore.done;
 
   @override
-  Future<void> close() async {
+  Future<void> close({bool interruptRunning = false}) async {
     await _semaphore.close();
 
     // Connections are closed when they are returned to the pool if it's closed.
     // We still need to close statements that are currently unused.
     for (final connection in [..._connections]) {
-      if (!connection._isInUse) {
-        await connection._dispose();
+      if (interruptRunning || !connection._isInUse) {
+        await connection._dispose(interruptRunning: interruptRunning);
       }
     }
   }
@@ -254,9 +254,9 @@ class _PoolConnection implements Connection {
     return false;
   }
 
-  Future<void> _dispose() async {
+  Future<void> _dispose({ bool interruptRunning = false}) async {
     _pool._connections.remove(this);
-    await _connection.close();
+    await _connection.close(interruptRunning: interruptRunning);
   }
 
   @override
@@ -277,9 +277,13 @@ class _PoolConnection implements Connection {
   }
 
   @override
-  Future<void> close() async {
-    // Don't forward the close call, the underlying connection should be re-used
+  Future<void> close({bool interruptRunning = false}) async {
+    // Don't forward the close call unless interrupting. The underlying connection should be re-used
     // when another pool connection is requested.
+
+    if (interruptRunning) {
+      await _connection.close(interruptRunning: interruptRunning);
+    }
   }
 
   @override
