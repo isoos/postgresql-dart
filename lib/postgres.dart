@@ -209,7 +209,9 @@ abstract class SessionExecutor {
 
   /// Closes this session, cleaning up resources and forbiding further calls to
   /// [prepare] and [execute].
-  Future<void> close();
+  /// If [force] is set to true, the session will be closed immediately, instead
+  /// of waiting for any pending queries to finish.
+  Future<void> close({bool force = false});
 }
 
 abstract class Connection implements Session, SessionExecutor {
