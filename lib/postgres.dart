@@ -209,7 +209,7 @@ abstract class SessionExecutor {
 
   /// Closes this session, cleaning up resources and forbiding further calls to
   /// [prepare] and [execute].
-  Future<void> close({bool interruptRunning = false});
+  Future<void> close({bool force = false});
 }
 
 abstract class Connection implements Session, SessionExecutor {
