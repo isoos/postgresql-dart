@@ -21,6 +21,8 @@ class PoolImplementation<L> implements Pool<L> {
   final ResolvedPoolSettings _settings;
 
   final _connections = <_PoolConnection>[];
+  final _poolResources = <_PoolConnectionResource>[];
+
   late final _maxConnectionCount = _settings.maxConnectionCount;
   late final _semaphore = pool.Pool(
     _maxConnectionCount,
@@ -42,6 +44,13 @@ class PoolImplementation<L> implements Pool<L> {
 
   @override
   Future<void> close({bool force = false}) async {
+    // If forcing the close, release the pool resources before closing the _semaphore,
+    // otherwise the close will wait for the queries to finish.
+    if (force) {
+      for (final r in [..._poolResources]) {
+        r.release();
+      }
+    }
     await _semaphore.close();
 
     // Connections are closed when they are returned to the pool if it's closed.
@@ -131,8 +140,9 @@ class PoolImplementation<L> implements Pool<L> {
     ConnectionSettings? settings,
     L? locality,
   }) async {
-    final resource = await _semaphore.request();
-    _PoolConnection? connection;
+    final resource = await _requestResource();
+    _poolResources.add(resource);
+
     bool reuse = true;
     final sw = Stopwatch();
     try {
@@ -143,10 +153,11 @@ class PoolImplementation<L> implements Pool<L> {
 
       // Find an existing connection that is currently unused, or open another
       // one.
-      connection = await _selectOrCreate(
+      final _PoolConnection connection = await _selectOrCreate(
         selection.endpoint,
         ResolvedConnectionSettings(settings, this._settings),
       );
+      resource._connection = connection;
 
       sw.start();
       try {
@@ -156,7 +167,10 @@ class PoolImplementation<L> implements Pool<L> {
         rethrow;
       }
     } finally {
+      final connection = resource._connection;
       resource.release();
+      _poolResources.remove(resource);
+
       sw.stop();
 
       // If the pool has been closed, this connection needs to be closed as
@@ -172,6 +186,12 @@ class PoolImplementation<L> implements Pool<L> {
         }
       }
     }
+  }
+
+  Future<_PoolConnectionResource> _requestResource() async {
+    final resource = await _semaphore.request();
+    // Wrap the pool resource so that we can be aware when it's released.
+    return _PoolConnectionResource(resource);
   }
 
   Future<_PoolConnection> _selectOrCreate(
@@ -349,5 +369,25 @@ class _PoolStatement implements Statement {
     Duration? timeout,
   }) {
     return _underlying.run(parameters, timeout: timeout);
+  }
+}
+
+class _PoolConnectionResource {
+  final pool.PoolResource _poolResource;
+  bool _released = false;
+  _PoolConnection? _connection;
+
+  _PoolConnectionResource(this._poolResource);
+
+  /// Same as [PoolResource.release], but it doesn't throw if the resource has
+  /// already been released.
+  /// We might call release outside the [withConnection] block, like when force
+  /// closing the pool, so [release] would be called multiple times.
+  void release() {
+    if (_released) {
+      return;
+    }
+    _poolResource.release();
+    _released = true;
   }
 }
