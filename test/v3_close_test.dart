@@ -8,16 +8,23 @@ void main() {
     late Connection conn1;
     late Connection conn2;
 
+    const conn1Name = 'conn1';
+    const conn2Name = 'conn2';
+
     setUp(() async {
       conn1 = await Connection.open(
         await server.endpoint(),
         settings: ConnectionSettings(
-            //transformer: _loggingTransformer('c1'),
-            ),
+          applicationName: conn1Name,
+          //transformer: _loggingTransformer('c1'),
+        ),
       );
 
       conn2 = await Connection.open(
         await server.endpoint(),
+        settings: ConnectionSettings(
+          applicationName: conn2Name,
+        ),
       );
     });
 
@@ -30,9 +37,8 @@ void main() {
       test(
         'with concurrent query: $concurrentQuery',
         () async {
-          final endpoint = await server.endpoint();
           final res = await conn2.execute(
-              "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
+              "SELECT pid FROM pg_stat_activity where application_name = '$conn1Name';");
           final conn1PID = res.first.first as int;
 
           // Simulate issue by terminating a connection during a query
@@ -49,10 +55,9 @@ void main() {
     }
 
     test('with simple query protocol', () async {
-      final endpoint = await server.endpoint();
       // Get the PID for conn1
       final res = await conn2.execute(
-          "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
+          "SELECT pid FROM pg_stat_activity where application_name = '$conn1Name';");
       final conn1PID = res.first.first as int;
 
       // ignore: unawaited_futures
