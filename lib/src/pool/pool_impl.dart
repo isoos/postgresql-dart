@@ -298,7 +298,7 @@ class _PoolConnection implements Connection {
 
   @override
   Future<void> close({bool force = false}) async {
-    // Don't forward the close call unless interrupting. The underlying connection should be re-used
+    // Don't forward the close call unless forcing. The underlying connection should be re-used
     // when another pool connection is requested.
 
     if (force) {
