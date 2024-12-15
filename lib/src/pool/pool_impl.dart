@@ -41,7 +41,8 @@ class PoolImplementation<L> implements Pool<L> {
   Future<void> get closed => _semaphore.done;
 
   @override
-  Future<void> close() async {
+  Future<void> close({bool force = false}) async {
+    // TODO: Implement force close.
     await _semaphore.close();
 
     // Connections are closed when they are returned to the pool if it's closed.
@@ -277,9 +278,11 @@ class _PoolConnection implements Connection {
   }
 
   @override
-  Future<void> close() async {
+  Future<void> close({bool force = false}) async {
     // Don't forward the close call, the underlying connection should be re-used
     // when another pool connection is requested.
+
+    // TODO: Implement force close.
   }
 
   @override

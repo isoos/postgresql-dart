@@ -209,4 +209,61 @@ void main() {
       expect(name, 'myapp');
     });
   });
+
+  group(skip: 'not implemented', 'force close', () {
+    Future<Pool> openPool(PostgresServer server) async {
+      final pool = Pool.withEndpoints(
+        [await server.endpoint()],
+        settings: PoolSettings(maxConnectionCount: 1),
+      );
+      addTearDown(pool.close);
+      return pool;
+    }
+
+    Future<void> expectPoolClosesForcefully(Pool pool) async {
+      await pool
+          .close(force: true) //
+          // If close takes too long, the test will fail (force=true would not be working correctly)
+          // as it would be waiting for the query to finish
+          .timeout(Duration(seconds: 1));
+      expect(pool.isOpen, isFalse);
+    }
+
+    Future<void> runLongQuery(Session session) {
+      return session.execute('select pg_sleep(10) from pg_stat_activity;');
+    }
+
+    withPostgresServer('pool session', (server) {
+      test('', () async {
+        final pool = await openPool(server);
+        // ignore: unawaited_futures
+        runLongQuery(pool);
+        // let it start
+        await Future.delayed(const Duration(milliseconds: 100));
+        await expectPoolClosesForcefully(pool);
+      });
+    });
+
+    withPostgresServer('tx session', (server) {
+      test('', () async {
+        final pool = await openPool(server);
+        // Ignore async error, it will fail when the connection is closed and it tries to do COMMIT
+        pool.runTx(runLongQuery).ignore();
+        // let it start
+        await Future.delayed(const Duration(milliseconds: 100));
+        await expectPoolClosesForcefully(pool);
+      });
+    });
+
+    withPostgresServer('run session', (server) {
+      test('', () async {
+        final pool = await openPool(server);
+        // ignore: unawaited_futures
+        pool.run(runLongQuery);
+        // let it start
+        await Future.delayed(const Duration(milliseconds: 100));
+        await expectPoolClosesForcefully(pool);
+      });
+    });
+  });
 }

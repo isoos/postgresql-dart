@@ -8,16 +8,23 @@ void main() {
     late Connection conn1;
     late Connection conn2;
 
+    const conn1Name = 'conn1';
+    const conn2Name = 'conn2';
+
     setUp(() async {
       conn1 = await Connection.open(
         await server.endpoint(),
         settings: ConnectionSettings(
-            //transformer: _loggingTransformer('c1'),
-            ),
+          applicationName: conn1Name,
+          //transformer: _loggingTransformer('c1'),
+        ),
       );
 
       conn2 = await Connection.open(
         await server.endpoint(),
+        settings: ConnectionSettings(
+          applicationName: conn2Name,
+        ),
       );
     });
 
@@ -30,9 +37,8 @@ void main() {
       test(
         'with concurrent query: $concurrentQuery',
         () async {
-          final endpoint = await server.endpoint();
           final res = await conn2.execute(
-              "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
+              "SELECT pid FROM pg_stat_activity where application_name = '$conn1Name';");
           final conn1PID = res.first.first as int;
 
           // Simulate issue by terminating a connection during a query
@@ -49,10 +55,9 @@ void main() {
     }
 
     test('with simple query protocol', () async {
-      final endpoint = await server.endpoint();
       // Get the PID for conn1
       final res = await conn2.execute(
-          "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
+          "SELECT pid FROM pg_stat_activity where application_name = '$conn1Name';");
       final conn1PID = res.first.first as int;
 
       // ignore: unawaited_futures
@@ -63,6 +68,61 @@ void main() {
 
       await conn2.execute(
           'select pg_terminate_backend($conn1PID) from pg_stat_activity;');
+    });
+  });
+
+  group('force close', () {
+    Future<Connection> openConnection(PostgresServer server) async {
+      final conn = await Connection.open(await server.endpoint());
+      addTearDown(conn.close);
+      return conn;
+    }
+
+    Future<void> expectConn1ClosesForcefully(Connection conn) async {
+      await conn
+          .close(force: true) //
+          // If close takes too long, the test will fail (force=true would not be working correctly)
+          // as it would be waiting for the query to finish
+          .timeout(Duration(seconds: 1));
+      expect(conn.isOpen, isFalse);
+    }
+
+    Future<void> runLongQuery(Session session) {
+      return session.execute('select pg_sleep(10) from pg_stat_activity;');
+    }
+
+    withPostgresServer('connection session', (server) {
+      test('', () async {
+        final conn = await openConnection(server);
+        // ignore: unawaited_futures
+        runLongQuery(conn);
+        // let it start
+        await Future.delayed(const Duration(milliseconds: 100));
+        await expectConn1ClosesForcefully(conn);
+      });
+    });
+
+    withPostgresServer('tx session', (server) {
+      test('', () async {
+        final conn = await openConnection(server);
+        // ignore: unawaited_futures
+        // Ignore async error, it will fail when the connection is closed and it tries to do COMMIT
+        conn.runTx(runLongQuery).ignore();
+        // let it start
+        await Future.delayed(const Duration(milliseconds: 100));
+        await expectConn1ClosesForcefully(conn);
+      });
+    });
+
+    withPostgresServer('run session', (server) {
+      test('', () async {
+        final conn = await openConnection(server);
+        // ignore: unawaited_futures
+        conn.run(runLongQuery);
+        // let it start
+        await Future.delayed(const Duration(milliseconds: 100));
+        await expectConn1ClosesForcefully(conn);
+      });
     });
   });
 }
