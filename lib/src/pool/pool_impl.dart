@@ -21,8 +21,6 @@ class PoolImplementation<L> implements Pool<L> {
   final ResolvedPoolSettings _settings;
 
   final _connections = <_PoolConnection>[];
-  final _poolResources = <_PoolConnectionResource>[];
-
   late final _maxConnectionCount = _settings.maxConnectionCount;
   late final _semaphore = pool.Pool(
     _maxConnectionCount,
@@ -44,20 +42,14 @@ class PoolImplementation<L> implements Pool<L> {
 
   @override
   Future<void> close({bool force = false}) async {
-    // If forcing the close, release the pool resources before closing the _semaphore,
-    // otherwise the close will wait for the queries to finish.
-    if (force) {
-      for (final r in [..._poolResources]) {
-        r.release();
-      }
-    }
+    // TODO: Implement force close.
     await _semaphore.close();
 
     // Connections are closed when they are returned to the pool if it's closed.
     // We still need to close statements that are currently unused.
     for (final connection in [..._connections]) {
-      if (force || !connection._isInUse) {
-        await connection._dispose(force: force);
+      if (!connection._isInUse) {
+        await connection._dispose();
       }
     }
   }
@@ -140,9 +132,8 @@ class PoolImplementation<L> implements Pool<L> {
     ConnectionSettings? settings,
     L? locality,
   }) async {
-    final resource = await _requestResource();
-    _poolResources.add(resource);
-
+    final resource = await _semaphore.request();
+    _PoolConnection? connection;
     bool reuse = true;
     final sw = Stopwatch();
     try {
@@ -153,11 +144,10 @@ class PoolImplementation<L> implements Pool<L> {
 
       // Find an existing connection that is currently unused, or open another
       // one.
-      final _PoolConnection connection = await _selectOrCreate(
+      connection = await _selectOrCreate(
         selection.endpoint,
         ResolvedConnectionSettings(settings, this._settings),
       );
-      resource._connection = connection;
 
       sw.start();
       try {
@@ -167,10 +157,7 @@ class PoolImplementation<L> implements Pool<L> {
         rethrow;
       }
     } finally {
-      final connection = resource._connection;
       resource.release();
-      _poolResources.remove(resource);
-
       sw.stop();
 
       // If the pool has been closed, this connection needs to be closed as
@@ -186,12 +173,6 @@ class PoolImplementation<L> implements Pool<L> {
         }
       }
     }
-  }
-
-  Future<_PoolConnectionResource> _requestResource() async {
-    final resource = await _semaphore.request();
-    // Wrap the pool resource so that we can be aware when it's released.
-    return _PoolConnectionResource(resource);
   }
 
   Future<_PoolConnection> _selectOrCreate(
@@ -274,9 +255,9 @@ class _PoolConnection implements Connection {
     return false;
   }
 
-  Future<void> _dispose({bool force = false}) async {
+  Future<void> _dispose() async {
     _pool._connections.remove(this);
-    await _connection.close(force: force);
+    await _connection.close();
   }
 
   @override
@@ -298,12 +279,10 @@ class _PoolConnection implements Connection {
 
   @override
   Future<void> close({bool force = false}) async {
-    // Don't forward the close call unless forcing. The underlying connection should be re-used
+    // Don't forward the close call, the underlying connection should be re-used
     // when another pool connection is requested.
 
-    if (force) {
-      await _connection.close(force: force);
-    }
+    // TODO: Implement force close.
   }
 
   @override
@@ -369,25 +348,5 @@ class _PoolStatement implements Statement {
     Duration? timeout,
   }) {
     return _underlying.run(parameters, timeout: timeout);
-  }
-}
-
-class _PoolConnectionResource {
-  final pool.PoolResource _poolResource;
-  bool _released = false;
-  _PoolConnection? _connection;
-
-  _PoolConnectionResource(this._poolResource);
-
-  /// Same as [PoolResource.release], but it doesn't throw if the resource has
-  /// already been released.
-  /// We might call release outside the [withConnection] block, like when force
-  /// closing the pool, so [release] would be called multiple times.
-  void release() {
-    if (_released) {
-      return;
-    }
-    _poolResource.release();
-    _released = true;
   }
 }

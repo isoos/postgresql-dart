@@ -210,7 +210,7 @@ void main() {
     });
   });
 
-  group('force close', () {
+  group(skip: 'not implemented', 'force close', () {
     Future<Pool> openPool(PostgresServer server) async {
       final pool = Pool.withEndpoints(
         [await server.endpoint()],
