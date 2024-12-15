@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.5
+
+- `close(force: true)` to indicate intent to force-close pending queries and resources. [#396](https://github.com/isoos/postgresql-dart/pull/396) by [davidmartos96](https://github.com/davidmartos96)
+
 ## 3.4.4
 
 - Fix: explicit closing of prepared statement portals in transactions to release table locks. [#393](https://github.com/isoos/postgresql-dart/pull/393)
