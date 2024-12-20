@@ -69,9 +69,9 @@ StreamTransformer<Uint8List, ServerMessage> _readMessages(
         }
       }
 
-      Future<void> handleChunk(Uint8List bytes) async {
+      Future<void> handleChunk() async {
         try {
-          await framer.addBytes(bytes);
+          // await framer.addBytes(bytes);
           emitFinishedMessages();
         } catch (e, st) {
           listener.addErrorSync(e, st);
@@ -80,10 +80,12 @@ StreamTransformer<Uint8List, ServerMessage> _readMessages(
 
       // Don't cancel this subscription on error! If the listener wants that,
       // they'll unsubscribe in time after we forward it synchronously.
-      final rawSubscription =
-          rawStream.listen(handleChunk, cancelOnError: false)
-            ..onError(listener.addErrorSync)
-            ..onDone(listener.closeSync);
+      final rawSubscription = rawStream
+          // TODO: figure out a better way to handle multiple callbacks to framer
+          .asyncMap(framer.addBytes)
+          .listen((_) => handleChunk(), cancelOnError: false)
+        ..onError(listener.addErrorSync)
+        ..onDone(listener.closeSync);
 
       listener.onPause = () {
         paused = true;
