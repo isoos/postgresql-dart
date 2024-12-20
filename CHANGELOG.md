@@ -3,6 +3,7 @@
 ## 3.4.5
 
 - `close(force: true)` to indicate intent to force-close pending queries and resources. [#396](https://github.com/isoos/postgresql-dart/pull/396) by [davidmartos96](https://github.com/davidmartos96)
+- Fix: multiple message processing overlap bug when SSL mode was `disabled`.
 
 ## 3.4.4
 

@@ -69,8 +69,18 @@ void main() {
       _print('Inserted ${numBatches * batchSize} rows in ${sw.elapsed}');
     }
 
-    test('issue#398', () async {
-      final conn = await server.newConnection();
+    test('issue#398 ssl:disabled', () async {
+      final conn = await server.newConnection(sslMode: SslMode.disable);
+      await createTableAndPopulate(conn);
+
+      final rows = await conn.execute('SELECT * FROM large_table');
+      _print('SELECTED ROWS ${rows.length}');
+
+      await conn.close();
+    });
+
+    test('issue#398 ssl:require', () async {
+      final conn = await server.newConnection(sslMode: SslMode.require);
       await createTableAndPopulate(conn);
 
       final rows = await conn.execute('SELECT * FROM large_table');
