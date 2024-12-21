@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 
@@ -92,36 +94,54 @@ void main() {
     }
 
     withPostgresServer('connection session', (server) {
-      test('', () async {
+      test('connection session', () async {
         final conn = await openConnection(server);
-        // ignore: unawaited_futures
-        runLongQuery(conn);
+        final rs = runLongQuery(conn);
         // let it start
         await Future.delayed(const Duration(milliseconds: 100));
         await expectConn1ClosesForcefully(conn);
+
+        // TODO: this should be throwing PgException
+        await expectLater(() => rs, isNotNull);
       });
     });
 
     withPostgresServer('tx session', (server) {
-      test('', () async {
+      test('tx', () async {
         final conn = await openConnection(server);
-        // ignore: unawaited_futures
-        // Ignore async error, it will fail when the connection is closed and it tries to do COMMIT
-        conn.runTx(runLongQuery).ignore();
+        final started = Completer();
+        final rs = conn.runTx((tx) async {
+          started.complete();
+          await runLongQuery(tx);
+        })
+            // Ignore async error, it will fail when the connection is closed and it tries to do COMMIT
+            // TODO: remove this ignore
+            .ignore();
         // let it start
+        await started.future;
         await Future.delayed(const Duration(milliseconds: 100));
         await expectConn1ClosesForcefully(conn);
+
+        // TODO: this should be throwing PgException
+        await expectLater(() => rs, isNotNull);
       });
     });
 
     withPostgresServer('run session', (server) {
-      test('', () async {
+      test('run', () async {
         final conn = await openConnection(server);
-        // ignore: unawaited_futures
-        conn.run(runLongQuery);
+        final started = Completer();
+        final rs = conn.run((s) async {
+          started.complete();
+          await runLongQuery(s);
+        });
         // let it start
+        await started.future;
         await Future.delayed(const Duration(milliseconds: 100));
         await expectConn1ClosesForcefully(conn);
+
+        // TODO: this should be throwing PgException
+        await expectLater(() => rs, isNotNull);
       });
     });
   });
