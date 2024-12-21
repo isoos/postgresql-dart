@@ -21,6 +21,7 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
   67: (r, _) => CommandCompleteMessage.parse(r),
   68: (r, _) => DataRowMessage.parse(r),
   69: ErrorResponseMessage.parse,
+  73: (_, __) => EmptyQueryResponseMessage(),
   75: (r, _) => BackendKeyMessage.parse(r),
   82: AuthenticationMessage.parse,
   83: (r, l) => ParameterStatusMessage.parse(r),

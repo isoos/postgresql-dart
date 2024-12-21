@@ -449,6 +449,13 @@ Future<XLogDataMessage> parseXLogDataMessage(
   }
 }
 
+class EmptyQueryResponseMessage extends ServerMessage {
+  EmptyQueryResponseMessage();
+
+  @override
+  String toString() => 'EmptyQueryResponseMessage()';
+}
+
 class UnknownMessage extends ServerMessage {
   final int code;
   final Uint8List bytes;
@@ -476,6 +483,9 @@ class UnknownMessage extends ServerMessage {
     }
     return true;
   }
+
+  @override
+  String toString() => 'UnknownMessage($code, length=${bytes.length})';
 }
 
 abstract class ErrorFieldId {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.6
+
+- Fix: do not close connection after an empty statement.
+
 ## 3.4.5
 
 - `close(force: true)` to indicate intent to force-close pending queries and resources. [#396](https://github.com/isoos/postgresql-dart/pull/396) by [davidmartos96](https://github.com/davidmartos96)
