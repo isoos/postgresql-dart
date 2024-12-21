@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
@@ -35,76 +34,95 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
   $N: NoticeMessage.parse,
 };
 
-class MessageFramer {
+class _BytesFrame {
+  final int type;
+  final int length;
+  final Uint8List bytes;
+
+  _BytesFrame(this.type, this.length, this.bytes);
+}
+
+StreamTransformer<Uint8List, ServerMessage> bytesToMessageParser() {
+  return StreamTransformer<Uint8List, ServerMessage>.fromHandlers(
+    handleData: (data, sink) {},
+  );
+}
+
+final _emptyData = Uint8List(0);
+
+class _BytesToFrameParser
+    extends StreamTransformerBase<Uint8List, _BytesFrame> {
   final CodecContext _codecContext;
-  late final _reader = PgByteDataReader(codecContext: _codecContext);
-  final messageQueue = Queue<ServerMessage>();
 
-  MessageFramer(this._codecContext);
+  _BytesToFrameParser(this._codecContext);
 
-  int? _type;
-  int _expectedLength = 0;
+  @override
+  Stream<_BytesFrame> bind(Stream<Uint8List> stream) async* {
+    final reader = PgByteDataReader(codecContext: _codecContext);
 
-  bool get _hasReadHeader => _type != null;
-  bool get _canReadHeader => _reader.remainingLength >= _headerByteSize;
+    int? type;
+    int expectedLength = 0;
 
-  bool get _isComplete =>
-      _expectedLength == 0 || _expectedLength <= _reader.remainingLength;
+    await for (final bytes in stream) {
+      reader.add(bytes);
 
-  Future<void> addBytes(Uint8List bytes) async {
-    _reader.add(bytes);
+      while (true) {
+        if (type == null && reader.remainingLength >= _headerByteSize) {
+          type = reader.readUint8();
+          expectedLength = reader.readUint32() - 4;
+        }
 
-    while (true) {
-      if (!_hasReadHeader && _canReadHeader) {
-        _type = _reader.readUint8();
-        _expectedLength = _reader.readUint32() - 4;
-      }
-
-      // special case
-      if (_type == SharedMessageId.copyDone) {
-        // unlike other messages, CopyDoneMessage only takes the length as an
-        // argument (must be the full length including the length bytes)
-        final msg = CopyDoneMessage(_expectedLength + 4);
-        _addMsg(msg);
-        continue;
-      }
-
-      if (_hasReadHeader && _isComplete) {
-        final msgMaker = _messageTypeMap[_type];
-        if (msgMaker == null) {
-          _addMsg(UnknownMessage(_type!, _reader.read(_expectedLength)));
+        // special case
+        if (type == SharedMessageId.copyDone) {
+          // unlike other messages, CopyDoneMessage only takes the length as an
+          // argument (must be the full length including the length bytes)
+          yield _BytesFrame(type!, expectedLength, _emptyData);
+          type = null;
+          expectedLength = 0;
           continue;
         }
 
-        final targetRemainingLength = _reader.remainingLength - _expectedLength;
-        final msg = await msgMaker(_reader, _expectedLength);
-        if (_reader.remainingLength > targetRemainingLength) {
-          throw StateError(
-              'Message parser consumed more bytes than expected. type=$_type expectedLength=$_expectedLength');
-        }
-        // consume the rest of the message
-        if (_reader.remainingLength < targetRemainingLength) {
-          _reader.read(targetRemainingLength - _reader.remainingLength);
+        if (type != null && expectedLength <= reader.remainingLength) {
+          final data = reader.read(expectedLength);
+          yield _BytesFrame(type, expectedLength, data);
+          type = null;
+          expectedLength = 0;
+          continue;
         }
 
-        _addMsg(msg);
-        continue;
+        break;
       }
-
-      break;
     }
   }
+}
 
-  void _addMsg(ServerMessage msg) {
-    messageQueue.add(msg);
-    _type = null;
-    _expectedLength = 0;
-  }
+class BytesToMessageParser
+    extends StreamTransformerBase<Uint8List, ServerMessage> {
+  final CodecContext _codecContext;
 
-  bool get hasMessage => messageQueue.isNotEmpty;
+  BytesToMessageParser(this._codecContext);
 
-  ServerMessage popMessage() {
-    return messageQueue.removeFirst();
+  @override
+  Stream<ServerMessage> bind(Stream<Uint8List> stream) {
+    return stream
+        .transform(_BytesToFrameParser(_codecContext))
+        .asyncMap((frame) async {
+      // special case
+      if (frame.type == SharedMessageId.copyDone) {
+        // unlike other messages, CopyDoneMessage only takes the length as an
+        // argument (must be the full length including the length bytes)
+        return CopyDoneMessage(frame.length + 4);
+      }
+
+      final msgMaker = _messageTypeMap[frame.type];
+      if (msgMaker == null) {
+        return UnknownMessage(frame.type, frame.bytes);
+      }
+
+      return await msgMaker(
+          PgByteDataReader(codecContext: _codecContext)..add(frame.bytes),
+          frame.bytes.length);
+    });
   }
 }
 

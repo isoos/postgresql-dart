@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:typed_data';
-
 import 'package:async/async.dart';
 import 'package:postgres/src/types/codec.dart';
 import 'package:stream_channel/stream_channel.dart';
@@ -8,7 +5,6 @@ import 'package:stream_channel/stream_channel.dart';
 import '../buffer.dart';
 import '../message_window.dart';
 import '../messages/client_messages.dart';
-import '../messages/server_messages.dart';
 import '../messages/shared_messages.dart';
 
 export '../messages/client_messages.dart';
@@ -36,7 +32,7 @@ class AggregatedClientMessage extends ClientMessage {
 StreamChannelTransformer<Message, List<int>> messageTransformer(
     CodecContext codecContext) {
   return StreamChannelTransformer(
-    _readMessages(codecContext),
+    BytesToMessageParser(codecContext),
     StreamSinkTransformer.fromHandlers(
       handleData: (message, out) {
         if (message is! ClientMessage) {
@@ -51,60 +47,4 @@ StreamChannelTransformer<Message, List<int>> messageTransformer(
       },
     ),
   );
-}
-
-StreamTransformer<Uint8List, ServerMessage> _readMessages(
-    CodecContext codecContext) {
-  return StreamTransformer.fromBind((rawStream) {
-    return Stream.multi((listener) {
-      final framer = MessageFramer(codecContext);
-
-      var paused = false;
-
-      void emitFinishedMessages() {
-        while (framer.hasMessage) {
-          listener.addSync(framer.popMessage());
-
-          if (paused) break;
-        }
-      }
-
-      Future<void> handleChunk() async {
-        try {
-          // await framer.addBytes(bytes);
-          emitFinishedMessages();
-        } catch (e, st) {
-          listener.addErrorSync(e, st);
-        }
-      }
-
-      // Don't cancel this subscription on error! If the listener wants that,
-      // they'll unsubscribe in time after we forward it synchronously.
-      final rawSubscription = rawStream
-          // TODO: figure out a better way to handle multiple callbacks to framer
-          .asyncMap(framer.addBytes)
-          .listen((_) => handleChunk(), cancelOnError: false)
-        ..onError(listener.addErrorSync)
-        ..onDone(listener.closeSync);
-
-      listener.onPause = () {
-        paused = true;
-        rawSubscription.pause();
-      };
-
-      listener.onResume = () {
-        paused = false;
-        emitFinishedMessages();
-
-        if (!paused) {
-          rawSubscription.resume();
-        }
-      };
-
-      listener.onCancel = () {
-        paused = true;
-        rawSubscription.cancel();
-      };
-    });
-  });
 }
