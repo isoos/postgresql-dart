@@ -71,6 +71,13 @@ void main() {
       await conn2.execute(
           'select pg_terminate_backend($conn1PID) from pg_stat_activity;');
     });
+
+    test('empty query does not close connection', () async {
+      await conn1.execute('-- test');
+      expect(await conn1.execute('SELECT 1'), [
+        [1]
+      ]);
+    });
   });
 
   group('force close', () {

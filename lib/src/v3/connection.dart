@@ -926,6 +926,8 @@ class _PgResultStreamSubscription
         // TODO(osaxma): Prevent executing queries when Streaming Replication
         //               is ongoing
         await _completeQuery();
+      case EmptyQueryResponseMessage():
+        break;
       default:
         // Unexpected message - either a severe bug in this package or in the
         // connection. We better close it.
