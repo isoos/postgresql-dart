@@ -4,6 +4,7 @@
 
 - Fix: do not close connection after an empty statement.
 - Fix: `close(force: true)` does not cause uncaught exception.
+- Implemented `Pool.close(force: true)` (using [davidmartos96](https://github.com/davidmartos96)'s [#397](https://github.com/isoos/postgresql-dart/pull/397) as baseline).
 
 ## 3.4.5
 
