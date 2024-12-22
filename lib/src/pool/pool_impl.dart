@@ -30,28 +30,31 @@ class PoolImplementation<L> implements Pool<L> {
     1,
     timeout: _settings.connectTimeout,
   );
+  bool _closing = false;
 
   PoolImplementation(this._selector, PoolSettings? settings)
       : _settings = ResolvedPoolSettings(settings);
 
   @override
-  bool get isOpen => !_semaphore.isClosed;
+  bool get isOpen => !_closing;
 
   @override
   Future<void> get closed => _semaphore.done;
 
   @override
   Future<void> close({bool force = false}) async {
-    // TODO: Implement force close.
-    await _semaphore.close();
+    _closing = true;
+    final semaphoreFuture = _semaphore.close();
 
     // Connections are closed when they are returned to the pool if it's closed.
     // We still need to close statements that are currently unused.
     for (final connection in [..._connections]) {
-      if (!connection._isInUse) {
-        await connection._dispose();
+      if (force || !connection._isInUse) {
+        await connection._dispose(force: force);
       }
     }
+
+    await semaphoreFuture;
   }
 
   @override
@@ -164,7 +167,7 @@ class PoolImplementation<L> implements Pool<L> {
       // well.
       if (connection != null) {
         connection._elapsedInUse += sw.elapsed;
-        if (_semaphore.isClosed || !reuse || !connection.isOpen) {
+        if (_closing || !reuse || !connection.isOpen) {
           await connection._dispose();
         } else {
           // Allow the connection to be re-used later.
@@ -255,9 +258,9 @@ class _PoolConnection implements Connection {
     return false;
   }
 
-  Future<void> _dispose() async {
+  Future<void> _dispose({bool force = false}) async {
     _pool._connections.remove(this);
-    await _connection.close();
+    await _connection.close(force: force);
   }
 
   @override
