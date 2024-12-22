@@ -583,7 +583,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   @override
   Future<void> close({bool force = false}) async {
-    await _close(force, null);
+    final ex = force ? PgException('Connection closed.') : null;
+    await _close(force, ex);
   }
 
   Future<void> _close(bool interruptRunning, PgException? cause,
@@ -594,9 +595,6 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       try {
         if (interruptRunning) {
           _pending?.handleConnectionClosed(cause);
-          if (!_socketIsBroken) {
-            _channel.sink.add(const TerminateMessage());
-          }
         } else {
           // Wait for the previous operation to complete by using the lock
           await _operationLock.withResource(() {
@@ -823,8 +821,6 @@ class _PgResultStreamSubscription
   Future<ResultSchema> get schema => _schema.future;
 
   Future<void> _completeQuery() async {
-    _done.complete();
-
     // Make sure the affectedRows and schema futures complete with something
     // after the query is done, even if we didn't get a row description
     // message.
@@ -834,6 +830,7 @@ class _PgResultStreamSubscription
     if (!_schema.isCompleted) {
       _schema.complete(ResultSchema(const []));
     }
+    _done.complete();
     await _controller.close();
   }
 

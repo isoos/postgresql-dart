@@ -108,8 +108,7 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 100));
         await expectConn1ClosesForcefully(conn);
 
-        // TODO: this should be throwing PgException
-        await expectLater(() => rs, isNotNull);
+        await expectLater(() => rs, throwsA(isA<PgException>()));
       });
     });
 
@@ -120,17 +119,13 @@ void main() {
         final rs = conn.runTx((tx) async {
           started.complete();
           await runLongQuery(tx);
-        })
-            // Ignore async error, it will fail when the connection is closed and it tries to do COMMIT
-            // TODO: remove this ignore
-            .ignore();
+        });
         // let it start
         await started.future;
         await Future.delayed(const Duration(milliseconds: 100));
         await expectConn1ClosesForcefully(conn);
 
-        // TODO: this should be throwing PgException
-        await expectLater(() => rs, isNotNull);
+        await expectLater(() => rs, throwsA(isA<PgException>()));
       });
     });
 
@@ -147,8 +142,7 @@ void main() {
         await Future.delayed(const Duration(milliseconds: 100));
         await expectConn1ClosesForcefully(conn);
 
-        // TODO: this should be throwing PgException
-        await expectLater(() => rs, isNotNull);
+        await expectLater(() => rs, throwsA(isA<PgException>()));
       });
     });
   });
