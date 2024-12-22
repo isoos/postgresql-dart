@@ -3,6 +3,7 @@
 ## 3.4.6
 
 - Fix: do not close connection after an empty statement.
+- Fix: `close(force: true)` does not cause uncaught exception.
 
 ## 3.4.5
 
