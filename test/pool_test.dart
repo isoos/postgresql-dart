@@ -267,5 +267,21 @@ void main() {
         await expectLater(() => rs, throwsA(isA<PgException>()));
       });
     });
+
+    withPostgresServer('inner connection close', (server) {
+      test('connection from inside withConnection', () async {
+        final pool = await openPool(server);
+        final rs = pool.withConnection((c) async {
+          await Future.wait([
+            Future.delayed(
+              Duration(milliseconds: 200),
+              () => c.close(force: true),
+            ),
+            runLongQuery(c),
+          ]);
+        });
+        await expectLater(() => rs, throwsA(isA<PgException>()));
+      });
+    });
   });
 }
