@@ -8,6 +8,7 @@ import 'package:async/async.dart' as async;
 import 'package:charcode/ascii.dart';
 import 'package:meta/meta.dart';
 import 'package:pool/pool.dart' as pool;
+import 'package:stack_trace/stack_trace.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
@@ -183,6 +184,7 @@ abstract class _PgSessionBase implements Session {
   }
 
   Future<_PreparedStatement> _prepare(Object query) async {
+    final trace = Trace.current();
     final conn = _connection;
     final name = 's/${conn._statementCounter++}';
     final description = InternalQueryDescription.wrap(
@@ -196,7 +198,7 @@ abstract class _PgSessionBase implements Session {
       typeOids: description.parameterTypes?.map((e) => e?.oid).toList(),
     ));
 
-    return _PreparedStatement(description, name, this);
+    return _PreparedStatement(description, name, this, trace);
   }
 }
 
@@ -652,7 +654,9 @@ class _PreparedStatement extends Statement {
   /// See more in https://github.com/isoos/postgresql-dart/issues/390
   Queue<String>? _portalsToClose;
 
-  _PreparedStatement(this._description, this._name, this._session);
+  final Trace _trace;
+
+  _PreparedStatement(this._description, this._name, this._session, this._trace);
 
   @override
   ResultStream bind(Object? parameters) {
@@ -753,7 +757,7 @@ class _PgResultStreamSubscription
       : session = statement.statement._session,
         ignoreRows = false,
         _boundStatement = statement,
-        _trace = StackTrace.current {
+        _trace = Chain([Trace.current(), statement.statement._trace]) {
     _scheduleStatement(() async {
       connection._pending = this;
 

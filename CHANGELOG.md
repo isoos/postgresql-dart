@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.9
+
+- Better exception stacktraces (in some cases) using `package:stack_trace`.
+
 ## 3.4.8
 
 - Fix: Don't ignore de pool resource `close` call when using foce. [#406](https://github.com/isoos/postgresql-dart/pull/406) by [davidmartos96](https://github.com/davidmartos96).
