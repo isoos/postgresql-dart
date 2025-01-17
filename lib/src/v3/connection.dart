@@ -750,14 +750,16 @@ class _PgResultStreamSubscription
   PgConnectionImplementation get connection => session._connection;
 
   late final _portalName = 'p/${connection._portalCounter++}';
-  final StackTrace _trace;
+  final Trace? _parentTrace;
+  final Trace _callerTrace;
 
   _PgResultStreamSubscription(
       _BoundStatement statement, this._controller, this._source)
       : session = statement.statement._session,
         ignoreRows = false,
         _boundStatement = statement,
-        _trace = Chain([Trace.current(), statement.statement._trace]) {
+        _parentTrace = statement.statement._trace,
+        _callerTrace = Trace.current() {
     _scheduleStatement(() async {
       connection._pending = this;
 
@@ -795,7 +797,8 @@ class _PgResultStreamSubscription
     this._source,
     this.ignoreRows, {
     void Function()? cleanup,
-  }) : _trace = StackTrace.current {
+  })  : _parentTrace = null,
+        _callerTrace = Trace.current() {
     _scheduleStatement(() async {
       connection._pending = this;
 
@@ -838,17 +841,23 @@ class _PgResultStreamSubscription
     await _controller.close();
   }
 
+  StackTrace _trace() => Chain([
+        Trace.current(1),
+        _callerTrace,
+        if (_parentTrace != null) _parentTrace!,
+      ]);
+
   @override
   void handleConnectionClosed(PgException? dueToException) {
     if (dueToException != null) {
-      _controller.addError(dueToException, _trace);
+      _controller.addError(dueToException, _trace());
     }
     _completeQuery();
   }
 
   @override
   void handleError(PgException exception) {
-    _controller.addError(exception, _trace);
+    _controller.addError(exception, _trace());
   }
 
   @override
