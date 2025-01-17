@@ -421,6 +421,7 @@ class TupleDataColumn {
 
   @override
   String toString() =>
+      // ignore: deprecated_member_use_from_same_package
       'TupleDataColumn(typeId: $typeId, length: $length, data: $data)';
 }
 
