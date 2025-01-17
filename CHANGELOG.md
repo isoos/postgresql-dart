@@ -3,6 +3,7 @@
 ## 3.4.9
 
 - Better exception stacktraces (in some cases) using `package:stack_trace`.
+- With that dependency, upgraded minimum SDK to `3.4`.
 
 ## 3.4.8
 

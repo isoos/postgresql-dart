@@ -66,11 +66,11 @@ class StartupMessage extends ClientMessage {
       (e('client_encoding'), buffer.encodingName),
       (e('database'), e(_databaseName)),
       (e('TimeZone'), e(_timeZone)),
-      if (_username != null) (e('user'), e(_username!)),
+      if (_username != null) (e('user'), e(_username)),
       if (_replication != ReplicationMode.none.value)
         (e('replication'), e(_replication)),
       if (_applicationName != null)
-        (e('application_name'), e(_applicationName!)),
+        (e('application_name'), e(_applicationName)),
     ];
 
     final propertiesLength = properties

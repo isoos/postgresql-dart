@@ -844,7 +844,7 @@ class _PgResultStreamSubscription
   StackTrace _trace() => Chain([
         Trace.current(1),
         _callerTrace,
-        if (_parentTrace != null) _parentTrace!,
+        if (_parentTrace != null) _parentTrace,
       ]);
 
   @override
