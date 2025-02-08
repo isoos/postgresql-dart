@@ -943,8 +943,10 @@ class PostgresBinaryDecoder {
     );
   }
 
-  static List<V> readListBytes<V>(Uint8List data,
-      V Function(ByteDataReader reader, int length) valueDecoder) {
+  static List<V?> readListBytes<V>(
+    Uint8List data,
+    V Function(ByteDataReader reader, int length) valueDecoder,
+  ) {
     if (data.length < 16) {
       return [];
     }
@@ -952,17 +954,25 @@ class PostgresBinaryDecoder {
     final reader = ByteDataReader()..add(data);
     reader.read(12); // header
 
-    final decoded = [].cast<V>();
+    final decoded = <V?>[];
     final size = reader.readInt32();
 
     reader.read(4); // index
 
+    bool hasNull = false;
     for (var i = 0; i < size; i++) {
       final len = reader.readInt32();
-      decoded.add(valueDecoder(reader, len));
+      if (len == -1) {
+        decoded.add(null);
+        hasNull = true;
+      } else {
+        final v = valueDecoder(reader, len);
+        decoded.add(v);
+        hasNull = hasNull || (v == null);
+      }
     }
 
-    return decoded;
+    return hasNull ? decoded : decoded.cast<V>();
   }
 
   /// Decode numeric / decimal to String without loosing precision.

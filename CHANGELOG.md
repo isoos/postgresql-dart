@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.1
+
+- Fix: `ARRAY_AGG` (and other arrays) may return `[null]`.
+
 ## 3.5.0
 
 - Better exception stacktraces (in some cases) using `package:stack_trace`.
