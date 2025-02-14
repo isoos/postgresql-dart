@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.2
+
+- Fix: `Pool` connection timeout does not rely on `package:pool`'s timeout, instead uses a separate `Timer`.
+
 ## 3.5.1
 
 - Fix: `ARRAY_AGG` (and other arrays) may return `[null]`.

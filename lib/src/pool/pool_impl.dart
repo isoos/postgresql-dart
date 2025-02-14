@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:pool/pool.dart' as pool;
+import 'package:postgres/src/utils/package_pool_ext.dart';
 
 import '../../postgres.dart';
 import '../v3/connection.dart';
@@ -22,14 +23,8 @@ class PoolImplementation<L> implements Pool<L> {
 
   final _connections = <_PoolConnection>[];
   late final _maxConnectionCount = _settings.maxConnectionCount;
-  late final _semaphore = pool.Pool(
-    _maxConnectionCount,
-    timeout: _settings.connectTimeout,
-  );
-  late final _connectLock = pool.Pool(
-    1,
-    timeout: _settings.connectTimeout,
-  );
+  late final _semaphore = pool.Pool(_maxConnectionCount);
+  late final _connectLock = pool.Pool(1);
   bool _closing = false;
 
   PoolImplementation(this._selector, PoolSettings? settings)
@@ -135,7 +130,8 @@ class PoolImplementation<L> implements Pool<L> {
     ConnectionSettings? settings,
     L? locality,
   }) async {
-    final resource = await _semaphore.request();
+    final resource =
+        await _semaphore.requestWithTimeout(_settings.connectTimeout);
     _PoolConnection? connection;
     bool reuse = true;
     final sw = Stopwatch();
@@ -189,7 +185,8 @@ class PoolImplementation<L> implements Pool<L> {
       return oldc;
     }
 
-    return await _connectLock.withResource(() async {
+    return await _connectLock
+        .withRequestTimeout(timeout: _settings.connectTimeout, (_) async {
       while (_connections.length >= _maxConnectionCount) {
         final candidates =
             _connections.where((c) => c._isInUse == false).toList();
