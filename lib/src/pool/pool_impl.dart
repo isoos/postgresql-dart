@@ -177,7 +177,7 @@ class PoolImplementation<L> implements Pool<L> {
   Future<_PoolConnection> _selectOrCreate(
       Endpoint endpoint, ResolvedConnectionSettings settings) async {
     final oldc =
-        _connections.firstWhereOrNull((c) => c._mayReuse(endpoint, settings));
+        _connections.firstWhereOrNull((c) => c._mayReuse(endpoint, settings) && c.isOpen);
     if (oldc != null) {
       // NOTE: It is important to update the _isInUse flag here, otherwise
       //       race conditions may create conflicts.
