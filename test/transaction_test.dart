@@ -700,7 +700,7 @@ void main() {
             // ignore
           }
         }),
-        throwsA(isA<ServerException>()),
+        throwsA(isA<DuplicateKeyException>()),
       );
     });
   });
