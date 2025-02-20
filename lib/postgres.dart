@@ -15,7 +15,13 @@ import 'src/v3/protocol.dart';
 import 'src/v3/query_description.dart';
 
 export 'src/exceptions.dart'
-    show BadCertificateException, Severity, PgException, ServerException;
+    show
+        BadCertificateException,
+        Severity,
+        PgException,
+        ServerException,
+        DuplicateKeyException,
+        ForeignKeyViolationException;
 export 'src/pool/pool_api.dart';
 export 'src/replication.dart';
 export 'src/types.dart';
@@ -225,6 +231,7 @@ abstract class Connection implements Session, SessionExecutor {
   }
 
   ConnectionInfo get info;
+
   Channels get channels;
 }
 

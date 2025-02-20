@@ -191,13 +191,15 @@ ServerException buildExceptionFromErrorFields(List<ErrorField> errorFields) {
 }
 
 PgException transformServerException(ServerException ex) {
-  if (ex.code == '57014') {
-    return _PgQueryCancelledException(
-      ['${ex.code}:', ex.message, ex.trace].whereType<String>().join(' '),
-      severity: ex.severity,
-    );
-  }
-  return ex;
+  return switch (ex.code) {
+    '23505' => DuplicateKeyException(ex.message, severity: ex.severity),
+    '23503' => ForeignKeyViolationException(ex.message, severity: ex.severity),
+    '57014' => _PgQueryCancelledException(
+        ['${ex.code}:', ex.message, ex.trace].whereType<String>().join(' '),
+        severity: ex.severity,
+      ),
+    _ => ex,
+  };
 }
 
 class _PgQueryCancelledException extends PgException
@@ -206,6 +208,20 @@ class _PgQueryCancelledException extends PgException
   late final duration = null;
 
   _PgQueryCancelledException(
+    super.message, {
+    required super.severity,
+  });
+}
+
+class DuplicateKeyException extends PgException {
+  DuplicateKeyException(
+    super.message, {
+    required super.severity,
+  });
+}
+
+class ForeignKeyViolationException extends PgException {
+  ForeignKeyViolationException(
     super.message, {
     required super.severity,
   });
