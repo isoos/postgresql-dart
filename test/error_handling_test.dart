@@ -67,5 +67,46 @@ void main() {
         ),
       );
     });
+
+    test('DuplicateKeyException', () async {
+      final c = await server.newConnection();
+      await c.execute('CREATE TABLE test (id INT PRIMARY KEY);');
+      await c.execute('INSERT INTO test (id) VALUES (1);');
+      addTearDown(() async => c.execute('DROP TABLE test;'));
+
+      try {
+        await c.execute('INSERT INTO test (id) VALUES (1);');
+      } catch (e) {
+        expect(e, isA<DuplicateKeyException>());
+        expect(
+            e.toString(),
+            contains(
+                'duplicate key value violates unique constraint "test_pkey"'));
+      }
+    });
+
+    test('ForeignKeyViolationException', () async {
+      final c = await server.newConnection();
+      await c.execute('CREATE TABLE test (id INT PRIMARY KEY);');
+      await c.execute(
+          'CREATE TABLE test2 (id INT PRIMARY KEY, test_id INT REFERENCES test(id));');
+      await c.execute('INSERT INTO test (id) VALUES (1);');
+      addTearDown(() async {
+        await c.execute('DROP TABLE test2;');
+        await c.execute('DROP TABLE test;');
+      });
+
+      try {
+        await c.execute('INSERT INTO test2 (id, test_id) VALUES (1, 2);');
+      } catch (e) {
+        expect(e, isA<ForeignKeyViolationException>());
+        expect(
+          e.toString(),
+          contains(
+            'insert or update on table "test2" violates foreign key constraint "test2_test_id_fkey"',
+          ),
+        );
+      }
+    });
   });
 }
