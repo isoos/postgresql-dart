@@ -138,6 +138,27 @@ class ServerException extends PgException {
     this.routineName,
   });
 
+  ServerException._from(ServerException original)
+      : this._(
+          original.message,
+          severity: original.severity,
+          position: original.position,
+          internalPosition: original.internalPosition,
+          lineNumber: original.lineNumber,
+          code: original.code,
+          detail: original.detail,
+          hint: original.hint,
+          internalQuery: original.internalQuery,
+          trace: original.trace,
+          schemaName: original.schemaName,
+          tableName: original.tableName,
+          columnName: original.columnName,
+          dataTypeName: original.dataTypeName,
+          constraintName: original.constraintName,
+          fileName: original.fileName,
+          routineName: original.routineName,
+        );
+
   @override
   String toString() {
     final buff = StringBuffer('$severity $code: $message');
@@ -193,37 +214,28 @@ ServerException buildExceptionFromErrorFields(List<ErrorField> errorFields) {
 PgException transformServerException(ServerException ex) {
   // TODO: consider adding more exception from https://www.postgresql.org/docs/current/errcodes-appendix.html
   return switch (ex.code) {
-    '23505' => UniqueViolationException(ex.message, severity: ex.severity),
-    '23503' => ForeignKeyViolationException(ex.message, severity: ex.severity),
-    '57014' => _PgQueryCancelledException(
-        ['${ex.code}:', ex.message, ex.trace].whereType<String>().join(' '),
-        severity: ex.severity,
+    '23505' => UniqueViolationException._(ex),
+    '23503' => ForeignKeyViolationException._(ex),
+    '57014' => _PgQueryCancelledException._(
+        ex,
+        // [ex.message, ex.trace].whereType<String>().join(' '),
       ),
     _ => ex,
   };
 }
 
-class _PgQueryCancelledException extends PgException
+class _PgQueryCancelledException extends ServerException
     implements TimeoutException {
   @override
   late final duration = null;
 
-  _PgQueryCancelledException(
-    super.message, {
-    required super.severity,
-  });
+  _PgQueryCancelledException._(super.original) : super._from();
 }
 
-class UniqueViolationException extends PgException {
-  UniqueViolationException(
-    super.message, {
-    required super.severity,
-  });
+class UniqueViolationException extends ServerException {
+  UniqueViolationException._(super.original) : super._from();
 }
 
-class ForeignKeyViolationException extends PgException {
-  ForeignKeyViolationException(
-    super.message, {
-    required super.severity,
-  });
+class ForeignKeyViolationException extends ServerException {
+  ForeignKeyViolationException._(super.original) : super._from();
 }
