@@ -177,7 +177,7 @@ class PoolImplementation<L> implements Pool<L> {
   Future<_PoolConnection> _selectOrCreate(
       Endpoint endpoint, ResolvedConnectionSettings settings) async {
     final oldc =
-        _connections.firstWhereOrNull((c) => c._mayReuse(endpoint, settings) && c.isOpen);
+        _connections.firstWhereOrNull((c) => c._mayReuse(endpoint, settings));
     if (oldc != null) {
       // NOTE: It is important to update the _isInUse flag here, otherwise
       //       race conditions may create conflicts.
@@ -232,7 +232,7 @@ class _PoolConnection implements Connection {
       this._pool, this._endpoint, this._connectionSettings, this._connection);
 
   bool _mayReuse(Endpoint endpoint, ResolvedConnectionSettings settings) {
-    if (_isInUse || endpoint != _endpoint || _isExpired()) {
+    if (_isInUse || endpoint != _endpoint || _isExpired() || !isOpen) {
       return false;
     }
     if (!_connectionSettings.isMatchingConnection(settings)) {
