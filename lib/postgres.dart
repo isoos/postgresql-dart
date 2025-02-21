@@ -20,7 +20,7 @@ export 'src/exceptions.dart'
         Severity,
         PgException,
         ServerException,
-        DuplicateKeyException,
+        UniqueViolationException,
         ForeignKeyViolationException;
 export 'src/pool/pool_api.dart';
 export 'src/replication.dart';

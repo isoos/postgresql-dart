@@ -77,7 +77,7 @@ void main() {
       try {
         await c.execute('INSERT INTO test (id) VALUES (1);');
       } catch (e) {
-        expect(e, isA<DuplicateKeyException>());
+        expect(e, isA<UniqueViolationException>());
         expect(
             e.toString(),
             contains(

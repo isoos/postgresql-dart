@@ -191,8 +191,9 @@ ServerException buildExceptionFromErrorFields(List<ErrorField> errorFields) {
 }
 
 PgException transformServerException(ServerException ex) {
+  // TODO: consider adding more exception from https://www.postgresql.org/docs/current/errcodes-appendix.html
   return switch (ex.code) {
-    '23505' => DuplicateKeyException(ex.message, severity: ex.severity),
+    '23505' => UniqueViolationException(ex.message, severity: ex.severity),
     '23503' => ForeignKeyViolationException(ex.message, severity: ex.severity),
     '57014' => _PgQueryCancelledException(
         ['${ex.code}:', ex.message, ex.trace].whereType<String>().join(' '),
@@ -213,8 +214,8 @@ class _PgQueryCancelledException extends PgException
   });
 }
 
-class DuplicateKeyException extends PgException {
-  DuplicateKeyException(
+class UniqueViolationException extends PgException {
+  UniqueViolationException(
     super.message, {
     required super.severity,
   });

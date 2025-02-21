@@ -700,7 +700,7 @@ void main() {
             // ignore
           }
         }),
-        throwsA(isA<DuplicateKeyException>()),
+        throwsA(isA<UniqueViolationException>()),
       );
     });
   });
