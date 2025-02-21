@@ -232,7 +232,7 @@ class _PoolConnection implements Connection {
       this._pool, this._endpoint, this._connectionSettings, this._connection);
 
   bool _mayReuse(Endpoint endpoint, ResolvedConnectionSettings settings) {
-    if (_isInUse || endpoint != _endpoint || _isExpired()) {
+    if (_isInUse || endpoint != _endpoint || _isExpired() || !isOpen) {
       return false;
     }
     if (!_connectionSettings.isMatchingConnection(settings)) {
