@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.5.4
+
+**Warning**: This version fixes the inconsistency of `3.5.3` by:
+- `UniqueViolationException` and  `ForeignKeyViolationException` extends `ServerException` instead of `PgException`, and
+- they no longer have public constructor (please open an issue if this is something you'd rely on).
+- The exception from cancelling the statement is also extends `ServerException` instead of `PgException`.
+
 ## 3.5.3
 
 - New typed exceptions: `UniqueViolationException`, `ForeignKeyViolationException`. [#416](https://github.com/isoos/postgresql-dart/pull/416) by [hurrba](https://github.com/hurrba)
