@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Don't reuse pool connections that are closed/closing.
+
 ## 3.5.3
 
 - New typed exceptions: `UniqueViolationException`, `ForeignKeyViolationException`. [#416](https://github.com/isoos/postgresql-dart/pull/416) by [hurrba](https://github.com/hurrba)
