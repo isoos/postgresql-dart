@@ -1,6 +1,6 @@
 name: postgres
 description: PostgreSQL database driver. Supports binary protocol, connection pooling and statement reuse.
-version: 3.5.4
+version: 3.5.5
 homepage: https://github.com/isoos/postgresql-dart
 topics:
   - sql
