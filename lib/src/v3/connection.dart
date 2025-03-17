@@ -343,7 +343,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         adaptedStream = socket;
       } else {
         // This server does not support SSL
-        throw PgException('Server does not support SSL, but it was required.');
+        throw PgException(
+            'Server does not support SSL, but it was required (default configuration). '
+            'To disable secure connections, use `ConnectionSettings(sslMode: SslMode.disable)`.');
       }
     } else {
       // We've listened to the stream already and sockets are single-subscription

@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.5
+
+- Better exception message when SSL is not supported.
+
 ## 3.5.4
 
 **Warning**: This version fixes the inconsistency of `3.5.3` by:
