@@ -207,7 +207,7 @@ final _builtInTypeNames = <String, Type>{
   'polygon': Type.polygon,
   'path': Type.path,
   'circle': Type.circle,
-  'read': Type.real,
+  'real': Type.real,
   'regtype': Type.regtype,
   'serial4': Type.serial,
   'serial8': Type.bigSerial,
@@ -327,7 +327,14 @@ extension TypeRegistryExt on TypeRegistry {
     return _byTypeOid[oid] ?? UnknownType(oid);
   }
 
-  Type? resolveSubstitution(String name) => _bySubstitutionName[name];
+  Type? resolveSubstitution(String name) {
+    if (name == 'read') {
+      print(
+          'WARNING: Use `real` instead of `read` - will be removed in a future release.');
+      return Type.real;
+    }
+    return _bySubstitutionName[name];
+  }
 }
 
 EncodedValue? _defaultTextEncoder(TypedValue input, CodecContext context) {
