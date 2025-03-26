@@ -3,6 +3,7 @@
 ## 3.5.5
 
 - Better exception message when SSL is not supported.
+- Fix: typo in type specification (`read` -> `real`, also keeping `read` for compatibility).
 
 ## 3.5.4
 
