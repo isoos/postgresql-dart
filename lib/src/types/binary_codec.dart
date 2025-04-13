@@ -248,7 +248,7 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<String?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.point:
@@ -358,7 +358,7 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<bool> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<bool?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.smallIntegerArray:
@@ -373,7 +373,7 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<int?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.integerArray:
@@ -388,7 +388,7 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<int?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.bigIntegerArray:
@@ -403,7 +403,7 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<int?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.dateArray:
@@ -419,7 +419,7 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<DateTime> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<DateTime?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.timeArray:
@@ -434,7 +434,7 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<Time> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<Time?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.timestampArray:
@@ -450,7 +450,7 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<DateTime> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<DateTime?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.timestampTzArray:
@@ -466,14 +466,15 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<DateTime> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<DateTime?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.varCharArray:
         {
           if (input is List) {
-            final bytesArray =
-                _castOrThrowList<String>(input).map((v) => encoding.encode(v));
+            final bytesArray = _castOrThrowList<String>(input)
+                .map((v) => v == null ? null : encoding.encode(v))
+                .toList();
             return _writeListBytes<List<int>>(
               bytesArray,
               1043,
@@ -483,14 +484,15 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<String?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.textArray:
         {
           if (input is List) {
-            final bytesArray =
-                _castOrThrowList<String>(input).map((v) => encoding.encode(v));
+            final bytesArray = _castOrThrowList<String>(input)
+                .map((v) => v == null ? null : encoding.encode(v))
+                .toList();
             return _writeListBytes<List<int>>(
               bytesArray,
               25,
@@ -500,7 +502,7 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<String> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<String?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.doubleArray:
@@ -515,13 +517,14 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<double> Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: List<double?> Got: ${input.runtimeType}');
         }
 
       case TypeOid.jsonbArray:
         {
           if (input is List) {
-            final objectsArray = input.map(_jsonFusedEncoding(encoding).encode);
+            final objectsArray =
+                input.map(_jsonFusedEncoding(encoding).encode).toList();
             return _writeListBytes<List<int>>(
               objectsArray,
               3802,
@@ -581,19 +584,19 @@ class PostgresBinaryEncoder {
     throw ArgumentError('Cannot encode `$input` into oid($_typeOid).');
   }
 
-  List<V> _castOrThrowList<V>(List input) {
-    if (input is List<V>) {
+  List<V?> _castOrThrowList<V>(List input) {
+    if (input is List<V?>) {
       return input;
     }
-    if (input.any((e) => e is! V)) {
+    if (input.any((e) => e is! V?)) {
       throw FormatException(
-          'Invalid type for parameter value. Expected: List<${V.runtimeType}> Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: List<${V.runtimeType}?> Got: ${input.runtimeType}');
     }
-    return input.cast<V>();
+    return input.cast<V?>();
   }
 
   Uint8List _writeListBytes<V>(
-    Iterable<V> value,
+    List<V?> value,
     int type,
     int Function(V item) lengthEncoder,
     void Function(PgByteDataWriter writer, V item) valueEncoder,
@@ -608,6 +611,10 @@ class PostgresBinaryEncoder {
     writer.writeInt32(1); // index
 
     for (final i in value) {
+      if (i == null) {
+        writer.writeInt32(-1);
+        continue;
+      }
       final len = lengthEncoder(i);
       writer.writeInt32(len);
       valueEncoder(writer, i);

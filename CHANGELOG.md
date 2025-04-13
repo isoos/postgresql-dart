@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.6
+
+- Accept `null` values as part of the binary List encodings.
+
 ## 3.5.5
 
 - Better exception message when SSL is not supported.

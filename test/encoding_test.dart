@@ -175,12 +175,13 @@ void main() {
           null,
           <DateTime>[],
           [
+            null,
             DateTime.utc(1920, 10, 1),
             DateTime.utc(2120, 10, 5),
             DateTime.utc(2016, 10, 1),
           ],
         ],
-        expectedDartType: 'List<DateTime>',
+        expectedDartType: 'List<DateTime?>',
       );
     });
 
@@ -307,11 +308,12 @@ void main() {
           null,
           <String>[],
           [
+            null,
             '00000000-0000-0000-0000-000000000000',
             '12345678-abcd-efab-cdef-012345678901',
           ],
         ],
-        expectedDartType: 'List<String>',
+        expectedDartType: 'List<String?>',
       );
     });
 
@@ -403,10 +405,10 @@ void main() {
         [
           null,
           <bool>[],
-          [false, true],
+          [null, false, true],
           [true],
         ],
-        expectedDartType: 'List<bool>',
+        expectedDartType: 'List<bool?>',
       );
     });
 
@@ -416,10 +418,10 @@ void main() {
         [
           null,
           <int>[],
-          [-1, 0, 200],
+          [null, -1, 0, 200],
           [-123],
         ],
-        expectedDartType: 'List<int>',
+        expectedDartType: 'List<int?>',
       );
     });
 
@@ -429,10 +431,10 @@ void main() {
         [
           null,
           <int>[],
-          [-1, 0, 200],
+          [null, -1, 0, 200],
           [-123],
         ],
-        expectedDartType: 'List<int>',
+        expectedDartType: 'List<int?>',
       );
     });
 
@@ -442,10 +444,10 @@ void main() {
         [
           null,
           <int>[],
-          [-1, 0, 200],
+          [null, -1, 0, 200],
           [-123],
         ],
-        expectedDartType: 'List<int>',
+        expectedDartType: 'List<int?>',
       );
     });
 
@@ -456,12 +458,13 @@ void main() {
           null,
           <DateTime>[],
           [
+            null,
             DateTime.utc(1970),
             DateTime.fromMicrosecondsSinceEpoch(12345678, isUtc: true),
             DateTime.timestamp()
           ],
         ],
-        expectedDartType: 'List<DateTime>',
+        expectedDartType: 'List<DateTime?>',
       );
     });
 
@@ -472,12 +475,13 @@ void main() {
           null,
           <DateTime>[],
           [
+            null,
             DateTime.utc(1970),
             DateTime.fromMicrosecondsSinceEpoch(12345678, isUtc: true),
             DateTime.timestamp()
           ],
         ],
-        expectedDartType: 'List<DateTime>',
+        expectedDartType: 'List<DateTime?>',
       );
     });
 
@@ -487,10 +491,10 @@ void main() {
         [
           null,
           <double>[],
-          [-123.0, 0.0, 1.0],
+          [null, -123.0, 0.0, 1.0],
           [0.001, 45.678],
         ],
-        expectedDartType: 'List<double>',
+        expectedDartType: 'List<double?>',
       );
     });
 
@@ -500,10 +504,10 @@ void main() {
         [
           null,
           <String>[],
-          ['', 'foo', 'foo\n', 'foo\nbar;s'],
+          [null, '', 'foo', 'foo\n', 'foo\nbar;s'],
         ],
         negative: 0,
-        expectedDartType: 'List<String>',
+        expectedDartType: 'List<String?>',
       );
     });
 
@@ -513,10 +517,10 @@ void main() {
         [
           null,
           <String>[],
-          ['', 'foo', 'foo\n', 'foo\nbar;s'],
+          [null, '', 'foo', 'foo\n', 'foo\nbar;s'],
         ],
         negative: 0,
-        expectedDartType: 'List<String>',
+        expectedDartType: 'List<String?>',
       );
     });
 
@@ -603,13 +607,14 @@ void main() {
           null,
           <Time>[],
           [
+            null,
             Time(16, 0, 44, 0, 888),
             Time.fromMicroseconds(57644000888),
             Time(0, 0, 0, 0, 86400000000),
             Time(0),
           ],
         ],
-        expectedDartType: 'List<Time>',
+        expectedDartType: 'List<Time?>',
       );
     });
 
