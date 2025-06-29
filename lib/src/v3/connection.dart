@@ -720,7 +720,7 @@ class _PreparedStatement extends Statement {
   }
 }
 
-class _BoundStatement extends Stream<ResultRow> implements ResultStream {
+class _BoundStatement extends Stream<ResultRow> implements ResultStreamTrace {
   final _PreparedStatement statement;
   final List<TypedValue> parameters;
 
@@ -728,13 +728,17 @@ class _BoundStatement extends Stream<ResultRow> implements ResultStream {
 
   @override
   ResultStreamSubscription listen(void Function(ResultRow event)? onData,
-      {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+      {Function? onError,
+      void Function()? onDone,
+      bool? cancelOnError,
+      Trace? callerTrace}) {
     final controller = StreamController<ResultRow>();
 
     // ignore: cancel_subscriptions
     final subscription = controller.stream.listen(onData,
         onError: onError, onDone: onDone, cancelOnError: cancelOnError);
-    return _PgResultStreamSubscription(this, controller, subscription);
+    return _PgResultStreamSubscription(this, controller, subscription,
+        callerTrace: callerTrace);
   }
 }
 
@@ -761,12 +765,13 @@ class _PgResultStreamSubscription
   final Trace _callerTrace;
 
   _PgResultStreamSubscription(
-      _BoundStatement statement, this._controller, this._source)
+      _BoundStatement statement, this._controller, this._source,
+      {Trace? callerTrace})
       : session = statement.statement._session,
         ignoreRows = false,
         _boundStatement = statement,
         _parentTrace = statement.statement._trace,
-        _callerTrace = Trace.current() {
+        _callerTrace = callerTrace ?? Trace.current() {
     _scheduleStatement(() async {
       connection._pending = this;
 
@@ -803,9 +808,10 @@ class _PgResultStreamSubscription
     this._controller,
     this._source,
     this.ignoreRows, {
+    Trace? callerTrace,
     void Function()? cleanup,
   })  : _parentTrace = null,
-        _callerTrace = Trace.current() {
+        _callerTrace = callerTrace ?? Trace.current() {
     _scheduleStatement(() async {
       connection._pending = this;
 
