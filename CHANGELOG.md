@@ -5,6 +5,16 @@
 - `PgSessionBase`:
   - Optimize `_prepare` by passing the already captured `StackTrace` to `_sendAndWaitForQuery`.
 
+- Added `ResultStreamTrace`:
+  - A `ResultStream` that adds a `callerTrace` parameter to the `listen` method.
+
+- `_BoundStatement` now implements `ResultStreamTrace` rather than `ResultStream`.
+
+- `_PgResultStreamSubscription`: added an optional `callerTrace` parameter to its constructors.
+
+- `PreparedStatement`:
+  - Optimized `run` and `_closePendingPortals` by reducing `StackTrace` captures.
+
 ## 3.5.6
 
 - Accept `null` values as part of the binary List encodings.
