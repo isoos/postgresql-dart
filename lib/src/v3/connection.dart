@@ -83,8 +83,9 @@ abstract class _PgSessionBase implements Session {
 
   /// Sends a message to the server and waits for a response [T], gracefully
   /// handling error messages that might come in instead.
-  Future<T> _sendAndWaitForQuery<T extends ServerMessage>(ClientMessage send) {
-    final trace = StackTrace.current;
+  Future<T> _sendAndWaitForQuery<T extends ServerMessage>(ClientMessage send,
+      {StackTrace? stackTrace}) {
+    final trace = stackTrace ?? StackTrace.current;
 
     return _withResource(() {
       _connection._channel.sink
@@ -184,7 +185,8 @@ abstract class _PgSessionBase implements Session {
   }
 
   Future<_PreparedStatement> _prepare(Object query) async {
-    final trace = Trace.current();
+    final stackTrace = StackTrace.current;
+    final trace = Trace.from(stackTrace);
     final conn = _connection;
     final name = 's/${conn._statementCounter++}';
     final description = InternalQueryDescription.wrap(
@@ -192,11 +194,14 @@ abstract class _PgSessionBase implements Session {
       typeRegistry: _connection._settings.typeRegistry,
     );
 
-    await _sendAndWaitForQuery<ParseCompleteMessage>(ParseMessage(
-      description.transformedSql,
-      statementName: name,
-      typeOids: description.parameterTypes?.map((e) => e?.oid).toList(),
-    ));
+    await _sendAndWaitForQuery<ParseCompleteMessage>(
+      ParseMessage(
+        description.transformedSql,
+        statementName: name,
+        typeOids: description.parameterTypes?.map((e) => e?.oid).toList(),
+      ),
+      stackTrace: stackTrace,
+    );
 
     return _PreparedStatement(description, name, this, trace);
   }

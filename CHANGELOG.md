@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.5.7
+
+- `PgSessionBase`:
+  - Optimize `_prepare` by passing the already captured `StackTrace` to `_sendAndWaitForQuery`.
+
 ## 3.5.6
 
 - Accept `null` values as part of the binary List encodings.
