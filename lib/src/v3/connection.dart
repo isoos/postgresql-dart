@@ -666,7 +666,7 @@ class _PreparedStatement extends Statement {
   _PreparedStatement(this._description, this._name, this._session, this._trace);
 
   @override
-  ResultStream bind(Object? parameters) {
+  ResultStreamTrace bind(Object? parameters) {
     return _BoundStatement(
         this,
         _description.bindParameters(
@@ -680,10 +680,12 @@ class _PreparedStatement extends Statement {
     Object? parameters, {
     Duration? timeout,
   }) async {
+    final stackTrace = StackTrace.current;
+    final trace = Trace.from(stackTrace);
     _session._connection._queryCount++;
     timeout ??= _session._settings.queryTimeout;
     final items = <ResultRow>[];
-    final subscription = bind(parameters).listen(items.add);
+    final subscription = bind(parameters).listen(items.add, callerTrace: trace);
     try {
       return await (subscription as _PgResultStreamSubscription)._waitForResult(
         items: items,
@@ -691,7 +693,7 @@ class _PreparedStatement extends Statement {
       );
     } finally {
       await subscription.cancel();
-      await _closePendingPortals();
+      await _closePendingPortals(stackTrace: stackTrace);
     }
   }
 
@@ -710,12 +712,13 @@ class _PreparedStatement extends Statement {
     _portalsToClose!.add(portalName);
   }
 
-  Future<void> _closePendingPortals() async {
+  Future<void> _closePendingPortals({StackTrace? stackTrace}) async {
     final list = _portalsToClose;
     while (list != null && list.isNotEmpty) {
       final portalName = list.removeFirst();
       await _session._sendAndWaitForQuery<CloseCompleteMessage>(
-          CloseMessage.portal(portalName));
+          CloseMessage.portal(portalName),
+          stackTrace: stackTrace);
     }
   }
 }
