@@ -145,7 +145,7 @@ class PoolImplementation<L> implements Pool<L> {
       // one.
       connection = await _selectOrCreate(
         selection.endpoint,
-        ResolvedConnectionSettings(settings, this._settings),
+        ResolvedConnectionSettings(settings, _settings),
       );
 
       sw.start();

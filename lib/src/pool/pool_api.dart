@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
+import 'package:postgres/src/connection_string.dart';
 
 import '../../postgres.dart';
 import 'pool_impl.dart';
@@ -69,6 +70,26 @@ abstract class Pool<L> implements Session, SessionExecutor {
     PoolSettings? settings,
   }) =>
       PoolImplementation(roundRobinSelector(endpoints), settings);
+
+  /// Creates  a new pool where the endpoint and the settings are encoded as an URL as
+  /// `postgresql://[userspec@][hostspec][/dbname][?paramspec]`
+  ///
+  /// Note: Only a single endpoint is supported for now.
+  /// Note: Only a subset of settings can be set with parameters.
+  factory Pool.withUrl(String connectionString) {
+    final parsed = parseConnectionString(connectionString);
+    return PoolImplementation(
+      roundRobinSelector([parsed.endpoint]),
+      PoolSettings(
+        applicationName: parsed.applicationName,
+        connectTimeout: parsed.connectTimeout,
+        encoding: parsed.encoding,
+        replicationMode: parsed.replicationMode,
+        securityContext: parsed.securityContext,
+        sslMode: parsed.sslMode,
+      ),
+    );
+  }
 
   /// Acquires a connection from this pool, opening a new one if necessary, and
   /// calls [fn] with it.

@@ -80,10 +80,9 @@ void main() {
 
     test('Query times out, next query in the queue runs', () async {
       final rs = await conn.execute('SELECT 1');
-      //ignore: unawaited_futures
-      conn
+      unawaited(conn
           .execute('SELECT pg_sleep(2)', timeout: Duration(seconds: 1))
-          .catchError((_) => rs);
+          .catchError((_) => rs));
 
       expect(await conn.execute('SELECT 1'), [
         [1]

@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.7.
+
+- Supporting URL-based connection-string specification in `Connection.openFromUrl` and `Pool.withUrl`. (Note: feature and supported settings is considered experimental.)
+
 ## 3.5.6
 
 - Accept `null` values as part of the binary List encodings.

@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres/src/connection_string.dart';
 import 'package:postgres/src/v3/connection_info.dart';
 import 'package:stream_channel/stream_channel.dart';
 
@@ -228,6 +229,26 @@ abstract class Connection implements Session, SessionExecutor {
   }) {
     return PgConnectionImplementation.connect(endpoint,
         connectionSettings: settings);
+  }
+
+  /// Open a new connection where the endpoint and the settings are encoded as an URL as
+  /// `postgresql://[userspec@][hostspec][/dbname][?paramspec]`
+  ///
+  /// Note: Only a single endpoint is supported.
+  /// Note: Only a subset of settings can be set with parameters.
+  static Future<Connection> openFromUrl(String connectionString) async {
+    final parsed = parseConnectionString(connectionString);
+    return open(
+      parsed.endpoint,
+      settings: ConnectionSettings(
+        applicationName: parsed.applicationName,
+        connectTimeout: parsed.connectTimeout,
+        encoding: parsed.encoding,
+        replicationMode: parsed.replicationMode,
+        securityContext: parsed.securityContext,
+        sslMode: parsed.sslMode,
+      ),
+    );
   }
 
   ConnectionInfo get info;
