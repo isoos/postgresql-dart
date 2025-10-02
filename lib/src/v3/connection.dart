@@ -86,8 +86,10 @@ abstract class _PgSessionBase implements Session {
 
   /// Sends a message to the server and waits for a response [T], gracefully
   /// handling error messages that might come in instead.
-  Future<T> _sendAndWaitForQuery<T extends ServerMessage>(ClientMessage send,
-      {StackTrace? stackTrace}) {
+  Future<T> _sendAndWaitForQuery<T extends ServerMessage>(
+    ClientMessage send, {
+    StackTrace? stackTrace,
+  }) {
     final trace = stackTrace ?? StackTrace.current;
 
     return _withResource(() {
@@ -751,8 +753,9 @@ class _PreparedStatement extends Statement {
     while (list != null && list.isNotEmpty) {
       final portalName = list.removeFirst();
       await _session._sendAndWaitForQuery<CloseCompleteMessage>(
-          CloseMessage.portal(portalName),
-          stackTrace: stackTrace);
+        CloseMessage.portal(portalName),
+        stackTrace: stackTrace,
+      );
     }
   }
 }
@@ -764,18 +767,28 @@ class _BoundStatement extends Stream<ResultRow> implements ResultStreamTrace {
   _BoundStatement(this.statement, this.parameters);
 
   @override
-  ResultStreamSubscription listen(void Function(ResultRow event)? onData,
-      {Function? onError,
-      void Function()? onDone,
-      bool? cancelOnError,
-      Trace? callerTrace}) {
+  ResultStreamSubscription listen(
+    void Function(ResultRow event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+    Trace? callerTrace,
+  }) {
     final controller = StreamController<ResultRow>();
 
     // ignore: cancel_subscriptions
-    final subscription = controller.stream.listen(onData,
-        onError: onError, onDone: onDone, cancelOnError: cancelOnError);
-    return _PgResultStreamSubscription(this, controller, subscription,
-        callerTrace: callerTrace);
+    final subscription = controller.stream.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+    return _PgResultStreamSubscription(
+      this,
+      controller,
+      subscription,
+      callerTrace: callerTrace,
+    );
   }
 }
 
@@ -802,13 +815,15 @@ class _PgResultStreamSubscription
   final Trace _callerTrace;
 
   _PgResultStreamSubscription(
-      _BoundStatement statement, this._controller, this._source,
-      {Trace? callerTrace})
-      : session = statement.statement._session,
-      ignoreRows = false,
-      _boundStatement = statement,
-      _parentTrace = statement.statement._trace,
-        _callerTrace = callerTrace ?? Trace.current() {
+    _BoundStatement statement,
+    this._controller,
+    this._source, {
+    Trace? callerTrace,
+  }) : session = statement.statement._session,
+       ignoreRows = false,
+       _boundStatement = statement,
+       _parentTrace = statement.statement._trace,
+       _callerTrace = callerTrace ?? Trace.current() {
     _scheduleStatement(() async {
       connection._pending = this;
 
@@ -850,7 +865,7 @@ class _PgResultStreamSubscription
     Trace? callerTrace,
     void Function()? cleanup,
   }) : _parentTrace = null,
-        _callerTrace = callerTrace ?? Trace.current() {
+       _callerTrace = callerTrace ?? Trace.current() {
     _scheduleStatement(() async {
       connection._pending = this;
 
