@@ -5,14 +5,25 @@ import '../postgres.dart';
 
 ({
   Endpoint endpoint,
+  // standard parameters
   String? applicationName,
   Duration? connectTimeout,
   Encoding? encoding,
   ReplicationMode? replicationMode,
   SecurityContext? securityContext,
   SslMode? sslMode,
+  // non-standard parameters
+  Duration? queryTimeout,
+  // pool parameters
+  Duration? maxConnectionAge,
+  int? maxConnectionCount,
+  Duration? maxSessionUse,
+  int? maxQueryCount,
 })
-parseConnectionString(String connectionString) {
+parseConnectionString(
+  String connectionString, {
+  bool enablePoolSettings = false,
+}) {
   final uri = Uri.parse(connectionString);
 
   if (uri.scheme != 'postgresql' && uri.scheme != 'postgres') {
@@ -28,14 +39,24 @@ parseConnectionString(String connectionString) {
   final password = uri.userInfo.isEmpty ? null : _parsePassword(uri.userInfo);
 
   final validParams = {
-    'sslmode',
-    'sslcert',
-    'sslkey',
-    'sslrootcert',
-    'connect_timeout',
+    // Note: parameters here should be matched to https://www.postgresql.org/docs/current/libpq-connect.html
     'application_name',
     'client_encoding',
+    'connect_timeout',
     'replication',
+    'sslcert',
+    'sslkey',
+    'sslmode',
+    'sslrootcert',
+    // Note: some parameters are not part of the libpq-connect above
+    'query_timeout',
+    // Note: parameters here are only for pool-settings
+    if (enablePoolSettings) ...[
+      'max_connection_age',
+      'max_connection_count',
+      'max_session_use',
+      'max_query_count',
+    ],
   };
 
   final params = uri.queryParameters;
@@ -133,6 +154,61 @@ parseConnectionString(String connectionString) {
     }
   }
 
+  Duration? queryTimeout;
+  if (params.containsKey('query_timeout')) {
+    final timeoutSeconds = int.tryParse(params['query_timeout']!);
+    if (timeoutSeconds == null || timeoutSeconds <= 0) {
+      throw ArgumentError(
+        'Invalid query_timeout value: ${params['query_timeout']}. Expected positive integer.',
+      );
+    }
+    queryTimeout = Duration(seconds: timeoutSeconds);
+  }
+
+  Duration? maxConnectionAge;
+  if (enablePoolSettings && params.containsKey('max_connection_age')) {
+    final ageSeconds = int.tryParse(params['max_connection_age']!);
+    if (ageSeconds == null || ageSeconds <= 0) {
+      throw ArgumentError(
+        'Invalid max_connection_age value: ${params['max_connection_age']}. Expected positive integer.',
+      );
+    }
+    maxConnectionAge = Duration(seconds: ageSeconds);
+  }
+
+  int? maxConnectionCount;
+  if (enablePoolSettings && params.containsKey('max_connection_count')) {
+    final count = int.tryParse(params['max_connection_count']!);
+    if (count == null || count <= 0) {
+      throw ArgumentError(
+        'Invalid max_connection_count value: ${params['max_connection_count']}. Expected positive integer.',
+      );
+    }
+    maxConnectionCount = count;
+  }
+
+  Duration? maxSessionUse;
+  if (enablePoolSettings && params.containsKey('max_session_use')) {
+    final sessionSeconds = int.tryParse(params['max_session_use']!);
+    if (sessionSeconds == null || sessionSeconds <= 0) {
+      throw ArgumentError(
+        'Invalid max_session_use value: ${params['max_session_use']}. Expected positive integer.',
+      );
+    }
+    maxSessionUse = Duration(seconds: sessionSeconds);
+  }
+
+  int? maxQueryCount;
+  if (enablePoolSettings && params.containsKey('max_query_count')) {
+    final count = int.tryParse(params['max_query_count']!);
+    if (count == null || count <= 0) {
+      throw ArgumentError(
+        'Invalid max_query_count value: ${params['max_query_count']}. Expected positive integer.',
+      );
+    }
+    maxQueryCount = count;
+  }
+
   final endpoint = Endpoint(
     host: host,
     port: port,
@@ -149,6 +225,11 @@ parseConnectionString(String connectionString) {
     applicationName: applicationName,
     encoding: encoding,
     replicationMode: replicationMode,
+    queryTimeout: queryTimeout,
+    maxConnectionAge: maxConnectionAge,
+    maxConnectionCount: maxConnectionCount,
+    maxSessionUse: maxSessionUse,
+    maxQueryCount: maxQueryCount,
   );
 }
 

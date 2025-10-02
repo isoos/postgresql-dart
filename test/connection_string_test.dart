@@ -387,5 +387,134 @@ void main() {
         expect(result.applicationName, equals(''));
       });
     });
+
+    group('Query timeout and pool parameters', () {
+      test('query_timeout parameter', () {
+        final result = parseConnectionString(
+          'postgresql://localhost/test?query_timeout=45',
+        );
+        expect(result.queryTimeout, equals(Duration(seconds: 45)));
+      });
+
+      test('query_timeout validation', () {
+        expect(
+          () => parseConnectionString(
+            'postgresql://localhost/test?query_timeout=invalid',
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('Invalid query_timeout'),
+            ),
+          ),
+        );
+        expect(
+          () => parseConnectionString(
+            'postgresql://localhost/test?query_timeout=0',
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('Invalid query_timeout'),
+            ),
+          ),
+        );
+      });
+
+      test('pool parameters with enablePoolSettings', () {
+        final result = parseConnectionString(
+          'postgresql://localhost/test?max_connection_age=3600&max_connection_count=10&max_session_use=7200&max_query_count=1000',
+          enablePoolSettings: true,
+        );
+        expect(result.maxConnectionAge, equals(Duration(seconds: 3600)));
+        expect(result.maxConnectionCount, equals(10));
+        expect(result.maxSessionUse, equals(Duration(seconds: 7200)));
+        expect(result.maxQueryCount, equals(1000));
+      });
+
+      test('pool parameters rejected without enablePoolSettings', () {
+        expect(
+          () => parseConnectionString(
+            'postgresql://localhost/test?max_connection_age=3600',
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('Unrecognized connection parameter'),
+            ),
+          ),
+        );
+      });
+
+      test('pool parameter validation', () {
+        expect(
+          () => parseConnectionString(
+            'postgresql://localhost/test?max_connection_age=0',
+            enablePoolSettings: true,
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('Invalid max_connection_age'),
+            ),
+          ),
+        );
+        expect(
+          () => parseConnectionString(
+            'postgresql://localhost/test?max_connection_count=invalid',
+            enablePoolSettings: true,
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('Invalid max_connection_count'),
+            ),
+          ),
+        );
+        expect(
+          () => parseConnectionString(
+            'postgresql://localhost/test?max_session_use=-5',
+            enablePoolSettings: true,
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('Invalid max_session_use'),
+            ),
+          ),
+        );
+        expect(
+          () => parseConnectionString(
+            'postgresql://localhost/test?max_query_count=0',
+            enablePoolSettings: true,
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('Invalid max_query_count'),
+            ),
+          ),
+        );
+      });
+
+      test('all timeout and pool parameters combined', () {
+        final result = parseConnectionString(
+          'postgresql://localhost/test?query_timeout=30&max_connection_age=3600&max_connection_count=20&max_session_use=7200&max_query_count=500',
+          enablePoolSettings: true,
+        );
+        expect(result.queryTimeout, equals(Duration(seconds: 30)));
+        expect(result.maxConnectionAge, equals(Duration(seconds: 3600)));
+        expect(result.maxConnectionCount, equals(20));
+        expect(result.maxSessionUse, equals(Duration(seconds: 7200)));
+        expect(result.maxQueryCount, equals(500));
+      });
+    });
   });
 }

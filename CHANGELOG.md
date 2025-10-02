@@ -3,6 +3,7 @@
 ## 3.5.8
 
 - Upgraded SDK constraints and lints.
+- Supporting more URL-based connection-string parameters (mostly for pool).
 
 ## 3.5.7.
 

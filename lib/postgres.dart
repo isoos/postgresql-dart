@@ -247,6 +247,7 @@ abstract class Connection implements Session, SessionExecutor {
         connectTimeout: parsed.connectTimeout,
         encoding: parsed.encoding,
         replicationMode: parsed.replicationMode,
+        queryTimeout: parsed.queryTimeout,
         securityContext: parsed.securityContext,
         sslMode: parsed.sslMode,
       ),

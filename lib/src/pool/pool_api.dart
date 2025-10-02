@@ -75,16 +75,24 @@ abstract class Pool<L> implements Session, SessionExecutor {
   /// Note: Only a single endpoint is supported for now.
   /// Note: Only a subset of settings can be set with parameters.
   factory Pool.withUrl(String connectionString) {
-    final parsed = parseConnectionString(connectionString);
+    final parsed = parseConnectionString(
+      connectionString,
+      enablePoolSettings: true,
+    );
     return PoolImplementation(
       roundRobinSelector([parsed.endpoint]),
       PoolSettings(
         applicationName: parsed.applicationName,
         connectTimeout: parsed.connectTimeout,
         encoding: parsed.encoding,
+        queryTimeout: parsed.queryTimeout,
         replicationMode: parsed.replicationMode,
         securityContext: parsed.securityContext,
         sslMode: parsed.sslMode,
+        maxConnectionAge: parsed.maxConnectionAge,
+        maxConnectionCount: parsed.maxConnectionCount,
+        maxSessionUse: parsed.maxSessionUse,
+        maxQueryCount: parsed.maxQueryCount,
       ),
     );
   }
