@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
+import 'package:postgres/src/connection_string.dart';
 import 'package:postgres/src/v3/connection_info.dart';
 import 'package:stack_trace/stack_trace.dart';
 import 'package:stream_channel/stream_channel.dart';
@@ -177,7 +178,7 @@ abstract class Session {
   Future<Result> execute(
     Object /* String | Sql */ query, {
     Object? /* List<Object?|TypedValue> | Map<String, Object?|TypedValue> */
-        parameters,
+    parameters,
     bool ignoreRows = false,
     QueryMode? queryMode,
     Duration? timeout,
@@ -227,8 +228,31 @@ abstract class Connection implements Session, SessionExecutor {
     Endpoint endpoint, {
     ConnectionSettings? settings,
   }) {
-    return PgConnectionImplementation.connect(endpoint,
-        connectionSettings: settings);
+    return PgConnectionImplementation.connect(
+      endpoint,
+      connectionSettings: settings,
+    );
+  }
+
+  /// Open a new connection where the endpoint and the settings are encoded as an URL as
+  /// `postgresql://[userspec@][hostspec][/dbname][?paramspec]`
+  ///
+  /// Note: Only a single endpoint is supported.
+  /// Note: Only a subset of settings can be set with parameters.
+  static Future<Connection> openFromUrl(String connectionString) async {
+    final parsed = parseConnectionString(connectionString);
+    return open(
+      parsed.endpoint,
+      settings: ConnectionSettings(
+        applicationName: parsed.applicationName,
+        connectTimeout: parsed.connectTimeout,
+        encoding: parsed.encoding,
+        replicationMode: parsed.replicationMode,
+        queryTimeout: parsed.queryTimeout,
+        securityContext: parsed.securityContext,
+        sslMode: parsed.sslMode,
+      ),
+    );
   }
 
   ConnectionInfo get info;
@@ -267,12 +291,13 @@ abstract class ResultStreamSubscription
 
 abstract class Statement {
   ResultStream bind(
-      Object? /* List<Object?|TypedValue> | Map<String, Object?|TypedValue> */
-          parameters);
+    Object? /* List<Object?|TypedValue> | Map<String, Object?|TypedValue> */
+    parameters,
+  );
 
   Future<Result> run(
     Object? /* List<Object?|TypedValue> | Map<String, Object?|TypedValue> */
-        parameters, {
+    parameters, {
     Duration? timeout,
   });
 
@@ -298,8 +323,8 @@ class ResultRow extends UnmodifiableListView<Object?> {
     required List<Object?> values,
     required this.schema,
     List<bool>? sqlNulls,
-  })  : _sqlNulls = sqlNulls,
-        super(values);
+  }) : _sqlNulls = sqlNulls,
+       super(values);
 
   /// Returns true if the result at [columnIndex] returned SQL `NULL` value.
   ///
@@ -424,14 +449,8 @@ final class Endpoint {
   });
 
   @override
-  int get hashCode => Object.hash(
-        host,
-        port,
-        database,
-        username,
-        password,
-        isUnixSocket,
-      );
+  int get hashCode =>
+      Object.hash(host, port, database, username, password, isUnixSocket);
 
   @override
   bool operator ==(Object other) {
@@ -460,8 +479,7 @@ enum SslMode {
   require,
 
   /// Always use SSL and verify certificates.
-  verifyFull,
-  ;
+  verifyFull;
 
   bool get ignoreCertificateIssues => this == SslMode.require;
 
@@ -591,8 +609,7 @@ enum IsolationLevel {
 
   /// One transaction may see uncommitted changes made by some other transaction.
   /// In PostgreSQL READ UNCOMMITTED is treated as READ COMMITTED.
-  readUncommitted._('READ UNCOMMITTED'),
-  ;
+  readUncommitted._('READ UNCOMMITTED');
 
   /// The SQL identifier of the isolation level including "ISOLATION LEVEL" prefix
   /// and leading space.
@@ -614,8 +631,7 @@ enum AccessMode {
   /// GRANT, REVOKE, TRUNCATE; and EXPLAIN ANALYZE and EXECUTE if the command
   /// they would execute is among those listed. This is a high-level notion of
   /// read-only that does not prevent all writes to disk.
-  readOnly._('READ ONLY'),
-  ;
+  readOnly._('READ ONLY');
 
   /// The SQL identifier of the access mode including leading space.
   @internal
@@ -636,8 +652,7 @@ enum DeferrableMode {
   deferrable._('DEFERRABLE'),
 
   /// The default mode.
-  notDeferrable._('NOT DEFERRABLE'),
-  ;
+  notDeferrable._('NOT DEFERRABLE');
 
   /// The SQL identifier of the deferrable mode including leading space.
   @internal
@@ -654,11 +669,7 @@ class Retry<R> {
   final FutureOr<R> Function()? orElse;
   final FutureOr<bool> Function(Exception)? retryIf;
 
-  Retry({
-    required this.maxAttempts,
-    this.orElse,
-    this.retryIf,
-  });
+  Retry({required this.maxAttempts, this.orElse, this.retryIf});
 }
 
 /// The characteristics of the current transaction.

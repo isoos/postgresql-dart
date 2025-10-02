@@ -20,146 +20,155 @@ void main() {
     });
 
     test('Can store JSON String', () async {
-      var result = await connection
-          .execute("INSERT INTO t (j) VALUES ('\"xyz\"'::jsonb) RETURNING j");
+      var result = await connection.execute(
+        "INSERT INTO t (j) VALUES ('\"xyz\"'::jsonb) RETURNING j",
+      );
       expect(result, [
-        ['xyz']
+        ['xyz'],
       ]);
       result = await connection.execute('SELECT j FROM t');
       expect(result, [
-        ['xyz']
+        ['xyz'],
       ]);
     });
 
     test('Can store JSON String with driver type annotation', () async {
       var result = await connection.execute(
-          Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
-          parameters: {'a': 'xyz'});
+        Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
+        parameters: {'a': 'xyz'},
+      );
       expect(result, [
-        ['xyz']
+        ['xyz'],
       ]);
       result = await connection.execute('SELECT j FROM t');
       expect(result, [
-        ['xyz']
+        ['xyz'],
       ]);
     });
 
     test('Can store JSON Number', () async {
-      var result = await connection
-          .execute("INSERT INTO t (j) VALUES ('4'::jsonb) RETURNING j");
+      var result = await connection.execute(
+        "INSERT INTO t (j) VALUES ('4'::jsonb) RETURNING j",
+      );
       expect(result, [
-        [4]
+        [4],
       ]);
       result = await connection.execute('SELECT j FROM t');
       expect(result, [
-        [4]
+        [4],
       ]);
     });
 
     test('Can store JSON Number with driver type annotation', () async {
       var result = await connection.execute(
-          Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
-          parameters: {'a': 4});
+        Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
+        parameters: {'a': 4},
+      );
       expect(result, [
-        [4]
+        [4],
       ]);
       result = await connection.execute('SELECT j FROM t');
       expect(result, [
-        [4]
+        [4],
       ]);
     });
 
     test('Can store JSON map', () async {
-      var result = await connection
-          .execute("INSERT INTO t (j) VALUES ('{\"a\":4}') RETURNING j");
+      var result = await connection.execute(
+        "INSERT INTO t (j) VALUES ('{\"a\":4}') RETURNING j",
+      );
       expect(result, [
         [
-          {'a': 4}
-        ]
+          {'a': 4},
+        ],
       ]);
       result = await connection.execute('SELECT j FROM t');
       expect(result, [
         [
-          {'a': 4}
-        ]
+          {'a': 4},
+        ],
       ]);
     });
 
     test('Can store JSON map with driver type annotation', () async {
       var result = await connection.execute(
-          Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
-          parameters: {
-            'a': {'a': 4}
-          });
+        Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
+        parameters: {
+          'a': {'a': 4},
+        },
+      );
       expect(result, [
         [
-          {'a': 4}
-        ]
+          {'a': 4},
+        ],
       ]);
       result = await connection.execute('SELECT j FROM t');
       expect(result, [
         [
-          {'a': 4}
-        ]
+          {'a': 4},
+        ],
       ]);
     });
     test('Can store JSON map with execute', () async {
       final result = await connection.execute(
-          Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
-          parameters: {
-            'a': {'a': 4}
-          });
+        Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
+        parameters: {
+          'a': {'a': 4},
+        },
+      );
       expect(result, hasLength(1));
       final resultQuery = await connection.execute('SELECT j FROM t');
       expect(resultQuery, [
         [
-          {'a': 4}
-        ]
+          {'a': 4},
+        ],
       ]);
     });
 
     test('Can store JSON list', () async {
-      var result = await connection
-          .execute("INSERT INTO t (j) VALUES ('[{\"a\":4}]') RETURNING j");
+      var result = await connection.execute(
+        "INSERT INTO t (j) VALUES ('[{\"a\":4}]') RETURNING j",
+      );
       expect(result, [
         [
           [
-            {'a': 4}
-          ]
-        ]
+            {'a': 4},
+          ],
+        ],
       ]);
       result = await connection.execute('SELECT j FROM t');
       expect(result, [
         [
           [
-            {'a': 4}
-          ]
-        ]
+            {'a': 4},
+          ],
+        ],
       ]);
     });
 
     test('Can store JSON list with driver type annotation', () async {
       var result = await connection.execute(
-          Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
-          parameters: {
-            'a': [
-              {'a': 4}
-            ]
-          });
+        Sql.named('INSERT INTO t (j) VALUES (@a:jsonb) RETURNING j'),
+        parameters: {
+          'a': [
+            {'a': 4},
+          ],
+        },
+      );
       expect(result, [
         [
           [
-            {'a': 4}
-          ]
-        ]
+            {'a': 4},
+          ],
+        ],
       ]);
       result = await connection.execute('SELECT j FROM t');
       expect(result, [
         [
           [
-            {'a': 4}
-          ]
-        ]
+            {'a': 4},
+          ],
+        ],
       ]);
     });
   });

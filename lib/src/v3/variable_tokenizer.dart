@@ -10,11 +10,7 @@ import 'package:postgres/src/types/type_registry.dart';
 import '../types.dart';
 import 'query_description.dart';
 
-enum TokenizerMode {
-  none,
-  named,
-  indexed,
-}
+enum TokenizerMode { none, named, indexed }
 
 /// In addition to indexed variables supported by the postgres protocol, most
 /// postgres clients (including this package) support a variable mode in which
@@ -67,9 +63,9 @@ class VariableTokenizer {
     int variableCodeUnit = $at,
     required String sql,
     required this.mode,
-  })  : _variableCodeUnit = variableCodeUnit,
-        _source = sql,
-        _codeUnits = sql.codeUnits;
+  }) : _variableCodeUnit = variableCodeUnit,
+       _source = sql,
+       _codeUnits = sql.codeUnits;
 
   /// Builds an [InternalQueryDescription] after lexing (see [tokenize]) the
   /// source input.
@@ -243,8 +239,9 @@ class VariableTokenizer {
       final char = _consume();
       _rewrittenSql.writeCharCode(char);
 
-      final nextCharInEndSequence =
-          endSequence.codeUnitAt(matchedCharactersOfEndSequence);
+      final nextCharInEndSequence = endSequence.codeUnitAt(
+        matchedCharactersOfEndSequence,
+      );
 
       if (char == nextCharInEndSequence) {
         matchedCharactersOfEndSequence++;
@@ -324,7 +321,8 @@ class VariableTokenizer {
       final lexeme = _source.substring(startPosition, _index);
 
       throw FormatException(
-          'Error at offset $startPosition ($lexeme): $message');
+        'Error at offset $startPosition ($lexeme): $message',
+      );
     }
 
     var isReadingName = true;
@@ -385,7 +383,9 @@ class VariableTokenizer {
         throw ArgumentError('Did not expect $mode.');
       case TokenizerMode.named:
         actualVariableIndex = _namedVariables.putIfAbsent(
-            nameBuffer.toString(), () => _namedVariables.length + 1);
+          nameBuffer.toString(),
+          () => _namedVariables.length + 1,
+        );
       case TokenizerMode.indexed:
         if (nameBuffer.isNotEmpty) {
           actualVariableIndex = int.parse(nameBuffer.toString());

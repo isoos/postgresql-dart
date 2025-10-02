@@ -13,20 +13,25 @@ void main() {
       expect(vector.words.first.text, 'x');
       expect(vector.words.first.toString(), 'x:11,12');
       expect(vector.words.last.text, 'yy');
-      expect(
-        vector.words.last.positions?.map((e) => e.toString()).toList(),
-        ['2A', '4C'],
-      );
+      expect(vector.words.last.positions?.map((e) => e.toString()).toList(), [
+        '2A',
+        '4C',
+      ]);
     });
 
     test('encode and decode', () async {
       final c = await server.newConnection();
-      final rs = await c.execute(r'SELECT $1::tsvector', parameters: [
-        TsVector(words: [
-          TsWord('ab'),
-          TsWord('cd', positions: [TsWordPos(4, weight: TsWeight.c)]),
-        ])
-      ]);
+      final rs = await c.execute(
+        r'SELECT $1::tsvector',
+        parameters: [
+          TsVector(
+            words: [
+              TsWord('ab'),
+              TsWord('cd', positions: [TsWordPos(4, weight: TsWeight.c)]),
+            ],
+          ),
+        ],
+      );
       final first = rs.first.first as TsVector;
       expect(first.words, hasLength(2));
       expect(first.words.first.text, 'ab');
@@ -37,20 +42,25 @@ void main() {
 
     test('store and read', () async {
       final c = await server.newConnection();
-      await c
-          .execute('CREATE TABLE t (id TEXT, tsv TSVECTOR, PRIMARY KEY (id))');
+      await c.execute(
+        'CREATE TABLE t (id TEXT, tsv TSVECTOR, PRIMARY KEY (id))',
+      );
       await c.execute(
         r'INSERT INTO t VALUES ($1, $2)',
         parameters: [
           'a',
-          TsVector(words: [
-            TsWord('abc', positions: [TsWordPos(1)]),
-            TsWord('def'),
-          ]),
+          TsVector(
+            words: [
+              TsWord('abc', positions: [TsWordPos(1)]),
+              TsWord('def'),
+            ],
+          ),
         ],
       );
-      final rs =
-          await c.execute(r'SELECT * FROM t WHERE id = $1', parameters: ['a']);
+      final rs = await c.execute(
+        r'SELECT * FROM t WHERE id = $1',
+        parameters: ['a'],
+      );
       final row = rs.single;
       final tsv = row[1] as TsVector;
       expect(tsv.toString(), 'abc:1 def');
@@ -89,7 +99,10 @@ void main() {
       final c = await server.newConnection();
 
       Future<void> expectMatch(
-          TsVector vector, TsQuery query, bool expectedMatch) async {
+        TsVector vector,
+        TsQuery query,
+        bool expectedMatch,
+      ) async {
         final rs = await c.execute(
           r'SELECT $1::tsvector @@ $2::tsquery',
           parameters: [vector, query],
@@ -97,17 +110,15 @@ void main() {
         expect(rs.first.first, expectedMatch);
       }
 
-      final vector = TsVector(words: [
-        TsWord('abc', positions: [TsWordPos(1)]),
-        TsWord('cde', positions: [TsWordPos(2)]),
-        TsWord('xyz', positions: [TsWordPos(3)]),
-      ]);
-
-      await expectMatch(
-        vector,
-        TsQuery.word('cd', prefix: true),
-        true,
+      final vector = TsVector(
+        words: [
+          TsWord('abc', positions: [TsWordPos(1)]),
+          TsWord('cde', positions: [TsWordPos(2)]),
+          TsWord('xyz', positions: [TsWordPos(3)]),
+        ],
       );
+
+      await expectMatch(vector, TsQuery.word('cd', prefix: true), true);
       await expectMatch(
         vector,
         TsQuery.word('cde').followedBy(TsQuery.word('xyz')),

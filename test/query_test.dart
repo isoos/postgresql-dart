@@ -9,18 +9,22 @@ void main() {
 
     setUp(() async {
       connection = await server.newConnection();
-      await connection.execute('CREATE TEMPORARY TABLE t '
-          '(i int, s serial, bi bigint, '
-          'bs bigserial, bl boolean, si smallint, '
-          't text, f real, d double precision, '
-          'dt date, ts timestamp, tsz timestamptz, j jsonb, u uuid, '
-          'v varchar, p point, jj json, ia _int4, bia _int8, ta _text, da _float8, ja _jsonb, va _varchar(20), '
-          'ba _bool'
-          ')');
       await connection.execute(
-          'CREATE TEMPORARY TABLE u (i1 int not null, i2 int not null);');
-      await connection
-          .execute('CREATE TEMPORARY TABLE n (i1 int, i2 int not null);');
+        'CREATE TEMPORARY TABLE t '
+        '(i int, s serial, bi bigint, '
+        'bs bigserial, bl boolean, si smallint, '
+        't text, f real, d double precision, '
+        'dt date, ts timestamp, tsz timestamptz, j jsonb, u uuid, '
+        'v varchar, p point, jj json, ia _int4, bia _int8, ta _text, da _float8, ja _jsonb, va _varchar(20), '
+        'ba _bool'
+        ')',
+      );
+      await connection.execute(
+        'CREATE TEMPORARY TABLE u (i1 int not null, i2 int not null);',
+      );
+      await connection.execute(
+        'CREATE TEMPORARY TABLE n (i1 int, i2 int not null);',
+      );
     });
 
     tearDown(() async {
@@ -29,8 +33,9 @@ void main() {
 
     test('UTF16 strings in value', () async {
       var result = await connection.execute(
-          Sql.named('INSERT INTO t (t) values (@t:text) returning t'),
-          parameters: {'t': '°∆'});
+        Sql.named('INSERT INTO t (t) values (@t:text) returning t'),
+        parameters: {'t': '°∆'},
+      );
 
       final expectedRow = ['°∆'];
       expect(result, [expectedRow]);
@@ -42,8 +47,9 @@ void main() {
     });
 
     test('UTF16 strings in query', () async {
-      var result = await connection
-          .execute("INSERT INTO t (t) values ('°∆') RETURNING t");
+      var result = await connection.execute(
+        "INSERT INTO t (t) values ('°∆') RETURNING t",
+      );
 
       final expectedRow = ['°∆'];
       expect(result, [expectedRow]);
@@ -53,8 +59,10 @@ void main() {
     });
 
     test('UTF16 strings in value with escape characters', () async {
-      await connection.execute(Sql.named('INSERT INTO t (t) values (@t:text)'),
-          parameters: {'t': "'©™®'"});
+      await connection.execute(
+        Sql.named('INSERT INTO t (t) values (@t:text)'),
+        parameters: {'t': "'©™®'"},
+      );
 
       final expectedRow = ["'©™®'"];
 
@@ -63,8 +71,10 @@ void main() {
     });
 
     test('UTF16 strings in value with backslash', () async {
-      await connection.execute(Sql.named('INSERT INTO t (t) values (@t:text)'),
-          parameters: {'t': r"°\'©™®'"});
+      await connection.execute(
+        Sql.named('INSERT INTO t (t) values (@t:text)'),
+        parameters: {'t': r"°\'©™®'"},
+      );
 
       final expectedRow = [r"°\'©™®'"];
 
@@ -83,10 +93,11 @@ void main() {
 
     test('Really long raw substitution value', () async {
       final result = await connection.execute(
-          Sql.named('INSERT INTO t (t) VALUES (@t:text) returning t;'),
-          parameters: {'t': lorumIpsum});
+        Sql.named('INSERT INTO t (t) VALUES (@t:text) returning t;'),
+        parameters: {'t': lorumIpsum},
+      );
       expect(result, [
-        [lorumIpsum]
+        [lorumIpsum],
       ]);
     });
 
@@ -101,59 +112,61 @@ void main() {
 
     test('Query without specifying types', () async {
       var result = await connection.execute(
-          Sql.named(
-              'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
-              '(@i,'
-              '@bi,'
-              '@bl,'
-              '@si,'
-              '@t,'
-              '@f,'
-              '@d,'
-              '@dt,'
-              '@ts,'
-              '@tsz,'
-              '@j,'
-              '@u,'
-              '@v,'
-              '@p,'
-              '@jj,'
-              '@ia,'
-              '@bia,'
-              '@ta,'
-              '@da,'
-              '@ja,'
-              '@va,'
-              '@ba'
-              ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba'),
-          parameters: {
-            'i': 1,
-            'bi': 2,
-            'bl': true,
-            'si': 3,
-            't': 'foobar',
-            'f': 5.0,
-            'd': 6.0,
-            'dt': DateTime.utc(2000),
-            'ts': DateTime.utc(2000, 2),
-            'tsz': DateTime.utc(2000, 3),
-            'j': {'a': 'b'},
-            'u': '01234567-89ab-cdef-0123-0123456789ab',
-            'v': 'abcdef',
-            'p': Point(1.0, 0.1),
-            'jj': {'k': 'v'},
-            'ia': [1, 2, 3],
-            'bia': [4, 5, 6],
-            'ta': ['a', 'b"\'\\"'],
-            'da': [0.1, 2.3, 1],
-            'ja': [
-              1,
-              'a"\'\\"',
-              {'k': 'v"\'\\"'}
-            ],
-            'va': ['a', 'b', 'c', 'd', 'e', 'f'],
-            'ba': [false, true, false],
-          });
+        Sql.named(
+          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
+          '(@i,'
+          '@bi,'
+          '@bl,'
+          '@si,'
+          '@t,'
+          '@f,'
+          '@d,'
+          '@dt,'
+          '@ts,'
+          '@tsz,'
+          '@j,'
+          '@u,'
+          '@v,'
+          '@p,'
+          '@jj,'
+          '@ia,'
+          '@bia,'
+          '@ta,'
+          '@da,'
+          '@ja,'
+          '@va,'
+          '@ba'
+          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba',
+        ),
+        parameters: {
+          'i': 1,
+          'bi': 2,
+          'bl': true,
+          'si': 3,
+          't': 'foobar',
+          'f': 5.0,
+          'd': 6.0,
+          'dt': DateTime.utc(2000),
+          'ts': DateTime.utc(2000, 2),
+          'tsz': DateTime.utc(2000, 3),
+          'j': {'a': 'b'},
+          'u': '01234567-89ab-cdef-0123-0123456789ab',
+          'v': 'abcdef',
+          'p': Point(1.0, 0.1),
+          'jj': {'k': 'v'},
+          'ia': [1, 2, 3],
+          'bia': [4, 5, 6],
+          'ta': ['a', 'b"\'\\"'],
+          'da': [0.1, 2.3, 1],
+          'ja': [
+            1,
+            'a"\'\\"',
+            {'k': 'v"\'\\"'},
+          ],
+          'va': ['a', 'b', 'c', 'd', 'e', 'f'],
+          'ba': [false, true, false],
+        },
+      );
 
       final expectedRow = [
         1,
@@ -180,75 +193,78 @@ void main() {
         [
           1,
           'a"\'\\"',
-          {'k': 'v"\'\\"'}
+          {'k': 'v"\'\\"'},
         ],
         ['a', 'b', 'c', 'd', 'e', 'f'],
-        [false, true, false]
+        [false, true, false],
       ];
       expect(result.schema.columns, hasLength(24));
       expect(result.schema.columns.first.columnName, 'i');
       expect(result.schema.columns.last.columnName, 'ba');
       expect(result, [expectedRow]);
       result = await connection.execute(
-          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba from t');
+        'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba from t',
+      );
       expect(result, [expectedRow]);
     });
 
     test('Query by specifying all types', () async {
       var result = await connection.execute(
-          Sql.named(
-              'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
-              '(@i:int4, '
-              '@bi:int8, '
-              '@bl:boolean, '
-              '@si:int2, '
-              '@t:text, '
-              '@f:float4, '
-              '@d:float8, '
-              '@dt:date, '
-              '@ts:timestamp, '
-              '@tsz:timestamptz, '
-              '@j:jsonb, '
-              '@u:uuid, '
-              '@v:varchar, '
-              '@p:point, '
-              '@jj:json, '
-              '@ia:_int4, '
-              '@bia:_int8, '
-              '@ta:_text, '
-              '@da:_float8, '
-              '@ja:_jsonb, '
-              '@va:_varchar, '
-              '@ba:_bool'
-              ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba'),
-          parameters: {
-            'i': 1,
-            'bi': 2,
-            'bl': true,
-            'si': 3,
-            't': 'foobar',
-            'f': 5.0,
-            'd': 6.0,
-            'dt': DateTime.utc(2000),
-            'ts': DateTime.utc(2000, 2),
-            'tsz': DateTime.utc(2000, 3),
-            'j': {'key': 'value'},
-            'u': '01234567-89ab-cdef-0123-0123456789ab',
-            'v': 'abcdef',
-            'p': Point(1.0, 0.1),
-            'jj': {'k': 'v'},
-            'ia': [1, 2, 3],
-            'bia': [4, 5, 6],
-            'ta': ['a', 'b'],
-            'da': [0.1, 2.3, 1.0],
-            'ja': [
-              1,
-              'a',
-              {'k': 'v'}
-            ],
-            'va': ['a', 'b', 'c', 'd', 'e', 'f'],
-            'ba': [false, true, true, false],
-          });
+        Sql.named(
+          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba) values '
+          '(@i:int4, '
+          '@bi:int8, '
+          '@bl:boolean, '
+          '@si:int2, '
+          '@t:text, '
+          '@f:float4, '
+          '@d:float8, '
+          '@dt:date, '
+          '@ts:timestamp, '
+          '@tsz:timestamptz, '
+          '@j:jsonb, '
+          '@u:uuid, '
+          '@v:varchar, '
+          '@p:point, '
+          '@jj:json, '
+          '@ia:_int4, '
+          '@bia:_int8, '
+          '@ta:_text, '
+          '@da:_float8, '
+          '@ja:_jsonb, '
+          '@va:_varchar, '
+          '@ba:_bool'
+          ') returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba',
+        ),
+        parameters: {
+          'i': 1,
+          'bi': 2,
+          'bl': true,
+          'si': 3,
+          't': 'foobar',
+          'f': 5.0,
+          'd': 6.0,
+          'dt': DateTime.utc(2000),
+          'ts': DateTime.utc(2000, 2),
+          'tsz': DateTime.utc(2000, 3),
+          'j': {'key': 'value'},
+          'u': '01234567-89ab-cdef-0123-0123456789ab',
+          'v': 'abcdef',
+          'p': Point(1.0, 0.1),
+          'jj': {'k': 'v'},
+          'ia': [1, 2, 3],
+          'bia': [4, 5, 6],
+          'ta': ['a', 'b'],
+          'da': [0.1, 2.3, 1.0],
+          'ja': [
+            1,
+            'a',
+            {'k': 'v'},
+          ],
+          'va': ['a', 'b', 'c', 'd', 'e', 'f'],
+          'ba': [false, true, true, false],
+        },
+      );
 
       final expectedRow = [
         1,
@@ -275,7 +291,7 @@ void main() {
         [
           1,
           'a',
-          {'k': 'v'}
+          {'k': 'v'},
         ],
         ['a', 'b', 'c', 'd', 'e', 'f'],
         [false, true, true, false],
@@ -283,36 +299,39 @@ void main() {
       expect(result, [expectedRow]);
 
       result = await connection.execute(
-          'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba from t');
+        'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz, j, u, v, p, jj, ia, bia, ta, da, ja, va, ba from t',
+      );
       expect(result, [expectedRow]);
     });
 
     test('Query by specifying some types', () async {
       var result = await connection.execute(
-          Sql.named(
-              'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) values '
-              '(@i,'
-              '@bi:int8,'
-              '@bl,'
-              '@si:int2,'
-              '@t,'
-              '@f:float4,'
-              '@d,'
-              '@dt:date,'
-              '@ts,'
-              '@tsz:timestamptz) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz'),
-          parameters: {
-            'i': 1,
-            'bi': 2,
-            'bl': true,
-            'si': 3,
-            't': 'foobar',
-            'f': 5.0,
-            'd': 6.0,
-            'dt': DateTime.utc(2000),
-            'ts': DateTime.utc(2000, 2),
-            'tsz': DateTime.utc(2000, 3),
-          });
+        Sql.named(
+          'INSERT INTO t (i, bi, bl, si, t, f, d, dt, ts, tsz) values '
+          '(@i,'
+          '@bi:int8,'
+          '@bl,'
+          '@si:int2,'
+          '@t,'
+          '@f:float4,'
+          '@d,'
+          '@dt:date,'
+          '@ts,'
+          '@tsz:timestamptz) returning i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz',
+        ),
+        parameters: {
+          'i': 1,
+          'bi': 2,
+          'bl': true,
+          'si': 3,
+          't': 'foobar',
+          'f': 5.0,
+          'd': 6.0,
+          'dt': DateTime.utc(2000),
+          'ts': DateTime.utc(2000, 2),
+          'tsz': DateTime.utc(2000, 3),
+        },
+      );
 
       final expectedRow = [
         1,
@@ -326,63 +345,63 @@ void main() {
         6.0,
         DateTime.utc(2000),
         DateTime.utc(2000, 2),
-        DateTime.utc(2000, 3)
+        DateTime.utc(2000, 3),
       ];
       expect(result, [expectedRow]);
-      result = await connection
-          .execute('select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t');
+      result = await connection.execute(
+        'select i,s, bi, bs, bl, si, t, f, d, dt, ts, tsz from t',
+      );
       expect(result, [expectedRow]);
     });
 
     test('Can supply null for values (binary)', () async {
       final results = await connection.execute(
-          Sql.named(
-              'INSERT INTO n (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2'),
-          parameters: {
-            'i1': null,
-            'i2': 1,
-          });
+        Sql.named(
+          'INSERT INTO n (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2',
+        ),
+        parameters: {'i1': null, 'i2': 1},
+      );
 
       expect(results, [
-        [null, 1]
+        [null, 1],
       ]);
     });
 
     test('Can supply null for values (text)', () async {
       final results = await connection.execute(
-          Sql.named(
-              'INSERT INTO n (i1, i2) values (@i1, @i2:int4) returning i1, i2'),
-          parameters: {
-            'i1': null,
-            'i2': 1,
-          });
+        Sql.named(
+          'INSERT INTO n (i1, i2) values (@i1, @i2:int4) returning i1, i2',
+        ),
+        parameters: {'i1': null, 'i2': 1},
+      );
 
       expect(results, [
-        [null, 1]
+        [null, 1],
       ]);
     });
 
     test('Overspecifying parameters throws query', () async {
       await expectLater(
-          () => connection.execute(
-                  Sql.named(
-                      'INSERT INTO u (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2'),
-                  parameters: {
-                    'i1': 0,
-                    'i2': 1,
-                    'i3': 0,
-                  }),
-          throwsArgumentError);
+        () => connection.execute(
+          Sql.named(
+            'INSERT INTO u (i1, i2) values (@i1:int4, @i2:int4) returning i1, i2',
+          ),
+          parameters: {'i1': 0, 'i2': 1, 'i3': 0},
+        ),
+        throwsArgumentError,
+      );
     });
 
     test('Can cast text to int on db server', () async {
       final results = await connection.execute(
-          Sql.named(
-              'INSERT INTO u (i1, i2) VALUES (@i1::int4, @i2::int4) RETURNING i1, i2'),
-          parameters: {'i1': '0', 'i2': '1'});
+        Sql.named(
+          'INSERT INTO u (i1, i2) VALUES (@i1::int4, @i2::int4) RETURNING i1, i2',
+        ),
+        parameters: {'i1': '0', 'i2': '1'},
+      );
 
       expect(results, [
-        [0, 1]
+        [0, 1],
       ]);
     });
   });
@@ -393,7 +412,8 @@ void main() {
     setUp(() async {
       connection = await server.newConnection();
       await connection.execute(
-          'CREATE TEMPORARY TABLE t (i1 int not null, i2 int not null)');
+        'CREATE TEMPORARY TABLE t (i1 int not null, i2 int not null)',
+      );
     });
 
     tearDown(() async {
@@ -401,38 +421,45 @@ void main() {
     });
 
     test(
-        'A query that fails on the server will report back an exception through the query method',
-        () async {
-      try {
-        await connection.execute(Sql.named('INSERT INTO t (i1) values (@i1)'),
-            parameters: {'i1': 0});
-        expect(true, false);
-      } on PgException catch (e) {
-        expect(e.severity, Severity.error);
-        expect(e.message, contains('null value in column "i2"'));
-      }
-    });
+      'A query that fails on the server will report back an exception through the query method',
+      () async {
+        try {
+          await connection.execute(
+            Sql.named('INSERT INTO t (i1) values (@i1)'),
+            parameters: {'i1': 0},
+          );
+          expect(true, false);
+        } on PgException catch (e) {
+          expect(e.severity, Severity.error);
+          expect(e.message, contains('null value in column "i2"'));
+        }
+      },
+    );
 
     test(
-        'Missing substitution value does not throw, query is sent to the server without changing that part.',
-        () async {
-      final rs1 = await connection
-          .execute('SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1)');
-      expect(rs1.first.toColumnMap(), {'col1': 'user@domain.com'});
+      'Missing substitution value does not throw, query is sent to the server without changing that part.',
+      () async {
+        final rs1 = await connection.execute(
+          'SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1)',
+        );
+        expect(rs1.first.toColumnMap(), {'col1': 'user@domain.com'});
 
-      final rs2 = await connection.execute(
-        Sql.named(
-            'SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1) WHERE col1 > @u1'),
-        parameters: {'u1': 'hello@domain.com'},
-      );
-      expect(rs2.first.toColumnMap(), {'col1': 'user@domain.com'});
-    });
+        final rs2 = await connection.execute(
+          Sql.named(
+            'SELECT *  FROM (VALUES (\'user@domain.com\')) t1 (col1) WHERE col1 > @u1',
+          ),
+          parameters: {'u1': 'hello@domain.com'},
+        );
+        expect(rs2.first.toColumnMap(), {'col1': 'user@domain.com'});
+      },
+    );
 
     test('Wrong type for parameter in substitution values fails', () async {
       try {
         await connection.execute(
-            Sql.named('INSERT INTO t (i1, i2) values (@i1:int4, @i2:int4)'),
-            parameters: {'i1': '1', 'i2': 1});
+          Sql.named('INSERT INTO t (i1, i2) values (@i1:int4, @i2:int4)'),
+          parameters: {'i1': '1', 'i2': 1},
+        );
         expect(true, false);
       } on FormatException catch (e) {
         expect(e.toString(), contains('Invalid type for parameter value'));
@@ -442,8 +469,9 @@ void main() {
     test('Invalid type code', () async {
       try {
         await connection.execute(
-            Sql.named('INSERT INTO t (i1, i2) values (@i1:qwerty, @i2:int4)'),
-            parameters: {'i1': '1', 'i2': 1});
+          Sql.named('INSERT INTO t (i1, i2) values (@i1:qwerty, @i2:int4)'),
+          parameters: {'i1': '1', 'i2': 1},
+        );
         expect(true, false);
       } on FormatException catch (e) {
         expect(e.toString(), contains('Unknown type'));

@@ -113,10 +113,11 @@ abstract interface class Range<T> {
     }
   }
 
-  _throwIfLowerGreaterThanUpper(T? lower, T? upper) {
+  void _throwIfLowerGreaterThanUpper(T? lower, T? upper) {
     if (_lowerGreaterThanUpper(lower, upper)) {
       throw ArgumentError(
-          'Range: lower bound must be less than or equal to upper bound');
+        'Range: lower bound must be less than or equal to upper bound',
+      );
     }
   }
 
@@ -260,5 +261,5 @@ final class DateTimeRange extends ContinuousRange<DateTime> {
 
   /// Construct an empty [TsRange]
   DateTimeRange.empty()
-      : super(_z0, _z0, Bounds(Bound.inclusive, Bound.exclusive));
+    : super(_z0, _z0, Bounds(Bound.inclusive, Bound.exclusive));
 }

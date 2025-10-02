@@ -28,10 +28,7 @@ class GenericCodec extends Codec {
   /// as `input` value.
   final bool encodesNull;
 
-  GenericCodec(
-    this.oid, {
-    this.encodesNull = false,
-  });
+  GenericCodec(this.oid, {this.encodesNull = false});
 
   @override
   EncodedValue? encode(TypedValue input, CodecContext context) {

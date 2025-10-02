@@ -20,7 +20,9 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
     switch (message.type) {
       case AuthenticationMessageType.sasl:
         final bytesToSend = authenticator.handleMessage(
-            SaslMessageType.AuthenticationSASL, message.bytes);
+          SaslMessageType.AuthenticationSASL,
+          message.bytes,
+        );
         if (bytesToSend == null) {
           throw PgException('KindSASL: No bytes to send');
         }
@@ -28,7 +30,9 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
         break;
       case AuthenticationMessageType.saslContinue:
         final bytesToSend = authenticator.handleMessage(
-            SaslMessageType.AuthenticationSASLContinue, message.bytes);
+          SaslMessageType.AuthenticationSASLContinue,
+          message.bytes,
+        );
         if (bytesToSend == null) {
           throw PgException('KindSASLContinue: No bytes to send');
         }
@@ -36,11 +40,14 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
         break;
       case AuthenticationMessageType.saslFinal:
         authenticator.handleMessage(
-            SaslMessageType.AuthenticationSASLFinal, message.bytes);
+          SaslMessageType.AuthenticationSASLFinal,
+          message.bytes,
+        );
         return;
       default:
         throw PgException(
-            'Unsupported authentication type ${message.type}, closing connection.');
+          'Unsupported authentication type ${message.type}, closing connection.',
+        );
     }
     connection.sendMessage(msg);
   }

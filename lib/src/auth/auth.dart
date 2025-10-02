@@ -6,11 +6,7 @@ import 'clear_text_authenticator.dart';
 import 'md5_authenticator.dart';
 import 'sasl_authenticator.dart';
 
-enum AuthenticationScheme {
-  md5,
-  scramSha256,
-  clear,
-}
+enum AuthenticationScheme { md5, scramSha256, clear }
 
 /// A small interface to obtain the username and password used for a postgres
 /// connection, as well as sending messages.
@@ -37,16 +33,22 @@ abstract class PostgresAuthenticator {
   void onMessage(AuthenticationMessage message);
 }
 
-PostgresAuthenticator createAuthenticator(PostgresAuthConnection connection,
-    AuthenticationScheme authenticationScheme) {
+PostgresAuthenticator createAuthenticator(
+  PostgresAuthConnection connection,
+  AuthenticationScheme authenticationScheme,
+) {
   switch (authenticationScheme) {
     case AuthenticationScheme.md5:
       return MD5Authenticator(connection);
     case AuthenticationScheme.scramSha256:
       final credentials = UsernamePasswordCredential(
-          username: connection.username, password: connection.password);
+        username: connection.username,
+        password: connection.password,
+      );
       return PostgresSaslAuthenticator(
-          connection, ScramAuthenticator('SCRAM-SHA-256', sha256, credentials));
+        connection,
+        ScramAuthenticator('SCRAM-SHA-256', sha256, credentials),
+      );
     case AuthenticationScheme.clear:
       return ClearAuthenticator(connection);
   }

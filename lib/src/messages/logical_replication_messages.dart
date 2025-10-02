@@ -48,10 +48,14 @@ class XLogDataLogicalMessage implements XLogDataMessage {
 
 /// Tries to check if the [bytesList] is a [LogicalReplicationMessage]. If so,
 /// [LogicalReplicationMessage] is returned, otherwise `null` is returned.
-@Deprecated('This method will be removed from public API. '
-    'Please file a new issue on GitHub if you are using it.')
+@Deprecated(
+  'This method will be removed from public API. '
+  'Please file a new issue on GitHub if you are using it.',
+)
 LogicalReplicationMessage? tryParseLogicalReplicationMessage(
-    PgByteDataReader reader, int length) {
+  PgByteDataReader reader,
+  int length,
+) {
   // the first byte is the msg type
   final firstByte = reader.readUint8();
   final msgType = LogicalReplicationMessageTypes.fromByte(firstByte);
@@ -104,7 +108,9 @@ LogicalReplicationMessage? tryParseLogicalReplicationMessage(
 /// [LogicalReplicationMessage] is returned, otherwise `null` is returned.
 @internal
 Future<LogicalReplicationMessage?> tryAsyncParseLogicalReplicationMessage(
-    PgByteDataReader reader, int length) async {
+  PgByteDataReader reader,
+  int length,
+) async {
   // the first byte is the msg type
   final firstByte = reader.readUint8();
   final msgType = LogicalReplicationMessageTypes.fromByte(firstByte);
@@ -403,7 +409,8 @@ class TupleDataColumn {
   /// Data is the value of the column, in text format.
   /// n is the above length.
   @Deprecated(
-      'Use `value` instead. This field will be removed in a Future version.')
+    'Use `value` instead. This field will be removed in a Future version.',
+  )
   final String data;
 
   /// The (best-effort) decoded value of the column.
@@ -431,9 +438,7 @@ class TupleData {
 
   final List<TupleDataColumn> columns;
 
-  TupleData({
-    required this.columns,
-  });
+  TupleData({required this.columns});
 
   /// TupleData does not consume the entire bytes
   ///
@@ -480,7 +485,9 @@ class TupleData {
   ///
   /// It'll read until the types are generated.
   static Future<TupleData> _parse(
-      PgByteDataReader reader, int relationId) async {
+    PgByteDataReader reader,
+    int relationId,
+  ) async {
     final columnCount = reader.readUint16();
     final columns = <TupleDataColumn>[];
     for (var i = 0; i < columnCount; i++) {
@@ -491,9 +498,9 @@ class TupleData {
       late final String data;
       final typeOid = await reader.codecContext.databaseInfo
           .getColumnTypeOidByRelationIdAndColumnIndex(
-        relationId: relationId,
-        columnIndex: i,
-      );
+            relationId: relationId,
+            columnIndex: i,
+          );
       Object? value;
       switch (tupleDataType) {
         case TupleDataType.text:
@@ -512,10 +519,7 @@ class TupleData {
                   encoding: reader.codecContext.encoding,
                 )
               : await reader.codecContext.typeRegistry.decode(
-                  EncodedValue.binary(
-                    bytes,
-                    typeOid: typeOid,
-                  ),
+                  EncodedValue.binary(bytes, typeOid: typeOid),
                   reader.codecContext,
                 );
           data = value.toString();
@@ -588,8 +592,10 @@ enum UpdateMessageTuple {
   final String id;
   const UpdateMessageTuple(this.id);
   static UpdateMessageTuple fromId(String id) {
-    return UpdateMessageTuple.values
-        .firstWhere((element) => element.id == id, orElse: () => noneType);
+    return UpdateMessageTuple.values.firstWhere(
+      (element) => element.id == id,
+      orElse: () => noneType,
+    );
   }
 
   static UpdateMessageTuple fromByte(int byte) {
@@ -627,7 +633,11 @@ class UpdateMessage implements LogicalReplicationMessage {
   late final TupleData? newTuple;
 
   UpdateMessage._(
-      this.relationId, this.oldTupleType, this.oldTuple, this.newTuple);
+    this.relationId,
+    this.oldTupleType,
+    this.oldTuple,
+    this.newTuple,
+  );
 
   /// NOTE: do not use, will be removed.
   UpdateMessage._syncParse(PgByteDataReader reader) {
@@ -775,8 +785,10 @@ enum TruncateOptions {
   const TruncateOptions(this.value);
 
   static TruncateOptions fromValue(int value) {
-    return TruncateOptions.values
-        .firstWhere((element) => element.value == value, orElse: () => none);
+    return TruncateOptions.values.firstWhere(
+      (element) => element.value == value,
+      orElse: () => none,
+    );
   }
 }
 

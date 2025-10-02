@@ -5,7 +5,7 @@ import 'package:test/test.dart';
 
 import 'docker.dart';
 
-void _print(x) {
+void _print(dynamic x) {
   // uncomment to debug locally
   // print(x);
 }
@@ -37,33 +37,31 @@ void main() {
       for (var i = 0; i < numBatches; i++) {
         _print('Batch $i of $numBatches');
         final values = List.generate(
-            batchSize,
-            (i) => [
-                  i,
-                  i * 2,
-                  'value $i',
-                  'value $i',
-                  'value $i',
-                  'value $i',
-                  'value $i',
-                  'value $i',
-                  'value $i',
-                  'value $i',
-                ]);
+          batchSize,
+          (i) => [
+            i,
+            i * 2,
+            'value $i',
+            'value $i',
+            'value $i',
+            'value $i',
+            'value $i',
+            'value $i',
+            'value $i',
+            'value $i',
+          ],
+        );
 
         final allArgs = values.expand((e) => e).toList();
         final valuesPart = List.generate(
-                batchSize,
-                (i) =>
-                    '(${List.generate(10, (j) => '\$${i * 10 + j + 1}').join(', ')})')
-            .join(', ');
+          batchSize,
+          (i) =>
+              '(${List.generate(10, (j) => '\$${i * 10 + j + 1}').join(', ')})',
+        ).join(', ');
 
         final stmt =
             'INSERT INTO large_table (c1, c2, c3, c4, c5, c6, c7, c8, c9, c10) VALUES $valuesPart';
-        await conn.execute(
-          stmt,
-          parameters: allArgs,
-        );
+        await conn.execute(stmt, parameters: allArgs);
       }
 
       _print('Inserted ${numBatches * batchSize} rows in ${sw.elapsed}');

@@ -18,19 +18,24 @@ void main() {
         );
 ''');
 
-      final rs1 = await conn.execute(Sql.named('''
+      final rs1 = await conn.execute(
+        Sql.named('''
         INSERT INTO images (name, description, image)
         VALUES (@name, @description, @image:bytea)
         RETURNING id
-'''), parameters: {
-        'name': 'name-1',
-        'description': 'descr-1',
-        'image': Uint8List.fromList([0, 1, 2]),
-      });
+'''),
+        parameters: {
+          'name': 'name-1',
+          'description': 'descr-1',
+          'image': Uint8List.fromList([0, 1, 2]),
+        },
+      );
       final id = rs1.single.single;
 
-      final rs2 = await conn
-          .execute(r'SELECT image FROM images WHERE id=$1', parameters: [id]);
+      final rs2 = await conn.execute(
+        r'SELECT image FROM images WHERE id=$1',
+        parameters: [id],
+      );
       final bytes = rs2.single.single;
       expect(bytes, [0, 1, 2]);
     });

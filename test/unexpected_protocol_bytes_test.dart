@@ -16,41 +16,51 @@ void main() {
       serverSocket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
       serverSocket.listen((socket) async {
         final clientSocket = await Socket.connect(
-            InternetAddress.loopbackIPv4, await server.port);
+          InternetAddress.loopbackIPv4,
+          await server.port,
+        );
         late StreamSubscription socketSubs;
         late StreamSubscription clientSubs;
-        socketSubs = socket.listen(clientSocket.add, onDone: () {
-          socketSubs.cancel();
-          clientSubs.cancel();
-          clientSocket.close();
-        }, onError: (e) {
-          socketSubs.cancel();
-          clientSubs.cancel();
-          clientSocket.close();
-        });
+        socketSubs = socket.listen(
+          clientSocket.add,
+          onDone: () {
+            socketSubs.cancel();
+            clientSubs.cancel();
+            clientSocket.close();
+          },
+          onError: (e) {
+            socketSubs.cancel();
+            clientSubs.cancel();
+            clientSocket.close();
+          },
+        );
         final pattern = [68, 0, 0, 0, 11, 0, 1, 0, 0, 0, 1];
-        clientSubs = clientSocket.listen((data) {
-          if (sendGarbageResponse) {
-            final i = _bytesIndexOf(data, pattern);
-            if (i >= 0) {
-              data[i + pattern.length - 4] = 255;
-              data[i + pattern.length - 3] = 255;
-              data[i + pattern.length - 2] = 255;
-              data[i + pattern.length - 1] = 250;
+        clientSubs = clientSocket.listen(
+          (data) {
+            if (sendGarbageResponse) {
+              final i = _bytesIndexOf(data, pattern);
+              if (i >= 0) {
+                data[i + pattern.length - 4] = 255;
+                data[i + pattern.length - 3] = 255;
+                data[i + pattern.length - 2] = 255;
+                data[i + pattern.length - 1] = 250;
+              }
+              socket.add(data);
+            } else {
+              socket.add(data);
             }
-            socket.add(data);
-          } else {
-            socket.add(data);
-          }
-        }, onDone: () {
-          socketSubs.cancel();
-          clientSubs.cancel();
-          clientSocket.close();
-        }, onError: (e) {
-          socketSubs.cancel();
-          clientSubs.cancel();
-          clientSocket.close();
-        });
+          },
+          onDone: () {
+            socketSubs.cancel();
+            clientSubs.cancel();
+            clientSocket.close();
+          },
+          onError: (e) {
+            socketSubs.cancel();
+            clientSubs.cancel();
+            clientSocket.close();
+          },
+        );
       });
 
       final endpoint = await server.endpoint();
@@ -62,9 +72,7 @@ void main() {
           password: endpoint.password,
           username: endpoint.username,
         ),
-        settings: ConnectionSettings(
-          sslMode: SslMode.disable,
-        ),
+        settings: ConnectionSettings(sslMode: SslMode.disable),
       );
     });
 
@@ -77,8 +85,9 @@ void main() {
       await conn.execute('SELECT 1;');
       sendGarbageResponse = true;
       await expectLater(
-          () => conn.execute('SELECT 2;', queryMode: QueryMode.simple),
-          throwsA(isA<PgException>()));
+        () => conn.execute('SELECT 2;', queryMode: QueryMode.simple),
+        throwsA(isA<PgException>()),
+      );
       expect(conn.isOpen, false);
     });
   });

@@ -8,17 +8,20 @@ void main() {
     test('case #1', () async {
       final conn = await server.newConnection();
       await conn.execute(_testDdl, queryMode: QueryMode.simple);
-      final rs1 = await conn.execute('SELECT l.id, bn.novel_id as novels '
-          'FROM books l LEFT JOIN book_novel bn on l.id=bn.book_id;');
+      final rs1 = await conn.execute(
+        'SELECT l.id, bn.novel_id as novels '
+        'FROM books l LEFT JOIN book_novel bn on l.id=bn.book_id;',
+      );
       expect(rs1.single, [359, null]);
 
-      final rs2 =
-          await conn.execute('SELECT l.id, ARRAY_AGG(bn.novel_id) as novels '
-              'FROM books l LEFT JOIN book_novel bn on l.id=bn.book_id '
-              'GROUP BY l.id;');
+      final rs2 = await conn.execute(
+        'SELECT l.id, ARRAY_AGG(bn.novel_id) as novels '
+        'FROM books l LEFT JOIN book_novel bn on l.id=bn.book_id '
+        'GROUP BY l.id;',
+      );
       expect(rs2.single, [
         359,
-        [null]
+        [null],
       ]);
     });
   });

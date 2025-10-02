@@ -24,12 +24,7 @@ void main() {
       await (conn as PgConnectionImplementation).cancelPendingStatement();
       await expectLater(
         f,
-        throwsA(
-          allOf(
-            isA<PgException>(),
-            isA<TimeoutException>(),
-          ),
-        ),
+        throwsA(allOf(isA<PgException>(), isA<TimeoutException>())),
       );
       // connection is still usable
       final rs = await conn.execute('SELECT 1;');
@@ -40,27 +35,13 @@ void main() {
       try {
         await conn.runTx((ctx) async {
           await ctx.execute('INSERT INTO t (id) VALUES (1)');
-          await ctx.execute('SELECT pg_sleep(2)',
-              timeout: Duration(seconds: 1));
+          await ctx.execute(
+            'SELECT pg_sleep(2)',
+            timeout: Duration(seconds: 1),
+          );
         });
         fail('unreachable');
       } on TimeoutException {
-        // ignore
-      }
-
-      expect(await conn.execute('SELECT * from t'), hasLength(0));
-    });
-
-    test('Timeout is ignored when new statement is run on parent context',
-        () async {
-      try {
-        await conn.runTx((ctx) async {
-          await conn.execute('SELECT 1', timeout: Duration(seconds: 1));
-          await ctx.execute('INSERT INTO t (id) VALUES (1)');
-        });
-        fail('unreachable');
-      } on PgException catch (e) {
-        expect(e.message, contains('runTx'));
         // ignore
       }
 
@@ -68,25 +49,48 @@ void main() {
     });
 
     test(
-        'If query is already on the wire and times out, safely throws timeoutexception and nothing else',
-        () async {
-      try {
-        await conn.execute('SELECT pg_sleep(2)', timeout: Duration(seconds: 1));
-        fail('unreachable');
-      } on TimeoutException {
-        // ignore
-      }
-    });
+      'Timeout is ignored when new statement is run on parent context',
+      () async {
+        try {
+          await conn.runTx((ctx) async {
+            await conn.execute('SELECT 1', timeout: Duration(seconds: 1));
+            await ctx.execute('INSERT INTO t (id) VALUES (1)');
+          });
+          fail('unreachable');
+        } on PgException catch (e) {
+          expect(e.message, contains('runTx'));
+          // ignore
+        }
+
+        expect(await conn.execute('SELECT * from t'), hasLength(0));
+      },
+    );
+
+    test(
+      'If query is already on the wire and times out, safely throws timeoutexception and nothing else',
+      () async {
+        try {
+          await conn.execute(
+            'SELECT pg_sleep(2)',
+            timeout: Duration(seconds: 1),
+          );
+          fail('unreachable');
+        } on TimeoutException {
+          // ignore
+        }
+      },
+    );
 
     test('Query times out, next query in the queue runs', () async {
       final rs = await conn.execute('SELECT 1');
-      //ignore: unawaited_futures
-      conn
-          .execute('SELECT pg_sleep(2)', timeout: Duration(seconds: 1))
-          .catchError((_) => rs);
+      unawaited(
+        conn
+            .execute('SELECT pg_sleep(2)', timeout: Duration(seconds: 1))
+            .catchError((_) => rs),
+      );
 
       expect(await conn.execute('SELECT 1'), [
-        [1]
+        [1],
       ]);
     });
 
@@ -98,13 +102,15 @@ void main() {
       final rs = await conn.execute('SELECT 1');
       Exception? caught;
       await conn
-          .execute("INSERT INTO t (id) VALUES ('foo')",
-              timeout: Duration(seconds: 1))
+          .execute(
+            "INSERT INTO t (id) VALUES ('foo')",
+            timeout: Duration(seconds: 1),
+          )
           .catchError((e) {
-        caught = e;
-        // needs this to match return type
-        return rs;
-      });
+            caught = e;
+            // needs this to match return type
+            return rs;
+          });
       expect(caught, isA<ServerException>());
     });
   });
@@ -126,8 +132,10 @@ void main() {
         await c1.execute('SELECT * FROM t WHERE id=1 FOR UPDATE');
         await c2.execute('BEGIN');
         try {
-          await c2.execute('SELECT * FROM t WHERE id=1 FOR UPDATE',
-              timeout: Duration(seconds: 1));
+          await c2.execute(
+            'SELECT * FROM t WHERE id=1 FOR UPDATE',
+            timeout: Duration(seconds: 1),
+          );
           fail('unreachable');
         } on TimeoutException catch (_) {
           // ignore

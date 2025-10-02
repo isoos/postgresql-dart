@@ -53,11 +53,11 @@ class StartupMessage extends ClientMessage {
     String? username,
     String? applicationName,
     ReplicationMode replication = ReplicationMode.none,
-  })  : _databaseName = database,
-        _timeZone = timeZone,
-        _username = username,
-        _applicationName = applicationName,
-        _replication = replication.value;
+  }) : _databaseName = database,
+       _timeZone = timeZone,
+       _username = username,
+       _applicationName = applicationName,
+       _replication = replication.value;
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
@@ -120,16 +120,17 @@ class ParseMessage extends ClientMessage {
     @Deprecated('Use typeOids instead. Will be removed soon.')
     List<Type?>? types,
     List<int?>? typeOids,
-  })  : _statement = statement,
-        _statementName = statementName,
-        _typeOids = typeOids ?? types?.map((e) => e?.oid).toList() ?? const [];
+  }) : _statement = statement,
+       _statementName = statementName,
+       _typeOids = typeOids ?? types?.map((e) => e?.oid).toList() ?? const [];
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessageId.parse);
     final statement = buffer.encodeString(_statement);
     final statementName = buffer.encodeString(_statementName);
-    final length = 8 +
+    final length =
+        8 +
         statement.bytesLength +
         statementName.bytesLength +
         _typeOids.length * 4;
@@ -156,12 +157,12 @@ class DescribeMessage extends ClientMessage {
   final bool _isPortal;
 
   DescribeMessage({String statementName = ''})
-      : _name = statementName,
-        _isPortal = false;
+    : _name = statementName,
+      _isPortal = false;
 
   DescribeMessage.portal({String portalName = ''})
-      : _name = portalName,
-        _isPortal = true;
+    : _name = portalName,
+      _isPortal = true;
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
@@ -186,8 +187,8 @@ class BindMessage extends ClientMessage {
     this._parameters, {
     String portalName = '',
     String statementName = '',
-  })  : _portalName = portalName,
-        _statementName = statementName;
+  }) : _portalName = portalName,
+       _statementName = statementName;
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
@@ -198,15 +199,18 @@ class BindMessage extends ClientMessage {
     final binaryCount = _parameters.where((p) => p?.isBinary ?? false).length;
     final isAllBinary = binaryCount == _parameters.length;
     final isAllText = binaryCount == 0;
-    final inputParameterElementCount =
-        isAllBinary || isAllText ? 1 : _parameters.length;
+    final inputParameterElementCount = isAllBinary || isAllText
+        ? 1
+        : _parameters.length;
 
     var length = 14;
     length += statementName.bytesLength;
     length += portalName.bytesLength;
     length += inputParameterElementCount * 2;
-    length +=
-        _parameters.fold<int>(0, (len, v) => len + 4 + (v?.bytes?.length ?? 0));
+    length += _parameters.fold<int>(
+      0,
+      (len, v) => len + 4 + (v?.bytes?.length ?? 0),
+    );
 
     buffer.writeUint32(length);
 
@@ -229,9 +233,11 @@ class BindMessage extends ClientMessage {
       // Well, we have some text and some binary, so we have to be explicit about each one
       buffer.writeUint16(_parameters.length);
       for (final p in _parameters) {
-        buffer.writeUint16(p != null && p.isBinary
-            ? ClientMessageFormat.binary
-            : ClientMessageFormat.text);
+        buffer.writeUint16(
+          p != null && p.isBinary
+              ? ClientMessageFormat.binary
+              : ClientMessageFormat.text,
+        );
       }
     }
 
@@ -253,10 +259,8 @@ class BindMessage extends ClientMessage {
   }
 
   @override
-  String toString() => 'BindMessage(${[
-        if (_portalName.isNotEmpty) 'portal=$_portalName',
-        if (_statementName.isNotEmpty) 'stmt=$_statementName',
-      ].join(',')})';
+  String toString() =>
+      'BindMessage(${[if (_portalName.isNotEmpty) 'portal=$_portalName', if (_statementName.isNotEmpty) 'stmt=$_statementName'].join(',')})';
 }
 
 class ExecuteMessage extends ClientMessage {
@@ -282,12 +286,10 @@ class CloseMessage extends ClientMessage {
   final String _name;
 
   CloseMessage.statement([String name = ''])
-      : _name = name,
-        _isForPortal = false;
+    : _name = name,
+      _isForPortal = false;
 
-  CloseMessage.portal([String name = ''])
-      : _name = name,
-        _isForPortal = true;
+  CloseMessage.portal([String name = '']) : _name = name, _isForPortal = true;
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
@@ -400,11 +402,12 @@ class HotStandbyFeedbackMessage extends ClientMessage
   final int epochCatalogXminXid;
 
   HotStandbyFeedbackMessage(
-      this.clientTime,
-      this.currentGlobalXmin,
-      this.epochGlobalXminXid,
-      this.lowestCatalogXmin,
-      this.epochCatalogXminXid);
+    this.clientTime,
+    this.currentGlobalXmin,
+    this.epochGlobalXminXid,
+    this.lowestCatalogXmin,
+    this.epochCatalogXminXid,
+  );
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
@@ -424,10 +427,7 @@ class CancelRequestMessage extends ClientMessage {
   /// The secret key for the target backend.
   final int secretKey;
 
-  CancelRequestMessage({
-    required this.processId,
-    required this.secretKey,
-  });
+  CancelRequestMessage({required this.processId, required this.secretKey});
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {

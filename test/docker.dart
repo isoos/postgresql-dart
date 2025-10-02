@@ -49,19 +49,17 @@ class PostgresServer {
   final String? _pgUser;
   final String? _pgPassword;
 
-  PostgresServer({
-    String? pgUser,
-    String? pgPassword,
-  })  : _pgUser = pgUser,
-        _pgPassword = pgPassword;
+  PostgresServer({String? pgUser, String? pgPassword})
+    : _pgUser = pgUser,
+      _pgPassword = pgPassword;
 
   Future<Endpoint> endpoint() async => Endpoint(
-        host: 'localhost',
-        database: 'postgres',
-        username: _pgUser ?? 'postgres',
-        password: _pgPassword ?? 'postgres',
-        port: await port,
-      );
+    host: 'localhost',
+    database: 'postgres',
+    username: _pgUser ?? 'postgres',
+    password: _pgPassword ?? 'postgres',
+    port: await port,
+  );
 
   Future<Connection> newConnection({
     ReplicationMode replicationMode = ReplicationMode.none,
@@ -78,8 +76,9 @@ class PostgresServer {
         sslMode: sslMode,
         queryMode: queryMode,
       ),
-      incomingBytesTransformer:
-          _splitAndDelayBytes ? _transformIncomingBytes() : null,
+      incomingBytesTransformer: _splitAndDelayBytes
+          ? _transformIncomingBytes()
+          : null,
     );
   }
 
@@ -89,27 +88,26 @@ class PostgresServer {
 }
 
 StreamTransformer<Uint8List, Uint8List> _transformIncomingBytes() {
-  return StreamTransformer.fromBind((s) => s.asyncExpand((u) {
-        if (u.length <= 2) {
-          return Stream.value(u);
-        }
-        final hash = u.hashCode.abs();
-        final split = hash % u.length;
-        if (split == 0 || split >= u.length - 1) {
-          return Stream.value(u);
-        }
+  return StreamTransformer.fromBind(
+    (s) => s.asyncExpand((u) {
+      if (u.length <= 2) {
+        return Stream.value(u);
+      }
+      final hash = u.hashCode.abs();
+      final split = hash % u.length;
+      if (split == 0 || split >= u.length - 1) {
+        return Stream.value(u);
+      }
 
-        final p1 = u.sublist(0, split);
-        final p2 = u.sublist(split);
+      final p1 = u.sublist(0, split);
+      final p2 = u.sublist(split);
 
-        return Stream.fromFutures([
-          Future.value(p1),
-          Future.delayed(
-            Duration(milliseconds: 50),
-            () => p2,
-          )
-        ]);
-      }));
+      return Stream.fromFutures([
+        Future.value(p1),
+        Future.delayed(Duration(milliseconds: 50), () => p2),
+      ]);
+    }),
+  );
 }
 
 @isTestGroup
@@ -123,10 +121,7 @@ void withPostgresServer(
   String? timeZone,
 }) {
   group(name, () {
-    final server = PostgresServer(
-      pgUser: pgUser,
-      pgPassword: pgPassword,
-    );
+    final server = PostgresServer(pgUser: pgUser, pgPassword: pgPassword);
     Directory? tempDir;
 
     setUpAll(() async {
@@ -134,8 +129,9 @@ void withPostgresServer(
         final port = await selectFreePort();
         String? pgHbaConfPath;
         if (pgHbaConfContent != null) {
-          tempDir =
-              await Directory.systemTemp.createTemp('postgres-dart-test-$port');
+          tempDir = await Directory.systemTemp.createTemp(
+            'postgres-dart-test-$port',
+          );
           pgHbaConfPath = p.join(tempDir!.path, 'pg_hba.conf');
           await File(pgHbaConfPath).writeAsString(pgHbaConfContent);
         }
@@ -216,13 +212,7 @@ Future<void> _startPostgresContainer({
 
   // Setup the database to support all kind of tests
   for (final stmt in initSqls) {
-    final args = [
-      'psql',
-      '-c',
-      stmt,
-      '-U',
-      'postgres',
-    ];
+    final args = ['psql', '-c', stmt, '-U', 'postgres'];
     final res = await dp.exec(args);
     if (res.exitCode != 0) {
       final message =
@@ -239,10 +229,7 @@ Future<void> _startPostgresContainer({
 }
 
 Future<bool> _isPostgresContainerRunning(String containerName) async {
-  final pr = await Process.run(
-    'docker',
-    ['ps', '--format', '{{.Names}}'],
-  );
+  final pr = await Process.run('docker', ['ps', '--format', '{{.Names}}']);
   return pr.stdout
       .toString()
       .split('\n')

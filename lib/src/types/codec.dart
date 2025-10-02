@@ -22,26 +22,15 @@ class EncodedValue {
   /// The type OID - if available.
   final int? typeOid;
 
-  EncodedValue(
-    this.bytes, {
-    required this.format,
-    this.typeOid,
-  });
+  EncodedValue(this.bytes, {required this.format, this.typeOid});
 
-  EncodedValue.binary(
-    this.bytes, {
-    this.typeOid,
-  }) : format = EncodingFormat.binary;
+  EncodedValue.binary(this.bytes, {this.typeOid})
+    : format = EncodingFormat.binary;
 
-  EncodedValue.text(
-    this.bytes, {
-    this.typeOid,
-  }) : format = EncodingFormat.text;
+  EncodedValue.text(this.bytes, {this.typeOid}) : format = EncodingFormat.text;
 
-  EncodedValue.null$({
-    this.format = EncodingFormat.binary,
-    this.typeOid,
-  }) : bytes = null;
+  EncodedValue.null$({this.format = EncodingFormat.binary, this.typeOid})
+    : bytes = null;
 
   bool get isBinary => format == EncodingFormat.binary;
   bool get isText => format == EncodingFormat.text;
@@ -51,8 +40,7 @@ class EncodedValue {
 /// [binary] (e.g. `0x0c`)
 enum EncodingFormat {
   binary,
-  text,
-  ;
+  text;
 
   static EncodingFormat fromBinaryFlag(bool isBinary) =>
       isBinary ? binary : text;
@@ -61,8 +49,8 @@ enum EncodingFormat {
 /// Encodes the [input] value and returns an [EncodedValue] object.
 ///
 /// May return `null` if the encoder is not able to convert the [input] value.
-typedef EncoderFn = FutureOr<EncodedValue?> Function(
-    TypedValue input, CodecContext context);
+typedef EncoderFn =
+    FutureOr<EncodedValue?> Function(TypedValue input, CodecContext context);
 
 /// Encoder and decoder for a value stored in Postgresql.
 abstract class Codec {

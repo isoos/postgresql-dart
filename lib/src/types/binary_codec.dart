@@ -63,7 +63,8 @@ class PostgresBinaryEncoder {
             return input ? _bool1 : _bool0;
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: bool Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: bool Got: ${input.runtimeType}',
+          );
         }
       case TypeOid.bigInteger:
         {
@@ -73,7 +74,8 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}',
+          );
         }
       case TypeOid.integer:
         {
@@ -83,7 +85,8 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}',
+          );
         }
       case TypeOid.smallInteger:
         {
@@ -93,7 +96,8 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: int Got: ${input.runtimeType}',
+          );
         }
       case TypeOid.character:
       case TypeOid.name:
@@ -104,7 +108,8 @@ class PostgresBinaryEncoder {
             return castBytes(encoding.encode(input));
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: String Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: String Got: ${input.runtimeType}',
+          );
         }
       case TypeOid.real:
         {
@@ -114,7 +119,8 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: double Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: double Got: ${input.runtimeType}',
+          );
         }
       case TypeOid.double:
         {
@@ -124,7 +130,8 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: double Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: double Got: ${input.runtimeType}',
+          );
         }
       case TypeOid.date:
         {
@@ -134,7 +141,8 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.time:
@@ -145,7 +153,8 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: Time Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: Time Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.timestampWithoutTimezone:
@@ -153,11 +162,14 @@ class PostgresBinaryEncoder {
           if (input is DateTime) {
             final bd = ByteData(8);
             bd.setInt64(
-                0, input.toUtc().difference(DateTime.utc(2000)).inMicroseconds);
+              0,
+              input.toUtc().difference(DateTime.utc(2000)).inMicroseconds,
+            );
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.timestampWithTimezone:
@@ -165,11 +177,14 @@ class PostgresBinaryEncoder {
           if (input is DateTime) {
             final bd = ByteData(8);
             bd.setInt64(
-                0, input.toUtc().difference(DateTime.utc(2000)).inMicroseconds);
+              0,
+              input.toUtc().difference(DateTime.utc(2000)).inMicroseconds,
+            );
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: DateTime Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.interval:
@@ -188,7 +203,8 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: Interval Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: Interval Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.numeric:
@@ -202,14 +218,17 @@ class PostgresBinaryEncoder {
             return _encodeNumeric(source, encoding);
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: String|double|int Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: String|double|int Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.jsonb:
         {
           final jsonBytes = _jsonFusedEncoding(encoding).encode(input);
           final writer = PgByteDataWriter(
-              bufferLength: jsonBytes.length + 1, encoding: encoding);
+            bufferLength: jsonBytes.length + 1,
+            encoding: encoding,
+          );
           writer.writeUint8(1);
           writer.write(jsonBytes);
           return writer.toBytes();
@@ -224,14 +243,16 @@ class PostgresBinaryEncoder {
             return castBytes(input);
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<int> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.uuid:
         {
           if (input is! String) {
             throw FormatException(
-                'Invalid type for parameter value. Expected: String Got: ${input.runtimeType}');
+              'Invalid type for parameter value. Expected: String Got: ${input.runtimeType}',
+            );
           }
           return _encodeUuid(input);
         }
@@ -248,7 +269,8 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<String?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<String?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.point:
@@ -260,7 +282,8 @@ class PostgresBinaryEncoder {
             return bd.buffer.asUint8List();
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: Point Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: Point Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.line:
@@ -272,7 +295,8 @@ class PostgresBinaryEncoder {
           return bd.buffer.asUint8List();
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: Line Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: Line Got: ${input.runtimeType}',
+        );
 
       case TypeOid.lineSegment:
         if (input is LineSegment) {
@@ -284,7 +308,8 @@ class PostgresBinaryEncoder {
           return bd.buffer.asUint8List();
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: LineSegment Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: LineSegment Got: ${input.runtimeType}',
+        );
 
       case TypeOid.box:
         if (input is Box) {
@@ -296,7 +321,8 @@ class PostgresBinaryEncoder {
           return bd.buffer.asUint8List();
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: Box Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: Box Got: ${input.runtimeType}',
+        );
 
       case TypeOid.path:
         if (input is Path) {
@@ -310,7 +336,8 @@ class PostgresBinaryEncoder {
           return bd.buffer.asUint8List();
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: Path Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: Path Got: ${input.runtimeType}',
+        );
 
       case TypeOid.polygon:
         if (input is Polygon) {
@@ -323,7 +350,8 @@ class PostgresBinaryEncoder {
           return bd.buffer.asUint8List();
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: Polygon Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: Polygon Got: ${input.runtimeType}',
+        );
 
       case TypeOid.circle:
         if (input is Circle) {
@@ -334,13 +362,15 @@ class PostgresBinaryEncoder {
           return bd.buffer.asUint8List();
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: Circle Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: Circle Got: ${input.runtimeType}',
+        );
 
       case TypeOid.regtype:
         final oid = input is Type ? input.oid : (input is int ? input : null);
         if (oid == null) {
           throw FormatException(
-              'Invalid type for parameter value, expected a data type an int or Type, got $input');
+            'Invalid type for parameter value, expected a data type an int or Type, got $input',
+          );
         }
 
         final outBuffer = Uint8List(4);
@@ -358,7 +388,8 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<bool?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<bool?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.smallIntegerArray:
@@ -373,7 +404,8 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<int?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<int?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.integerArray:
@@ -388,7 +420,8 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<int?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<int?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.bigIntegerArray:
@@ -403,7 +436,8 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<int?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<int?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.dateArray:
@@ -414,12 +448,14 @@ class PostgresBinaryEncoder {
               TypeOid.date,
               (_) => 4,
               (writer, item) => writer.writeInt32(
-                  item.toUtc().difference(DateTime.utc(2000)).inDays),
+                item.toUtc().difference(DateTime.utc(2000)).inDays,
+              ),
               encoding,
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<DateTime?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<DateTime?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.timeArray:
@@ -434,7 +470,8 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<Time?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<Time?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.timestampArray:
@@ -445,12 +482,14 @@ class PostgresBinaryEncoder {
               TypeOid.timestamp,
               (_) => 8,
               (writer, item) => writer.writeInt64(
-                  item.toUtc().difference(DateTime.utc(2000)).inMicroseconds),
+                item.toUtc().difference(DateTime.utc(2000)).inMicroseconds,
+              ),
               encoding,
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<DateTime?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<DateTime?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.timestampTzArray:
@@ -461,20 +500,22 @@ class PostgresBinaryEncoder {
               TypeOid.timestampTz,
               (_) => 8,
               (writer, item) => writer.writeInt64(
-                  item.toUtc().difference(DateTime.utc(2000)).inMicroseconds),
+                item.toUtc().difference(DateTime.utc(2000)).inMicroseconds,
+              ),
               encoding,
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<DateTime?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<DateTime?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.varCharArray:
         {
           if (input is List) {
-            final bytesArray = _castOrThrowList<String>(input)
-                .map((v) => v == null ? null : encoding.encode(v))
-                .toList();
+            final bytesArray = _castOrThrowList<String>(
+              input,
+            ).map((v) => v == null ? null : encoding.encode(v)).toList();
             return _writeListBytes<List<int>>(
               bytesArray,
               1043,
@@ -484,15 +525,16 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<String?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<String?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.textArray:
         {
           if (input is List) {
-            final bytesArray = _castOrThrowList<String>(input)
-                .map((v) => v == null ? null : encoding.encode(v))
-                .toList();
+            final bytesArray = _castOrThrowList<String>(
+              input,
+            ).map((v) => v == null ? null : encoding.encode(v)).toList();
             return _writeListBytes<List<int>>(
               bytesArray,
               25,
@@ -502,7 +544,8 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<String?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<String?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.doubleArray:
@@ -517,14 +560,16 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List<double?> Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List<double?> Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.jsonbArray:
         {
           if (input is List) {
-            final objectsArray =
-                input.map(_jsonFusedEncoding(encoding).encode).toList();
+            final objectsArray = input
+                .map(_jsonFusedEncoding(encoding).encode)
+                .toList();
             return _writeListBytes<List<int>>(
               objectsArray,
               3802,
@@ -537,7 +582,8 @@ class PostgresBinaryEncoder {
             );
           }
           throw FormatException(
-              'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}');
+            'Invalid type for parameter value. Expected: List Got: ${input.runtimeType}',
+          );
         }
 
       case TypeOid.integerRange:
@@ -545,36 +591,44 @@ class PostgresBinaryEncoder {
           return _encodeRange(input, encoding, TypeOid.integer);
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}',
+        );
 
       case TypeOid.bigIntegerRange:
         if (input is IntRange) {
           return _encodeRange(input, encoding, TypeOid.bigInteger);
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: IntRange Got: ${input.runtimeType}',
+        );
 
       case TypeOid.dateRange:
         if (input is DateRange) {
           return _encodeRange(input, encoding, TypeOid.date);
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: DateRange Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: DateRange Got: ${input.runtimeType}',
+        );
 
       case TypeOid.timestampRange:
         if (input is DateTimeRange) {
           return _encodeRange(
-              input, encoding, TypeOid.timestampWithoutTimezone);
+            input,
+            encoding,
+            TypeOid.timestampWithoutTimezone,
+          );
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: DateTimeRange Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: DateTimeRange Got: ${input.runtimeType}',
+        );
 
       case TypeOid.timestampTzRange:
         if (input is DateTimeRange) {
           return _encodeRange(input, encoding, TypeOid.timestampWithTimezone);
         }
         throw FormatException(
-            'Invalid type for parameter value. Expected: DateTimeRange Got: ${input.runtimeType}');
+          'Invalid type for parameter value. Expected: DateTimeRange Got: ${input.runtimeType}',
+        );
     }
     // Pass-through of Uint8List instances allows client with custom types to
     // encode their types for efficient binary transport.
@@ -590,7 +644,8 @@ class PostgresBinaryEncoder {
     }
     if (input.any((e) => e is! V?)) {
       throw FormatException(
-          'Invalid type for parameter value. Expected: List<${V.runtimeType}?> Got: ${input.runtimeType}');
+        'Invalid type for parameter value. Expected: List<${V.runtimeType}?> Got: ${input.runtimeType}',
+      );
     }
     return input.cast<V?>();
   }
@@ -639,7 +694,8 @@ class PostgresBinaryEncoder {
     }
     if (!_numericRegExp.hasMatch(value)) {
       throw FormatException(
-          'Invalid format for parameter value. Expected: String which matches "/^(\\d*)(\\.\\d*)?\$/" Got: $value');
+        'Invalid format for parameter value. Expected: String which matches "/^(\\d*)(\\.\\d*)?\$/" Got: $value',
+      );
     }
     final parts = value.split('.');
 
@@ -660,13 +716,15 @@ class PostgresBinaryEncoder {
         // Weight of value 0 or '' is 0;
         weight = 0;
       } else {
-        final leadingZeros =
-            _leadingZerosRegExp.firstMatch(fractPart)?.group(0);
+        final leadingZeros = _leadingZerosRegExp
+            .firstMatch(fractPart)
+            ?.group(0);
         if (leadingZeros != null) {
           final leadingZerosWeight =
               leadingZeros.length ~/ 4; // Get count of leading zeros '0000'
-          fractPart = fractPart
-              .substring(leadingZerosWeight * 4); // Remove leading zeros '0000'
+          fractPart = fractPart.substring(
+            leadingZerosWeight * 4,
+          ); // Remove leading zeros '0000'
           fractWeight -= leadingZerosWeight;
           weight = -(leadingZerosWeight + 1); // Ignore leading zeros in weight
         }
@@ -678,9 +736,9 @@ class PostgresBinaryEncoder {
         final trailingZerosWeight =
             trailingZeros.length ~/ 4; // Get count of trailing zeros '0000'
         intPart = intPart.substring(
-            0,
-            intPart.length -
-                trailingZerosWeight * 4); // Remove leading zeros '0000'
+          0,
+          intPart.length - trailingZerosWeight * 4,
+        ); // Remove leading zeros '0000'
         intWeight -= trailingZerosWeight;
       }
     }
@@ -702,7 +760,10 @@ class PostgresBinaryEncoder {
   }
 
   Uint8List _encodeRange<T>(
-      Range<T> range, Encoding encoding, int elementTypeOid) {
+    Range<T> range,
+    Encoding encoding,
+    int elementTypeOid,
+  ) {
     final buffer = BytesBuffer();
     buffer.add([range.flag]);
     switch ((range.lower == null, range.upper == null)) {
@@ -722,8 +783,12 @@ class PostgresBinaryEncoder {
   }
 
   // Adds 4 length bytes followed by the value bytes
-  _encodeRangeValue<T>(
-      T value, Encoding encoding, int elementTypeOid, BytesBuffer buffer) {
+  void _encodeRangeValue<T>(
+    T value,
+    Encoding encoding,
+    int elementTypeOid,
+    BytesBuffer buffer,
+  ) {
     final encoder = PostgresBinaryEncoder(elementTypeOid);
     final valueBytes = encoder.convert(value as Object, encoding);
     final lengthBytes = ByteData(4)..setInt32(0, valueBytes.length);
@@ -732,11 +797,15 @@ class PostgresBinaryEncoder {
   }
 
   Uint8List _encodeUuid(String value) {
-    final hexBytes =
-        value.toLowerCase().codeUnits.where((c) => c != _dashUnit).toList();
+    final hexBytes = value
+        .toLowerCase()
+        .codeUnits
+        .where((c) => c != _dashUnit)
+        .toList();
     if (hexBytes.length != 32) {
       throw FormatException(
-          "Invalid UUID string. There must be exactly 32 hexadecimal (0-9 and a-f) characters and any number of '-' characters.");
+        "Invalid UUID string. There must be exactly 32 hexadecimal (0-9 and a-f) characters and any number of '-' characters.",
+      );
     }
 
     int byteConvert(int charCode) {
@@ -747,7 +816,8 @@ class PostgresBinaryEncoder {
       }
 
       throw FormatException(
-          'Invalid UUID string. Contains non-hexadecimal character (0-9 and a-f).');
+        'Invalid UUID string. Contains non-hexadecimal character (0-9 and a-f).',
+      );
     }
 
     final outBuffer = Uint8List(16);
@@ -763,8 +833,11 @@ class PostgresBinaryEncoder {
 
 class PostgresBinaryDecoder {
   static Object? convert(CodecContext context, int typeOid, Uint8List input) {
-    late final buffer =
-        ByteData.view(input.buffer, input.offsetInBytes, input.lengthInBytes);
+    late final buffer = ByteData.view(
+      input.buffer,
+      input.offsetInBytes,
+      input.lengthInBytes,
+    );
 
     switch (typeOid) {
       case TypeOid.character:
@@ -788,8 +861,9 @@ class PostgresBinaryDecoder {
         return Time.fromMicroseconds(buffer.getInt64(0));
       case TypeOid.timestampWithoutTimezone:
       case TypeOid.timestampWithTimezone:
-        return DateTime.utc(2000)
-            .add(Duration(microseconds: buffer.getInt64(0)));
+        return DateTime.utc(
+          2000,
+        ).add(Duration(microseconds: buffer.getInt64(0)));
 
       case TypeOid.interval:
         return Interval(
@@ -807,8 +881,10 @@ class PostgresBinaryDecoder {
       case TypeOid.jsonb:
         {
           // Removes version which is first character and currently always '1'
-          final bytes = input.buffer
-              .asUint8List(input.offsetInBytes + 1, input.lengthInBytes - 1);
+          final bytes = input.buffer.asUint8List(
+            input.offsetInBytes + 1,
+            input.lengthInBytes - 1,
+          );
           return _jsonFusedEncoding(context.encoding).decode(bytes);
         }
 
@@ -822,7 +898,9 @@ class PostgresBinaryDecoder {
         return _decodeUuid(input);
       case TypeOid.uuidArray:
         return readListBytes<String>(
-            input, (reader, _) => _decodeUuid(reader.read(16)));
+          input,
+          (reader, _) => _decodeUuid(reader.read(16)),
+        );
 
       case TypeOid.regtype:
         final data = input.buffer.asByteData(input.offsetInBytes, input.length);
@@ -836,15 +914,22 @@ class PostgresBinaryDecoder {
 
       case TypeOid.line:
         return Line(
-            buffer.getFloat64(0), buffer.getFloat64(8), buffer.getFloat64(16));
+          buffer.getFloat64(0),
+          buffer.getFloat64(8),
+          buffer.getFloat64(16),
+        );
 
       case TypeOid.lineSegment:
-        return LineSegment(Point(buffer.getFloat64(0), buffer.getFloat64(8)),
-            Point(buffer.getFloat64(16), buffer.getFloat64(24)));
+        return LineSegment(
+          Point(buffer.getFloat64(0), buffer.getFloat64(8)),
+          Point(buffer.getFloat64(16), buffer.getFloat64(24)),
+        );
 
       case TypeOid.box:
-        return Box(Point(buffer.getFloat64(0), buffer.getFloat64(8)),
-            Point(buffer.getFloat64(16), buffer.getFloat64(24)));
+        return Box(
+          Point(buffer.getFloat64(0), buffer.getFloat64(8)),
+          Point(buffer.getFloat64(16), buffer.getFloat64(24)),
+        );
 
       case TypeOid.path:
         final open = buffer.getInt8(0) == 0;
@@ -868,12 +953,16 @@ class PostgresBinaryDecoder {
         return Polygon(points);
 
       case TypeOid.circle:
-        return Circle(Point(buffer.getFloat64(0), buffer.getFloat64(8)),
-            buffer.getFloat64(16));
+        return Circle(
+          Point(buffer.getFloat64(0), buffer.getFloat64(8)),
+          buffer.getFloat64(16),
+        );
 
       case TypeOid.booleanArray:
         return readListBytes<bool>(
-            input, (reader, _) => reader.readUint8() != 0);
+          input,
+          (reader, _) => reader.readUint8() != 0,
+        );
 
       case TypeOid.smallIntegerArray:
         return readListBytes<int>(input, (reader, _) => reader.readInt16());
@@ -884,18 +973,23 @@ class PostgresBinaryDecoder {
 
       case TypeOid.dateArray:
         return readListBytes<DateTime>(
-            input,
-            (reader, _) =>
-                DateTime.utc(2000).add(Duration(days: reader.readInt32())));
+          input,
+          (reader, _) =>
+              DateTime.utc(2000).add(Duration(days: reader.readInt32())),
+        );
       case TypeOid.timeArray:
         return readListBytes<Time>(
-            input, (reader, _) => Time.fromMicroseconds(reader.readInt64()));
+          input,
+          (reader, _) => Time.fromMicroseconds(reader.readInt64()),
+        );
       case TypeOid.timestampArray:
       case TypeOid.timestampTzArray:
         return readListBytes<DateTime>(
-            input,
-            (reader, _) => DateTime.utc(2000)
-                .add(Duration(microseconds: reader.readInt64())));
+          input,
+          (reader, _) => DateTime.utc(
+            2000,
+          ).add(Duration(microseconds: reader.readInt64())),
+        );
 
       case TypeOid.varCharArray:
       case TypeOid.textArray:
@@ -905,7 +999,9 @@ class PostgresBinaryDecoder {
 
       case TypeOid.doubleArray:
         return readListBytes<double>(
-            input, (reader, _) => reader.readFloat64());
+          input,
+          (reader, _) => reader.readFloat64(),
+        );
 
       case TypeOid.jsonbArray:
         return readListBytes<dynamic>(input, (reader, length) {
@@ -931,13 +1027,21 @@ class PostgresBinaryDecoder {
             : DateRange(range.$1, range.$2, range.$3);
       case TypeOid.timestampRange:
         final range = _decodeRange(
-            context, buffer, input, TypeOid.timestampWithoutTimezone);
+          context,
+          buffer,
+          input,
+          TypeOid.timestampWithoutTimezone,
+        );
         return range == null
             ? DateTimeRange.empty()
             : DateTimeRange(range.$1, range.$2, range.$3);
       case TypeOid.timestampTzRange:
-        final range =
-            _decodeRange(context, buffer, input, TypeOid.timestampWithTimezone);
+        final range = _decodeRange(
+          context,
+          buffer,
+          input,
+          TypeOid.timestampWithTimezone,
+        );
         return range == null
             ? DateTimeRange.empty()
             : DateTimeRange(range.$1, range.$2, range.$3);
@@ -987,11 +1091,11 @@ class PostgresBinaryDecoder {
   /// See implementation: https://github.com/charmander/pg-numeric/blob/0c310eeb11dc680dffb7747821e61d542831108b/index.js#L13
   static String _decodeNumeric(Uint8List value) {
     final reader = ByteDataReader()..add(value);
-    final nDigits =
-        reader.readInt16(); // non-zero digits, data buffer length = 2 * nDigits
+    final nDigits = reader
+        .readInt16(); // non-zero digits, data buffer length = 2 * nDigits
     var weight = reader.readInt16(); // weight of first digit
-    final signByte =
-        reader.readUint16(); // NUMERIC_POS, NEG, NAN, PINF, or NINF
+    final signByte = reader
+        .readUint16(); // NUMERIC_POS, NEG, NAN, PINF, or NINF
     final dScale = reader.readInt16(); // display scale
     if (signByte == 0xc000) return 'NaN';
     final sign = signByte == 0x4000 ? '-' : '';
@@ -1029,8 +1133,12 @@ class PostgresBinaryDecoder {
     return result;
   }
 
-  static (T?, T?, Bounds)? _decodeRange<T>(CodecContext context,
-      ByteData buffer, Uint8List dinput, int elementTypeOid) {
+  static (T?, T?, Bounds)? _decodeRange<T>(
+    CodecContext context,
+    ByteData buffer,
+    Uint8List dinput,
+    int elementTypeOid,
+  ) {
     final flag = buffer.getInt8(0);
     final bounds = Bounds.fromFlag(flag);
     switch (flag) {
@@ -1057,13 +1165,19 @@ class PostgresBinaryDecoder {
   }
 
   static T _decodeRangeElement<T>(
-      CodecContext context, int elementTypeOid, Uint8List bytes) {
+    CodecContext context,
+    int elementTypeOid,
+    Uint8List bytes,
+  ) {
     return convert(context, elementTypeOid, bytes) as T;
   }
 
   static String _decodeUuid(Uint8List bytes) {
-    late final buffer =
-        ByteData.view(bytes.buffer, bytes.offsetInBytes, bytes.lengthInBytes);
+    late final buffer = ByteData.view(
+      bytes.buffer,
+      bytes.offsetInBytes,
+      bytes.lengthInBytes,
+    );
     final buf = StringBuffer();
     for (var i = 0; i < buffer.lengthInBytes; i++) {
       final byteValue = buffer.getUint8(i);

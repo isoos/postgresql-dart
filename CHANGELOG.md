@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.5.7
+## 3.5.9
 
 - `PgSessionBase`:
   - Optimize `_prepare` by passing the already captured `StackTrace` to `_sendAndWaitForQuery`.
@@ -14,6 +14,15 @@
 
 - `PreparedStatement`:
   - Optimized `run` and `_closePendingPortals` by reducing `StackTrace` captures.
+
+## 3.5.8
+
+- Upgraded SDK constraints and lints.
+- Supporting more URL-based connection-string parameters (mostly for pool).
+
+## 3.5.7.
+
+- Supporting URL-based connection-string specification in `Connection.openFromUrl` and `Pool.withUrl`. (Note: feature and supported settings is considered experimental.)
 
 ## 3.5.6
 

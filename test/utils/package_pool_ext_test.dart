@@ -8,12 +8,11 @@ void main() {
   group('package:pool extensions', () {
     test('acquire with timeout succeeds - no parallel use', () async {
       final pool = Pool(1);
-      final x = await pool.withRequestTimeout(
-        timeout: Duration(seconds: 1),
-        (_) async {
-          return 1;
-        },
-      );
+      final x = await pool.withRequestTimeout(timeout: Duration(seconds: 1), (
+        _,
+      ) async {
+        return 1;
+      });
       expect(x, 1);
       final r = await pool.request();
       r.release();
@@ -25,13 +24,12 @@ void main() {
       final other = await pool.request();
       Timer(Duration(seconds: 1), other.release);
       var remainingMillis = 0;
-      final x = await pool.withRequestTimeout(
-        timeout: Duration(seconds: 2),
-        (remaining) async {
-          remainingMillis = remaining.inMilliseconds;
-          return 1;
-        },
-      );
+      final x = await pool.withRequestTimeout(timeout: Duration(seconds: 2), (
+        remaining,
+      ) async {
+        remainingMillis = remaining.inMilliseconds;
+        return 1;
+      });
       expect(x, 1);
       final r = await pool.request();
       r.release();
@@ -45,12 +43,9 @@ void main() {
       final other = await pool.request();
       Timer(Duration(seconds: 2), other.release);
       await expectLater(
-        pool.withRequestTimeout(
-          timeout: Duration(seconds: 1),
-          (_) async {
-            return 1;
-          },
-        ),
+        pool.withRequestTimeout(timeout: Duration(seconds: 1), (_) async {
+          return 1;
+        }),
         throwsA(isA<TimeoutException>()),
       );
       final sw = Stopwatch()..start();

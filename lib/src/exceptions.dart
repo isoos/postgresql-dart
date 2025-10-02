@@ -34,8 +34,7 @@ enum Severity {
   log,
 
   /// A [PgException] with this severity indicates a failed a precondition or other error that doesn't originate from the database.
-  unknown,
-  ;
+  unknown;
 
   static Severity _parseServerMessage(String? value) {
     switch (value) {
@@ -69,10 +68,7 @@ class PgException implements Exception {
   /// A message indicating the error.
   final String message;
 
-  PgException(
-    this.message, {
-    this.severity = Severity.error,
-  });
+  PgException(this.message, {this.severity = Severity.error});
 
   @override
   String toString() => '$severity $message';
@@ -83,7 +79,7 @@ class BadCertificateException extends PgException {
   final X509Certificate certificate;
 
   BadCertificateException(this.certificate)
-      : super('Bad server certificate.', severity: Severity.fatal);
+    : super('Bad server certificate.', severity: Severity.fatal);
 }
 
 /// Exception thrown by the server.
@@ -139,25 +135,25 @@ class ServerException extends PgException {
   });
 
   ServerException._from(ServerException original)
-      : this._(
-          original.message,
-          severity: original.severity,
-          position: original.position,
-          internalPosition: original.internalPosition,
-          lineNumber: original.lineNumber,
-          code: original.code,
-          detail: original.detail,
-          hint: original.hint,
-          internalQuery: original.internalQuery,
-          trace: original.trace,
-          schemaName: original.schemaName,
-          tableName: original.tableName,
-          columnName: original.columnName,
-          dataTypeName: original.dataTypeName,
-          constraintName: original.constraintName,
-          fileName: original.fileName,
-          routineName: original.routineName,
-        );
+    : this._(
+        original.message,
+        severity: original.severity,
+        position: original.position,
+        internalPosition: original.internalPosition,
+        lineNumber: original.lineNumber,
+        code: original.code,
+        detail: original.detail,
+        hint: original.hint,
+        internalQuery: original.internalQuery,
+        trace: original.trace,
+        schemaName: original.schemaName,
+        tableName: original.tableName,
+        columnName: original.columnName,
+        dataTypeName: original.dataTypeName,
+        constraintName: original.constraintName,
+        fileName: original.fileName,
+        routineName: original.routineName,
+      );
 
   @override
   String toString() {
@@ -217,9 +213,9 @@ PgException transformServerException(ServerException ex) {
     '23505' => UniqueViolationException._(ex),
     '23503' => ForeignKeyViolationException._(ex),
     '57014' => _PgQueryCancelledException._(
-        ex,
-        // [ex.message, ex.trace].whereType<String>().join(' '),
-      ),
+      ex,
+      // [ex.message, ex.trace].whereType<String>().join(' '),
+    ),
     _ => ex,
   };
 }

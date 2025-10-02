@@ -85,7 +85,7 @@ class ReadyForQueryMessage extends ServerMessage {
 
   @internal
   ReadyForQueryMessage.parse(PgByteDataReader reader, int length)
-      : state = reader.encoding.decode(reader.read(length));
+    : state = reader.encoding.decode(reader.read(length));
 
   @override
   String toString() {
@@ -370,23 +370,27 @@ class XLogDataMessage implements ReplicationMessage, ServerMessage {
   /// will return a [XLogDataLogicalMessage] with that message. Otherwise, it'll
   /// return [XLogDataMessage] with raw data.
   ///
-  @Deprecated('This method will be removed from public API. '
-      'Please file a new issue on GitHub if you are using it.')
+  @Deprecated(
+    'This method will be removed from public API. '
+    'Please file a new issue on GitHub if you are using it.',
+  )
   static XLogDataMessage parse(
     Uint8List bytes,
     Encoding encoding, {
     CodecContext? codecContext,
   }) {
     final reader = PgByteDataReader(
-        codecContext:
-            codecContext ?? CodecContext.withDefaults(encoding: encoding))
-      ..add(bytes);
+      codecContext:
+          codecContext ?? CodecContext.withDefaults(encoding: encoding),
+    )..add(bytes);
     final walStart = LSN(reader.readUint64());
     final walEnd = LSN(reader.readUint64());
     final time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
 
-    final message =
-        tryParseLogicalReplicationMessage(reader, reader.remainingLength);
+    final message = tryParseLogicalReplicationMessage(
+      reader,
+      reader.remainingLength,
+    );
     if (message != null) {
       return XLogDataLogicalMessage(
         message: message,
@@ -422,15 +426,16 @@ Future<XLogDataMessage> parseXLogDataMessage(
   CodecContext? codecContext,
 }) async {
   final reader = PgByteDataReader(
-      codecContext:
-          codecContext ?? CodecContext.withDefaults(encoding: encoding))
-    ..add(bytes);
+    codecContext: codecContext ?? CodecContext.withDefaults(encoding: encoding),
+  )..add(bytes);
   final walStart = LSN(reader.readUint64());
   final walEnd = LSN(reader.readUint64());
   final time = dateTimeFromMicrosecondsSinceY2k(reader.readUint64());
 
   final message = await tryAsyncParseLogicalReplicationMessage(
-      reader, reader.remainingLength);
+    reader,
+    reader.remainingLength,
+  );
   if (message != null) {
     return XLogDataLogicalMessage(
       message: message,

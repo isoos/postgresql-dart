@@ -32,10 +32,12 @@ void main() async {
   print('has connection!');
 
   // Simple query without results
-  await conn.execute('CREATE TABLE IF NOT EXISTS a_table ('
-      '  id TEXT NOT NULL, '
-      '  totals INTEGER NOT NULL DEFAULT 0'
-      ')');
+  await conn.execute(
+    'CREATE TABLE IF NOT EXISTS a_table ('
+    '  id TEXT NOT NULL, '
+    '  totals INTEGER NOT NULL DEFAULT 0'
+    ')',
+  );
 
   // simple query
   final result0 = await conn.execute("SELECT 'foo'");
@@ -71,8 +73,9 @@ void main() async {
   await statement.dispose();
 
   // preared statement with types
-  final anotherStatement =
-      await conn.prepare(Sql(r'SELECT $1;', types: [Type.bigInteger]));
+  final anotherStatement = await conn.prepare(
+    Sql(r'SELECT $1;', types: [Type.bigInteger]),
+  );
   final bound = anotherStatement.bind([1]);
   final subscription = bound.listen((row) {
     print('row: $row');

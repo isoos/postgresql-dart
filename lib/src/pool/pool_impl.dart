@@ -28,7 +28,7 @@ class PoolImplementation<L> implements Pool<L> {
   bool _closing = false;
 
   PoolImplementation(this._selector, PoolSettings? settings)
-      : _settings = ResolvedPoolSettings(settings);
+    : _settings = ResolvedPoolSettings(settings);
 
   @override
   bool get isOpen => !_closing;
@@ -60,39 +60,43 @@ class PoolImplementation<L> implements Pool<L> {
     QueryMode? queryMode,
     Duration? timeout,
   }) {
-    return withConnection((connection) => connection.execute(
-          query,
-          parameters: parameters,
-          ignoreRows: ignoreRows,
-          queryMode: queryMode,
-          timeout: timeout,
-        ));
+    return withConnection(
+      (connection) => connection.execute(
+        query,
+        parameters: parameters,
+        ignoreRows: ignoreRows,
+        queryMode: queryMode,
+        timeout: timeout,
+      ),
+    );
   }
 
   @override
   Future<Statement> prepare(Object query) async {
     final statementCompleter = Completer<Statement>();
 
-    unawaited(withConnection((connection) async {
-      _PoolStatement? poolStatement;
+    unawaited(
+      withConnection((connection) async {
+        _PoolStatement? poolStatement;
 
-      try {
-        final statement = await connection.prepare(query);
-        poolStatement = _PoolStatement(statement);
-      } on Object catch (e, s) {
-        // Could not prepare the statement, inform the caller and stop occupying
-        // the connection.
-        statementCompleter.completeError(e, s);
-        return;
-      }
+        try {
+          final statement = await connection.prepare(query);
+          poolStatement = _PoolStatement(statement);
+        } on Object catch (e, s) {
+          // Could not prepare the statement, inform the caller and stop occupying
+          // the connection.
+          statementCompleter.completeError(e, s);
+          return;
+        }
 
-      // Otherwise, make the future returned by prepare complete with the
-      // statement.
-      statementCompleter.complete(poolStatement);
+        // Otherwise, make the future returned by prepare complete with the
+        // statement.
+        statementCompleter.complete(poolStatement);
 
-      // And keep this connection reserved until the statement has been disposed.
-      return poolStatement._disposed.future;
-    }));
+        // And keep this connection reserved until the statement has been disposed.
+        return poolStatement._disposed.future;
+      }),
+    );
 
     return statementCompleter.future;
   }
@@ -116,10 +120,7 @@ class PoolImplementation<L> implements Pool<L> {
     L? locality,
   }) {
     return withConnection(
-      (connection) => connection.runTx(
-        fn,
-        settings: settings,
-      ),
+      (connection) => connection.runTx(fn, settings: settings),
       locality: locality,
     );
   }
@@ -130,22 +131,21 @@ class PoolImplementation<L> implements Pool<L> {
     ConnectionSettings? settings,
     L? locality,
   }) async {
-    final resource =
-        await _semaphore.requestWithTimeout(_settings.connectTimeout);
+    final resource = await _semaphore.requestWithTimeout(
+      _settings.connectTimeout,
+    );
     _PoolConnection? connection;
     bool reuse = true;
     final sw = Stopwatch();
     try {
-      final context = EndpointSelectorContext(
-        locality: locality,
-      );
+      final context = EndpointSelectorContext(locality: locality);
       final selection = await _selector(context);
 
       // Find an existing connection that is currently unused, or open another
       // one.
       connection = await _selectOrCreate(
         selection.endpoint,
-        ResolvedConnectionSettings(settings, this._settings),
+        ResolvedConnectionSettings(settings, _settings),
       );
 
       sw.start();
@@ -175,9 +175,12 @@ class PoolImplementation<L> implements Pool<L> {
   }
 
   Future<_PoolConnection> _selectOrCreate(
-      Endpoint endpoint, ResolvedConnectionSettings settings) async {
-    final oldc =
-        _connections.firstWhereOrNull((c) => c._mayReuse(endpoint, settings));
+    Endpoint endpoint,
+    ResolvedConnectionSettings settings,
+  ) async {
+    final oldc = _connections.firstWhereOrNull(
+      (c) => c._mayReuse(endpoint, settings),
+    );
     if (oldc != null) {
       // NOTE: It is important to update the _isInUse flag here, otherwise
       //       race conditions may create conflicts.
@@ -185,35 +188,39 @@ class PoolImplementation<L> implements Pool<L> {
       return oldc;
     }
 
-    return await _connectLock
-        .withRequestTimeout(timeout: _settings.connectTimeout, (_) async {
-      while (_connections.length >= _maxConnectionCount) {
-        final candidates =
-            _connections.where((c) => c._isInUse == false).toList();
-        if (candidates.isEmpty) {
-          throw StateError('The pool should not be in this state.');
+    return await _connectLock.withRequestTimeout(
+      timeout: _settings.connectTimeout,
+      (_) async {
+        while (_connections.length >= _maxConnectionCount) {
+          final candidates = _connections
+              .where((c) => c._isInUse == false)
+              .toList();
+          if (candidates.isEmpty) {
+            throw StateError('The pool should not be in this state.');
+          }
+          final selected = candidates.reduce(
+            (a, b) => a._lastReturned.isBefore(b._lastReturned) ? a : b,
+          );
+          await selected._dispose();
         }
-        final selected = candidates.reduce(
-            (a, b) => a._lastReturned.isBefore(b._lastReturned) ? a : b);
-        await selected._dispose();
-      }
 
-      final newc = _PoolConnection(
-        this,
-        endpoint,
-        settings,
-        await PgConnectionImplementation.connect(
+        final newc = _PoolConnection(
+          this,
           endpoint,
-          connectionSettings: settings,
-        ),
-      );
-      newc._isInUse = true;
-      // NOTE: It is important to update _connections list after the isInUse
-      //       flag is set, otherwise race conditions may create conflicts or
-      //       pool close may miss the connection.
-      _connections.add(newc);
-      return newc;
-    });
+          settings,
+          await PgConnectionImplementation.connect(
+            endpoint,
+            connectionSettings: settings,
+          ),
+        );
+        newc._isInUse = true;
+        // NOTE: It is important to update _connections list after the isInUse
+        //       flag is set, otherwise race conditions may create conflicts or
+        //       pool close may miss the connection.
+        _connections.add(newc);
+        return newc;
+      },
+    );
   }
 }
 
@@ -229,7 +236,11 @@ class _PoolConnection implements Connection {
   bool _isInUse = false;
 
   _PoolConnection(
-      this._pool, this._endpoint, this._connectionSettings, this._connection);
+    this._pool,
+    this._endpoint,
+    this._connectionSettings,
+    this._connection,
+  );
 
   bool _mayReuse(Endpoint endpoint, ResolvedConnectionSettings settings) {
     if (_isInUse || endpoint != _endpoint || _isExpired() || !isOpen) {
@@ -322,10 +333,7 @@ class _PoolConnection implements Connection {
     Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
   }) {
-    return _connection.runTx(
-      fn,
-      settings: settings,
-    );
+    return _connection.runTx(fn, settings: settings);
   }
 }
 
@@ -345,10 +353,7 @@ class _PoolStatement implements Statement {
   }
 
   @override
-  Future<Result> run(
-    Object? parameters, {
-    Duration? timeout,
-  }) {
+  Future<Result> run(Object? parameters, {Duration? timeout}) {
     return _underlying.run(parameters, timeout: timeout);
   }
 }

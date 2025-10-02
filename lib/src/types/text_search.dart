@@ -12,9 +12,7 @@ import 'type_registry.dart';
 class TsVector {
   final List<TsWord> words;
 
-  TsVector({
-    required this.words,
-  });
+  TsVector({required this.words});
 
   @override
   String toString() => words.join(' ');
@@ -29,9 +27,9 @@ class TsWord {
 
   @override
   String toString() => [
-        text,
-        if (positions != null && positions!.isNotEmpty) positions!.join(','),
-      ].join(':');
+    text,
+    if (positions != null && positions!.isNotEmpty) positions!.join(','),
+  ].join(':');
 }
 
 /// The weight of the [TsWord].
@@ -57,10 +55,7 @@ class TsWordPos {
   final int position;
   final TsWeight weight;
 
-  TsWordPos(
-    this.position, {
-    this.weight = TsWeight.d,
-  }) {
+  TsWordPos(this.position, {this.weight = TsWeight.d}) {
     assert(position >= 1);
     assert(position <= 16383);
   }
@@ -72,10 +67,8 @@ class TsWordPos {
   }
 
   @override
-  String toString() => [
-        position,
-        if (weight != TsWeight.d) weight.name.toUpperCase(),
-      ].join();
+  String toString() =>
+      [position, if (weight != TsWeight.d) weight.name.toUpperCase()].join();
 }
 
 class TsVectorType extends Type<TsVector> {
@@ -125,7 +118,9 @@ class TsVectorCodec extends Codec {
         final positions = positionCount == 0
             ? null
             : List.generate(
-                positionCount, (_) => TsWordPos._parse(reader.readUint16()));
+                positionCount,
+                (_) => TsWordPos._parse(reader.readUint16()),
+              );
         final lexeme = TsWord(text, positions: positions);
         lexemes.add(lexeme);
       }
@@ -282,7 +277,8 @@ class TsQueryCodec extends Codec {
         return items.single as TsQuery;
       }
       throw PgException(
-          'Unable to parse TsQuery: ${items.join(', ')} ${input.bytes}');
+        'Unable to parse TsQuery: ${items.join(', ')} ${input.bytes}',
+      );
     } else {
       throw UnimplementedError();
     }
@@ -327,11 +323,11 @@ class _WordTsQuery extends TsQuery {
 
   @override
   String toString() => [
-        "'$_text'",
-        if (_hasSuffix) ':',
-        if (_isPrefix) '*',
-        if (_hasWeights) ..._weights.map((e) => e.name.toUpperCase()),
-      ].join();
+    "'$_text'",
+    if (_hasSuffix) ':',
+    if (_isPrefix) '*',
+    if (_hasWeights) ..._weights.map((e) => e.name.toUpperCase()),
+  ].join();
 }
 
 class _AndTsQuery extends TsQuery {
@@ -440,10 +436,10 @@ class _PhraseTsQuery extends TsQuery {
 
   @override
   String toString() => [
-        _left is _WordTsQuery ? _left : '($_left)',
-        '<$_distance>',
-        _right is _WordTsQuery ? _right : '($_right)',
-      ].join(' ');
+    _left is _WordTsQuery ? _left : '($_left)',
+    '<$_distance>',
+    _right is _WordTsQuery ? _right : '($_right)',
+  ].join(' ');
 }
 
 class _Op {

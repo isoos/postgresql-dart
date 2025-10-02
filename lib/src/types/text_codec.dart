@@ -138,8 +138,10 @@ class PostgresTextEncoder {
         final timezoneMinuteOffset = value.timeZoneOffset.inMinutes % 60;
 
         var hourComponent = timezoneHourOffset.abs().toString().padLeft(2, '0');
-        final minuteComponent =
-            timezoneMinuteOffset.abs().toString().padLeft(2, '0');
+        final minuteComponent = timezoneMinuteOffset.abs().toString().padLeft(
+          2,
+          '0',
+        );
 
         if (timezoneHourOffset >= 0) {
           hourComponent = '+$hourComponent';
@@ -210,8 +212,7 @@ class PostgresTextEncoder {
 
     if (type == Map) {
       return '{${value.map((s) {
-        final escaped =
-            json.encode(s).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+        final escaped = json.encode(s).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
 
         return '"$escaped"';
       }).join(',')}}';

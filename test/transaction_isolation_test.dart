@@ -34,8 +34,9 @@ void main() {
           ),
           (session) async {
             await c2.future;
-            await session
-                .execute('UPDATE t SET counter = counter + 1 WHERE id=1');
+            await session.execute(
+              'UPDATE t SET counter = counter + 1 WHERE id=1',
+            );
             c1.complete();
             // await c3.future;
           },
@@ -49,8 +50,9 @@ void main() {
           (session) async {
             c2.complete();
             await c1.future;
-            await session
-                .execute('UPDATE t SET counter = counter + 1 WHERE id=1');
+            await session.execute(
+              'UPDATE t SET counter = counter + 1 WHERE id=1',
+            );
             c3.complete();
           },
         ),
@@ -71,8 +73,9 @@ void main() {
           ),
           (session) async {
             await c2.future;
-            await session
-                .execute('UPDATE t SET counter = counter + 1 WHERE id=1');
+            await session.execute(
+              'UPDATE t SET counter = counter + 1 WHERE id=1',
+            );
             c1.complete();
             // await c3.future;
           },
@@ -86,14 +89,17 @@ void main() {
           (session) async {
             c2.complete();
             await c1.future;
-            await session
-                .execute('UPDATE t SET counter = counter + 1 WHERE id=1');
+            await session.execute(
+              'UPDATE t SET counter = counter + 1 WHERE id=1',
+            );
             c3.complete();
           },
         ),
       );
       await expectLater(
-          () => Future.wait([f1, f2]), throwsA(isA<ServerException>()));
+        () => Future.wait([f1, f2]),
+        throwsA(isA<ServerException>()),
+      );
       final rs = await conn1.execute('SELECT * from t WHERE id=1');
       expect(rs.single, [1, 1]);
     });
@@ -117,8 +123,7 @@ void main() {
         await conn2.close();
       });
 
-      test(
-          'when two transactions using repeatable read isolation level'
+      test('when two transactions using repeatable read isolation level'
           'reads the row updated by the other transaction'
           'then one transaction throws exception ', () async {
         final c1 = Completer();
@@ -134,8 +139,9 @@ void main() {
               c1.complete();
               await c2.future;
 
-              await session
-                  .execute('UPDATE t SET counter = counter + 10 WHERE id=2');
+              await session.execute(
+                'UPDATE t SET counter = counter + 10 WHERE id=2',
+              );
             },
           ),
         );
@@ -152,8 +158,9 @@ void main() {
               // exception
               c2.complete();
 
-              await session
-                  .execute('UPDATE t SET counter = counter + 20 WHERE id=1');
+              await session.execute(
+                'UPDATE t SET counter = counter + 20 WHERE id=1',
+              );
               // If we complete the first transaction after the second transaction
               // the correct exception is thrown
               // c2.complete();

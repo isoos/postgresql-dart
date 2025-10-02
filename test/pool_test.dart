@@ -10,10 +10,9 @@ void main() {
     late Pool pool;
 
     setUp(() async {
-      pool = Pool.withEndpoints(
-        [await server.endpoint()],
-        settings: PoolSettings(maxConnectionCount: 8),
-      );
+      pool = Pool.withEndpoints([
+        await server.endpoint(),
+      ], settings: PoolSettings(maxConnectionCount: 8));
 
       // We can't write to the public schema by default in postgres 15, so
       // create one for this test.
@@ -22,8 +21,10 @@ void main() {
     tearDown(() => pool.close());
 
     test('does not support channels', () {
-      expect(pool.withConnection((c) async => c.channels.notify('foo')),
-          throwsUnsupportedError);
+      expect(
+        pool.withConnection((c) async => c.channels.notify('foo')),
+        throwsUnsupportedError,
+      );
     });
 
     test('execute re-uses free connection', () async {
@@ -41,13 +42,15 @@ void main() {
       // The table can't be temporary because it needs to be visible across
       // connections.
       await pool.execute(
-          'CREATE TABLE IF NOT EXISTS test.transactions (bar INTEGER);');
+        'CREATE TABLE IF NOT EXISTS test.transactions (bar INTEGER);',
+      );
       addTearDown(() => pool.execute('DROP TABLE test.transactions;'));
 
       final completeTransaction = Completer();
       final transaction = pool.runTx((session) async {
-        await session
-            .execute('INSERT INTO test.transactions VALUES (1), (2), (3);');
+        await session.execute(
+          'INSERT INTO test.transactions VALUES (1), (2), (3);',
+        );
         await completeTransaction.future;
       });
 
@@ -62,8 +65,9 @@ void main() {
     });
 
     test('can use prepared statements', () async {
-      await pool
-          .execute('CREATE TABLE IF NOT EXISTS test.statements (bar INTEGER);');
+      await pool.execute(
+        'CREATE TABLE IF NOT EXISTS test.statements (bar INTEGER);',
+      );
       addTearDown(() => pool.execute('DROP TABLE test.statements;'));
 
       final stmt = await pool.prepare('SELECT * FROM test.statements');
@@ -112,42 +116,37 @@ void main() {
     });
 
     test('bad query does not lock up pool instance', () async {
-      final db = Pool.withEndpoints(
-        [await server.endpoint()],
-        settings: PoolSettings(
-          maxConnectionCount: 1,
-        ),
-      );
+      final db = Pool.withEndpoints([
+        await server.endpoint(),
+      ], settings: PoolSettings(maxConnectionCount: 1));
 
       for (var i = 0; i < 10; i++) {
         await expectLater(
-            () => db.run((c) => c.execute('select x;')), throwsException);
+          () => db.run((c) => c.execute('select x;')),
+          throwsException,
+        );
       }
 
       await db.execute('SELECT 1');
     });
 
     test('empty query does not lock up pool instance', () async {
-      final db = Pool.withEndpoints(
-        [await server.endpoint()],
-        settings: PoolSettings(
-          maxConnectionCount: 1,
-        ),
-      );
+      final db = Pool.withEndpoints([
+        await server.endpoint(),
+      ], settings: PoolSettings(maxConnectionCount: 1));
 
       await db.execute('-- test');
       expect(await db.execute('SELECT 1'), [
-        [1]
+        [1],
       ]);
     });
   });
 
   withPostgresServer('limit pool connections', (server) {
     test('can limit concurrent connections', () async {
-      final pool = Pool.withEndpoints(
-        [await server.endpoint()],
-        settings: PoolSettings(maxConnectionCount: 2),
-      );
+      final pool = Pool.withEndpoints([
+        await server.endpoint(),
+      ], settings: PoolSettings(maxConnectionCount: 2));
       addTearDown(pool.close);
 
       final completeFirstTwo = Completer();
@@ -159,9 +158,11 @@ void main() {
 
       // Creating a third one should block.
 
-      unawaited(pool.withConnection((connection) async {
-        didInvokeThird.complete();
-      }));
+      unawaited(
+        pool.withConnection((connection) async {
+          didInvokeThird.complete();
+        }),
+      );
 
       await pumpEventQueue();
       expect(didInvokeThird.isCompleted, isFalse);
@@ -173,10 +174,9 @@ void main() {
 
   withPostgresServer('closes old connections', (server) {
     test('when new connection required it', () async {
-      final pool = Pool.withEndpoints(
-        [await server.endpoint()],
-        settings: PoolSettings(maxConnectionCount: 1),
-      );
+      final pool = Pool.withEndpoints([
+        await server.endpoint(),
+      ], settings: PoolSettings(maxConnectionCount: 1));
       addTearDown(pool.close);
 
       final results = <int>{};
@@ -213,10 +213,9 @@ void main() {
 
   group('force close', () {
     Future<Pool> openPool(PostgresServer server) async {
-      final pool = Pool.withEndpoints(
-        [await server.endpoint()],
-        settings: PoolSettings(maxConnectionCount: 1),
-      );
+      final pool = Pool.withEndpoints([
+        await server.endpoint(),
+      ], settings: PoolSettings(maxConnectionCount: 1));
       addTearDown(pool.close);
       return pool;
     }

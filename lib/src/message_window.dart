@@ -11,17 +11,17 @@ import 'messages/shared_messages.dart';
 
 const int _headerByteSize = 5;
 
-typedef _ServerMessageFn = FutureOr<ServerMessage> Function(
-    PgByteDataReader reader, int length);
+typedef _ServerMessageFn =
+    FutureOr<ServerMessage> Function(PgByteDataReader reader, int length);
 
 Map<int, _ServerMessageFn> _messageTypeMap = {
-  49: (_, __) => ParseCompleteMessage(),
-  50: (_, __) => BindCompleteMessage(),
+  49: (_, _) => ParseCompleteMessage(),
+  50: (_, _) => BindCompleteMessage(),
   65: (r, _) => NotificationResponseMessage.parse(r),
   67: (r, _) => CommandCompleteMessage.parse(r),
   68: (r, _) => DataRowMessage.parse(r),
   69: ErrorResponseMessage.parse,
-  73: (_, __) => EmptyQueryResponseMessage(),
+  73: (_, _) => EmptyQueryResponseMessage(),
   75: (r, _) => BackendKeyMessage.parse(r),
   82: AuthenticationMessage.parse,
   83: (r, l) => ParameterStatusMessage.parse(r),
@@ -29,9 +29,9 @@ Map<int, _ServerMessageFn> _messageTypeMap = {
   87: (r, _) => CopyBothResponseMessage.parse(r),
   90: ReadyForQueryMessage.parse,
   100: _parseCopyDataMessage,
-  110: (_, __) => NoDataMessage(),
+  110: (_, _) => NoDataMessage(),
   116: (r, _) => ParameterDescriptionMessage.parse(r),
-  $3: (_, __) => CloseCompleteMessage(),
+  $3: (_, _) => CloseCompleteMessage(),
   $N: NoticeMessage.parse,
 };
 
@@ -105,9 +105,9 @@ class BytesToMessageParser
 
   @override
   Stream<ServerMessage> bind(Stream<Uint8List> stream) {
-    return stream
-        .transform(_BytesToFrameParser(_codecContext))
-        .asyncMap((frame) async {
+    return stream.transform(_BytesToFrameParser(_codecContext)).asyncMap((
+      frame,
+    ) async {
       // special case
       if (frame.type == SharedMessageId.copyDone) {
         // unlike other messages, CopyDoneMessage only takes the length as an
@@ -121,8 +121,9 @@ class BytesToMessageParser
       }
 
       return await msgMaker(
-          PgByteDataReader(codecContext: _codecContext)..add(frame.bytes),
-          frame.bytes.length);
+        PgByteDataReader(codecContext: _codecContext)..add(frame.bytes),
+        frame.bytes.length,
+      );
     });
   }
 }
@@ -132,7 +133,9 @@ class BytesToMessageParser
 /// Returns a [ReplicationMessage] if the message contains such message.
 /// Otherwise, it'll just return the provided bytes as [CopyDataMessage].
 Future<ServerMessage> _parseCopyDataMessage(
-    PgByteDataReader reader, int length) async {
+  PgByteDataReader reader,
+  int length,
+) async {
   final code = reader.readUint8();
   if (code == ReplicationMessageId.primaryKeepAlive) {
     return PrimaryKeepAliveMessage.parse(reader);

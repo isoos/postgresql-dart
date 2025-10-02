@@ -8,16 +8,16 @@ class SqlImpl implements Sql {
   final List<Type>? types;
 
   SqlImpl.direct(this.sql, {this.types})
-      : mode = TokenizerMode.none,
-        substitution = '';
+    : mode = TokenizerMode.none,
+      substitution = '';
 
   SqlImpl.indexed(this.sql, {this.substitution = '@'})
-      : mode = TokenizerMode.indexed,
-        types = null;
+    : mode = TokenizerMode.indexed,
+      types = null;
 
   SqlImpl.named(this.sql, {this.substitution = '@'})
-      : mode = TokenizerMode.named,
-        types = null;
+    : mode = TokenizerMode.named,
+      types = null;
 }
 
 class InternalQueryDescription {
@@ -41,27 +41,26 @@ class InternalQueryDescription {
   );
 
   InternalQueryDescription.direct(String sql, {List<Type>? types})
-      : this._(sql, sql, types, null);
+    : this._(sql, sql, types, null);
 
   InternalQueryDescription.transformed(
     String original,
     String transformed,
     List<Type?> parameterTypes,
     Map<String, int>? namedVariables,
-  ) : this._(
-          transformed,
-          original,
-          parameterTypes,
-          namedVariables,
-        );
+  ) : this._(transformed, original, parameterTypes, namedVariables);
 
   factory InternalQueryDescription.indexed(
     String sql, {
     String substitution = '@',
     TypeRegistry? typeRegistry,
   }) {
-    return _viaTokenizer(typeRegistry ?? TypeRegistry(), sql, substitution,
-        TokenizerMode.indexed);
+    return _viaTokenizer(
+      typeRegistry ?? TypeRegistry(),
+      sql,
+      substitution,
+      TokenizerMode.indexed,
+    );
   }
 
   factory InternalQueryDescription.named(
@@ -70,7 +69,11 @@ class InternalQueryDescription {
     TypeRegistry? typeRegistry,
   }) {
     return _viaTokenizer(
-        typeRegistry ?? TypeRegistry(), sql, substitution, TokenizerMode.named);
+      typeRegistry ?? TypeRegistry(),
+      sql,
+      substitution,
+      TokenizerMode.named,
+    );
   }
 
   static InternalQueryDescription _viaTokenizer(
@@ -81,8 +84,11 @@ class InternalQueryDescription {
   ) {
     final charCodes = substitution.codeUnits;
     if (charCodes.length != 1) {
-      throw ArgumentError.value(substitution, 'substitution',
-          'Must be a string with a single code unit');
+      throw ArgumentError.value(
+        substitution,
+        'substitution',
+        'Must be a string with a single code unit',
+      );
     }
 
     final tokenizer = VariableTokenizer(
@@ -106,10 +112,7 @@ class InternalQueryDescription {
     } else if (query is SqlImpl) {
       switch (query.mode) {
         case TokenizerMode.none:
-          return InternalQueryDescription.direct(
-            query.sql,
-            types: query.types,
-          );
+          return InternalQueryDescription.direct(query.sql, types: query.types);
         case TokenizerMode.indexed:
           return InternalQueryDescription.indexed(
             query.sql,
@@ -125,15 +128,14 @@ class InternalQueryDescription {
       }
     } else {
       throw ArgumentError.value(
-          query, 'query', 'Must either be a String or an SqlImpl');
+        query,
+        'query',
+        'Must either be a String or an SqlImpl',
+      );
     }
   }
 
-  TypedValue _toParameter(
-    Object? value,
-    Type? knownType, {
-    String? name,
-  }) {
+  TypedValue _toParameter(Object? value, Type? knownType, {String? name}) {
     if (value is TypedValue) {
       if (value.type != Type.unspecified) {
         return value;
@@ -161,15 +163,21 @@ class InternalQueryDescription {
 
     if (params == null) {
       if (knownTypes != null && knownTypes.isNotEmpty) {
-        throw ArgumentError.value(params, 'parameters',
-            'This prepared statement has ${knownTypes.length} parameters that must be set.');
+        throw ArgumentError.value(
+          params,
+          'parameters',
+          'This prepared statement has ${knownTypes.length} parameters that must be set.',
+        );
       }
 
       return const [];
     } else if (params is List) {
       if (knownTypes != null && knownTypes.length != params.length) {
-        throw ArgumentError.value(params, 'parameters',
-            'Expected ${knownTypes.length} parameters, got ${params.length}');
+        throw ArgumentError.value(
+          params,
+          'parameters',
+          'Expected ${knownTypes.length} parameters, got ${params.length}',
+        );
       }
 
       for (var i = 0; i < params.length; i++) {
@@ -182,7 +190,10 @@ class InternalQueryDescription {
       final unmatchedVariables = params.keys.toSet();
       if (byName == null) {
         throw ArgumentError.value(
-            params, 'parameters', 'Maps are only supported by `Sql.named`');
+          params,
+          'parameters',
+          'Maps are only supported by `Sql.named`',
+        );
       }
 
       var variableIndex = 1;
@@ -194,7 +205,10 @@ class InternalQueryDescription {
         final name = entry.key;
         if (!params.containsKey(name)) {
           throw ArgumentError.value(
-              params, 'parameters', 'Missing variable for `$name`');
+            params,
+            'parameters',
+            'Missing variable for `$name`',
+          );
         }
 
         final value = params[name];
@@ -205,12 +219,18 @@ class InternalQueryDescription {
       }
 
       if (unmatchedVariables.isNotEmpty && !ignoreSuperfluous) {
-        throw ArgumentError.value(params, 'parameters',
-            'Contains superfluous variables: ${unmatchedVariables.join(', ')}');
+        throw ArgumentError.value(
+          params,
+          'parameters',
+          'Contains superfluous variables: ${unmatchedVariables.join(', ')}',
+        );
       }
     } else {
       throw ArgumentError.value(
-          params, 'parameters', 'Must either be a list or a map');
+        params,
+        'parameters',
+        'Must either be a list or a map',
+      );
     }
 
     return parameters;

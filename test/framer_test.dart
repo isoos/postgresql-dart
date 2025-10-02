@@ -12,27 +12,29 @@ import 'package:test/test.dart';
 void main() {
   Future<void> parse(Uint8List buffer, messages) async {
     expect(
-      await Stream.fromIterable([buffer])
-          .transform(BytesToMessageParser(CodecContext.withDefaults()))
-          .toList(),
+      await Stream.fromIterable([
+        buffer,
+      ]).transform(BytesToMessageParser(CodecContext.withDefaults())).toList(),
       messages,
     );
 
     expect(
-      await Stream.fromIterable(buffer.expand((b) => [
-                Uint8List.fromList([b])
-              ]))
-          .transform(BytesToMessageParser(CodecContext.withDefaults()))
-          .toList(),
+      await Stream.fromIterable(
+        buffer.expand(
+          (b) => [
+            Uint8List.fromList([b]),
+          ],
+        ),
+      ).transform(BytesToMessageParser(CodecContext.withDefaults())).toList(),
       messages,
     );
 
     for (var i = 1; i < buffer.length - 1; i++) {
       final splitBuffers = fragmentedMessageBuffer(buffer, i);
       expect(
-        await Stream.fromIterable(splitBuffers)
-            .transform(BytesToMessageParser(CodecContext.withDefaults()))
-            .toList(),
+        await Stream.fromIterable(
+          splitBuffers,
+        ).transform(BytesToMessageParser(CodecContext.withDefaults())).toList(),
         messages,
       );
     }
@@ -40,58 +42,61 @@ void main() {
 
   test('Perfectly sized message in one buffer', () async {
     await parse(
-        bufferWithMessages([
-          messageWithBytes([1, 2, 3], 1),
-        ]),
-        [
-          UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
-        ]);
+      bufferWithMessages([
+        messageWithBytes([1, 2, 3], 1),
+      ]),
+      [
+        UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
+      ],
+    );
   });
 
   test('Two perfectly sized messages in one buffer', () async {
     await parse(
-        bufferWithMessages([
-          messageWithBytes([1, 2, 3], 1),
-          messageWithBytes([1, 2, 3, 4], 2),
-        ]),
-        [
-          UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
-          UnknownMessage(2, Uint8List.fromList([1, 2, 3, 4])),
-        ]);
+      bufferWithMessages([
+        messageWithBytes([1, 2, 3], 1),
+        messageWithBytes([1, 2, 3, 4], 2),
+      ]),
+      [
+        UnknownMessage(1, Uint8List.fromList([1, 2, 3])),
+        UnknownMessage(2, Uint8List.fromList([1, 2, 3, 4])),
+      ],
+    );
   });
 
   test('Header fragment', () async {
     await parse(
-        bufferWithMessages([
-          messageWithBytes([], 1), // frame with no data
-          [1], // only a header fragment
-        ]),
-        [UnknownMessage(1, Uint8List.fromList([]))]);
+      bufferWithMessages([
+        messageWithBytes([], 1), // frame with no data
+        [1], // only a header fragment
+      ]),
+      [UnknownMessage(1, Uint8List.fromList([]))],
+    );
   });
 
-  test('Identify CopyDoneMessage with length equals size length (min)',
-      () async {
-    // min length
-    final length = [0, 0, 0, 4]; // min length (4 bytes) as 32-bit
-    final bytes = Uint8List.fromList([
-      SharedMessageId.copyDone,
-      ...length,
-    ]);
-    await parse(
-        bytes, [isA<CopyDoneMessage>().having((m) => m.length, 'length', 4)]);
-  });
+  test(
+    'Identify CopyDoneMessage with length equals size length (min)',
+    () async {
+      // min length
+      final length = [0, 0, 0, 4]; // min length (4 bytes) as 32-bit
+      final bytes = Uint8List.fromList([SharedMessageId.copyDone, ...length]);
+      await parse(bytes, [
+        isA<CopyDoneMessage>().having((m) => m.length, 'length', 4),
+      ]);
+    },
+  );
 
-  test('Identify CopyDoneMessage when length larger than size length',
-      () async {
-    final length = (ByteData(4)..setUint32(0, 42)).buffer.asUint8List();
-    final bytes = Uint8List.fromList([
-      SharedMessageId.copyDone,
-      ...length,
-    ]);
+  test(
+    'Identify CopyDoneMessage when length larger than size length',
+    () async {
+      final length = (ByteData(4)..setUint32(0, 42)).buffer.asUint8List();
+      final bytes = Uint8List.fromList([SharedMessageId.copyDone, ...length]);
 
-    await parse(
-        bytes, [isA<CopyDoneMessage>().having((m) => m.length, 'length', 42)]);
-  });
+      await parse(bytes, [
+        isA<CopyDoneMessage>().having((m) => m.length, 'length', 42),
+      ]);
+    },
+  );
 
   test('Adds XLogDataMessage to queue', () async {
     final bits64 = (ByteData(8)..setUint64(0, 42)).buffer.asUint8List();
@@ -104,7 +109,7 @@ void main() {
       ...bits64, // walStart (64bit)
       ...bits64, // walEnd (64bit)
       ...bits64, // time (64bit)
-      ...dataBytes // bytes (any)
+      ...dataBytes, // bytes (any)
     ];
     final length = ByteData(4)..setUint32(0, xlogDataMessage.length + 4);
 
@@ -117,10 +122,7 @@ void main() {
     ];
 
     await parse(Uint8List.fromList(copyDataBytes), [
-      allOf(
-        isA<XLogDataMessage>(),
-        isNot(isA<XLogDataLogicalMessage>()),
-      ),
+      allOf(isA<XLogDataMessage>(), isNot(isA<XLogDataLogicalMessage>())),
     ]);
   });
 
@@ -151,8 +153,11 @@ void main() {
     ];
 
     await parse(Uint8List.fromList(copyDataMessage), [
-      isA<XLogDataLogicalMessage>()
-          .having((x) => x.message, 'message', isA<JsonMessage>()),
+      isA<XLogDataLogicalMessage>().having(
+        (x) => x.message,
+        'message',
+        isA<JsonMessage>(),
+      ),
     ]);
   });
 
@@ -176,8 +181,9 @@ void main() {
       ...xlogDataMessage,
     ];
 
-    await parse(
-        Uint8List.fromList(copyDataMessage), [isA<PrimaryKeepAliveMessage>()]);
+    await parse(Uint8List.fromList(copyDataMessage), [
+      isA<PrimaryKeepAliveMessage>(),
+    ]);
   });
 
   test('Adds raw CopyDataMessage for unknown stream message', () async {

@@ -23,11 +23,7 @@ class Interval {
   final int days;
   final int microseconds;
 
-  Interval({
-    this.months = 0,
-    this.days = 0,
-    this.microseconds = 0,
-  });
+  Interval({this.months = 0, this.days = 0, this.microseconds = 0});
 
   factory Interval.duration(Duration value) =>
       Interval(microseconds: value.inMicroseconds);
@@ -37,8 +33,9 @@ class Interval {
     if (days != 0) '$days days',
     if (microseconds != 0) '$microseconds microseconds',
   ];
-  late final _asString =
-      _asStringParts.isEmpty ? '0 microseconds' : _asStringParts.join(' ');
+  late final _asString = _asStringParts.isEmpty
+      ? '0 microseconds'
+      : _asStringParts.join(' ');
 
   @override
   String toString() => _asString;
@@ -152,17 +149,20 @@ final class Time {
     int millisecond = 0,
     int microsecond = 0,
   ]) {
-    return Time.fromMicroseconds(hour * Duration.microsecondsPerHour +
-        minute * Duration.microsecondsPerMinute +
-        second * Duration.microsecondsPerSecond +
-        millisecond * Duration.microsecondsPerMillisecond +
-        microsecond);
+    return Time.fromMicroseconds(
+      hour * Duration.microsecondsPerHour +
+          minute * Duration.microsecondsPerMinute +
+          second * Duration.microsecondsPerSecond +
+          millisecond * Duration.microsecondsPerMillisecond +
+          microsecond,
+    );
   }
 
-  _check() {
+  void _check() {
     if (microseconds > Duration.microsecondsPerDay) {
       throw ArgumentError(
-          'Time: values greater than 24:00:00.000000 are not allowed');
+        'Time: values greater than 24:00:00.000000 are not allowed',
+      );
     }
     if (microseconds < 0) {
       throw ArgumentError('Time: negative value not allowed');
@@ -241,15 +241,17 @@ abstract class Type<T extends Object> {
   static const time = GenericType<Time>(TypeOid.time);
 
   /// Must be a [DateTime] (microsecond date and time precision)
-  static const timestamp =
-      GenericType<DateTime>(TypeOid.timestampWithoutTimezone);
+  static const timestamp = GenericType<DateTime>(
+    TypeOid.timestampWithoutTimezone,
+  );
 
   /// Please use [Type.timestamp] instead.
   static const timestampWithoutTimezone = timestamp;
 
   /// Must be a [DateTime] (microsecond date and time precision)
-  static const timestampTz =
-      GenericType<DateTime>(TypeOid.timestampWithTimezone);
+  static const timestampTz = GenericType<DateTime>(
+    TypeOid.timestampWithTimezone,
+  );
 
   /// Please use [Type.timestampTz] instead.
   static const timestampWithTimezone = timestampTz;
@@ -321,22 +323,25 @@ abstract class Type<T extends Object> {
   static const booleanArray = GenericType<List<bool>>(TypeOid.booleanArray);
 
   /// Must be a [List<int>]
-  static const smallIntegerArray =
-      GenericType<List<int>>(TypeOid.smallIntegerArray);
+  static const smallIntegerArray = GenericType<List<int>>(
+    TypeOid.smallIntegerArray,
+  );
 
   /// Must be a [List<int>]
   static const integerArray = GenericType<List<int>>(TypeOid.integerArray);
 
   /// Must be a [List<int>]
-  static const bigIntegerArray =
-      GenericType<List<int>>(TypeOid.bigIntegerArray);
+  static const bigIntegerArray = GenericType<List<int>>(
+    TypeOid.bigIntegerArray,
+  );
 
   /// Must be a [List<String>]
   static const textArray = GenericType<List<String>>(TypeOid.textArray);
 
   /// Must be a [List<double>]
-  static const doubleArray =
-      GenericType<List<core.double>>(TypeOid.doubleArray);
+  static const doubleArray = GenericType<List<core.double>>(
+    TypeOid.doubleArray,
+  );
 
   /// Must be a [List<DateTime>]
   static const dateArray = GenericType<List<DateTime>>(TypeOid.dateArray);
@@ -345,12 +350,14 @@ abstract class Type<T extends Object> {
   static const timeArray = GenericType<List<Time>>(TypeOid.timeArray);
 
   /// Must be a [List<DateTime>] (microsecond date and time precision)
-  static const timestampArray =
-      GenericType<List<DateTime>>(TypeOid.timestampArray);
+  static const timestampArray = GenericType<List<DateTime>>(
+    TypeOid.timestampArray,
+  );
 
   /// Must be a [List<DateTime>] (microsecond date and time precision)
-  static const timestampTzArray =
-      GenericType<List<DateTime>>(TypeOid.timestampTzArray);
+  static const timestampTzArray = GenericType<List<DateTime>>(
+    TypeOid.timestampTzArray,
+  );
 
   /// Must be a [TsQuery].
   static const tsquery = TsQueryType();
@@ -389,12 +396,14 @@ abstract class Type<T extends Object> {
   //     GenericType<ContinuousRange<String>>(TypeOid.numrange);
 
   /// Must be a [Range<DateTime>]
-  static const timestampRange =
-      GenericType<DateTimeRange>(TypeOid.timestampRange);
+  static const timestampRange = GenericType<DateTimeRange>(
+    TypeOid.timestampRange,
+  );
 
   /// Must be a [Range<DateTime>]
-  static const timestampTzRange =
-      GenericType<DateTimeRange>(TypeOid.timestampTzRange);
+  static const timestampTzRange = GenericType<DateTimeRange>(
+    TypeOid.timestampTzRange,
+  );
 
   /// The object ID of this data type.
   final int? oid;
@@ -427,7 +436,7 @@ class TypedValue<T extends Object> {
   final bool isSqlNull;
 
   TypedValue(this.type, this.value, {bool? isSqlNull})
-      : isSqlNull = isSqlNull ?? (value == null) {
+    : isSqlNull = isSqlNull ?? (value == null) {
     if (isSqlNull == true && value != null) {
       throw core.ArgumentError(
         'Using `isSqlNull: true` indicates that a Dart value should be bound '

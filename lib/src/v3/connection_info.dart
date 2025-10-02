@@ -3,9 +3,8 @@ class ConnectionInfo {
   /// The read-only, passive view of the Postgresql's runtime/session parameters.
   final ConnectionParametersView parameters;
 
-  ConnectionInfo({
-    Map<String, String>? parameters,
-  }) : parameters = ConnectionParametersView(values: parameters);
+  ConnectionInfo({Map<String, String>? parameters})
+    : parameters = ConnectionParametersView(values: parameters);
 }
 
 /// The read-only, passive view of the Postgresql's runtime/session parameters.
@@ -32,9 +31,7 @@ class ConnectionInfo {
 class ConnectionParametersView {
   final _values = <String, String>{};
 
-  ConnectionParametersView({
-    Map<String, String>? values,
-  }) {
+  ConnectionParametersView({Map<String, String>? values}) {
     if (values != null) {
       _values.addAll(values);
     }

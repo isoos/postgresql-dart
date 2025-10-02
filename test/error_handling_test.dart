@@ -17,10 +17,7 @@ void main() {
         fail('Should not reach');
       } catch (e, st) {
         expect(e.toString(), contains('column "hello" does not exist'));
-        expect(
-          st.toString(),
-          contains('test/error_handling_test.dart'),
-        );
+        expect(st.toString(), contains('test/error_handling_test.dart'));
       }
 
       // Root connection execute
@@ -29,10 +26,7 @@ void main() {
         fail('Should not reach');
       } catch (e, st) {
         expect(e.toString(), contains('relation "hello" does not exist'));
-        expect(
-          st.toString(),
-          contains('test/error_handling_test.dart'),
-        );
+        expect(st.toString(), contains('test/error_handling_test.dart'));
       }
 
       // Inside transaction
@@ -43,10 +37,7 @@ void main() {
         });
       } catch (e, st) {
         expect(e.toString(), contains('column "hello" does not exist'));
-        expect(
-          st.toString(),
-          contains('test/error_handling_test.dart'),
-        );
+        expect(st.toString(), contains('test/error_handling_test.dart'));
       }
     });
 
@@ -79,9 +70,11 @@ void main() {
       } catch (e) {
         expect(e, isA<UniqueViolationException>());
         expect(
-            e.toString(),
-            contains(
-                'duplicate key value violates unique constraint "test_pkey"'));
+          e.toString(),
+          contains(
+            'duplicate key value violates unique constraint "test_pkey"',
+          ),
+        );
       }
     });
 
@@ -89,7 +82,8 @@ void main() {
       final c = await server.newConnection();
       await c.execute('CREATE TABLE test (id INT PRIMARY KEY);');
       await c.execute(
-          'CREATE TABLE test2 (id INT PRIMARY KEY, test_id INT REFERENCES test(id));');
+        'CREATE TABLE test2 (id INT PRIMARY KEY, test_id INT REFERENCES test(id));',
+      );
       await c.execute('INSERT INTO test (id) VALUES (1);');
       addTearDown(() async {
         await c.execute('DROP TABLE test2;');

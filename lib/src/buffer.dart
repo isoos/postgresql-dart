@@ -16,10 +16,7 @@ class EncodedString {
 class PgByteDataWriter extends ByteDataWriter {
   final Encoding encoding;
 
-  PgByteDataWriter({
-    super.bufferLength,
-    required this.encoding,
-  });
+  PgByteDataWriter({super.bufferLength, required this.encoding});
 
   late final encodingName = encodeString(encoding.name);
 
@@ -45,9 +42,7 @@ const _emptyString = '';
 class PgByteDataReader extends ByteDataReader {
   final CodecContext codecContext;
 
-  PgByteDataReader({
-    required this.codecContext,
-  });
+  PgByteDataReader({required this.codecContext});
 
   Encoding get encoding => codecContext.encoding;
 

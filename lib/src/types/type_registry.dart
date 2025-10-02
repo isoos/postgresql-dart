@@ -135,8 +135,9 @@ final _builtInCodecs = <int, Codec>{
   TypeOid.voidType: GenericCodec(TypeOid.voidType),
   TypeOid.time: GenericCodec(TypeOid.time),
   TypeOid.timestampWithTimezone: GenericCodec(TypeOid.timestampWithTimezone),
-  TypeOid.timestampWithoutTimezone:
-      GenericCodec(TypeOid.timestampWithoutTimezone),
+  TypeOid.timestampWithoutTimezone: GenericCodec(
+    TypeOid.timestampWithoutTimezone,
+  ),
   TypeOid.interval: GenericCodec(TypeOid.interval),
   TypeOid.numeric: GenericCodec(TypeOid.numeric),
   TypeOid.byteArray: GenericCodec(TypeOid.byteArray),
@@ -264,10 +265,7 @@ class TypeRegistry {
     if (codecs != null) {
       _codecs.addAll(codecs);
     }
-    _encoders.addAll([
-      ...?encoders,
-      _defaultTextEncoder,
-    ]);
+    _encoders.addAll([...?encoders, _defaultTextEncoder]);
   }
 
   Future<EncodedValue?> encode(TypedValue input, CodecContext context) async {
@@ -330,7 +328,8 @@ extension TypeRegistryExt on TypeRegistry {
   Type? resolveSubstitution(String name) {
     if (name == 'read') {
       print(
-          'WARNING: Use `real` instead of `read` - will be removed in a future release.');
+        'WARNING: Use `real` instead of `read` - will be removed in a future release.',
+      );
       return Type.real;
     }
     return _bySubstitutionName[name];

@@ -13,7 +13,9 @@ extension PackagePoolExt on Pool {
       timer = Timer(timeout, () {
         if (!completer.isCompleted) {
           completer.completeError(
-              TimeoutException('Failed to acquire pool lock.'), stack);
+            TimeoutException('Failed to acquire pool lock.'),
+            stack,
+          );
         }
       });
     }
@@ -34,7 +36,9 @@ extension PackagePoolExt on Pool {
           timer?.cancel();
           if (!completer.isCompleted) {
             completer.completeError(
-                e, Chain([Trace.from(st), Trace.from(stack)]));
+              e,
+              Chain([Trace.from(st), Trace.from(stack)]),
+            );
           }
         },
       );

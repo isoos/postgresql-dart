@@ -30,16 +30,17 @@ class AggregatedClientMessage extends ClientMessage {
 }
 
 StreamChannelTransformer<Message, List<int>> messageTransformer(
-    CodecContext codecContext) {
+  CodecContext codecContext,
+) {
   return StreamChannelTransformer(
     BytesToMessageParser(codecContext),
     StreamSinkTransformer.fromHandlers(
       handleData: (message, out) {
         if (message is! ClientMessage) {
           out.addError(
-              ArgumentError.value(
-                  message, 'message', 'Must be a client message'),
-              StackTrace.current);
+            ArgumentError.value(message, 'message', 'Must be a client message'),
+            StackTrace.current,
+          );
           return;
         }
 

@@ -24,9 +24,7 @@ void main() {
 
       conn2 = await Connection.open(
         await server.endpoint(),
-        settings: ConnectionSettings(
-          applicationName: conn2Name,
-        ),
+        settings: ConnectionSettings(applicationName: conn2Name),
       );
     });
 
@@ -36,46 +34,51 @@ void main() {
     });
 
     for (final concurrentQuery in [false, true]) {
-      test(
-        'with concurrent query: $concurrentQuery',
-        () async {
-          final res = await conn2.execute(
-              "SELECT pid FROM pg_stat_activity where application_name = '$conn1Name';");
-          final conn1PID = res.first.first as int;
+      test('with concurrent query: $concurrentQuery', () async {
+        final res = await conn2.execute(
+          "SELECT pid FROM pg_stat_activity where application_name = '$conn1Name';",
+        );
+        final conn1PID = res.first.first as int;
 
-          // Simulate issue by terminating a connection during a query
-          if (concurrentQuery) {
-            // We expect that terminating the connection will throw.
-            expect(conn1.execute('select pg_sleep(1) from pg_stat_activity;'),
-                _throwsPostgresException);
-          }
+        // Simulate issue by terminating a connection during a query
+        if (concurrentQuery) {
+          // We expect that terminating the connection will throw.
+          expect(
+            conn1.execute('select pg_sleep(1) from pg_stat_activity;'),
+            _throwsPostgresException,
+          );
+        }
 
-          // Terminate the conn1 while the query is running
-          await conn2.execute('select pg_terminate_backend($conn1PID);');
-        },
-      );
+        // Terminate the conn1 while the query is running
+        await conn2.execute('select pg_terminate_backend($conn1PID);');
+      });
     }
 
     test('with simple query protocol', () async {
       // Get the PID for conn1
       final res = await conn2.execute(
-          "SELECT pid FROM pg_stat_activity where application_name = '$conn1Name';");
+        "SELECT pid FROM pg_stat_activity where application_name = '$conn1Name';",
+      );
       final conn1PID = res.first.first as int;
 
       // ignore: unawaited_futures
       expect(
-          conn1.execute('select pg_sleep(1) from pg_stat_activity;',
-              ignoreRows: true),
-          _throwsPostgresException);
+        conn1.execute(
+          'select pg_sleep(1) from pg_stat_activity;',
+          ignoreRows: true,
+        ),
+        _throwsPostgresException,
+      );
 
       await conn2.execute(
-          'select pg_terminate_backend($conn1PID) from pg_stat_activity;');
+        'select pg_terminate_backend($conn1PID) from pg_stat_activity;',
+      );
     });
 
     test('empty query does not close connection', () async {
       await conn1.execute('-- test');
       expect(await conn1.execute('SELECT 1'), [
-        [1]
+        [1],
       ]);
     });
   });

@@ -34,12 +34,13 @@ void main() {
     test('simple queries', () async {
       final rs = await connection.execute("SELECT 'dart', 42, NULL");
       expect(rs, [
-        ['dart', 42, null]
+        ['dart', 42, null],
       ]);
       expect(rs.single.toColumnMap(), {'?column?': null});
 
-      final appRs = await connection
-          .execute("SELECT current_setting('application_name');");
+      final appRs = await connection.execute(
+        "SELECT current_setting('application_name');",
+      );
       expect(appRs.single.single, 'test_app');
     });
 
@@ -53,13 +54,14 @@ void main() {
       expect(result.schema.columns, [
         isA<ResultSchemaColumn>()
             .having((e) => e.columnName, 'columnName', 'pg_notify')
-            .having((e) => e.type, 'type', Type.voidType)
+            .having((e) => e.type, 'type', Type.voidType),
       ]);
     });
 
     test('queries without a schema message', () async {
-      final response =
-          await connection.execute('CREATE TEMPORARY TABLE foo (bar INTEGER);');
+      final response = await connection.execute(
+        'CREATE TEMPORARY TABLE foo (bar INTEGER);',
+      );
       expect(response.affectedRows, isZero);
       expect(response.schema.columns, isEmpty);
     });
@@ -89,20 +91,23 @@ void main() {
     test('listen and notify', () async {
       const channel = 'test_channel';
 
-      expect(connection.channels[channel],
-          emitsInOrder(['my notification', isEmpty]));
+      expect(
+        connection.channels[channel],
+        emitsInOrder(['my notification', isEmpty]),
+      );
 
       await connection.channels.notify(channel, 'my notification');
       await connection.channels.notify(channel);
     });
 
     test('can use same variable multiple times', () async {
-      final stmt = await connection
-          .prepare(Sql(r'SELECT $1 AS a, $1 + 2 AS b', types: [Type.integer]));
+      final stmt = await connection.prepare(
+        Sql(r'SELECT $1 AS a, $1 + 2 AS b', types: [Type.integer]),
+      );
       final rows = await stmt.run([10]);
 
       expect(rows, [
-        [10, 12]
+        [10, 12],
       ]);
       expect(rows.single.toColumnMap(), {'a': 10, 'b': 12});
     });
@@ -117,7 +122,7 @@ void main() {
       );
 
       expect(rows, [
-        [true]
+        [true],
       ]);
     });
 
@@ -131,14 +136,15 @@ void main() {
       );
 
       expect(rows, [
-        [false]
+        [false],
       ]);
     });
 
     group('throws error', () {
       setUp(() async {
-        await connection
-            .execute('CREATE TEMPORARY TABLE foo (id INTEGER PRIMARY KEY);');
+        await connection.execute(
+          'CREATE TEMPORARY TABLE foo (id INTEGER PRIMARY KEY);',
+        );
         await connection.execute('INSERT INTO foo VALUES (1);');
       });
 
@@ -179,16 +185,19 @@ void main() {
       late Session leakedSession;
 
       await expectLater(
-        connection.run(expectAsync1((session) async {
-          expect(session.isOpen, isTrue);
-          leakedSession = session;
+        connection.run(
+          expectAsync1((session) async {
+            expect(session.isOpen, isTrue);
+            leakedSession = session;
 
-          await session
-              .execute('CREATE TEMPORARY TABLE foo (id INTEGER PRIMARY KEY);');
-          await session.execute('INSERT INTO foo VALUES (3);');
+            await session.execute(
+              'CREATE TEMPORARY TABLE foo (id INTEGER PRIMARY KEY);',
+            );
+            await session.execute('INSERT INTO foo VALUES (3);');
 
-          return returnValue;
-        })),
+            return returnValue;
+          }),
+        ),
         completion(returnValue),
       );
 
@@ -196,20 +205,22 @@ void main() {
 
       final rows = await connection.execute('SELECT * FROM foo');
       expect(rows, [
-        [3]
+        [3],
       ]);
     });
 
     test('run with bad query mode', () async {
       await expectLater(
-          connection.run(settings: SessionSettings(queryMode: QueryMode.simple),
-              (session) async {
-            await session.execute(
-              r'SELECT * FROM foo WHERE where id = $1',
-              parameters: ['id#1'],
-            );
-          }),
-          throwsA(isA<PgException>()));
+        connection.run(settings: SessionSettings(queryMode: QueryMode.simple), (
+          session,
+        ) async {
+          await session.execute(
+            r'SELECT * FROM foo WHERE where id = $1',
+            parameters: ['id#1'],
+          );
+        }),
+        throwsA(isA<PgException>()),
+      );
     });
 
     group('runTx', () {
@@ -228,74 +239,81 @@ void main() {
         });
 
         expect(outValue, [
-          [1]
-        ]);
-      });
-
-      test('Send successful transaction succeeds, returns returned value',
-          () async {
-        final outResult = await connection.runTx((c) async {
-          await c.execute('INSERT INTO t (id) VALUES (1)');
-
-          return await c.execute('SELECT id FROM t');
-        });
-        expect(outResult, [
-          [1]
-        ]);
-
-        final result = await connection.execute('SELECT id FROM t');
-        expect(result, [
-          [1]
-        ]);
-      });
-
-      test('Make sure two simultaneous transactions cannot be interwoven',
-          () async {
-        final orderEnsurer = [];
-
-        final firstTransactionFuture = connection.runTx((c) async {
-          orderEnsurer.add(11);
-          await c.execute('INSERT INTO t (id) VALUES (1)');
-          orderEnsurer.add(12);
-          final result = await c.execute('SELECT id FROM t');
-          orderEnsurer.add(13);
-
-          return result;
-        });
-
-        final secondTransactionFuture = connection.runTx((c) async {
-          orderEnsurer.add(21);
-          await c.execute('INSERT INTO t (id) VALUES (2)');
-          orderEnsurer.add(22);
-          final result = await c.execute('SELECT id FROM t');
-          orderEnsurer.add(23);
-
-          return result;
-        });
-
-        final firstResults = await firstTransactionFuture;
-        final secondResults = await secondTransactionFuture;
-
-        expect(orderEnsurer, [11, 12, 13, 21, 22, 23]);
-
-        expect(firstResults, [
-          [1]
-        ]);
-        expect(secondResults, [
           [1],
-          [2]
         ]);
       });
+
+      test(
+        'Send successful transaction succeeds, returns returned value',
+        () async {
+          final outResult = await connection.runTx((c) async {
+            await c.execute('INSERT INTO t (id) VALUES (1)');
+
+            return await c.execute('SELECT id FROM t');
+          });
+          expect(outResult, [
+            [1],
+          ]);
+
+          final result = await connection.execute('SELECT id FROM t');
+          expect(result, [
+            [1],
+          ]);
+        },
+      );
+
+      test(
+        'Make sure two simultaneous transactions cannot be interwoven',
+        () async {
+          final orderEnsurer = [];
+
+          final firstTransactionFuture = connection.runTx((c) async {
+            orderEnsurer.add(11);
+            await c.execute('INSERT INTO t (id) VALUES (1)');
+            orderEnsurer.add(12);
+            final result = await c.execute('SELECT id FROM t');
+            orderEnsurer.add(13);
+
+            return result;
+          });
+
+          final secondTransactionFuture = connection.runTx((c) async {
+            orderEnsurer.add(21);
+            await c.execute('INSERT INTO t (id) VALUES (2)');
+            orderEnsurer.add(22);
+            final result = await c.execute('SELECT id FROM t');
+            orderEnsurer.add(23);
+
+            return result;
+          });
+
+          final firstResults = await firstTransactionFuture;
+          final secondResults = await secondTransactionFuture;
+
+          expect(orderEnsurer, [11, 12, 13, 21, 22, 23]);
+
+          expect(firstResults, [
+            [1],
+          ]);
+          expect(secondResults, [
+            [1],
+            [2],
+          ]);
+        },
+      );
 
       test('A transaction does not preempt pending queries', () async {
         // Add a few insert queries but don't await, then do a transaction that does a fetch,
         // make sure that transaction sees all of the elements.
-        unawaited(connection.execute('INSERT INTO t (id) VALUES (1)',
-            ignoreRows: true));
-        unawaited(connection.execute('INSERT INTO t (id) VALUES (2)',
-            ignoreRows: true));
-        unawaited(connection.execute('INSERT INTO t (id) VALUES (3)',
-            ignoreRows: true));
+        unawaited(
+          connection.execute('INSERT INTO t (id) VALUES (1)', ignoreRows: true),
+        );
+        unawaited(
+          connection.execute('INSERT INTO t (id) VALUES (2)', ignoreRows: true),
+        );
+        unawaited(
+          connection.execute('INSERT INTO t (id) VALUES (3)', ignoreRows: true),
+        );
 
         final results = await connection.runTx((ctx) async {
           return await ctx.execute('SELECT id FROM t');
@@ -303,7 +321,7 @@ void main() {
         expect(results, [
           [1],
           [2],
-          [3]
+          [3],
         ]);
       });
 
@@ -327,7 +345,7 @@ void main() {
           queryMode: QueryMode.simple,
         );
         expect(res, [
-          ['dart', 42, true, false, null]
+          ['dart', 42, true, false, null],
         ]);
       });
 
@@ -354,17 +372,17 @@ void main() {
             sink.add(msg);
           },
         ),
-        StreamSinkTransformer.fromHandlers(handleData: (msg, sink) {
-          outgoing.add(msg as ClientMessage);
-          sink.add(msg);
-        }),
+        StreamSinkTransformer.fromHandlers(
+          handleData: (msg, sink) {
+            outgoing.add(msg as ClientMessage);
+            sink.add(msg);
+          },
+        ),
       );
 
       final connection = await Connection.open(
         await server.endpoint(),
-        settings: ConnectionSettings(
-          transformer: transformer,
-        ),
+        settings: ConnectionSettings(transformer: transformer),
       );
       addTearDown(connection.close);
 
@@ -379,13 +397,17 @@ void main() {
 
       var didFinishClose = false;
       expect(
-          connection.closed.then((_) => didFinishClose), completion(isFalse));
+        connection.closed.then((_) => didFinishClose),
+        completion(isFalse),
+      );
       await connection.close();
       didFinishClose = true;
 
       expect(connection.isOpen, isFalse);
       expect(
-          () => connection.execute('SELECT 1'), throwsA(_isPostgresException));
+        () => connection.execute('SELECT 1'),
+        throwsA(_isPostgresException),
+      );
     });
   });
 
@@ -396,16 +418,12 @@ void main() {
     setUp(() async {
       conn1 = await Connection.open(
         await server.endpoint(),
-        settings: ConnectionSettings(
-          transformer: loggingTransformer('c1'),
-        ),
+        settings: ConnectionSettings(transformer: loggingTransformer('c1')),
       );
 
       conn2 = await Connection.open(
         await server.endpoint(),
-        settings: ConnectionSettings(
-          transformer: loggingTransformer('c2'),
-        ),
+        settings: ConnectionSettings(transformer: loggingTransformer('c2')),
       );
     });
 
@@ -415,43 +433,47 @@ void main() {
     });
 
     for (final concurrentQuery in [false, true]) {
-      test(
-        'with concurrent query: $concurrentQuery',
-        () async {
-          final endpoint = await server.endpoint();
-          final res = await conn2.execute(
-              "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
-          final conn1PID = res.first.first as int;
+      test('with concurrent query: $concurrentQuery', () async {
+        final endpoint = await server.endpoint();
+        final res = await conn2.execute(
+          "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';",
+        );
+        final conn1PID = res.first.first as int;
 
-          // Simulate issue by terminating a connection during a query
-          if (concurrentQuery) {
-            // We expect that terminating the connection will throw. Use
-            // pg_sleep to avoid flaky race conditions between the conditions.
-            expect(conn1.execute('select pg_sleep(1) from pg_stat_activity;'),
-                _throwsPostgresException);
-          }
+        // Simulate issue by terminating a connection during a query
+        if (concurrentQuery) {
+          // We expect that terminating the connection will throw. Use
+          // pg_sleep to avoid flaky race conditions between the conditions.
+          expect(
+            conn1.execute('select pg_sleep(1) from pg_stat_activity;'),
+            _throwsPostgresException,
+          );
+        }
 
-          // Terminate the conn1 while the query is running
-          await conn2.execute('select pg_terminate_backend($conn1PID);');
-        },
-      );
+        // Terminate the conn1 while the query is running
+        await conn2.execute('select pg_terminate_backend($conn1PID);');
+      });
     }
 
     test('with simple query protocol', () async {
       final endpoint = await server.endpoint();
       // Get the PID for conn1
       final res = await conn2.execute(
-          "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';");
+        "SELECT pid FROM pg_stat_activity where usename = '${endpoint.username}';",
+      );
       final conn1PID = res.first.first as int;
 
       expect(
-        conn1.execute('select pg_sleep(1) from pg_stat_activity;',
-            ignoreRows: true),
+        conn1.execute(
+          'select pg_sleep(1) from pg_stat_activity;',
+          ignoreRows: true,
+        ),
         _throwsPostgresException,
       );
 
       await conn2.execute(
-          'select pg_terminate_backend($conn1PID) from pg_stat_activity;');
+        'select pg_terminate_backend($conn1PID) from pg_stat_activity;',
+      );
     });
   });
 
@@ -471,8 +493,9 @@ void main() {
     });
   });
 
-  withPostgresServer('issue 390 - closing the portal of prepared statements',
-      (server) {
+  withPostgresServer('issue 390 - closing the portal of prepared statements', (
+    server,
+  ) {
     const tableToAlter = 'table_to_alter';
     const otherTable = 'other_table';
 
@@ -484,7 +507,8 @@ void main() {
             a_other_id INTEGER NOT NULL
         );''');
       await conn.execute(
-          'CREATE TABLE $otherTable (other_id INTEGER PRIMARY KEY NOT NULL);');
+        'CREATE TABLE $otherTable (other_id INTEGER PRIMARY KEY NOT NULL);',
+      );
       await conn.close();
     });
 
