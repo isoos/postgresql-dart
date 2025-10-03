@@ -6,7 +6,6 @@ import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:postgres/src/connection_string.dart';
 import 'package:postgres/src/v3/connection_info.dart';
-import 'package:stack_trace/stack_trace.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import 'src/replication.dart';
@@ -267,18 +266,6 @@ abstract class ResultStream implements Stream<ResultRow> {
     Function? onError,
     void Function()? onDone,
     bool? cancelOnError,
-  });
-}
-
-/// A [ResultStream] that adds a `callerTrace` parameter to the `listen` method.
-abstract class ResultStreamTrace implements ResultStream {
-  @override
-  ResultStreamSubscription listen(
-    void Function(ResultRow event)? onData, {
-    Function? onError,
-    void Function()? onDone,
-    bool? cancelOnError,
-    Trace? callerTrace,
   });
 }
 

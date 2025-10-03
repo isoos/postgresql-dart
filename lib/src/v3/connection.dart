@@ -703,7 +703,7 @@ class _PreparedStatement extends Statement {
   _PreparedStatement(this._description, this._name, this._session, this._trace);
 
   @override
-  ResultStreamTrace bind(Object? parameters) {
+  ResultStream bind(Object? parameters) {
     return _BoundStatement(
       this,
       _description.bindParameters(
@@ -720,7 +720,10 @@ class _PreparedStatement extends Statement {
     _session._connection._queryCount++;
     timeout ??= _session._settings.queryTimeout;
     final items = <ResultRow>[];
-    final subscription = bind(parameters).listen(items.add, callerTrace: trace);
+    final subscription = (bind(parameters) as _BoundStatement).listen(
+      items.add,
+      callerTrace: trace,
+    );
     try {
       return await (subscription as _PgResultStreamSubscription)._waitForResult(
         items: items,
@@ -760,7 +763,7 @@ class _PreparedStatement extends Statement {
   }
 }
 
-class _BoundStatement extends Stream<ResultRow> implements ResultStreamTrace {
+class _BoundStatement extends Stream<ResultRow> implements ResultStream {
   final _PreparedStatement statement;
   final List<TypedValue> parameters;
 

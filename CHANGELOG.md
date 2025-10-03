@@ -1,24 +1,10 @@
 # Changelog
 
-## 3.5.9
-
-- `PgSessionBase`:
-  - Optimize `_prepare` by passing the already captured `StackTrace` to `_sendAndWaitForQuery`.
-
-- Added `ResultStreamTrace`:
-  - A `ResultStream` that adds a `callerTrace` parameter to the `listen` method.
-
-- `_BoundStatement` now implements `ResultStreamTrace` rather than `ResultStream`.
-
-- `_PgResultStreamSubscription`: added an optional `callerTrace` parameter to its constructors.
-
-- `PreparedStatement`:
-  - Optimized `run` and `_closePendingPortals` by reducing `StackTrace` captures.
-
 ## 3.5.8
 
 - Upgraded SDK constraints and lints.
 - Supporting more URL-based connection-string parameters (mostly for pool).
+- Optimized `StackTrace` capture [#432](https://github.com/isoos/postgresql-dart/pull/432) by [gmpassos](https://github.com/gmpassos).
 
 ## 3.5.7.
 
