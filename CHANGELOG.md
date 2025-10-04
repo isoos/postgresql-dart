@@ -3,6 +3,7 @@
 ## 3.5.8
 
 - Upgraded SDK constraints and lints.
+- New SASL authenticator (reduce dependencies that haven't been updated for a while).
 - Supporting more URL-based connection-string parameters (mostly for pool).
 - Optimized `StackTrace` capture [#432](https://github.com/isoos/postgresql-dart/pull/432) by [gmpassos](https://github.com/gmpassos).
 

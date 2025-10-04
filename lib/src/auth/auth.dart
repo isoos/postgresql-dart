@@ -1,6 +1,3 @@
-import 'package:crypto/crypto.dart';
-import 'package:sasl_scram/sasl_scram.dart';
-
 import '../../messages.dart';
 import 'clear_text_authenticator.dart';
 import 'md5_authenticator.dart';
@@ -41,14 +38,7 @@ PostgresAuthenticator createAuthenticator(
     case AuthenticationScheme.md5:
       return MD5Authenticator(connection);
     case AuthenticationScheme.scramSha256:
-      final credentials = UsernamePasswordCredential(
-        username: connection.username,
-        password: connection.password,
-      );
-      return PostgresSaslAuthenticator(
-        connection,
-        ScramAuthenticator('SCRAM-SHA-256', sha256, credentials),
-      );
+      return PostgresSaslAuthenticator(connection);
     case AuthenticationScheme.clear:
       return ClearAuthenticator(connection);
   }

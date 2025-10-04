@@ -15,7 +15,6 @@ dependencies:
   buffer: ^1.2.3
   crypto: ^3.0.6
   collection: ^1.19.1
-  sasl_scram: ^0.1.1
   stack_trace: ^1.12.1
   stream_channel: ^2.1.4
   async: ^2.12.0
