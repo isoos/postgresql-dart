@@ -71,7 +71,7 @@ Pool.withUrl(
 
 - **Scheme**: `postgresql://` or `postgres://`
 - **User**: `username` or `username:password`
-- **Host**: hostname or IP address (defaults to `localhost`)
+- **Host**: hostname or IP address (defaults to `localhost`). Supports multiple hosts via comma-separated list (`host1:5433,host2:5434`) or multiple `host` query parameters (`?host=host1:5433&host=host2:5434`)
 - **Port**: port number (defaults to `5432`)
 - **Database**: database name (defaults to `postgres`)
 - **Parameters**: query parameters (see below)
@@ -85,6 +85,7 @@ These parameters are supported by `Connection.openFromUrl()`:
 | `application_name` | String | Sets the application name | `application_name=myapp` |
 | `client_encoding` | String | Character encoding | `UTF8`, `LATIN1` |
 | `connect_timeout` | Integer | Connection timeout in seconds | `connect_timeout=30` |
+| `host` | String | Alternative host specification (supports Unix sockets) | `host=/var/run/postgresql`, `host=host1:5433` |
 | `sslmode` | String | SSL mode | `disable`, `require`, `verify-ca`, `verify-full` |
 | `sslcert` | String | Path to client certificate | `sslcert=/path/to/cert.pem` |
 | `sslkey` | String | Path to client private key | `sslkey=/path/to/key.pem` |
