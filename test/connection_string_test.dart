@@ -360,6 +360,21 @@ void main() {
       });
     });
 
+    group('Query parameter overrides', () {
+      test('user, password, database, and port as query parameters', () {
+        final result = parseConnectionString(
+          'postgresql:///?user=queryuser&password=querypass&database=querydb&port=9876',
+        );
+
+        final endpoint = result.endpoints.single;
+        expect(endpoint.host, equals('localhost'));
+        expect(endpoint.port, equals(9876));
+        expect(endpoint.database, equals('querydb'));
+        expect(endpoint.username, equals('queryuser'));
+        expect(endpoint.password, equals('querypass'));
+      });
+    });
+
     group('Complex scenarios', () {
       test('multiple parameters combined', () {
         final result = parseConnectionString(

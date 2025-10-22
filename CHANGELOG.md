@@ -4,6 +4,7 @@
 
 - Supporting multiple hosts in connection strings via comma-separated hosts or multiple `host` query parameters.
 - Unix socket connections via `host` query parameter (automatically detected when path contains `/`).
+- Supporting `user`/`username`, `password`, `database`, and `port` as query parameters in connection strings (override URL components).
 
 
 ## 3.5.8

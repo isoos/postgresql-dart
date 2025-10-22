@@ -35,9 +35,22 @@ parseConnectionString(
     );
   }
 
-  final database = uri.pathSegments.firstOrNull ?? 'postgres';
-  final username = uri.userInfo.isEmpty ? null : _parseUsername(uri.userInfo);
-  final password = uri.userInfo.isEmpty ? null : _parsePassword(uri.userInfo);
+  final params = uri.queryParameters;
+
+  // Database: query parameter overrides path
+  final database =
+      params['database'] ?? uri.pathSegments.firstOrNull ?? 'postgres';
+
+  // Username: 'user' or 'username' query parameter overrides userInfo
+  final username =
+      params['user'] ??
+      params['username'] ??
+      (uri.userInfo.isEmpty ? null : _parseUsername(uri.userInfo));
+
+  // Password: query parameter overrides userInfo
+  final password =
+      params['password'] ??
+      (uri.userInfo.isEmpty ? null : _parsePassword(uri.userInfo));
 
   // Parse hosts
   final hosts = <({String host, int port, bool isUnixSocket})>[];
@@ -55,17 +68,21 @@ parseConnectionString(
   }
 
   // Parse host query parameters
+  final defaultPort = params['port'] != null
+      ? int.tryParse(params['port']!) ?? 5432
+      : 5432;
+
   if (uri.queryParametersAll.containsKey('host')) {
     final hostParams = uri.queryParametersAll['host'] ?? [];
     for (final hostParam in hostParams) {
-      final parsed = _parseHostPort(hostParam, defaultPort: 5432);
+      final parsed = _parseHostPort(hostParam, defaultPort: defaultPort);
       hosts.add(parsed);
     }
   }
 
   // Default to localhost if no hosts specified
   if (hosts.isEmpty) {
-    hosts.add((host: 'localhost', port: 5432, isUnixSocket: false));
+    hosts.add((host: 'localhost', port: defaultPort, isUnixSocket: false));
   }
 
   final validParams = {
@@ -73,12 +90,17 @@ parseConnectionString(
     'application_name',
     'client_encoding',
     'connect_timeout',
+    'database',
     'host',
+    'password',
+    'port',
     'replication',
     'sslcert',
     'sslkey',
     'sslmode',
     'sslrootcert',
+    'user',
+    'username',
     // Note: some parameters are not part of the libpq-connect above
     'query_timeout',
     // Note: parameters here are only for pool-settings
@@ -90,7 +112,6 @@ parseConnectionString(
     ],
   };
 
-  final params = uri.queryParameters;
   for (final key in params.keys) {
     if (!validParams.contains(key)) {
       throw ArgumentError('Unrecognized connection parameter: $key');
