@@ -72,7 +72,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
   /// Creates  a new pool where the endpoint and the settings are encoded as an URL as
   /// `postgresql://[userspec@][hostspec][/dbname][?paramspec]`
   ///
-  /// Note: Only a single endpoint is supported for now.
+  /// Note: Multiple endpoints can be specified via comma-separated hosts or multiple host query parameters.
   /// Note: Only a subset of settings can be set with parameters.
   factory Pool.withUrl(String connectionString) {
     final parsed = parseConnectionString(
@@ -80,7 +80,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
       enablePoolSettings: true,
     );
     return PoolImplementation(
-      roundRobinSelector([parsed.endpoint]),
+      roundRobinSelector(parsed.endpoints),
       PoolSettings(
         applicationName: parsed.applicationName,
         connectTimeout: parsed.connectTimeout,

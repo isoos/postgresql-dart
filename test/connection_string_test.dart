@@ -10,11 +10,12 @@ void main() {
       test('minimal connection string', () {
         final result = parseConnectionString('postgresql://localhost/test');
 
-        expect(result.endpoint.host, equals('localhost'));
-        expect(result.endpoint.port, equals(5432));
-        expect(result.endpoint.database, equals('test'));
-        expect(result.endpoint.username, isNull);
-        expect(result.endpoint.password, isNull);
+        final endpoint = result.endpoints.single;
+        expect(endpoint.host, equals('localhost'));
+        expect(endpoint.port, equals(5432));
+        expect(endpoint.database, equals('test'));
+        expect(endpoint.username, isNull);
+        expect(endpoint.password, isNull);
         expect(result.applicationName, isNull);
         expect(result.connectTimeout, isNull);
         expect(result.encoding, isNull);
@@ -28,19 +29,21 @@ void main() {
           'postgresql://user:password@host:9999/database',
         );
 
-        expect(result.endpoint.host, equals('host'));
-        expect(result.endpoint.port, equals(9999));
-        expect(result.endpoint.database, equals('database'));
-        expect(result.endpoint.username, equals('user'));
-        expect(result.endpoint.password, equals('password'));
+        final endpoint = result.endpoints.single;
+        expect(endpoint.host, equals('host'));
+        expect(endpoint.port, equals(9999));
+        expect(endpoint.database, equals('database'));
+        expect(endpoint.username, equals('user'));
+        expect(endpoint.password, equals('password'));
       });
 
       test('default values when components missing', () {
         final result = parseConnectionString('postgresql:///');
 
-        expect(result.endpoint.host, equals('localhost'));
-        expect(result.endpoint.port, equals(5432));
-        expect(result.endpoint.database, equals('postgres'));
+        final endpoint = result.endpoints.single;
+        expect(endpoint.host, equals('localhost'));
+        expect(endpoint.port, equals(5432));
+        expect(endpoint.database, equals('postgres'));
       });
 
       test('URL encoded credentials', () {
@@ -48,15 +51,17 @@ void main() {
           'postgresql://user%40domain:p%40ssw%3Ard@host/db',
         );
 
-        expect(result.endpoint.username, equals('user@domain'));
-        expect(result.endpoint.password, equals('p@ssw:rd'));
+        final endpoint = result.endpoints.single;
+        expect(endpoint.username, equals('user@domain'));
+        expect(endpoint.password, equals('p@ssw:rd'));
       });
 
       test('postgres scheme alias', () {
         final result = parseConnectionString('postgres://localhost/test');
 
-        expect(result.endpoint.host, equals('localhost'));
-        expect(result.endpoint.database, equals('test'));
+        final endpoint = result.endpoints.single;
+        expect(endpoint.host, equals('localhost'));
+        expect(endpoint.database, equals('test'));
       });
     });
 
@@ -355,6 +360,21 @@ void main() {
       });
     });
 
+    group('Query parameter overrides', () {
+      test('user, password, database, and port as query parameters', () {
+        final result = parseConnectionString(
+          'postgresql:///?user=queryuser&password=querypass&database=querydb&port=9876',
+        );
+
+        final endpoint = result.endpoints.single;
+        expect(endpoint.host, equals('localhost'));
+        expect(endpoint.port, equals(9876));
+        expect(endpoint.database, equals('querydb'));
+        expect(endpoint.username, equals('queryuser'));
+        expect(endpoint.password, equals('querypass'));
+      });
+    });
+
     group('Complex scenarios', () {
       test('multiple parameters combined', () {
         final result = parseConnectionString(
@@ -366,11 +386,12 @@ void main() {
           'replication=database',
         );
 
-        expect(result.endpoint.host, equals('host'));
-        expect(result.endpoint.port, equals(5433));
-        expect(result.endpoint.database, equals('mydb'));
-        expect(result.endpoint.username, equals('user'));
-        expect(result.endpoint.password, equals('pass'));
+        final endpoint = result.endpoints.single;
+        expect(endpoint.host, equals('host'));
+        expect(endpoint.port, equals(5433));
+        expect(endpoint.database, equals('mydb'));
+        expect(endpoint.username, equals('user'));
+        expect(endpoint.password, equals('pass'));
 
         expect(result.sslMode, equals(SslMode.require));
         expect(result.connectTimeout, equals(Duration(seconds: 60)));
@@ -385,6 +406,86 @@ void main() {
         );
 
         expect(result.applicationName, equals(''));
+      });
+    });
+
+    group('Multiple hosts', () {
+      test('comma-separated hosts in URI', () {
+        final result = parseConnectionString(
+          'postgresql://host1:5433,host2:5434,host3/mydb',
+        );
+
+        expect(result.endpoints, hasLength(3));
+
+        expect(result.endpoints[0].host, equals('host1'));
+        expect(result.endpoints[0].port, equals(5433));
+        expect(result.endpoints[0].database, equals('mydb'));
+        expect(result.endpoints[0].isUnixSocket, isFalse);
+
+        expect(result.endpoints[1].host, equals('host2'));
+        expect(result.endpoints[1].port, equals(5434));
+        expect(result.endpoints[1].database, equals('mydb'));
+        expect(result.endpoints[1].isUnixSocket, isFalse);
+
+        expect(result.endpoints[2].host, equals('host3'));
+        expect(result.endpoints[2].port, equals(5432)); // default port
+        expect(result.endpoints[2].database, equals('mydb'));
+        expect(result.endpoints[2].isUnixSocket, isFalse);
+      });
+
+      test('multiple host query parameters', () {
+        final result = parseConnectionString(
+          'postgresql:///mydb?host=host1:5433&host=host2:5434&host=host3',
+        );
+
+        expect(result.endpoints, hasLength(3));
+
+        expect(result.endpoints[0].host, equals('host1'));
+        expect(result.endpoints[0].port, equals(5433));
+        expect(result.endpoints[0].database, equals('mydb'));
+        expect(result.endpoints[0].isUnixSocket, isFalse);
+
+        expect(result.endpoints[1].host, equals('host2'));
+        expect(result.endpoints[1].port, equals(5434));
+        expect(result.endpoints[1].database, equals('mydb'));
+        expect(result.endpoints[1].isUnixSocket, isFalse);
+
+        expect(result.endpoints[2].host, equals('host3'));
+        expect(result.endpoints[2].port, equals(5432)); // default port
+        expect(result.endpoints[2].database, equals('mydb'));
+        expect(result.endpoints[2].isUnixSocket, isFalse);
+      });
+
+      test('Unix socket as query parameter host', () {
+        final result = parseConnectionString(
+          'postgresql:///mydb?host=/var/run/postgresql',
+        );
+
+        expect(result.endpoints, hasLength(1));
+
+        expect(result.endpoints[0].host, equals('/var/run/postgresql'));
+        expect(result.endpoints[0].port, equals(5432)); // default port
+        expect(result.endpoints[0].database, equals('mydb'));
+        expect(result.endpoints[0].isUnixSocket, isTrue);
+      });
+
+      test('Unix socket with colon in path', () {
+        final result = parseConnectionString(
+          'postgresql:///mydb?host=/var/run:with:colons/postgresql',
+        );
+
+        expect(result.endpoints, hasLength(1));
+
+        expect(
+          result.endpoints[0].host,
+          equals('/var/run:with:colons/postgresql'),
+        );
+        expect(
+          result.endpoints[0].port,
+          equals(5432),
+        ); // should not parse colons as port
+        expect(result.endpoints[0].database, equals('mydb'));
+        expect(result.endpoints[0].isUnixSocket, isTrue);
       });
     });
 

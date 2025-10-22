@@ -236,12 +236,12 @@ abstract class Connection implements Session, SessionExecutor {
   /// Open a new connection where the endpoint and the settings are encoded as an URL as
   /// `postgresql://[userspec@][hostspec][/dbname][?paramspec]`
   ///
-  /// Note: Only a single endpoint is supported.
+  /// Note: When multiple endpoints are specified, only the first one is used.
   /// Note: Only a subset of settings can be set with parameters.
   static Future<Connection> openFromUrl(String connectionString) async {
     final parsed = parseConnectionString(connectionString);
     return open(
-      parsed.endpoint,
+      parsed.endpoints.first,
       settings: ConnectionSettings(
         applicationName: parsed.applicationName,
         connectTimeout: parsed.connectTimeout,

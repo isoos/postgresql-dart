@@ -70,10 +70,10 @@ Pool.withUrl(
 `postgresql://[userspec@][hostspec][:port][/dbname][?paramspec]`
 
 - **Scheme**: `postgresql://` or `postgres://`
-- **User**: `username` or `username:password`
-- **Host**: hostname or IP address (defaults to `localhost`)
-- **Port**: port number (defaults to `5432`)
-- **Database**: database name (defaults to `postgres`)
+- **User**: `username` or `username:password` (can also be set via `user`/`username` and `password` query parameters)
+- **Host**: hostname or IP address (defaults to `localhost`). Supports multiple hosts via comma-separated list (`host1:5433,host2:5434`) or multiple `host` query parameters (`?host=host1:5433&host=host2:5434`)
+- **Port**: port number (defaults to `5432`, can be overridden via `port` query parameter)
+- **Database**: database name (defaults to `postgres`, can be overridden via `database` query parameter)
 - **Parameters**: query parameters (see below)
 
 ### Standard Parameters
@@ -85,6 +85,11 @@ These parameters are supported by `Connection.openFromUrl()`:
 | `application_name` | String | Sets the application name | `application_name=myapp` |
 | `client_encoding` | String | Character encoding | `UTF8`, `LATIN1` |
 | `connect_timeout` | Integer | Connection timeout in seconds | `connect_timeout=30` |
+| `database` | String | Database name (overrides URL path) | `database=mydb` |
+| `host` | String | Alternative host specification (supports Unix sockets) | `host=/var/run/postgresql`, `host=host1:5433` |
+| `password` | String | Password (overrides URL userspec) | `password=secret` |
+| `port` | Integer | Port number (overrides URL port) | `port=5433` |
+| `user` / `username` | String | Username (overrides URL userspec) | `user=myuser` |
 | `sslmode` | String | SSL mode | `disable`, `require`, `verify-ca`, `verify-full` |
 | `sslcert` | String | Path to client certificate | `sslcert=/path/to/cert.pem` |
 | `sslkey` | String | Path to client private key | `sslkey=/path/to/key.pem` |
