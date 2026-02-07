@@ -303,6 +303,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       timeout: settings.connectTimeout,
     );
 
+    // Enable TCP keep-alive if requested and not using a Unix-domain socket.
+    // Must be set before any SSL upgrade because SecureSocket does not expose
+    // setRawOption.
+    if (settings.keepAlive && !endpoint.isUnixSocket) {
+      _enableKeepAlive(socket, settings);
+    }
+
     final sslCompleter = Completer<int>();
     // ignore: cancel_subscriptions
     final subscription = socket.listen(
@@ -402,6 +409,46 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       ).transform(messageTransformer(codecContext)),
       secure,
     );
+  }
+
+  static void _enableKeepAlive(
+    Socket socket,
+    ResolvedConnectionSettings settings,
+  ) {
+    final isLinux = Platform.isLinux || Platform.isAndroid;
+
+    final soKeepAlive = isLinux ? 0x0009 : 0x0008;
+    socket.setRawOption(
+      RawSocketOption.fromBool(RawSocketOption.levelSocket, soKeepAlive, true),
+    );
+
+    final idle = settings.keepAliveIdle?.inSeconds;
+    final interval = settings.keepAliveInterval?.inSeconds;
+    final count = settings.keepAliveCount;
+
+    if (idle != null) {
+      // TCP_KEEPIDLE (Linux=4) / TCP_KEEPALIVE (macOS=0x10, Windows=4)
+      final opt = Platform.isMacOS || Platform.isIOS ? 0x10 : 4;
+      socket.setRawOption(
+        RawSocketOption.fromInt(RawSocketOption.levelTcp, opt, idle),
+      );
+    }
+
+    if (interval != null) {
+      // TCP_KEEPINTVL: Linux=5, macOS=0x101, Windows=5
+      final opt = Platform.isMacOS || Platform.isIOS ? 0x101 : 5;
+      socket.setRawOption(
+        RawSocketOption.fromInt(RawSocketOption.levelTcp, opt, interval),
+      );
+    }
+
+    if (count != null) {
+      // TCP_KEEPCNT: Linux=6, macOS=0x102, Windows=6
+      final opt = Platform.isMacOS || Platform.isIOS ? 0x102 : 6;
+      socket.setRawOption(
+        RawSocketOption.fromInt(RawSocketOption.levelTcp, opt, count),
+      );
+    }
   }
 
   final Endpoint _endpoint;
