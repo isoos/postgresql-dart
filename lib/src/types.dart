@@ -284,6 +284,13 @@ abstract class Type<T extends Object> {
   /// Each element of the list must fit into a byte (0-255).
   static const byteArray = GenericType<List<int>>(TypeOid.byteArray);
 
+  /// Must be a [List<List<int>>].
+  ///
+  /// Each inner list must be a valid bytea value.
+  static const byteArrayArray = GenericType<List<List<int>>>(
+    TypeOid.byteArrayArray,
+  );
+
   /// Must be a [String]
   ///
   /// Used for internal pg structure names

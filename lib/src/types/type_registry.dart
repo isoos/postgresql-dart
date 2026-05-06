@@ -16,6 +16,7 @@ class TypeOid {
   static const booleanArray = 1000;
   static const box = 603;
   static const byteArray = 17;
+  static const byteArrayArray = 1001;
   static const character = 1042;
   static const circle = 718;
   static const date = 1082;
@@ -86,6 +87,7 @@ final _builtInTypes = <Type>{
   Type.interval,
   Type.numeric,
   Type.byteArray,
+  Type.byteArrayArray,
   Type.date,
   Type.json,
   Type.jsonb,
@@ -141,6 +143,7 @@ final _builtInCodecs = <int, Codec>{
   TypeOid.interval: GenericCodec(TypeOid.interval),
   TypeOid.numeric: GenericCodec(TypeOid.numeric),
   TypeOid.byteArray: GenericCodec(TypeOid.byteArray),
+  TypeOid.byteArrayArray: GenericCodec(TypeOid.byteArrayArray),
   TypeOid.date: GenericCodec(TypeOid.date),
   TypeOid.json: GenericCodec(TypeOid.json, encodesNull: true),
   TypeOid.jsonb: GenericCodec(TypeOid.jsonb, encodesNull: true),
@@ -180,6 +183,7 @@ final _builtInTypeNames = <String, Type>{
   'bigint': Type.bigInteger,
   'boolean': Type.boolean,
   'bytea': Type.byteArray,
+  '_bytea': Type.byteArrayArray,
   'bpchar': Type.character,
   'char': Type.character,
   'character': Type.character,
