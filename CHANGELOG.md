@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.10
+
+- Supporting `BYTEA[]` built-in type.
+
 ## 3.5.9
 
 - Supporting multiple hosts in connection strings via comma-separated hosts or multiple `host` query parameters.

@@ -247,6 +247,22 @@ class PostgresBinaryEncoder {
           );
         }
 
+      case TypeOid.byteArrayArray:
+        {
+          if (input is List) {
+            return _writeListBytes<List<int>>(
+              _castOrThrowList<List<int>>(input),
+              TypeOid.byteArray,
+              (item) => item.length,
+              (writer, item) => writer.write(item),
+              encoding,
+            );
+          }
+          throw FormatException(
+            'Invalid type for parameter value. Expected: List<List<int>?> Got: ${input.runtimeType}',
+          );
+        }
+
       case TypeOid.uuid:
         {
           if (input is! String) {
@@ -893,6 +909,12 @@ class PostgresBinaryDecoder {
 
       case TypeOid.byteArray:
         return input;
+
+      case TypeOid.byteArrayArray:
+        return readListBytes<Uint8List>(
+          input,
+          (reader, length) => reader.read(length),
+        );
 
       case TypeOid.uuid:
         return _decodeUuid(input);
