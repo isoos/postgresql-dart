@@ -180,7 +180,7 @@ abstract class _PgSessionBase implements Session {
     } else {
       // The simple query protocol does not support variables. So when we have
       // parameters, we need an explicit prepare.
-      final prepared = await _prepare(description);
+      final prepared = await _prepare(description, variables);
       try {
         return await prepared.run(variables, timeout: timeout);
       } finally {
@@ -195,7 +195,10 @@ abstract class _PgSessionBase implements Session {
     return await _prepare(query);
   }
 
-  Future<_PreparedStatement> _prepare(Object query) async {
+  Future<_PreparedStatement> _prepare(
+    Object query, [
+    List<TypedValue>? fallbackTypes,
+  ]) async {
     final stackTrace = StackTrace.current;
     final trace = Trace.from(stackTrace);
     final conn = _connection;
@@ -209,7 +212,7 @@ abstract class _PgSessionBase implements Session {
       ParseMessage(
         description.transformedSql,
         statementName: name,
-        typeOids: description.parameterTypes?.map((e) => e?.oid).toList(),
+        typeOids: _mergeTypeOids(description.parameterTypes, fallbackTypes),
       ),
       stackTrace: stackTrace,
     );
@@ -1389,6 +1392,36 @@ class _AuthenticationProcedure extends _PendingOperation {
       _done.complete();
     }
   }
+}
+
+/// Merges inline SQL type annotations with runtime [TypedValue] types for use
+/// in a [ParseMessage].
+///
+/// Inline annotations (from `:type` syntax) take precedence. For positions
+/// without an annotation, the [TypedValue.type] is used as a hint so that
+/// PostgreSQL can resolve polymorphic operators (e.g. `@>`, `&&`, `<@`).
+List<int?>? _mergeTypeOids(
+  List<Type?>? paramTypes,
+  List<TypedValue>? fallbackTypes,
+) {
+  if (fallbackTypes == null || fallbackTypes.isEmpty) {
+    return paramTypes?.map((e) => e?.oid).toList();
+  }
+  final length = paramTypes?.length ?? fallbackTypes.length;
+  final result = <int?>[];
+  for (var i = 0; i < length; i++) {
+    final fromAnnotation =
+        (paramTypes != null && i < paramTypes.length) ? paramTypes[i]?.oid : null;
+    if (fromAnnotation != null) {
+      result.add(fromAnnotation);
+    } else {
+      final type = i < fallbackTypes.length ? fallbackTypes[i].type : null;
+      result.add(
+        (type != null && type != Type.unspecified) ? type.oid : null,
+      );
+    }
+  }
+  return result;
 }
 
 extension on PgException {
