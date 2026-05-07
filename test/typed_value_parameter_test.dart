@@ -75,5 +75,28 @@ void main() {
       );
       expect(result.single.single, isTrue);
     });
+
+    // PostgreSQL cannot resolve anyelement polymorphic parameters when the
+    // driver sends OID 0 ("unknown") in the Parse message. TypedValue must
+    // propagate its type to Parse so the function can be resolved.
+    test('anyelement polymorphic function resolves with TypedValue type',
+        () async {
+      await conn.execute(r'''
+        CREATE OR REPLACE FUNCTION pg_temp.identity(anyelement)
+        RETURNS anyelement LANGUAGE sql AS $$ SELECT $1 $$
+      ''');
+
+      final intResult = await conn.execute(
+        Sql.named('SELECT pg_temp.identity(@v)'),
+        parameters: {'v': TypedValue(Type.integer, 42)},
+      );
+      expect(intResult.single.single, 42);
+
+      final boolResult = await conn.execute(
+        Sql.named('SELECT pg_temp.identity(@v)'),
+        parameters: {'v': TypedValue(Type.boolean, true)},
+      );
+      expect(boolResult.single.single, isTrue);
+    });
   });
 }
