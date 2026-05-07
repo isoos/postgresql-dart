@@ -3,6 +3,7 @@
 ## 3.5.10
 
 - Supporting `BYTEA[]` built-in type.
+- Fix TypedValue parameter propagation.
 
 ## 3.5.9
 
