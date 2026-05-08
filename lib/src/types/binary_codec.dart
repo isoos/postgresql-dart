@@ -583,9 +583,11 @@ class PostgresBinaryEncoder {
       case TypeOid.jsonbArray:
         {
           if (input is List) {
-            final objectsArray = input
-                .map(_jsonFusedEncoding(encoding).encode)
-                .toList();
+            final encoder = _jsonFusedEncoding(encoding);
+            final objectsArray = input.map((item) {
+              if (item is TypedValue && item.isSqlNull) return null;
+              return encoder.encode(item);
+            }).toList();
             return _writeListBytes<List<int>>(
               objectsArray,
               3802,

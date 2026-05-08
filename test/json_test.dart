@@ -172,4 +172,37 @@ void main() {
       ]);
     });
   });
+
+  withPostgresServer('JSONB array with SQL NULLs', (server) {
+    late Connection connection;
+
+    setUp(() async {
+      connection = await server.newConnection();
+      await connection.execute(
+        'CREATE TEMPORARY TABLE t (j jsonb[])',
+      );
+    });
+
+    tearDown(() async {
+      await connection.close();
+    });
+
+    test('Can store jsonb[] with SQL NULL elements via TypedValue', () async {
+      final result = await connection.execute(
+        Sql.named('INSERT INTO t (j) VALUES (@a) RETURNING j'),
+        parameters: {
+          'a': TypedValue(Type.jsonbArray, [
+            TypedValue(Type.jsonb, null, isSqlNull: true), // SQL NULL element
+            null, // 'null'::jsonb
+            {'key': 'value'},
+          ]),
+        },
+      );
+      final row = result.single;
+      final cell = row.single as List;
+      expect(cell[0], isNull);
+      expect(cell[1], isNull);
+      expect(cell[2], {'key': 'value'});
+    });
+  });
 }
