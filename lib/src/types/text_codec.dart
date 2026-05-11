@@ -134,6 +134,27 @@ class PostgresTextEncoder {
       string = string.split('T').first;
     } else {
       if (!value.isUtc) {
+        // On some platforms, toIso8601String() for a local DateTime already
+        // includes a timezone suffix (e.g. '+0200'). Strip it so we don't
+        // produce a double suffix like '...+0200+02:00'.
+        final tIdx = string.indexOf('T');
+        if (tIdx != -1) {
+          // Search for a timezone sign after the time-of-day part. Skip the
+          // first character after 'T' to avoid mistaking a leading '-' in a
+          // negative year for a timezone sign.
+          final timepart = string.substring(tIdx + 1);
+          final plusIdx = timepart.indexOf('+');
+          // A '-' that is part of the time zone must appear after at least
+          // 'HH:MM' (5 chars), so require index > 4.
+          final minusIdx = timepart.lastIndexOf('-');
+          final tzStart = plusIdx != -1
+              ? plusIdx
+              : (minusIdx > 4 ? minusIdx : -1);
+          if (tzStart != -1) {
+            string = string.substring(0, tIdx + 1 + tzStart);
+          }
+        }
+
         final timezoneHourOffset = value.timeZoneOffset.inHours;
         final timezoneMinuteOffset = value.timeZoneOffset.inMinutes % 60;
 
