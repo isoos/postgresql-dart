@@ -178,9 +178,7 @@ void main() {
 
     setUp(() async {
       connection = await server.newConnection();
-      await connection.execute(
-        'CREATE TEMPORARY TABLE t (j jsonb[])',
-      );
+      await connection.execute('CREATE TEMPORARY TABLE t (j jsonb[])');
     });
 
     tearDown(() async {
@@ -198,11 +196,15 @@ void main() {
           ]),
         },
       );
-      final row = result.single;
-      final cell = row.single as List;
-      expect(cell[0], isNull);
-      expect(cell[1], isNull);
-      expect(cell[2], {'key': 'value'});
+      final list = result.single.single as JsonbListView;
+      // Both SQL NULL and JSON null decode to Dart null...
+      expect(list[0], isNull);
+      expect(list[1], isNull);
+      expect(list[2], {'key': 'value'});
+      // ...but isSqlNull distinguishes them.
+      expect(list.isSqlNull(0), isTrue); // SQL NULL
+      expect(list.isSqlNull(1), isFalse); // JSON null ('null'::jsonb)
+      expect(list.isSqlNull(2), isFalse); // real value
     });
   });
 }
