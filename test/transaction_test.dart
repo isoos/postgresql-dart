@@ -803,5 +803,38 @@ void main() {
         throwsA(isA<UniqueViolationException>()),
       );
     });
+
+    test(
+      'prepared statement created outside transaction can be used inside it',
+      () async {
+        await conn.execute('INSERT INTO t (id) VALUES (1), (2), (3)');
+
+        // Prepare outside the transaction.
+        final stmt = await conn.prepare(
+          Sql(r'SELECT id FROM t WHERE id = $1', types: [Type.integer]),
+        );
+
+        try {
+          final result = await conn.runTx((tx) async {
+            // Use the pre-prepared statement inside the transaction.
+            // Before the fix this would hang indefinitely because stmt tried to
+            // acquire the connection's _operationLock, which runTx already holds.
+            return await stmt.run([2]);
+          });
+
+          expect(result, [
+            [2],
+          ]);
+
+          // Statement still works after the transaction.
+          final afterTx = await stmt.run([3]);
+          expect(afterTx, [
+            [3],
+          ]);
+        } finally {
+          await stmt.dispose();
+        }
+      },
+    );
   });
 }

@@ -705,13 +705,17 @@ class _PreparedStatement extends Statement {
 
   _PreparedStatement(this._description, this._name, this._session, this._trace);
 
+  _PgSessionBase get _effectiveSession =>
+      _session._connection._activeTransaction ?? _session;
+
   @override
   ResultStream bind(Object? parameters) {
     return _BoundStatement(
       this,
       _description.bindParameters(
         parameters,
-        ignoreSuperfluous: _session._settings.ignoreSuperfluousParameters,
+        ignoreSuperfluous:
+            _effectiveSession._settings.ignoreSuperfluousParameters,
       ),
     );
   }
@@ -758,7 +762,7 @@ class _PreparedStatement extends Statement {
     final list = _portalsToClose;
     while (list != null && list.isNotEmpty) {
       final portalName = list.removeFirst();
-      await _session._sendAndWaitForQuery<CloseCompleteMessage>(
+      await _effectiveSession._sendAndWaitForQuery<CloseCompleteMessage>(
         CloseMessage.portal(portalName),
         stackTrace: stackTrace,
       );
@@ -825,7 +829,7 @@ class _PgResultStreamSubscription
     this._controller,
     this._source, {
     Trace? callerTrace,
-  }) : session = statement.statement._session,
+  }) : session = statement.statement._effectiveSession,
        ignoreRows = false,
        _boundStatement = statement,
        _parentTrace = statement.statement._trace,
