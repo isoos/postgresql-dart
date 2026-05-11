@@ -1029,6 +1029,30 @@ void main() {
       });
     });
 
+    test('Encode local DateTime has exactly one timezone suffix', () {
+      // On some platforms toIso8601String() for a local DateTime already includes a
+      // timezone suffix (e.g. '+0200'), causing the encoder to produce '...+0200+02:00'.
+      // The expected format after encoding is 'YYYY-MM-DDTHH:MM:SS.mmm±HH:MM'
+      final localDateTimes = [
+        DateTime(2024, 5, 8, 8, 22, 1),
+        DateTime(2001, 1, 1, 0, 0, 0),
+        DateTime(2024, 12, 31, 23, 59, 59, 999),
+      ];
+      // Single ±HH:MM at the end, nothing after it.
+      final validPattern = RegExp(
+        r"^'\d+-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+[+-]\d{2}:\d{2}'$",
+      );
+      for (final dt in localDateTimes) {
+        final encoded = encoder.convert(dt, escapeStrings: false);
+        expect(
+          encoded,
+          matches(validPattern),
+          reason:
+              'encoded "$encoded" has unexpected format (possible double timezone suffix)',
+        );
+      }
+    });
+
     test('Encode Double', () {
       final pairs = {
         "'nan'": double.nan,
