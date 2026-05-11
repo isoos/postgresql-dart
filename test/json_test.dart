@@ -172,4 +172,39 @@ void main() {
       ]);
     });
   });
+
+  withPostgresServer('JSONB array with SQL NULLs', (server) {
+    late Connection connection;
+
+    setUp(() async {
+      connection = await server.newConnection();
+      await connection.execute('CREATE TEMPORARY TABLE t (j jsonb[])');
+    });
+
+    tearDown(() async {
+      await connection.close();
+    });
+
+    test('Can store jsonb[] with SQL NULL elements via TypedValue', () async {
+      final result = await connection.execute(
+        Sql.named('INSERT INTO t (j) VALUES (@a) RETURNING j'),
+        parameters: {
+          'a': TypedValue(Type.jsonbArray, [
+            TypedValue(Type.jsonb, null, isSqlNull: true), // SQL NULL element
+            null, // 'null'::jsonb
+            {'key': 'value'},
+          ]),
+        },
+      );
+      final list = result.single.single as JsonbListView;
+      // Both SQL NULL and JSON null decode to Dart null...
+      expect(list[0], isNull);
+      expect(list[1], isNull);
+      expect(list[2], {'key': 'value'});
+      // ...but isSqlNull distinguishes them.
+      expect(list.isSqlNull(0), isTrue); // SQL NULL
+      expect(list.isSqlNull(1), isFalse); // JSON null ('null'::jsonb)
+      expect(list.isSqlNull(2), isFalse); // real value
+    });
+  });
 }

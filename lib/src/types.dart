@@ -3,6 +3,7 @@ import 'dart:core' as core;
 import 'dart:core';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
 import 'types/generic_type.dart';
@@ -468,4 +469,30 @@ class TypedValue<T extends Object> {
   String toString() {
     return 'TypedValue($type, $value)';
   }
+}
+
+/// A decoded PostgreSQL `jsonb[]` array.
+///
+/// Wraps the list of decoded JSON values and tracks which elements were SQL
+/// `NULL` (as opposed to the JSON `null` literal, which also decodes to Dart
+/// `null` but is a non-null value at the SQL level).
+///
+/// Use [isSqlNull] to distinguish between the two:
+/// ```dart
+/// final list = row[0] as JsonbListView;
+/// list[0];              // null — but is it SQL NULL or JSON null?
+/// list.isSqlNull(0);    // true  → SQL NULL  (IS NULL in SQL)
+/// list.isSqlNull(1);    // false → JSON null ('null'::jsonb, IS NOT NULL in SQL)
+/// ```
+class JsonbListView extends UnmodifiableListView<Object?> {
+  final List<bool> _sqlNulls;
+
+  JsonbListView(super.items, List<bool> sqlNulls) : _sqlNulls = sqlNulls;
+
+  /// Returns `true` if the element at [index] was a SQL `NULL` in the array
+  /// (i.e. the PostgreSQL wire protocol sent a -1 length sentinel).
+  ///
+  /// Returns `false` for elements that carry an actual value, including the
+  /// JSON `null` literal (`'null'::jsonb`), which also decodes to Dart `null`.
+  bool isSqlNull(int index) => _sqlNulls[index];
 }

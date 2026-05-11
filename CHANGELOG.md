@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.11
+
+- Adding `JsonbListView` with `isSqlNull(int index)` method to check if a JSONB array has SQL or JSON null value.
+
 ## 3.5.10
 
 - Supporting `BYTEA[]` built-in type.

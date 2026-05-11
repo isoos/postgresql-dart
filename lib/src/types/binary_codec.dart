@@ -583,9 +583,11 @@ class PostgresBinaryEncoder {
       case TypeOid.jsonbArray:
         {
           if (input is List) {
-            final objectsArray = input
-                .map(_jsonFusedEncoding(encoding).encode)
-                .toList();
+            final encoder = _jsonFusedEncoding(encoding);
+            final objectsArray = input.map((item) {
+              if (item is TypedValue && item.isSqlNull) return null;
+              return encoder.encode(item);
+            }).toList();
             return _writeListBytes<List<int>>(
               objectsArray,
               3802,
@@ -914,7 +916,7 @@ class PostgresBinaryDecoder {
         return readListBytes<Uint8List>(
           input,
           (reader, length) => reader.read(length),
-        );
+        ).items;
 
       case TypeOid.uuid:
         return _decodeUuid(input);
@@ -922,7 +924,7 @@ class PostgresBinaryDecoder {
         return readListBytes<String>(
           input,
           (reader, _) => _decodeUuid(reader.read(16)),
-        );
+        ).items;
 
       case TypeOid.regtype:
         final data = input.buffer.asByteData(input.offsetInBytes, input.length);
@@ -984,26 +986,35 @@ class PostgresBinaryDecoder {
         return readListBytes<bool>(
           input,
           (reader, _) => reader.readUint8() != 0,
-        );
+        ).items;
 
       case TypeOid.smallIntegerArray:
-        return readListBytes<int>(input, (reader, _) => reader.readInt16());
+        return readListBytes<int>(
+          input,
+          (reader, _) => reader.readInt16(),
+        ).items;
       case TypeOid.integerArray:
-        return readListBytes<int>(input, (reader, _) => reader.readInt32());
+        return readListBytes<int>(
+          input,
+          (reader, _) => reader.readInt32(),
+        ).items;
       case TypeOid.bigIntegerArray:
-        return readListBytes<int>(input, (reader, _) => reader.readInt64());
+        return readListBytes<int>(
+          input,
+          (reader, _) => reader.readInt64(),
+        ).items;
 
       case TypeOid.dateArray:
         return readListBytes<DateTime>(
           input,
           (reader, _) =>
               DateTime.utc(2000).add(Duration(days: reader.readInt32())),
-        );
+        ).items;
       case TypeOid.timeArray:
         return readListBytes<Time>(
           input,
           (reader, _) => Time.fromMicroseconds(reader.readInt64()),
-        );
+        ).items;
       case TypeOid.timestampArray:
       case TypeOid.timestampTzArray:
         return readListBytes<DateTime>(
@@ -1011,26 +1022,30 @@ class PostgresBinaryDecoder {
           (reader, _) => DateTime.utc(
             2000,
           ).add(Duration(microseconds: reader.readInt64())),
-        );
+        ).items;
 
       case TypeOid.varCharArray:
       case TypeOid.textArray:
         return readListBytes<String>(input, (reader, length) {
           return context.encoding.decode(length > 0 ? reader.read(length) : []);
-        });
+        }).items;
 
       case TypeOid.doubleArray:
         return readListBytes<double>(
           input,
           (reader, _) => reader.readFloat64(),
-        );
+        ).items;
 
       case TypeOid.jsonbArray:
-        return readListBytes<dynamic>(input, (reader, length) {
+        final (:items, :sqlNulls) = readListBytes<dynamic>(input, (
+          reader,
+          length,
+        ) {
           reader.read(1);
           final bytes = reader.read(length - 1);
           return _jsonFusedEncoding(context.encoding).decode(bytes);
         });
+        return JsonbListView(items, sqlNulls);
 
       case TypeOid.integerRange:
         final range = _decodeRange(context, buffer, input, TypeOid.integer);
@@ -1076,12 +1091,12 @@ class PostgresBinaryDecoder {
     );
   }
 
-  static List<V?> readListBytes<V>(
+  static ({List<V?> items, List<bool> sqlNulls}) readListBytes<V>(
     Uint8List data,
     V Function(ByteDataReader reader, int length) valueDecoder,
   ) {
     if (data.length < 16) {
-      return [];
+      return (items: [], sqlNulls: []);
     }
 
     final reader = ByteDataReader()..add(data);
@@ -1092,20 +1107,23 @@ class PostgresBinaryDecoder {
 
     reader.read(4); // index
 
+    final sqlNulls = <bool>[];
     bool hasNull = false;
     for (var i = 0; i < size; i++) {
       final len = reader.readInt32();
       if (len == -1) {
         decoded.add(null);
+        sqlNulls.add(true);
         hasNull = true;
       } else {
         final v = valueDecoder(reader, len);
         decoded.add(v);
+        sqlNulls.add(false);
         hasNull = hasNull || (v == null);
       }
     }
 
-    return hasNull ? decoded : decoded.cast<V>();
+    return (items: hasNull ? decoded : decoded.cast<V>(), sqlNulls: sqlNulls);
   }
 
   /// Decode numeric / decimal to String without loosing precision.

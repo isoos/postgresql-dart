@@ -1410,15 +1410,14 @@ List<int?>? _mergeTypeOids(
   final length = paramTypes?.length ?? fallbackTypes.length;
   final result = <int?>[];
   for (var i = 0; i < length; i++) {
-    final fromAnnotation =
-        (paramTypes != null && i < paramTypes.length) ? paramTypes[i]?.oid : null;
+    final fromAnnotation = (paramTypes != null && i < paramTypes.length)
+        ? paramTypes[i]?.oid
+        : null;
     if (fromAnnotation != null) {
       result.add(fromAnnotation);
     } else {
       final type = i < fallbackTypes.length ? fallbackTypes[i].type : null;
-      result.add(
-        (type != null && type != Type.unspecified) ? type.oid : null,
-      );
+      result.add((type != null && type != Type.unspecified) ? type.oid : null);
     }
   }
   return result;
