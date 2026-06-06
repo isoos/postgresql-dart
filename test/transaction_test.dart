@@ -836,5 +836,26 @@ void main() {
         }
       },
     );
+
+    test('failed BEGIN during runTx clears active transaction state', () async {
+      await conn.execute('BEGIN');
+      try {
+        await conn.execute('SELECT 1 FROM _nonexistent_xyz_ LIMIT 1');
+      } catch (_) {
+        // Leave the manually-started transaction in PostgreSQL's failed state.
+      }
+
+      await expectLater(
+        conn.runTx((tx) async {
+          await tx.execute('SELECT 1');
+        }),
+        throwsA(isA<PgException>()),
+      );
+
+      final rows = await conn.execute('SELECT 1');
+      expect(rows, [
+        [1],
+      ]);
+    });
   });
 }
