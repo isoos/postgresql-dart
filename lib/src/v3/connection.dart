@@ -533,6 +533,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
           _pending!.handleError(exception);
         }
       } else if (_pending != null) {
+        // If PostgreSQL reports the transaction is healthy (e.g. after a
+        // successful ROLLBACK TO SAVEPOINT), clear any stale exception so that
+        // mayCommit can return true and the outer runTx can COMMIT.
+        if (message is ReadyForQueryMessage &&
+            message.state == ReadyForQueryMessageState.transaction) {
+          _activeTransaction?._transactionException = null;
+        }
         await _pending!.handleMessage(message);
       }
     } finally {

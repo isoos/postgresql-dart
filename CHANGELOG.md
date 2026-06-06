@@ -2,6 +2,7 @@
 
 ## 3.5.12
 
+- Fix `runTx` silently rolling back after `ROLLBACK TO SAVEPOINT` recovery: clear stale `_transactionException` when PostgreSQL confirms a healthy transaction state.
 - Fix connection permanently blocked when `BEGIN` fails inside `runTx` (stale `_activeTransaction` state).
 - Fix connection left in undefined PostgreSQL state when `ROLLBACK` fails after a transaction error.
 
