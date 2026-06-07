@@ -1238,8 +1238,21 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
         _connection._activeTransaction = null;
       },
     );
-    await querySubscription.asFuture();
-    await querySubscription.cancel();
+    Object? error;
+    StackTrace? stackTrace;
+    try {
+      await querySubscription.asFuture();
+    } catch (e, s) {
+      error = e;
+      stackTrace = s;
+      await querySubscription._done.future;
+    } finally {
+      await querySubscription.cancel();
+    }
+
+    if (error != null) {
+      Error.throwWithStackTrace(error, stackTrace!);
+    }
   }
 
   @override
