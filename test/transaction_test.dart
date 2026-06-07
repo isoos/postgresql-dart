@@ -836,5 +836,51 @@ void main() {
         }
       },
     );
+
+    test('failed BEGIN during runTx clears active transaction state', () async {
+      await conn.execute('BEGIN');
+      try {
+        await conn.execute('SELECT 1 FROM _nonexistent_xyz_ LIMIT 1');
+      } catch (_) {
+        // Leave the manually-started transaction in PostgreSQL's failed state.
+      }
+
+      await expectLater(
+        conn.runTx((tx) async {
+          await tx.execute('SELECT 1');
+        }),
+        throwsA(isA<PgException>()),
+      );
+
+      final rows = await conn.execute('SELECT 1');
+      expect(rows, [
+        [1],
+      ]);
+    });
+
+    test(
+      'ROLLBACK TO SAVEPOINT clears _transactionException so subsequent work commits',
+      () async {
+        await conn.runTx((tx) async {
+          await tx.execute('SAVEPOINT sp1');
+
+          try {
+            // 42P01 – relation does not exist
+            await tx.execute('SELECT 1 FROM _nonexistent_xyz_ LIMIT 1');
+          } catch (_) {
+            await tx.execute('ROLLBACK TO SAVEPOINT sp1');
+            await tx.execute('RELEASE SAVEPOINT sp1');
+          }
+
+          // This insert must commit; before the fix it was silently rolled back.
+          await tx.execute('INSERT INTO t (id) VALUES (42)');
+        });
+
+        final rows = await conn.execute('SELECT id FROM t WHERE id = 42');
+        expect(rows, [
+          [42],
+        ], reason: 'Insert after savepoint recovery should have been committed');
+      },
+    );
   });
 }

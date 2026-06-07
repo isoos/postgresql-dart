@@ -533,6 +533,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
           _pending!.handleError(exception);
         }
       } else if (_pending != null) {
+        // If PostgreSQL reports the transaction is healthy (e.g. after a
+        // successful ROLLBACK TO SAVEPOINT), clear any stale exception so that
+        // mayCommit can return true and the outer runTx can COMMIT.
+        if (message is ReadyForQueryMessage &&
+            message.state == ReadyForQueryMessageState.transaction) {
+          _activeTransaction?._transactionException = null;
+        }
         await _pending!.handleMessage(message);
       }
     } finally {
@@ -588,14 +595,22 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         beginQuery = 'BEGIN;';
       }
 
-      await transaction.execute(Sql(beginQuery), queryMode: QueryMode.simple);
-
       try {
+        await transaction.execute(Sql(beginQuery), queryMode: QueryMode.simple);
+
         final result = await fn(transaction);
         if (transaction.mayCommit) {
           await transaction._sendAndMarkClosed('COMMIT;');
         } else if (!transaction._sessionClosed) {
-          await transaction._sendAndMarkClosed('ROLLBACK;');
+          try {
+            await transaction._sendAndMarkClosed('ROLLBACK;');
+          } catch (rollbackEx) {
+            // ROLLBACK failed — PG connection state is undefined, close it.
+            _connection._closeAfterError(
+              rollbackEx is PgException ? rollbackEx : null,
+            );
+            rethrow;
+          }
         }
 
         // If we have received an error while the transaction was active, it
@@ -609,10 +624,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         if (!transaction._sessionClosed) {
           try {
             await transaction._sendAndMarkClosed('ROLLBACK;');
-          } catch (_) {
-            // checking the outer exception
+          } catch (rollbackEx) {
+            // ROLLBACK failed — PG connection state is undefined, close it.
+            _connection._closeAfterError(
+              rollbackEx is PgException ? rollbackEx : null,
+            );
             if (e is PgException) {
-              // Ignore exception of rollback, as the earlier exception takes precedence.
+              // Original exception takes precedence over rollback failure.
             } else {
               // Do not ignore the exception here, it may be an implementation bug we are swallowing.
               rethrow;
@@ -1227,8 +1245,21 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
         _connection._activeTransaction = null;
       },
     );
-    await querySubscription.asFuture();
-    await querySubscription.cancel();
+    Object? error;
+    StackTrace? stackTrace;
+    try {
+      await querySubscription.asFuture();
+    } catch (e, s) {
+      error = e;
+      stackTrace = s;
+      await querySubscription._done.future;
+    } finally {
+      await querySubscription.cancel();
+    }
+
+    if (error != null) {
+      Error.throwWithStackTrace(error, stackTrace!);
+    }
   }
 
   @override
