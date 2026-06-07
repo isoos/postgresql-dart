@@ -25,6 +25,3 @@ doc/api/
 
 # VS Code IDE
 .vscode/
-
-# Reference libraries for bug research
-_reference/
