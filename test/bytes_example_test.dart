@@ -39,5 +39,28 @@ void main() {
       final bytes = rs2.single.single;
       expect(bytes, [0, 1, 2]);
     });
+
+    test('write and read untyped parameter', () async {
+      final conn = await server.newConnection();
+      await conn.execute('''
+        CREATE TABLE IF NOT EXISTS blobs (
+        id SERIAL PRIMARY KEY,
+        data BYTEA NOT NULL
+        );
+''');
+
+      final data = Uint8List.fromList([0, 1, 127, 255]);
+      final rs1 = await conn.execute(
+        Sql.named('INSERT INTO blobs (data) VALUES (@data) RETURNING id'),
+        parameters: {'data': data},
+      );
+      final id = rs1.single.single;
+
+      final rs2 = await conn.execute(
+        r'SELECT data FROM blobs WHERE id=$1',
+        parameters: [id],
+      );
+      expect(rs2.single.single, data);
+    });
   });
 }
