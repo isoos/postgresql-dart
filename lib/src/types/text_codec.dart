@@ -47,6 +47,10 @@ class PostgresTextEncoder {
       return _encodePoint(input);
     }
 
+    if (input is Uint8List) {
+      return _encodeBytea(input, escapeStrings);
+    }
+
     if (input is List) {
       return _encodeList(input);
     }
@@ -198,6 +202,14 @@ class PostgresTextEncoder {
 
   String _encodePoint(Point value) {
     return '(${_encodeDouble(value.latitude)}, ${_encodeDouble(value.longitude)})';
+  }
+
+  String _encodeBytea(Uint8List value, bool escapeStrings) {
+    final hex = StringBuffer(r'\x');
+    for (final byte in value) {
+      hex.write(byte.toRadixString(16).padLeft(2, '0'));
+    }
+    return _encodeString(hex.toString(), escapeStrings);
   }
 
   String _encodeList(List value) {

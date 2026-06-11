@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:postgres/postgres.dart';
 import 'package:postgres/src/types/text_codec.dart';
@@ -952,6 +953,24 @@ void main() {
         utf8.encode(encoder.convert(r"\'")),
         equals([32, 69, 39, 92, 92, 39, 39, 39]),
       );
+    });
+
+    test('Encode Uint8List as bytea, not as an int array literal', () {
+      expect(
+        encoder.convert(
+          Uint8List.fromList([0, 1, 127, 255]),
+          escapeStrings: false,
+        ),
+        r'\x00017fff',
+      );
+
+      //  sp   E   '   \   \   x   0   0   f  f   '
+      expect(
+        utf8.encode(encoder.convert(Uint8List.fromList([0, 255]))),
+        equals([32, 69, 39, 92, 92, 120, 48, 48, 102, 102, 39]),
+      );
+
+      expect(encoder.convert(Uint8List(0), escapeStrings: false), r'\x');
     });
 
     test('Encode DateTime', () {
