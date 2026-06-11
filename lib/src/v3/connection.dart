@@ -1107,8 +1107,9 @@ class _Channels implements Channels {
   final _all = StreamController<Notification>.broadcast();
 
   // We are using the pg_notify function in a prepared select statement to
-  // efficiently implement [notify].
-  Completer<Statement>? _notifyStatement;
+  // efficiently implement [notify]. The future is cached so the statement is
+  // only prepared once.
+  Future<Statement>? _notifyStatement;
 
   _Channels(this._connection);
 
@@ -1190,15 +1191,9 @@ class _Channels implements Channels {
 
   @override
   Future<void> notify(String channel, [String? payload]) async {
-    final statementCompleter = _notifyStatement ??= Completer<Statement>()
-      ..complete(
-        Future(() async {
-          return _connection.prepare(
-            Sql(r'SELECT pg_notify($1, $2)', types: [Type.text, Type.text]),
-          );
-        }),
-      );
-    final statement = await statementCompleter.future;
+    final statement = await (_notifyStatement ??= _connection.prepare(
+      Sql(r'SELECT pg_notify($1, $2)', types: [Type.text, Type.text]),
+    ));
 
     await statement.run([channel, payload]);
   }
