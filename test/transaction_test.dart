@@ -877,9 +877,13 @@ void main() {
         });
 
         final rows = await conn.execute('SELECT id FROM t WHERE id = 42');
-        expect(rows, [
-          [42],
-        ], reason: 'Insert after savepoint recovery should have been committed');
+        expect(
+          rows,
+          [
+            [42],
+          ],
+          reason: 'Insert after savepoint recovery should have been committed',
+        );
       },
     );
   });
