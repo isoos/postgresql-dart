@@ -57,6 +57,10 @@ class PoolSettings extends ConnectionSettings {
 ///   specified data range.
 /// - a primary/replica status, whic may be specified for cases where stale or
 ///   read-only data is acceptable
+///
+/// This interface implements [Session] and [SessionExecutor] as a convenience
+/// API that internally acquires a pooled connection via [withConnection] for
+/// each operation.
 abstract class Pool<L> implements Session, SessionExecutor {
   factory Pool.withSelector(
     EndpointSelector<L> selector, {
@@ -125,8 +129,9 @@ abstract class Pool<L> implements Session, SessionExecutor {
   // TODO: decide whether PgSession.execute and prepare methods should also take locality parameter
 }
 
-typedef EndpointSelector<L> =
-    FutureOr<EndpointSelection> Function(EndpointSelectorContext<L> context);
+typedef EndpointSelector<L> = FutureOr<EndpointSelection> Function(
+  EndpointSelectorContext<L> context,
+);
 
 final class EndpointSelectorContext<L> {
   final L? locality;
