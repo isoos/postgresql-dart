@@ -125,6 +125,18 @@ class Sql {
   factory Sql.named(String sql, {String substitution}) = SqlImpl.named;
 }
 
+/// A capability for preparing and executing SQL statements.
+///
+/// This is **not** necessarily a 1:1 mapping to a PostgreSQL physical database
+/// connection or session.
+///
+/// An implementation may represent:
+///
+/// - a dedicated database connection.
+/// - a session executed on a connection borrowed from a pool.
+/// - or another abstraction capable of executing queries.
+///
+/// A session may also operate in a transactional context ([TxSession]).
 abstract class Session {
   /// Whether this connection is currently open.
   ///
