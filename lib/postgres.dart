@@ -534,6 +534,10 @@ class ConnectionSettings extends SessionSettings {
     super.queryTimeout,
     super.queryMode,
     super.ignoreSuperfluousParameters,
+    super.keepAlive,
+    super.keepAliveIdle,
+    super.keepAliveInterval,
+    super.keepAliveCount,
   });
 }
 
@@ -557,11 +561,39 @@ class SessionSettings {
   /// parameters are found.
   final bool? ignoreSuperfluousParameters;
 
+  /// Whether to enable TCP keep-alive on the socket connection.
+  ///
+  /// When enabled, sets `SO_KEEPALIVE` on the underlying TCP socket so that
+  /// the operating system will periodically send probes on idle connections
+  /// to detect broken peers.
+  ///
+  /// Defaults to `false`. Has no effect on Unix-domain socket connections.
+  final bool? keepAlive;
+
+  /// Time a connection must be idle before the first keep-alive probe is sent.
+  /// Sets `TCP_KEEPIDLE` (Linux) / `TCP_KEEPALIVE` (macOS) per-socket.
+  /// Requires [keepAlive] to be `true`. Falls back to OS default if null.
+  final Duration? keepAliveIdle;
+
+  /// Interval between successive keep-alive probes when no acknowledgement
+  /// is received. Sets `TCP_KEEPINTVL` per-socket.
+  /// Requires [keepAlive] to be `true`. Falls back to OS default if null.
+  final Duration? keepAliveInterval;
+
+  /// Number of unacknowledged probes before the connection is considered dead.
+  /// Sets `TCP_KEEPCNT` per-socket.
+  /// Requires [keepAlive] to be `true`. Falls back to OS default if null.
+  final int? keepAliveCount;
+
   const SessionSettings({
     this.connectTimeout,
     this.queryTimeout,
     this.queryMode,
     this.ignoreSuperfluousParameters,
+    this.keepAlive,
+    this.keepAliveIdle,
+    this.keepAliveInterval,
+    this.keepAliveCount,
   });
 }
 
