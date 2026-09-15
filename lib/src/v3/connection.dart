@@ -199,9 +199,16 @@ abstract class _PgSessionBase implements Session {
         ),
       );
       try {
+        // Nothing to close on the way out: the unnamed statement is replaced
+        // by the next parse that leaves the name empty, so closing it is an
+        // exchange that changes nothing -- and every `execute` would make one.
         return await prepared.run(variables, timeout: timeout);
-      } finally {
+      } catch (_) {
+        // A statement that did not finish can leave the connection with
+        // messages still to deliver, and this exchange is where they land.
+        // Closing is beside the point here; having somewhere to arrive is not.
         await prepared.dispose();
+        rethrow;
       }
     }
   }

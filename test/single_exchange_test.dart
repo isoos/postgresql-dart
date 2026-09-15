@@ -81,6 +81,23 @@ void main() {
       expect(sent.whereType<ParseMessage>().single.statementName, isEmpty);
     });
 
+    test('a one-shot query does not close the statement it never named', () async {
+      await connection.execute(r'SELECT $1::int AS value', parameters: [1]);
+
+      expect(
+        sent.whereType<CloseMessage>(),
+        isEmpty,
+        reason: 'the next parse replaces the unnamed statement, so closing it is an exchange that changes nothing',
+      );
+    });
+
+    test('a named statement is still closed, because its name has to become free again', () async {
+      final statement = await connection.prepare(r'SELECT $1::int AS value');
+      await statement.dispose();
+
+      expect(sent.whereType<CloseMessage>(), isNotEmpty);
+    });
+
     test('a statement kept for reuse is still named and still parsed on its own', () async {
       final statement = await connection.prepare(r'SELECT $1::int AS value');
       addTearDown(statement.dispose);
