@@ -178,9 +178,26 @@ abstract class _PgSessionBase implements Session {
         await querySubscription.cancel();
       }
     } else {
-      // The simple query protocol does not support variables. So when we have
-      // parameters, we need an explicit prepare.
-      final prepared = await _prepare(description, variables);
+      // The simple query protocol does not support variables, so this needs the
+      // extended one. Parsing in its own exchange would end the implicit
+      // transaction the parse opened, and a pooler in transaction mode hands
+      // the server connection to another client at that point -- which either
+      // loses the statement or leaves it behind for someone else to collide
+      // with. So the parse travels with the bind and the execute, as one
+      // exchange and one transaction, under the unnamed statement that belongs
+      // to it.
+      final stackTrace = StackTrace.current;
+      final prepared = _PreparedStatement(
+        description,
+        '',
+        this,
+        Trace.from(stackTrace),
+        parse: ParseMessage(
+          description.transformedSql,
+          statementName: '',
+          typeOids: _mergeTypeOids(description.parameterTypes, variables),
+        ),
+      );
       try {
         return await prepared.run(variables, timeout: timeout);
       } finally {
@@ -721,7 +738,18 @@ class _PreparedStatement extends Statement {
 
   final Trace _trace;
 
-  _PreparedStatement(this._description, this._name, this._session, this._trace);
+  /// The parse this statement still owes the server, when it was made without
+  /// sending one. It travels with the first bind so that parsing and binding
+  /// are one exchange.
+  final ParseMessage? _parse;
+
+  _PreparedStatement(
+    this._description,
+    this._name,
+    this._session,
+    this._trace, {
+    ParseMessage? parse,
+  }) : _parse = parse;
 
   _PgSessionBase get _effectiveSession =>
       _session._connection._activeTransaction ?? _session;
@@ -869,6 +897,9 @@ class _PgResultStreamSubscription
 
       connection._channel.sink.add(
         AggregatedClientMessage([
+          // A statement that has not been parsed yet parses here, so that the
+          // parse and the bind cannot be split across two transactions.
+          ?statement.statement._parse,
           BindMessage(
             encodedValues,
             portalName: _portalName,
@@ -958,6 +989,7 @@ class _PgResultStreamSubscription
   @override
   Future<void> handleMessage(ServerMessage message) async {
     switch (message) {
+      case ParseCompleteMessage():
       case BindCompleteMessage():
       case NoDataMessage():
         // Nothing to do!

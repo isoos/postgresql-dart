@@ -124,6 +124,11 @@ class ParseMessage extends ClientMessage {
        _statementName = statementName,
        _typeOids = typeOids ?? types?.map((e) => e?.oid).toList() ?? const [];
 
+  /// The name the statement is prepared under. Empty for the unnamed
+  /// statement, which belongs to whichever transaction is using the connection
+  /// rather than to the connection itself.
+  String get statementName => _statementName;
+
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
     buffer.writeUint8(ClientMessageId.parse);

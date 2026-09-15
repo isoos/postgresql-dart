@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.5.13-wip
+
+- Fix queries being split across transactions, which made the driver unusable
+  through a transaction pooler. Parsing used to be its own Sync-terminated
+  exchange, so a pooler could hand the server connection to another client
+  between the parse and the bind: the statement was either gone by the time it
+  was bound (`26000`), or still there when another client parsed the same
+  generated name (`42P05`). A one-shot query now parses, binds and executes in
+  one exchange, under the unnamed statement. This also removes a round trip.
+- `ParseMessage.statementName` is now readable.
+
 ## 3.5.12
 
 - Fix `runTx` silently rolling back after `ROLLBACK TO SAVEPOINT` recovery: clear stale `_transactionException` when PostgreSQL confirms a healthy transaction state.
