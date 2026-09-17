@@ -188,7 +188,10 @@ ServerException buildExceptionFromErrorFields(List<ErrorField> errorFields) {
 
   return ServerException._(
     findString(ErrorFieldId.message) ?? 'Server error.',
-    severity: Severity._parseServerMessage(findString(ErrorFieldId.severity)),
+    severity: Severity._parseServerMessage(
+      findString(ErrorFieldId.nonLocalizedSeverity) ??
+          findString(ErrorFieldId.severity),
+    ),
     position: findInt(ErrorFieldId.position),
     internalPosition: findInt(ErrorFieldId.internalPosition),
     lineNumber: findInt(ErrorFieldId.line),

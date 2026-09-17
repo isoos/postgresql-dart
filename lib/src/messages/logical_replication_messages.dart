@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
@@ -380,12 +381,16 @@ enum TupleDataType {
   null_('n'),
   toast('u'),
   text('t'),
-  binary('b');
+  binary('b'),
+  unknown('');
 
   final String id;
   const TupleDataType(this.id);
   static TupleDataType fromId(String id) {
-    return TupleDataType.values.firstWhere((element) => element.id == id);
+    return TupleDataType.values.firstWhere(
+      (element) => element.id == id,
+      orElse: () => TupleDataType.unknown,
+    );
   }
 
   static TupleDataType fromByte(int byte) {
@@ -457,13 +462,23 @@ class TupleData {
       Object? value;
       switch (tupleDataType) {
         case TupleDataType.text:
-        case TupleDataType.binary:
           length = reader.readUint32();
           data = reader.encoding.decode(reader.read(length));
           value = data;
           break;
+        case TupleDataType.binary:
+          length = reader.readUint32();
+          final bytes = reader.read(length);
+          // Binary-format data is raw Postgres wire format, not text in the
+          // connection's encoding - decoding it as such can throw or produce
+          // garbage. Keep the raw bytes as `value` and use a lossless,
+          // non-throwing decoding for the deprecated `data` field.
+          data = latin1.decode(bytes);
+          value = bytes;
+          break;
         case TupleDataType.null_:
         case TupleDataType.toast:
+        case TupleDataType.unknown:
           length = 0;
           data = '';
           break;
@@ -526,6 +541,7 @@ class TupleData {
           break;
         case TupleDataType.null_:
         case TupleDataType.toast:
+        case TupleDataType.unknown:
           length = 0;
           data = '';
           break;

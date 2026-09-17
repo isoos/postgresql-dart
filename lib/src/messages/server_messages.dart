@@ -495,6 +495,12 @@ class UnknownMessage extends ServerMessage {
 
 abstract class ErrorFieldId {
   static const int severity = 83;
+
+  /// Non-localized severity, always one of `ERROR`, `FATAL` or `PANIC` (or,
+  /// for notices, `WARNING`, `NOTICE`, `DEBUG`, `INFO` or `LOG`). Only sent by
+  /// servers speaking protocol 3.0 or later. Unlike [severity], this field's
+  /// value is never translated, so it should be preferred when present.
+  static const int nonLocalizedSeverity = 86;
   static const int code = 67;
   static const int message = 77;
   static const int detail = 68;

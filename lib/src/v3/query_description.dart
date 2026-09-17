@@ -140,7 +140,6 @@ class InternalQueryDescription {
       if (value.type != Type.unspecified) {
         return value;
       }
-      knownType = value.type;
       value = value.value;
     }
     if (knownType != null && knownType != Type.unspecified) {
