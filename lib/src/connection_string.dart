@@ -124,7 +124,14 @@ parseConnectionString(
       case 'disable':
         sslMode = SslMode.disable;
         break;
+      case 'allow':
+      case 'prefer':
       case 'require':
+        // Note: libpq's `allow`/`prefer` negotiate opportunistically (trying
+        // both encrypted and unencrypted connections and falling back),
+        // which this package does not implement. We approximate both with
+        // `require` so that SSL connection strings from other libpq-based
+        // tools are at least accepted rather than rejected outright.
         sslMode = SslMode.require;
         break;
       case 'verify-ca':
@@ -133,7 +140,7 @@ parseConnectionString(
         break;
       default:
         throw ArgumentError(
-          'Invalid sslmode value: ${params['sslmode']}. Expected: disable, require, verify-ca, verify-full',
+          'Invalid sslmode value: ${params['sslmode']}. Expected: disable, allow, prefer, require, verify-ca, verify-full',
         );
     }
   }
@@ -192,16 +199,22 @@ parseConnectionString(
         replicationMode = ReplicationMode.logical;
         break;
       case 'true':
+      case 'on':
+      case 'yes':
+      case '1':
       case 'physical':
         replicationMode = ReplicationMode.physical;
         break;
       case 'false':
+      case 'off':
+      case 'no':
+      case '0':
       case 'no_select':
         replicationMode = ReplicationMode.none;
         break;
       default:
         throw ArgumentError(
-          'Invalid replication value: ${params['replication']}. Expected: database, true, physical, false, no_select',
+          'Invalid replication value: ${params['replication']}. Expected: database, true/on/yes/1/physical, false/off/no/0/no_select',
         );
     }
   }
@@ -320,6 +333,20 @@ String? _parsePassword(String userInfo) {
     // Unix socket - don't parse for port (may have colons in filename)
     host = hostPort;
     port = defaultPort;
+  } else if (hostPort.startsWith('[')) {
+    // Bracketed IPv6 literal, e.g. `[::1]` or `[::1]:5432`. The brackets are
+    // only wire-format syntax and must be stripped - `Socket.connect` needs
+    // the bare address - and any port separator must be looked for after the
+    // closing bracket, since the address itself contains colons.
+    final closeIndex = hostPort.indexOf(']');
+    if (closeIndex == -1) {
+      throw ArgumentError('Invalid IPv6 host: $hostPort. Missing closing "]".');
+    }
+    host = hostPort.substring(1, closeIndex);
+    final afterBracket = hostPort.substring(closeIndex + 1);
+    port = afterBracket.startsWith(':')
+        ? int.tryParse(afterBracket.substring(1)) ?? defaultPort
+        : defaultPort;
   } else {
     // Regular host - check for port after colon
     final colonIndex = hostPort.lastIndexOf(':');
