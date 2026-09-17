@@ -701,8 +701,15 @@ class PostgresBinaryEncoder {
   Uint8List _encodeNumeric(String value, Encoding encoding) {
     value = value.trim();
     var signByte = 0x0000;
-    if (value.toLowerCase() == 'nan') {
+    final lowerValue = value.toLowerCase();
+    if (lowerValue == 'nan') {
       signByte = 0xc000;
+      value = '';
+    } else if (lowerValue == 'infinity') {
+      signByte = 0xd000;
+      value = '';
+    } else if (lowerValue == '-infinity') {
+      signByte = 0xf000;
       value = '';
     } else if (value.startsWith('-')) {
       value = value.substring(1);
@@ -1138,6 +1145,8 @@ class PostgresBinaryDecoder {
         .readUint16(); // NUMERIC_POS, NEG, NAN, PINF, or NINF
     final dScale = reader.readInt16(); // display scale
     if (signByte == 0xc000) return 'NaN';
+    if (signByte == 0xd000) return 'Infinity';
+    if (signByte == 0xf000) return '-Infinity';
     final sign = signByte == 0x4000 ? '-' : '';
     var intPart = '';
     var fractPart = '';

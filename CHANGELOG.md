@@ -11,6 +11,9 @@
 - Fix `Severity` parsing to prefer PostgreSQL's non-localized error-severity field.
 - Fix logical replication tuple decoding: unknown column type bytes no longer crash the stream, and binary-format columns are no longer mis-decoded as text.
 - Fix off-by-one in `DatabaseInfo` column lookup causing a `RangeError` instead of returning `null`.
+- Fix `LSN.operator-` performing addition instead of subtraction.
+- Fix `Range.flag` misclassifying a valid single-point inclusive range (e.g. `[x,x]`) as empty.
+- Fix `numeric` `Infinity`/`-Infinity` values silently decoding as `0`.
 
 ## 3.5.12
 
