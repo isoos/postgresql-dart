@@ -43,11 +43,18 @@ class PoolImplementation<L> implements Pool<L> {
 
     // Connections are closed when they are returned to the pool if it's closed.
     // We still need to close statements that are currently unused.
-    for (final connection in [..._connections]) {
+    final snapshot = [..._connections];
+    for (final connection in snapshot) {
       if (force || !connection._isInUse) {
         await connection._dispose(force: force);
       }
     }
+
+    // Connections that were in use at the time of this call are skipped
+    // above and torn down later by their own `withConnection` call, once it
+    // notices `_closing`. Wait for that to actually happen, so this method
+    // doesn't return while a connection is still mid-teardown.
+    await Future.wait(snapshot.map((c) => c.closed));
 
     await semaphoreFuture;
   }
@@ -75,28 +82,37 @@ class PoolImplementation<L> implements Pool<L> {
   Future<Statement> prepare(Object query) async {
     final statementCompleter = Completer<Statement>();
 
-    unawaited(
-      withConnection((connection) async {
-        _PoolStatement? poolStatement;
+    unawaited(() async {
+      try {
+        await withConnection((connection) async {
+          _PoolStatement? poolStatement;
 
-        try {
-          final statement = await connection.prepare(query);
-          poolStatement = _PoolStatement(statement);
-        } on Object catch (e, s) {
-          // Could not prepare the statement, inform the caller and stop occupying
-          // the connection.
+          try {
+            final statement = await connection.prepare(query);
+            poolStatement = _PoolStatement(statement);
+          } on Object catch (e, s) {
+            // Could not prepare the statement, inform the caller and stop occupying
+            // the connection.
+            statementCompleter.completeError(e, s);
+            return;
+          }
+
+          // Otherwise, make the future returned by prepare complete with the
+          // statement.
+          statementCompleter.complete(poolStatement);
+
+          // And keep this connection reserved until the statement has been disposed.
+          return poolStatement._disposed.future;
+        });
+      } on Object catch (e, s) {
+        // withConnection itself may fail before `fn` ever runs (e.g. no
+        // connection could be acquired in time) - make sure that surfaces to
+        // the caller instead of leaving `statementCompleter` pending forever.
+        if (!statementCompleter.isCompleted) {
           statementCompleter.completeError(e, s);
-          return;
         }
-
-        // Otherwise, make the future returned by prepare complete with the
-        // statement.
-        statementCompleter.complete(poolStatement);
-
-        // And keep this connection reserved until the statement has been disposed.
-        return poolStatement._disposed.future;
-      }),
-    );
+      }
+    }());
 
     return statementCompleter.future;
   }
@@ -190,7 +206,7 @@ class PoolImplementation<L> implements Pool<L> {
 
     return await _connectLock.withRequestTimeout(
       timeout: _settings.connectTimeout,
-      (_) async {
+      (remainingTimeout) async {
         while (_connections.length >= _maxConnectionCount) {
           final candidates = _connections
               .where((c) => c._isInUse == false)
@@ -211,7 +227,7 @@ class PoolImplementation<L> implements Pool<L> {
           await PgConnectionImplementation.connect(
             endpoint,
             connectionSettings: settings,
-          ),
+          ).timeout(remainingTimeout),
         );
         newc._isInUse = true;
         // NOTE: It is important to update _connections list after the isInUse
