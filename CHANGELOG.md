@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.5.14
+
+- Fix an opaque `Bad state: StreamSink is closed` crash when the socket closes in the narrow window between connecting and sending the first message (e.g. `StartupMessage`, a bound statement, or a simple query); this now surfaces as a catchable `PgException`.
+- Fix `connect()` leaking the socket and its listener when startup (or `onOpen`) fails instead of closing the partially-opened connection.
+- Fix `connect()` failures (e.g. wrong password, SSL/auth errors) reporting a stack trace made up of internal frames only; the caller's stack is now attached so the trace points back to the code that called `connect()`/`Connection.open()`.
+- Fix the same internal-frames-only stack trace issue for a failed `LISTEN` (`Channels[channel]`): the trace now points back to the code that subscribed to the channel.
+
 ## 3.5.13
 
 - Fix socket/listener leaks in `cancelAll()` and `cancelPendingStatement()`, and add a hard timeout fallback so a stuck query can't hang forever even if cancellation fails.
