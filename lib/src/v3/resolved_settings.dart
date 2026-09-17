@@ -68,7 +68,7 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
       timeZone = settings?.timeZone ?? fallback?.timeZone ?? 'UTC',
       encoding = settings?.encoding ?? fallback?.encoding ?? utf8,
       sslMode = settings?.sslMode ?? fallback?.sslMode ?? SslMode.require,
-      securityContext = settings?.securityContext,
+      securityContext = settings?.securityContext ?? fallback?.securityContext,
       // TODO: consider merging the transformers
       transformer = settings?.transformer ?? fallback?.transformer,
       replicationMode =
