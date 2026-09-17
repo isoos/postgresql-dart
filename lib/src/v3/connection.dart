@@ -193,15 +193,10 @@ abstract class _PgSessionBase implements Session {
         Trace.from(stackTrace),
         parse: _parseMessageFor(description, '', variables),
       );
-      try {
-        // Nothing to close on the way out: the unnamed statement is replaced
-        // by the next parse that leaves the name empty, so closing it is an
-        // exchange that changes nothing.
-        return await prepared.run(variables, timeout: timeout);
-      } catch (_) {
-        await prepared.dispose();
-        rethrow;
-      }
+      // Nothing to close, success or failure: the unnamed statement is
+      // replaced by the next parse that leaves the name empty, so closing it
+      // is an exchange that changes nothing.
+      return await prepared.run(variables, timeout: timeout);
     }
   }
 
