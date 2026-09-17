@@ -129,9 +129,8 @@ abstract class Pool<L> implements Session, SessionExecutor {
   // TODO: decide whether PgSession.execute and prepare methods should also take locality parameter
 }
 
-typedef EndpointSelector<L> = FutureOr<EndpointSelection> Function(
-  EndpointSelectorContext<L> context,
-);
+typedef EndpointSelector<L> =
+    FutureOr<EndpointSelection> Function(EndpointSelectorContext<L> context);
 
 final class EndpointSelectorContext<L> {
   final L? locality;

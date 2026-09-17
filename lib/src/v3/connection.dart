@@ -684,25 +684,29 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   @internal
   Future<void> cancelPendingStatement() async {
-    var (channel, _) = await _connect(
-      _endpoint,
-      _settings,
-      codecContext: codecContext,
-    );
     if (_backendKeyMessage == null) {
       throw PgException(
         'Unable to cancel pending statement: no backend key available.',
       );
     }
-    channel = _debugChannel(channel);
-    channel.sink.add(
-      CancelRequestMessage(
-        processId: _backendKeyMessage!.processId,
-        secretKey: _backendKeyMessage!.secretKey,
-      ),
+    var (channel, _) = await _connect(
+      _endpoint,
+      _settings,
+      codecContext: codecContext,
     );
-    // Waiting for the server to close connection.
-    await channel.stream.listen((_) {}).asFuture();
+    channel = _debugChannel(channel);
+    try {
+      channel.sink.add(
+        CancelRequestMessage(
+          processId: _backendKeyMessage!.processId,
+          secretKey: _backendKeyMessage!.secretKey,
+        ),
+      );
+      // Waiting for the server to close connection.
+      await channel.stream.listen((_) {}).asFuture();
+    } finally {
+      await channel.sink.close();
+    }
   }
 }
 
@@ -1047,11 +1051,22 @@ class _PgResultStreamSubscription
   }) async {
     final cancelTimer = timeout == null
         ? null
-        : Timer(timeout, () async {
-            await connection.cancelPendingStatement();
+        : Timer(timeout, () {
+            // Best effort: a cancel request is not guaranteed to reach or be
+            // honored by the server, and it may itself fail (e.g. no backend
+            // key, connection issues). Either way, the hard timeout below
+            // guarantees this call doesn't hang forever.
+            unawaited(connection.cancelPendingStatement().catchError((_) {}));
           });
     try {
-      await asFuture();
+      var future = asFuture();
+      if (timeout != null) {
+        // Give the cancel request above a chance to complete gracefully
+        // (which surfaces a proper "query canceled" PgException) before
+        // falling back to a blunt TimeoutException.
+        future = future.timeout(timeout + connection._settings.connectTimeout);
+      }
+      await future;
       return Result(
         rows: items,
         affectedRows: await affectedRows,
@@ -1182,7 +1197,13 @@ class _Channels implements Channels {
   Future<void> cancelAll() async {
     await _connection.execute(Sql('UNLISTEN *'));
 
-    for (final entry in _activeListeners.values) {
+    // Take a snapshot before closing: closing a listener does not trigger
+    // its `onCancel` (that only fires when the consumer cancels), so we
+    // clear the map ourselves instead of relying on `_unsubscribe`.
+    final listeners = _activeListeners.values.toList();
+    _activeListeners.clear();
+
+    for (final entry in listeners) {
       for (final listener in entry) {
         await listener.close();
       }
@@ -1456,15 +1477,6 @@ List<int?>? _mergeTypeOids(
 extension on PgException {
   bool get willAbortConnection {
     return severity == Severity.fatal || severity == Severity.panic;
-  }
-}
-
-extension FutureExt<R> on Future<R> {
-  Future<R> optionalTimeout(Duration? duration) {
-    if (duration == null) {
-      return this;
-    }
-    return timeout(duration);
   }
 }
 

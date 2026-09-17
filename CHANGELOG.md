@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.5.13
+
+- Fix socket/listener leaks in `cancelAll()` and `cancelPendingStatement()`, and add a hard timeout fallback so a stuck query can't hang forever even if cancellation fails.
+- Fix `Pool.prepare()` hanging when a connection can't be acquired, `Pool.close()` returning before in-use connections finish closing, and pooled connects ignoring time already spent waiting for a slot.
+
 ## 3.5.12
 
 - Fix `runTx` silently rolling back after `ROLLBACK TO SAVEPOINT` recovery: clear stale `_transactionException` when PostgreSQL confirms a healthy transaction state.
