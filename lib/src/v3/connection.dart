@@ -93,7 +93,7 @@ abstract class _PgSessionBase implements Session {
     final trace = stackTrace ?? StackTrace.current;
 
     return _withResource(() {
-      _connection._channel.sink.add(
+      _connection._send(
         AggregatedClientMessage([send, const SyncMessage()]),
       );
 
@@ -228,6 +228,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     @visibleForTesting
     StreamTransformer<Uint8List, Uint8List>? incomingBytesTransformer,
   }) async {
+    // Captured here, synchronously, because `_startup()` runs its body in a
+    // deferred callback (see `_withResource`) - by the time it can fail, the
+    // call stack no longer contains this method's caller, so any stack trace
+    // captured from within `_startup()` would only show internal frames.
+    final callerTrace = Trace.current();
     final settings = connectionSettings is ResolvedConnectionSettings
         ? connectionSettings
         : ResolvedConnectionSettings(connectionSettings, null);
@@ -259,9 +264,20 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       databaseInfo: codecContext.databaseInfo,
       info: codecContext.connectionInfo,
     );
-    await connection._startup();
-    if (connection._settings.onOpen != null) {
-      await connection._settings.onOpen!(connection);
+    try {
+      await connection._startup();
+      if (connection._settings.onOpen != null) {
+        await connection._settings.onOpen!(connection);
+      }
+    } catch (e, s) {
+      // Startup (or onOpen) failed - the socket and its listener must not be
+      // left dangling, otherwise this becomes an unreferenced connection
+      // that stays open in the background.
+      unawaited(connection.close(force: true));
+      // Re-attach the caller's stack trace (see comment on `callerTrace`
+      // above) so the exception points at the calling code, not just at
+      // `_startup()`'s internals.
+      Error.throwWithStackTrace(e, Chain([Trace.from(s), callerTrace]));
     }
     return connection;
   }
@@ -467,6 +483,32 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     );
   }
 
+  /// Sends [message] to the server, guarding against the (racy) case where
+  /// the socket was already closed - e.g. the server closing the connection
+  /// right after it was accepted, before we got a chance to write to it.
+  ///
+  /// Writing to a closed [StreamSink] throws an opaque `Bad state: StreamSink
+  /// is closed` error; this turns that into a [PgException] that clearly
+  /// identifies the connection as the cause and that later callers can
+  /// meaningfully catch.
+  void _send(Message message) {
+    if (_isClosing) {
+      throw PgException(
+        'Unable to send message: the connection is closing or already '
+        'closed.',
+      );
+    }
+    try {
+      _channel.sink.add(message);
+    } on StateError catch (e) {
+      _socketIsBroken = true;
+      throw PgException(
+        'Unable to send message: the connection to the server was closed '
+        'unexpectedly. ($e)',
+      );
+    }
+  }
+
   Future<void> _startup() {
     return _withResource(() {
       final result = _pending = _AuthenticationProcedure(
@@ -474,7 +516,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         _channelIsSecure,
       );
 
-      _channel.sink.add(
+      _send(
         StartupMessage(
           database: _endpoint.database,
           timeZone: _settings.timeZone,
@@ -871,7 +913,7 @@ class _PgResultStreamSubscription
       }
       final encodedValues = await Future.wait(encodedFutures);
 
-      connection._channel.sink.add(
+      connection._send(
         AggregatedClientMessage([
           BindMessage(
             encodedValues,
@@ -901,7 +943,7 @@ class _PgResultStreamSubscription
     _scheduleStatement(() async {
       connection._pending = this;
 
-      connection._channel.sink.add(QueryMessage(sql));
+      connection._send(QueryMessage(sql));
       await _done.future;
       cleanup?.call();
     });
@@ -1141,12 +1183,21 @@ class _Channels implements Channels {
       existingListeners.add(newListener);
 
       if (needsSubscription) {
-        _subscribe(channel, newListener);
+        // Captured here, synchronously, because the LISTEN call below runs
+        // in a deferred callback - by the time it can fail, the call stack
+        // no longer contains whoever subscribed to this stream, so a stack
+        // trace captured from within `_subscribe()` would only show internal
+        // frames (see the equivalent comment on `connect()`).
+        _subscribe(channel, newListener, Trace.current());
       }
     }, isBroadcast: true);
   }
 
-  void _subscribe(String channel, MultiStreamController firstListener) {
+  void _subscribe(
+    String channel,
+    MultiStreamController firstListener,
+    Trace callerTrace,
+  ) {
     Future(() async {
       await _connection.execute(
         Sql('LISTEN ${_identifier(channel)}'),
@@ -1156,7 +1207,7 @@ class _Channels implements Channels {
       _activeListeners[channel]?.remove(firstListener);
 
       firstListener
-        ..addError(error, stackTrace)
+        ..addError(error, Chain([Trace.from(stackTrace), callerTrace]))
         ..close();
     });
   }
@@ -1170,11 +1221,23 @@ class _Channels implements Channels {
     if (listeners.isEmpty) {
       _activeListeners.remove(channel);
 
-      // Send unlisten command
-      await _connection.execute(
-        Sql('UNLISTEN ${_identifier(channel)}'),
-        ignoreRows: true,
-      );
+      // This runs as a `StreamSubscription.onCancel` callback, which can be
+      // triggered by the connection closing while this listener is being
+      // torn down - there is nothing to unlisten on a connection that's
+      // already going away, so that race is not a real failure.
+      if (!_connection.isOpen) {
+        return;
+      }
+      try {
+        await _connection.execute(
+          Sql('UNLISTEN ${_identifier(channel)}'),
+          ignoreRows: true,
+        );
+      } on PgException {
+        if (_connection.isOpen) {
+          rethrow;
+        }
+      }
     }
   }
 
