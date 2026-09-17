@@ -230,17 +230,24 @@ void main() {
     }
 
     Future<void> runLongQuery(Session session) {
-      return session.execute('select pg_sleep(10) from pg_stat_activity;');
+      // Callers stash this future and only look at it after also awaiting
+      // some other async work (e.g. force-closing the pool) - ignore it here
+      // so a rejection arriving in that gap isn't flagged as an unhandled
+      // error by the zone before the caller gets a chance to.
+      return session.execute(
+        'select pg_sleep(10) from pg_stat_activity;',
+      )..ignore();
     }
 
     withPostgresServer('pool session', (server) {
       test('pool session', () async {
         final pool = await openPool(server);
         final started = Completer();
+        // Ignored for the same reason as runLongQuery.
         final rs = pool.run((s) async {
           started.complete();
           await runLongQuery(s);
-        });
+        })..ignore();
         // let it start
         await started.future;
         await Future.delayed(const Duration(milliseconds: 100));
@@ -254,10 +261,11 @@ void main() {
       test('tx', () async {
         final pool = await openPool(server);
         final started = Completer();
+        // Ignored for the same reason as runLongQuery.
         final rs = pool.runTx((s) async {
           started.complete();
           await runLongQuery(s);
-        });
+        })..ignore();
         // let it start
         await started.future;
         await Future.delayed(const Duration(milliseconds: 100));

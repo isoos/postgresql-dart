@@ -20,7 +20,10 @@ void main() {
     });
 
     test('Cancel current statement through a new connection', () async {
-      final f = conn.execute('SELECT pg_sleep(2);');
+      // Not awaited until after the cancel request below, which does real
+      // network I/O - ignore it in the meantime so a rejection arriving
+      // during that gap isn't flagged as an unhandled error by the zone.
+      final f = conn.execute('SELECT pg_sleep(2);')..ignore();
       await (conn as PgConnectionImplementation).cancelPendingStatement();
       await expectLater(
         f,
