@@ -314,11 +314,13 @@ void main() {
           final orderEnsurer = [];
 
           // this will emit a query error
-          conn!.execute('INSERT INTO t (i) VALUES ()').catchError((err) {
-            orderEnsurer.add(1);
-            // ignore
-            return Result(rows: [], affectedRows: 0, schema: ResultSchema([]));
-          });
+          final failing = conn!
+              .execute('INSERT INTO t (i) VALUES ()')
+              .catchError((err) {
+                orderEnsurer.add(1);
+                // ignore
+                return Result(rows: [], affectedRows: 0, schema: ResultSchema([]));
+              });
 
           orderEnsurer.add(2);
           final res = await conn!.runTx((ctx) async {
@@ -326,11 +328,17 @@ void main() {
             return await ctx.execute('SELECT i FROM t');
           });
           orderEnsurer.add(4);
+          // The error is reported when the query's one exchange comes back,
+          // rather than by a parse of its own that failed before anything
+          // else was scheduled - so 1 can land anywhere relative to 2 and 3.
+          await failing;
 
           expect(res, [
             [1],
           ]);
-          expect(orderEnsurer, [2, 1, 3, 4]);
+          expect(orderEnsurer, containsAll([1, 2, 3, 4]));
+          expect(orderEnsurer.indexOf(2), lessThan(orderEnsurer.indexOf(3)));
+          expect(orderEnsurer.indexOf(3), lessThan(orderEnsurer.indexOf(4)));
         },
       );
     },

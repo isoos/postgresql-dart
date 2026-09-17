@@ -178,13 +178,29 @@ abstract class _PgSessionBase implements Session {
         await querySubscription.cancel();
       }
     } else {
-      // The simple query protocol does not support variables. So when we have
-      // parameters, we need an explicit prepare.
-      final prepared = await _prepare(description, variables);
+      // The simple query protocol does not support variables, so this needs
+      // the extended one. Parsing in its own exchange would end the implicit
+      // transaction the parse opened, and a pooler in transaction mode hands
+      // the server connection to another client at that point - which either
+      // loses the statement or leaves it behind for someone else to collide
+      // with. So the parse travels with the bind and the execute, as one
+      // exchange, under the unnamed statement that belongs to it.
+      final stackTrace = StackTrace.current;
+      final prepared = _PreparedStatement(
+        description,
+        '',
+        this,
+        Trace.from(stackTrace),
+        parse: _parseMessageFor(description, '', variables),
+      );
       try {
+        // Nothing to close on the way out: the unnamed statement is replaced
+        // by the next parse that leaves the name empty, so closing it is an
+        // exchange that changes nothing.
         return await prepared.run(variables, timeout: timeout);
-      } finally {
+      } catch (_) {
         await prepared.dispose();
+        rethrow;
       }
     }
   }
@@ -209,11 +225,7 @@ abstract class _PgSessionBase implements Session {
     );
 
     await _sendAndWaitForQuery<ParseCompleteMessage>(
-      ParseMessage(
-        description.transformedSql,
-        statementName: name,
-        typeOids: _mergeTypeOids(description.parameterTypes, fallbackTypes),
-      ),
+      _parseMessageFor(description, name, fallbackTypes),
       stackTrace: stackTrace,
     );
 
@@ -767,7 +779,18 @@ class _PreparedStatement extends Statement {
 
   final Trace _trace;
 
-  _PreparedStatement(this._description, this._name, this._session, this._trace);
+  /// The parse this statement still owes the server, when it was created
+  /// without sending one. It travels with the first bind so that parsing
+  /// and binding happen in a single exchange.
+  final ParseMessage? _parse;
+
+  _PreparedStatement(
+    this._description,
+    this._name,
+    this._session,
+    this._trace, {
+    ParseMessage? parse,
+  }) : _parse = parse;
 
   _PgSessionBase get _effectiveSession =>
       _session._connection._activeTransaction ?? _session;
@@ -915,6 +938,9 @@ class _PgResultStreamSubscription
 
       connection._send(
         AggregatedClientMessage([
+          // A statement that has not been parsed yet parses here, so that
+          // the parse and the bind travel in the same exchange.
+          ?statement.statement._parse,
           BindMessage(
             encodedValues,
             portalName: _portalName,
@@ -1004,6 +1030,7 @@ class _PgResultStreamSubscription
   @override
   Future<void> handleMessage(ServerMessage message) async {
     switch (message) {
+      case ParseCompleteMessage():
       case BindCompleteMessage():
       case NoDataMessage():
         // Nothing to do!
@@ -1535,6 +1562,18 @@ List<int?>? _mergeTypeOids(
     }
   }
   return result;
+}
+
+ParseMessage _parseMessageFor(
+  InternalQueryDescription description,
+  String statementName, [
+  List<TypedValue>? fallbackTypes,
+]) {
+  return ParseMessage(
+    description.transformedSql,
+    statementName: statementName,
+    typeOids: _mergeTypeOids(description.parameterTypes, fallbackTypes),
+  );
 }
 
 extension on PgException {
