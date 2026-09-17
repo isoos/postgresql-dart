@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:charcode/ascii.dart';
+import 'package:meta/meta.dart';
 
 import '../buffer.dart';
 import '../replication.dart';
@@ -123,6 +124,11 @@ class ParseMessage extends ClientMessage {
   }) : _statement = statement,
        _statementName = statementName,
        _typeOids = typeOids ?? types?.map((e) => e?.oid).toList() ?? const [];
+
+  /// The name the statement is prepared under. Empty for the unnamed
+  /// statement.
+  @visibleForTesting
+  String get statementName => _statementName;
 
   @override
   void applyToBuffer(PgByteDataWriter buffer) {
