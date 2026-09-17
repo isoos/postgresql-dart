@@ -109,7 +109,17 @@ abstract interface class Range<T> {
       case (false, true):
         return 16 + bounds._lowerFlag;
       case (false, false):
-        return lower == upper ? 1 : bounds._lowerFlag + bounds._upperFlag;
+        // Equal bounds mean an empty range, *unless* both bounds are
+        // inclusive: `[x,x]` is a valid single-point (non-empty) range in
+        // PostgreSQL, while `[x,x)`, `(x,x]` and `(x,x)` are all empty.
+        // `DiscreteRange` subclasses always canonicalize to `[lower, upper)`
+        // form, so this only matters for `ContinuousRange`, which preserves
+        // the bounds as given.
+        final bothInclusive =
+            bounds.lower == Bound.inclusive && bounds.upper == Bound.inclusive;
+        return (lower == upper && !bothInclusive)
+            ? 1
+            : bounds._lowerFlag + bounds._upperFlag;
     }
   }
 

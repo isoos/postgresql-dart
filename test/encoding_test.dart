@@ -220,6 +220,8 @@ void main() {
         '10000.000000000',
         '100000000.00000000',
         'NaN',
+        'Infinity',
+        '-Infinity',
       ], expectedDartType: 'String');
     });
 

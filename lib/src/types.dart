@@ -106,7 +106,7 @@ class LSN {
   }
 
   LSN operator -(LSN other) {
-    return LSN(value + other.value);
+    return LSN(value - other.value);
   }
 
   @override
