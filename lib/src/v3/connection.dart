@@ -1221,11 +1221,23 @@ class _Channels implements Channels {
     if (listeners.isEmpty) {
       _activeListeners.remove(channel);
 
-      // Send unlisten command
-      await _connection.execute(
-        Sql('UNLISTEN ${_identifier(channel)}'),
-        ignoreRows: true,
-      );
+      // This runs as a `StreamSubscription.onCancel` callback, which can be
+      // triggered by the connection closing while this listener is being
+      // torn down - there is nothing to unlisten on a connection that's
+      // already going away, so that race is not a real failure.
+      if (!_connection.isOpen) {
+        return;
+      }
+      try {
+        await _connection.execute(
+          Sql('UNLISTEN ${_identifier(channel)}'),
+          ignoreRows: true,
+        );
+      } on PgException {
+        if (_connection.isOpen) {
+          rethrow;
+        }
+      }
     }
   }
 

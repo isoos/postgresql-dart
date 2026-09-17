@@ -6,6 +6,7 @@
 - Fix `connect()` leaking the socket and its listener when startup (or `onOpen`) fails instead of closing the partially-opened connection.
 - Fix `connect()` failures (e.g. wrong password, SSL/auth errors) reporting a stack trace made up of internal frames only; the caller's stack is now attached so the trace points back to the code that called `connect()`/`Connection.open()`.
 - Fix the same internal-frames-only stack trace issue for a failed `LISTEN` (`Channels[channel]`): the trace now points back to the code that subscribed to the channel.
+- Fix a background `UNLISTEN` (sent when the last listener on a channel cancels) throwing when it raced a concurrent `close()`; this is now treated as a no-op instead of failing whatever cancelled the subscription.
 
 ## 3.5.13
 
