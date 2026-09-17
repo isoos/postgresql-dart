@@ -8,6 +8,7 @@
 - Fix the same internal-frames-only stack trace issue for a failed `LISTEN` (`Channels[channel]`): the trace now points back to the code that subscribed to the channel.
 - Fix a background `UNLISTEN` (sent when the last listener on a channel cancels) throwing when it raced a concurrent `close()`; this is now treated as a no-op instead of failing whatever cancelled the subscription.
 - Fix a one-shot query being split across two transactions: parsing had its own `Sync`-terminated exchange, so a transaction-mode pooler could hand the connection to another client between the parse and the bind (`26000`/`42P05`). Parse, bind and execute now travel in one exchange under the unnamed statement.
+- A failed one-shot query no longer sends a redundant `Close` for the unnamed statement it never named; failure and success now cost the same single exchange.
 
 ## 3.5.13
 
