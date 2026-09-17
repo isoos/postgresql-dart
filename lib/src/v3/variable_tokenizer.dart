@@ -373,6 +373,26 @@ class VariableTokenizer {
       return;
     }
 
+    if (nameBuffer.isEmpty && mode == TokenizerMode.indexed) {
+      // Indexed mode treats a bare variable code unit as "next positional
+      // index" (see the doc comment on `_conflictsWithOperator`), which
+      // conflicts with `@>`, `<@`, `@?` and `@@`. Since those are far more
+      // common than a genuine auto-incrementing variable placed directly
+      // next to `<`/`>`/`?`/the substitution character itself, treat this
+      // as literal syntax instead in that case.
+      final followedByDoubled = !_isAtEnd && _peek() == _variableCodeUnit;
+      if (_conflictsWithOperator(startPosition, followedByDoubled)) {
+        _rewrittenSql.writeCharCode(_variableCodeUnit);
+        if (followedByDoubled) {
+          // `@@`: consume and emit the second code unit too, so the main
+          // loop doesn't re-enter this method for it and mistake it for a
+          // separate (auto-incrementing) variable.
+          _rewrittenSql.writeCharCode(_consume());
+        }
+        return;
+      }
+    }
+
     if (consumedColonForType && typeBuffer.isEmpty) {
       error('Expected type name after colon');
     }
@@ -442,5 +462,32 @@ class VariableTokenizer {
         (charcode >= $a && charcode <= $z) ||
         (charcode >= $A && charcode <= $Z) ||
         charcode == $underscore;
+  }
+
+  /// Whether a bare (nameless) variable code unit at [startPosition] is more
+  /// likely to be part of one of PostgreSQL's `@>`, `<@`, `@?` or `@@`
+  /// operators than a genuine auto-incrementing positional variable.
+  ///
+  /// Named mode never reaches this check: an empty name is unconditionally
+  /// treated as "not a variable" there, since named variables always require
+  /// an actual name. Indexed mode, however, treats a bare variable code unit
+  /// as a legitimate shorthand for "next positional index" (e.g.
+  /// `Sql.indexed('SELECT ?2, ?, ?1', substitution: '?')`), so it needs this
+  /// extra check to avoid misinterpreting those operators as variables.
+  bool _conflictsWithOperator(int startPosition, bool followedByDoubled) {
+    // `<@`: the variable code unit is immediately preceded by `<`.
+    if (startPosition > 0 && _codeUnits[startPosition - 1] == $lessThan) {
+      return true;
+    }
+    // `@>`, `@?`, `@@`: the variable code unit is immediately followed by
+    // one of these characters.
+    if (followedByDoubled) return true;
+    if (!_isAtEnd) {
+      final next = _peek();
+      if (next == $greaterThan || next == $question) {
+        return true;
+      }
+    }
+    return false;
   }
 }

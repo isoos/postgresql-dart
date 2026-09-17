@@ -28,7 +28,7 @@ class DatabaseInfo {
     if (m == null) {
       return null;
     }
-    if (columnIndex > m.columns.length) {
+    if (columnIndex >= m.columns.length) {
       return null;
     }
     return m.columns[columnIndex].typeOid;
