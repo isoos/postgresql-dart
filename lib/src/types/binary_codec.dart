@@ -1181,15 +1181,20 @@ class PostgresBinaryDecoder {
         final lowerLength = buffer.getInt32(1);
         final lowerBytes = dinput.sublist(5, 5 + lowerLength);
         final lower = _decodeRangeElement(context, elementTypeOid, lowerBytes);
-        final upperBytes = dinput.sublist(9 + lowerLength);
+        final upperLengthOffset = 5 + lowerLength;
+        final upperLength = buffer.getInt32(upperLengthOffset);
+        final upperStart = upperLengthOffset + 4;
+        final upperBytes = dinput.sublist(upperStart, upperStart + upperLength);
         final upper = _decodeRangeElement(context, elementTypeOid, upperBytes);
         return (lower, upper, bounds);
       case 8 || 12:
-        final bytes = dinput.sublist(5);
+        final upperLength = buffer.getInt32(1);
+        final bytes = dinput.sublist(5, 5 + upperLength);
         final upper = _decodeRangeElement(context, elementTypeOid, bytes);
         return (null, upper, bounds);
       case 16 || 18:
-        final bytes = dinput.sublist(5);
+        final lowerLength = buffer.getInt32(1);
+        final bytes = dinput.sublist(5, 5 + lowerLength);
         final lower = _decodeRangeElement(context, elementTypeOid, bytes);
         return (lower, null, bounds);
       case 24:
