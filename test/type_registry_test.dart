@@ -37,17 +37,20 @@ void main() {
       expect(result, 'sync-decoded');
     });
 
-    test('returns a Future and resolves correctly for an async codec', () async {
-      final registry = TypeRegistry(codecs: {1: _AsyncCodec()});
-      final context = CodecContext.withDefaults(typeRegistry: registry);
+    test(
+      'returns a Future and resolves correctly for an async codec',
+      () async {
+        final registry = TypeRegistry(codecs: {1: _AsyncCodec()});
+        final context = CodecContext.withDefaults(typeRegistry: registry);
 
-      final result = registry.decode(
-        EncodedValue.binary(null, typeOid: 1),
-        context,
-      );
+        final result = registry.decode(
+          EncodedValue.binary(null, typeOid: 1),
+          context,
+        );
 
-      expect(result, isA<Future>());
-      expect(await result, 'async-decoded');
-    });
+        expect(result, isA<Future>());
+        expect(await result, 'async-decoded');
+      },
+    );
   });
 }

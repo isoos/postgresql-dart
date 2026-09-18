@@ -93,9 +93,7 @@ abstract class _PgSessionBase implements Session {
     final trace = stackTrace ?? StackTrace.current;
 
     return _withResource(() {
-      _connection._send(
-        AggregatedClientMessage([send, const SyncMessage()]),
-      );
+      _connection._send(AggregatedClientMessage([send, const SyncMessage()]));
 
       final wait = _connection._pending = _WaitForMessage<T>(this, trace);
 

@@ -320,7 +320,11 @@ void main() {
               .catchError((err) {
                 orderEnsurer.add(1);
                 // ignore
-                return Result(rows: [], affectedRows: 0, schema: ResultSchema([]));
+                return Result(
+                  rows: [],
+                  affectedRows: 0,
+                  schema: ResultSchema([]),
+                );
               });
 
           orderEnsurer.add(2);

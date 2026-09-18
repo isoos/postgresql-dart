@@ -38,19 +38,22 @@ void main() {
       expect(remainingMillis, lessThan(1500));
     });
 
-    test('acquire with a zero timeout fails fast instead of waiting forever', () async {
-      final pool = Pool(1);
-      final other = await pool.request();
-      final sw = Stopwatch()..start();
-      await expectLater(
-        pool.requestWithTimeout(Duration.zero),
-        throwsA(isA<TimeoutException>()),
-      );
-      sw.stop();
-      other.release();
-      await pool.close();
-      expect(sw.elapsedMilliseconds, lessThan(500));
-    });
+    test(
+      'acquire with a zero timeout fails fast instead of waiting forever',
+      () async {
+        final pool = Pool(1);
+        final other = await pool.request();
+        final sw = Stopwatch()..start();
+        await expectLater(
+          pool.requestWithTimeout(Duration.zero),
+          throwsA(isA<TimeoutException>()),
+        );
+        sw.stop();
+        other.release();
+        await pool.close();
+        expect(sw.elapsedMilliseconds, lessThan(500));
+      },
+    );
 
     test('acquire with timeout fails - long parallel use', () async {
       final pool = Pool(1);

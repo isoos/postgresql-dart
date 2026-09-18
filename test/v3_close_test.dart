@@ -104,9 +104,8 @@ void main() {
       // some other async work (e.g. force-closing the connection) - ignore
       // it here so a rejection arriving in that gap isn't flagged as an
       // unhandled error by the zone before the caller gets a chance to.
-      return session.execute(
-        'select pg_sleep(10) from pg_stat_activity;',
-      )..ignore();
+      return session.execute('select pg_sleep(10) from pg_stat_activity;')
+        ..ignore();
     }
 
     withPostgresServer('connection session', (server) {
