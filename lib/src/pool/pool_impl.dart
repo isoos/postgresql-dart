@@ -243,15 +243,27 @@ class PoolImplementation<L> implements Pool<L> {
           await selected._dispose();
         }
 
-        final newc = _PoolConnection(
-          this,
+        final connectFuture = PgConnectionImplementation.connect(
           endpoint,
-          settings,
-          await PgConnectionImplementation.connect(
-            endpoint,
-            connectionSettings: settings,
-          ).timeout(remainingTimeout),
+          connectionSettings: settings,
         );
+        final PgConnectionImplementation connection;
+        try {
+          connection = await connectFuture.timeout(remainingTimeout);
+        } on TimeoutException {
+          // `.timeout()` doesn't cancel `connectFuture` - if it later
+          // succeeds anyway, close the resulting connection instead of
+          // leaking its socket (it was never added to `_connections`, so
+          // nothing else would ever close it).
+          unawaited(
+            connectFuture
+                .then((c) => c.close(force: true))
+                .catchError((_) {}),
+          );
+          rethrow;
+        }
+
+        final newc = _PoolConnection(this, endpoint, settings, connection);
         newc._isInUse = true;
         // NOTE: It is important to update _connections list after the isInUse
         //       flag is set, otherwise race conditions may create conflicts or
