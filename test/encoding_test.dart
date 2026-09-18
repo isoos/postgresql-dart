@@ -995,6 +995,24 @@ void main() {
       );
     });
 
+    test('Encode lists of DateTime', () {
+      expect(
+        encoder.convert([
+          DateTime.utc(2020, 1, 1),
+          DateTime.utc(2021, 6, 15, 4, 5, 6),
+        ], escapeStrings: false),
+        '{"2020-01-01T00:00:00.000Z","2021-06-15T04:05:06.000Z"}',
+      );
+      expect(
+        encoder.convert([
+          DateTime.utc(2020, 1, 1),
+          null,
+          DateTime.utc(-10, 6, 15),
+        ], escapeStrings: false),
+        '{"2020-01-01T00:00:00.000Z",NULL,"0011-06-15T00:00:00.000Z BC"}',
+      );
+    });
+
     test('Encode DateTime', () {
       // Get users current timezone
       final tz = DateTime(2001, 2, 3).timeZoneOffset;

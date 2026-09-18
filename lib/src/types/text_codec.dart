@@ -132,6 +132,14 @@ class PostgresTextEncoder {
   }
 
   String _encodeDateTime(DateTime value, {bool isDateOnly = false}) {
+    return "'${_dateTimeToText(value, isDateOnly: isDateOnly)}'";
+  }
+
+  /// The text representation of [value], without the surrounding quotes
+  /// `_encodeDateTime` adds for a top-level SQL literal - shared with
+  /// `_encodeList`, which needs the same text but double-quoted (and
+  /// escaped) as an array element instead.
+  String _dateTimeToText(DateTime value, {bool isDateOnly = false}) {
     var string = value.toIso8601String();
 
     if (isDateOnly) {
@@ -196,7 +204,7 @@ class PostgresTextEncoder {
       string = string.substring(1);
     }
 
-    return "'$string'";
+    return string;
   }
 
   String _encodeJSON(dynamic value, bool escapeStrings) {
@@ -262,6 +270,15 @@ class PostgresTextEncoder {
     if (type == String) {
       return '{${value.map((s) => encodeElement(s, (v) {
         final escaped = (v as String).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+        return '"$escaped"';
+      })).join(',')}}';
+    }
+
+    if (type == DateTime) {
+      return '{${value.map((s) => encodeElement(s, (v) {
+        final escaped = _dateTimeToText(
+          v as DateTime,
+        ).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
         return '"$escaped"';
       })).join(',')}}';
     }

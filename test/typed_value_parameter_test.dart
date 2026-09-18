@@ -76,6 +76,21 @@ void main() {
       expect(result.single.single, isTrue);
     });
 
+    test(
+      'unspecified TypedValue list of DateTime falls back to text encoding',
+      () async {
+        final values = [
+          DateTime.utc(2020, 1, 1),
+          DateTime.utc(2021, 6, 15, 4, 5, 6),
+        ];
+        final result = await conn.execute(
+          Sql.named('SELECT @v::timestamp[]'),
+          parameters: {'v': TypedValue(Type.unspecified, values)},
+        );
+        expect(result.single.single, values);
+      },
+    );
+
     // PostgreSQL cannot resolve anyelement polymorphic parameters when the
     // driver sends OID 0 ("unknown") in the Parse message. TypedValue must
     // propagate its type to Parse so the function can be resolved.
