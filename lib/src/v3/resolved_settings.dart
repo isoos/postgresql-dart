@@ -86,8 +86,10 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
         timeZone == other.timeZone &&
         encoding == other.encoding &&
         sslMode == other.sslMode &&
+        securityContext == other.securityContext &&
         transformer == other.transformer &&
         replicationMode == other.replicationMode &&
+        typeRegistry == other.typeRegistry &&
         onOpen == other.onOpen;
   }
 }

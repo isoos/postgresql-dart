@@ -10,6 +10,7 @@
 - Fix a one-shot query being split across two transactions: parsing had its own `Sync`-terminated exchange, so a transaction-mode pooler could hand the connection to another client between the parse and the bind (`26000`/`42P05`). Parse, bind and execute now travel in one exchange under the unnamed statement.
 - A failed one-shot query no longer sends a redundant `Close` for the unnamed statement it never named; failure and success now cost the same single exchange.
 - Fix `port` connection-string query parameter being ignored whenever a host was already present in the URI (e.g. `postgresql://host/db?port=9876`).
+- Fix pooled connections being reused across requests with different `typeRegistry` or `securityContext` settings.
 
 ## 3.5.13
 
