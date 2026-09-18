@@ -131,7 +131,8 @@ class FieldDescription {
     final tableOid = reader.readUint32();
     final columnOid = reader.readUint16();
     final typeOid = reader.readUint32();
-    final dataTypeSize = reader.readUint16();
+    // Signed (`pg_type.typlen`); negative for variable-width types.
+    final dataTypeSize = reader.readInt16();
     final typeModifier = reader.readInt32();
     final formatCode = reader.readUint16();
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
+import 'package:postgres/src/buffer.dart';
 import 'package:postgres/src/message_window.dart';
 import 'package:postgres/src/messages/logical_replication_messages.dart';
 import 'package:postgres/src/messages/server_messages.dart';
@@ -203,7 +204,83 @@ void main() {
 
     await parse(Uint8List.fromList(copyDataMessage), [isA<CopyDataMessage>()]);
   });
+
+  test(
+    'RelationMessage decodes typeModifier as a signed int (e.g. -1 default)',
+    () {
+      final reader = PgByteDataReader(codecContext: CodecContext.withDefaults())
+        ..add(
+          Uint8List.fromList([
+            'R'.codeUnitAt(0), // message type, consumed by the caller below
+            ...uint32Bytes(1), // relationId
+            0, // nameSpace (empty, null-terminated)
+            0, // relationName (empty, null-terminated)
+            0, // replicaIdentity
+            ...uint16Bytes(1), // columnNum
+            // single column:
+            0, // flags
+            0, // name (empty, null-terminated)
+            ...uint32Bytes(25), // typeOid (text)
+            ...int32Bytes(-1), // typeModifier: no modifier
+          ]),
+        );
+
+      // ignore: deprecated_member_use_from_same_package
+      final message =
+          tryParseLogicalReplicationMessage(reader, 0) as RelationMessage;
+      expect(message.columns.single.typeModifier, -1);
+    },
+  );
+
+  test('TruncateMessage decodes combined CASCADE + RESTART IDENTITY flags', () {
+    final reader = PgByteDataReader(codecContext: CodecContext.withDefaults())
+      ..add(
+        Uint8List.fromList([
+          'T'.codeUnitAt(0), // message type, consumed by the caller below
+          ...uint32Bytes(0), // relationNum
+          3, // options: cascade (1) | restartIdentity (2)
+        ]),
+      );
+
+    // ignore: deprecated_member_use_from_same_package
+    final message =
+        tryParseLogicalReplicationMessage(reader, 0) as TruncateMessage;
+    expect(message.options, {
+      TruncateOptions.cascade,
+      TruncateOptions.restartIdentity,
+    });
+  });
+
+  test('FieldDescription decodes typeSize as a signed int', () {
+    final reader = PgByteDataReader(codecContext: CodecContext.withDefaults())
+      ..add(
+        Uint8List.fromList([
+          0, // fieldName (empty, null-terminated)
+          ...uint32Bytes(0), // tableOid
+          ...uint16Bytes(0), // columnOid
+          ...uint32Bytes(25), // typeOid (text)
+          ...int16Bytes(-1), // typeSize: variable-width
+          ...int32Bytes(-1), // typeModifier
+          ...uint16Bytes(0), // formatCode
+        ]),
+      );
+
+    final field = FieldDescription.read(reader);
+    expect(field.typeSize, -1);
+  });
 }
+
+List<int> uint32Bytes(int value) =>
+    (ByteData(4)..setUint32(0, value)).buffer.asUint8List();
+
+List<int> uint16Bytes(int value) =>
+    (ByteData(2)..setUint16(0, value)).buffer.asUint8List();
+
+List<int> int32Bytes(int value) =>
+    (ByteData(4)..setInt32(0, value)).buffer.asUint8List();
+
+List<int> int16Bytes(int value) =>
+    (ByteData(2)..setInt16(0, value)).buffer.asUint8List();
 
 List<int> messageWithBytes(List<int> bytes, int messageID) {
   final buffer = BytesBuilder();
