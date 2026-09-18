@@ -373,6 +373,16 @@ void main() {
         expect(endpoint.username, equals('queryuser'));
         expect(endpoint.password, equals('querypass'));
       });
+
+      test('port query parameter overrides a host already in the URI', () {
+        final result = parseConnectionString(
+          'postgresql://myhost:5433/mydb?port=9876',
+        );
+
+        final endpoint = result.endpoints.single;
+        expect(endpoint.host, equals('myhost'));
+        expect(endpoint.port, equals(9876));
+      });
     });
 
     group('Complex scenarios', () {
