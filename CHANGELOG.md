@@ -6,6 +6,7 @@
 - Fix the `Sql.indexed` operator-tokenizing bug silently dropping the `:type` annotation.
 - Fix `port` query parameter being ignored for comma-separated hosts in connection strings.
 - Fix MD5 authentication hashing credentials as UTF-16 instead of UTF-8, breaking non-ASCII passwords.
+- Fix list parameters silently mis-encoding `null` elements, and range decoding crashing on an unrecognized flag byte instead of failing gracefully.
 
 ## 3.5.14
 

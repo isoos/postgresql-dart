@@ -217,8 +217,16 @@ class PostgresTextEncoder {
       return '{}';
     }
 
-    final first = value.first as Object?;
-    final type = value.fold(first.runtimeType, (type, item) {
+    // Ignore `null` elements when inferring the element type - they're
+    // written as the bare `NULL` keyword below regardless of type, and
+    // shouldn't make the fold think the list has a mixed/unknown type.
+    final nonNullValues = value.where((e) => e != null);
+    if (nonNullValues.isEmpty) {
+      return '{${value.map((_) => 'NULL').join(',')}}';
+    }
+
+    final first = nonNullValues.first as Object;
+    final type = nonNullValues.fold(first.runtimeType, (type, item) {
       if (type == item.runtimeType) {
         return type;
       } else if ((type == int || type == double) && item is num) {
@@ -228,27 +236,30 @@ class PostgresTextEncoder {
       }
     });
 
+    String encodeElement(Object? item, String Function(Object value) encode) {
+      return item == null ? 'NULL' : encode(item);
+    }
+
     if (type == bool) {
-      return '{${value.cast<bool>().map((s) => s.toString()).join(',')}}';
+      return '{${value.map((s) => encodeElement(s, (v) => (v as bool).toString())).join(',')}}';
     }
 
     if (type == int || type == double) {
-      return '{${value.cast<num>().map((s) => s is double ? _encodeDouble(s) : _encodeNumber(s)).join(',')}}';
+      return '{${value.map((s) => encodeElement(s, (v) => v is double ? _encodeDouble(v) : _encodeNumber(v as num))).join(',')}}';
     }
 
     if (type == String) {
-      return '{${value.cast<String>().map((s) {
-        final escaped = s.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+      return '{${value.map((s) => encodeElement(s, (v) {
+        final escaped = (v as String).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
         return '"$escaped"';
-      }).join(',')}}';
+      })).join(',')}}';
     }
 
     if (type == Map) {
-      return '{${value.map((s) {
-        final escaped = json.encode(s).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
-
+      return '{${value.map((s) => encodeElement(s, (v) {
+        final escaped = json.encode(v).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
         return '"$escaped"';
-      }).join(',')}}';
+      })).join(',')}}';
     }
 
     throw PgException("Could not infer array type of value '$value'.");
