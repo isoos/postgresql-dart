@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.15
+
+- Fix the hard-timeout fallback deadlocking the connection.
+
 ## 3.5.14
 
 - Fix an opaque `Bad state: StreamSink is closed` crash when the socket closes in the narrow window between connecting and sending the first message (e.g. `StartupMessage`, a bound statement, or a simple query); this now surfaces as a catchable `PgException`.
@@ -59,7 +63,6 @@
 - Supporting multiple hosts in connection strings via comma-separated hosts or multiple `host` query parameters.
 - Unix socket connections via `host` query parameter (automatically detected when path contains `/`).
 - Supporting `user`/`username`, `password`, `database`, and `port` as query parameters in connection strings (override URL components).
-
 
 ## 3.5.8
 

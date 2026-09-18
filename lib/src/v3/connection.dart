@@ -1148,7 +1148,30 @@ class _PgResultStreamSubscription
         // falling back to a blunt TimeoutException.
         future = future.timeout(timeout + connection._settings.connectTimeout);
       }
-      await future;
+      try {
+        await future;
+      } on TimeoutException catch (e) {
+        // A graceful cancel surfaces as a `_PgQueryCancelledException`,
+        // which (for backwards compatibility) also implements
+        // `TimeoutException` - but it arrived through a normal
+        // ErrorResponse + ReadyForQueryMessage exchange, so the connection
+        // is healthy and must be left alone.
+        //
+        // A bare `TimeoutException` (not a [PgException]) can only come from
+        // the `future.timeout(...)` fallback above, which means the graceful
+        // cancel didn't get us a proper response in time and the wire
+        // protocol is now out of sync (no ReadyForQueryMessage was received
+        // for the outstanding query). Force the connection closed in that
+        // case - this also completes `_done` for the still-pending
+        // operation, releasing the operation lock so that callers cleaning
+        // up (e.g. Pool or `runTx`) don't deadlock waiting for it.
+        if (e is! PgException) {
+          connection._closeAfterError(
+            PgException('Query timed out and could not be canceled.'),
+          );
+        }
+        rethrow;
+      }
       return Result(
         rows: items,
         affectedRows: await affectedRows,
