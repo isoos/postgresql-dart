@@ -232,57 +232,56 @@ class PoolImplementation<L> implements Pool<L> {
       return oldc;
     }
 
-    return await _connectLock.withRequestTimeout(
-      timeout: timeout,
-      (remainingTimeout) async {
-        if (_closing) {
-          throw PgException('The pool is closing, cannot open a connection.');
+    return await _connectLock.withRequestTimeout(timeout: timeout, (
+      remainingTimeout,
+    ) async {
+      if (_closing) {
+        throw PgException('The pool is closing, cannot open a connection.');
+      }
+      while (_connections.length >= _maxConnectionCount) {
+        final candidates = _connections
+            .where((c) => c._isInUse == false)
+            .toList();
+        if (candidates.isEmpty) {
+          throw StateError('The pool should not be in this state.');
         }
-        while (_connections.length >= _maxConnectionCount) {
-          final candidates = _connections
-              .where((c) => c._isInUse == false)
-              .toList();
-          if (candidates.isEmpty) {
-            throw StateError('The pool should not be in this state.');
-          }
-          final selected = candidates.reduce(
-            (a, b) => a._lastReturned.isBefore(b._lastReturned) ? a : b,
-          );
-          await selected._dispose();
-        }
-
-        final connectFuture = PgConnectionImplementation.connect(
-          endpoint,
-          connectionSettings: settings,
+        final selected = candidates.reduce(
+          (a, b) => a._lastReturned.isBefore(b._lastReturned) ? a : b,
         );
-        final PgConnectionImplementation connection;
-        try {
-          connection = await connectFuture.timeout(remainingTimeout);
-        } on TimeoutException {
-          // `.timeout()` doesn't cancel `connectFuture` - if it later
-          // succeeds anyway, close the resulting connection instead of
-          // leaking its socket (it was never added to `_connections`, so
-          // nothing else would ever close it). Track it in
-          // `_pendingLateConnects` so `close()` can wait for this cleanup
-          // too, instead of potentially returning before it's done.
-          late final Future<void> cleanup;
-          cleanup = connectFuture
-              .then((c) => c.close(force: true))
-              .catchError((_) {})
-              .whenComplete(() => _pendingLateConnects.remove(cleanup));
-          _pendingLateConnects.add(cleanup);
-          rethrow;
-        }
+        await selected._dispose();
+      }
 
-        final newc = _PoolConnection(this, endpoint, settings, connection);
-        newc._isInUse = true;
-        // NOTE: It is important to update _connections list after the isInUse
-        //       flag is set, otherwise race conditions may create conflicts or
-        //       pool close may miss the connection.
-        _connections.add(newc);
-        return newc;
-      },
-    );
+      final connectFuture = PgConnectionImplementation.connect(
+        endpoint,
+        connectionSettings: settings,
+      );
+      final PgConnectionImplementation connection;
+      try {
+        connection = await connectFuture.timeout(remainingTimeout);
+      } on TimeoutException {
+        // `.timeout()` doesn't cancel `connectFuture` - if it later
+        // succeeds anyway, close the resulting connection instead of
+        // leaking its socket (it was never added to `_connections`, so
+        // nothing else would ever close it). Track it in
+        // `_pendingLateConnects` so `close()` can wait for this cleanup
+        // too, instead of potentially returning before it's done.
+        late final Future<void> cleanup;
+        cleanup = connectFuture
+            .then((c) => c.close(force: true))
+            .catchError((_) {})
+            .whenComplete(() => _pendingLateConnects.remove(cleanup));
+        _pendingLateConnects.add(cleanup);
+        rethrow;
+      }
+
+      final newc = _PoolConnection(this, endpoint, settings, connection);
+      newc._isInUse = true;
+      // NOTE: It is important to update _connections list after the isInUse
+      //       flag is set, otherwise race conditions may create conflicts or
+      //       pool close may miss the connection.
+      _connections.add(newc);
+      return newc;
+    });
   }
 }
 

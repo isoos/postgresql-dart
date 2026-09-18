@@ -407,7 +407,9 @@ _preprocessConnectionString(String connectionString) {
   final queryIndex = remainder.indexOf('?');
   final query = queryIndex == -1 ? '' : remainder.substring(queryIndex + 1);
   final queryPort = query.isEmpty ? null : Uri.splitQueryString(query)['port'];
-  final defaultPort = queryPort != null ? int.tryParse(queryPort) ?? 5432 : 5432;
+  final defaultPort = queryPort != null
+      ? int.tryParse(queryPort) ?? 5432
+      : 5432;
 
   // Split authority into userinfo and hostlist
   final atIndex = authority.indexOf('@');

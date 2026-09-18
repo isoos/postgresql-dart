@@ -102,80 +102,74 @@ void main() {
       await conn.execute('SELECT 1', timeout: Duration(seconds: 1));
     });
 
-    test(
-      'Hard timeout releases the operation lock even if the server never '
-      'confirms the cancel',
-      () async {
-        var dropIncoming = false;
-        final faultyConn = await PgConnectionImplementation.connect(
-          await server.endpoint(),
-          connectionSettings: ConnectionSettings(
-            connectTimeout: Duration(seconds: 2),
-          ),
-          incomingBytesTransformer: StreamTransformer.fromHandlers(
-            handleData: (Uint8List data, EventSink<Uint8List> sink) {
-              if (!dropIncoming) sink.add(data);
-            },
-          ),
-        );
-        addTearDown(() => faultyConn.close(force: true));
+    test('Hard timeout releases the operation lock even if the server never '
+        'confirms the cancel', () async {
+      var dropIncoming = false;
+      final faultyConn = await PgConnectionImplementation.connect(
+        await server.endpoint(),
+        connectionSettings: ConnectionSettings(
+          connectTimeout: Duration(seconds: 2),
+        ),
+        incomingBytesTransformer: StreamTransformer.fromHandlers(
+          handleData: (Uint8List data, EventSink<Uint8List> sink) {
+            if (!dropIncoming) sink.add(data);
+          },
+        ),
+      );
+      addTearDown(() => faultyConn.close(force: true));
 
-        final f = faultyConn.execute(
-          'SELECT pg_sleep(5)',
-          timeout: Duration(milliseconds: 300),
-        )..ignore();
-        // Let the query reach the server before dropping further bytes, so
-        // the eventual cancel request never gets a visible response (no
-        // error message, no ReadyForQueryMessage) - forcing the hard-timeout
-        // fallback in `_waitForResult` to fire instead of the graceful
-        // cancel path.
-        await Future<void>.delayed(Duration(milliseconds: 50));
+      final f = faultyConn.execute(
+        'SELECT pg_sleep(5)',
+        timeout: Duration(milliseconds: 300),
+      )..ignore();
+      // Let the query reach the server before dropping further bytes, so
+      // the eventual cancel request never gets a visible response (no
+      // error message, no ReadyForQueryMessage) - forcing the hard-timeout
+      // fallback in `_waitForResult` to fire instead of the graceful
+      // cancel path.
+      await Future<void>.delayed(Duration(milliseconds: 50));
+      dropIncoming = true;
+
+      await expectLater(f, throwsA(isA<TimeoutException>()));
+
+      // Without the fix, the connection's operation lock stays stuck
+      // forever and this call hangs; with the fix, the connection is
+      // force-closed and this fails fast instead.
+      await expectLater(
+        faultyConn.execute('SELECT 1'),
+        throwsA(isA<PgException>()),
+      );
+    });
+
+    test('runTx preserves the original exception when the rollback also times '
+        'out', () async {
+      var dropIncoming = false;
+      final faultyConn = await PgConnectionImplementation.connect(
+        await server.endpoint(),
+        connectionSettings: ConnectionSettings(
+          connectTimeout: Duration(seconds: 2),
+          queryTimeout: Duration(milliseconds: 300),
+        ),
+        incomingBytesTransformer: StreamTransformer.fromHandlers(
+          handleData: (Uint8List data, EventSink<Uint8List> sink) {
+            if (!dropIncoming) sink.add(data);
+          },
+        ),
+      );
+      addTearDown(() => faultyConn.close(force: true));
+
+      final f = faultyConn.runTx((ctx) async {
+        // BEGIN's response has already arrived by now - drop everything
+        // from here on, so the ROLLBACK this throw triggers never gets a
+        // response and times out internally too.
         dropIncoming = true;
+        throw StateError('boom');
+      });
 
-        await expectLater(f, throwsA(isA<TimeoutException>()));
-
-        // Without the fix, the connection's operation lock stays stuck
-        // forever and this call hangs; with the fix, the connection is
-        // force-closed and this fails fast instead.
-        await expectLater(
-          faultyConn.execute('SELECT 1'),
-          throwsA(isA<PgException>()),
-        );
-      },
-    );
-
-    test(
-      'runTx preserves the original exception when the rollback also times '
-      'out',
-      () async {
-        var dropIncoming = false;
-        final faultyConn = await PgConnectionImplementation.connect(
-          await server.endpoint(),
-          connectionSettings: ConnectionSettings(
-            connectTimeout: Duration(seconds: 2),
-            queryTimeout: Duration(milliseconds: 300),
-          ),
-          incomingBytesTransformer: StreamTransformer.fromHandlers(
-            handleData: (Uint8List data, EventSink<Uint8List> sink) {
-              if (!dropIncoming) sink.add(data);
-            },
-          ),
-        );
-        addTearDown(() => faultyConn.close(force: true));
-
-        final f = faultyConn.runTx((ctx) async {
-          // BEGIN's response has already arrived by now - drop everything
-          // from here on, so the ROLLBACK this throw triggers never gets a
-          // response and times out internally too.
-          dropIncoming = true;
-          throw StateError('boom');
-        });
-
-        // The original StateError must win, not the internal ROLLBACK's
-        // TimeoutException - and this must not hang forever either.
-        await expectLater(f, throwsA(isA<StateError>()));
-      },
-    );
+      // The original StateError must win, not the internal ROLLBACK's
+      // TimeoutException - and this must not hang forever either.
+      await expectLater(f, throwsA(isA<StateError>()));
+    });
 
     test('Query that fails does not timeout', () async {
       final rs = await conn.execute('SELECT 1');

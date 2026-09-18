@@ -374,9 +374,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         byteBuffer.setUint32(4, 80877103);
         socket.add(byteBuffer.buffer.asUint8List());
 
-        final byte = await sslCompleter.future.timeout(
-          settings.connectTimeout,
-        );
+        final byte = await sslCompleter.future.timeout(settings.connectTimeout);
 
         if (byte == $S) {
           // SSL is supported, upgrade!
@@ -769,9 +767,10 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       // Waiting for the server to close connection. Bounded so a server (or
       // network) that never closes this side-channel doesn't leak it and
       // hang forever.
-      await channel.stream.listen((_) {}).asFuture().timeout(
-        _settings.connectTimeout,
-      );
+      await channel.stream
+          .listen((_) {})
+          .asFuture()
+          .timeout(_settings.connectTimeout);
     } finally {
       await channel.sink.close();
     }

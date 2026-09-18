@@ -70,37 +70,34 @@ void main() {
       );
     }
 
-    test(
-      'a pool connect that times out does not leak the connection if it '
-      'succeeds later',
-      () async {
-        final (port, realSocketClosed) = await startDelayingProxy(
-          Duration(milliseconds: 400),
-        );
-        final pool = await openPool(port);
-        addTearDown(() => pool.close(force: true));
+    test('a pool connect that times out does not leak the connection if it '
+        'succeeds later', () async {
+      final (port, realSocketClosed) = await startDelayingProxy(
+        Duration(milliseconds: 400),
+      );
+      final pool = await openPool(port);
+      addTearDown(() => pool.close(force: true));
 
-        // The proxy doesn't even start connecting for 400ms, so the pool's
-        // 100ms wrapper must time out well before the real connection is
-        // established. The per-call `connectTimeout` override below only
-        // bounds the individual connection's own internal handshake
-        // timeout (kept generous, so that handshake genuinely succeeds
-        // after the proxy's delay instead of separately timing out too -
-        // isolating the pool-level bug this test targets).
-        await expectLater(
-          pool.withConnection(
-            (c) => c.execute('SELECT 1'),
-            settings: ConnectionSettings(connectTimeout: Duration(seconds: 5)),
-          ),
-          throwsA(anything),
-        );
+      // The proxy doesn't even start connecting for 400ms, so the pool's
+      // 100ms wrapper must time out well before the real connection is
+      // established. The per-call `connectTimeout` override below only
+      // bounds the individual connection's own internal handshake
+      // timeout (kept generous, so that handshake genuinely succeeds
+      // after the proxy's delay instead of separately timing out too -
+      // isolating the pool-level bug this test targets).
+      await expectLater(
+        pool.withConnection(
+          (c) => c.execute('SELECT 1'),
+          settings: ConnectionSettings(connectTimeout: Duration(seconds: 5)),
+        ),
+        throwsA(anything),
+      );
 
-        // The real connection succeeds shortly after (around 400ms in) -
-        // without the fix, it's never referenced again and stays open
-        // forever; with the fix, it gets closed once connect() resolves.
-        await realSocketClosed.future.timeout(Duration(seconds: 5));
-      },
-    );
+      // The real connection succeeds shortly after (around 400ms in) -
+      // without the fix, it's never referenced again and stays open
+      // forever; with the fix, it gets closed once connect() resolves.
+      await realSocketClosed.future.timeout(Duration(seconds: 5));
+    });
 
     test(
       'Pool.close() waits for a timed-out connect that is still resolving',
@@ -135,7 +132,8 @@ void main() {
         expect(
           timeoutFired.elapsed,
           greaterThan(Duration(milliseconds: 300)),
-          reason: "close() returned too quickly - it isn't waiting for the "
+          reason:
+              "close() returned too quickly - it isn't waiting for the "
               'still-resolving connect.',
         );
       },
