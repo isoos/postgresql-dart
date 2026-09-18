@@ -55,6 +55,11 @@ parseConnectionString(
   // Parse hosts
   final hosts = <({String host, int port, bool isUnixSocket})>[];
 
+  // Port: query parameter overrides the URI's port, same as database/user/password above.
+  final defaultPort = params['port'] != null
+      ? int.tryParse(params['port']!) ?? 5432
+      : 5432;
+
   // Add hosts from authority (extracted during preprocessing)
   if (preProcessed.hosts.isNotEmpty) {
     hosts.addAll(preProcessed.hosts);
@@ -62,15 +67,12 @@ parseConnectionString(
     // No comma-separated hosts, use standard URI host
     hosts.add((
       host: uri.host,
-      port: uri.port == 0 ? 5432 : uri.port,
+      port: params['port'] != null
+          ? defaultPort
+          : (uri.port == 0 ? 5432 : uri.port),
       isUnixSocket: false,
     ));
   }
-
-  // Parse host query parameters
-  final defaultPort = params['port'] != null
-      ? int.tryParse(params['port']!) ?? 5432
-      : 5432;
 
   if (uri.queryParametersAll.containsKey('host')) {
     final hostParams = uri.queryParametersAll['host'] ?? [];
