@@ -692,15 +692,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
             await transaction._sendAndMarkClosed('ROLLBACK;');
           } catch (rollbackEx) {
             // ROLLBACK failed — PG connection state is undefined, close it.
+            // The original exception `e` still takes precedence over the
+            // rollback failure below, regardless of its type - rethrowing
+            // `rollbackEx` here instead would silently replace (and hide) a
+            // real implementation bug behind an unrelated rollback failure.
             _connection._closeAfterError(
               rollbackEx is PgException ? rollbackEx : null,
             );
-            if (e is PgException) {
-              // Original exception takes precedence over rollback failure.
-            } else {
-              // Do not ignore the exception here, it may be an implementation bug we are swallowing.
-              rethrow;
-            }
           }
         }
 
@@ -768,8 +766,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
           secretKey: _backendKeyMessage!.secretKey,
         ),
       );
-      // Waiting for the server to close connection.
-      await channel.stream.listen((_) {}).asFuture();
+      // Waiting for the server to close connection. Bounded so a server (or
+      // network) that never closes this side-channel doesn't leak it and
+      // hang forever.
+      await channel.stream.listen((_) {}).asFuture().timeout(
+        _settings.connectTimeout,
+      );
     } finally {
       await channel.sink.close();
     }
@@ -1410,7 +1412,18 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
     Object? error;
     StackTrace? stackTrace;
     try {
-      await querySubscription.asFuture();
+      // Bounded, like regular queries: otherwise a hung server would leave
+      // `runTx` stuck here forever, holding the connection's operation lock.
+      await querySubscription.asFuture().timeout(
+        _settings.queryTimeout + _connection._settings.connectTimeout,
+      );
+    } on TimeoutException catch (e, s) {
+      // The wire protocol is now out of sync (no ReadyForQueryMessage was
+      // received for this internal COMMIT/ROLLBACK) - force the connection
+      // closed so cleanup elsewhere doesn't deadlock waiting for it.
+      _connection._closeAfterError(PgException('`$command` timed out.'));
+      error = e;
+      stackTrace = s;
     } catch (e, s) {
       error = e;
       stackTrace = s;

@@ -144,6 +144,39 @@ void main() {
       },
     );
 
+    test(
+      'runTx preserves the original exception when the rollback also times '
+      'out',
+      () async {
+        var dropIncoming = false;
+        final faultyConn = await PgConnectionImplementation.connect(
+          await server.endpoint(),
+          connectionSettings: ConnectionSettings(
+            connectTimeout: Duration(seconds: 2),
+            queryTimeout: Duration(milliseconds: 300),
+          ),
+          incomingBytesTransformer: StreamTransformer.fromHandlers(
+            handleData: (Uint8List data, EventSink<Uint8List> sink) {
+              if (!dropIncoming) sink.add(data);
+            },
+          ),
+        );
+        addTearDown(() => faultyConn.close(force: true));
+
+        final f = faultyConn.runTx((ctx) async {
+          // BEGIN's response has already arrived by now - drop everything
+          // from here on, so the ROLLBACK this throw triggers never gets a
+          // response and times out internally too.
+          dropIncoming = true;
+          throw StateError('boom');
+        });
+
+        // The original StateError must win, not the internal ROLLBACK's
+        // TimeoutException - and this must not hang forever either.
+        await expectLater(f, throwsA(isA<StateError>()));
+      },
+    );
+
     test('Query that fails does not timeout', () async {
       final rs = await conn.execute('SELECT 1');
       Exception? caught;

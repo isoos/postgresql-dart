@@ -10,6 +10,7 @@
 - Fix `RelationMessage.typeModifier` and `FieldDescription.typeSize` decoding as unsigned instead of signed, and `TruncateMessage` (now `.options`) being unable to represent combined `CASCADE`/`RESTART IDENTITY` flags.
 - Fix a socket leak when the SSL handshake fails (timeout, bad certificate, or the server doesn't support SSL).
 - Fix dollar-quoted strings with a lettered tag (e.g. `$body$...$body$`) not being recognized in `Sql.indexed` queries.
+- Fix `runTx` discarding the original exception when the rollback it triggers also fails, and add timeouts to the internal commit/rollback and to `cancelPendingStatement()` so a hung server can't deadlock the connection.
 
 ## 3.5.14
 
