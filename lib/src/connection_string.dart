@@ -399,6 +399,16 @@ _preprocessConnectionString(String connectionString) {
     return (uri: connectionString, hosts: []);
   }
 
+  // A `?port=` query parameter should apply as the default port to every
+  // comma-separated host that doesn't specify its own, same as it does for
+  // the single-host case handled later in `parseConnectionString`. The query
+  // string hasn't been parsed into a `Uri` yet at this point, so pull the
+  // `port` value out of it directly.
+  final queryIndex = remainder.indexOf('?');
+  final query = queryIndex == -1 ? '' : remainder.substring(queryIndex + 1);
+  final queryPort = query.isEmpty ? null : Uri.splitQueryString(query)['port'];
+  final defaultPort = queryPort != null ? int.tryParse(queryPort) ?? 5432 : 5432;
+
   // Split authority into userinfo and hostlist
   final atIndex = authority.indexOf('@');
   final String userInfo;
@@ -417,7 +427,7 @@ _preprocessConnectionString(String connectionString) {
   final hosts = <({String host, int port, bool isUnixSocket})>[];
 
   for (final hostPart in hostParts) {
-    final parsed = _parseHostPort(hostPart.trim(), defaultPort: 5432);
+    final parsed = _parseHostPort(hostPart.trim(), defaultPort: defaultPort);
     hosts.add(parsed);
   }
 

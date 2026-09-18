@@ -443,6 +443,25 @@ void main() {
         expect(result.endpoints[2].isUnixSocket, isFalse);
       });
 
+      test('port query parameter applies to comma-separated hosts without '
+          'their own port', () {
+        final result = parseConnectionString(
+          'postgresql://host1,host2:5434,host3/mydb?port=6543',
+        );
+
+        expect(result.endpoints, hasLength(3));
+
+        expect(result.endpoints[0].host, equals('host1'));
+        expect(result.endpoints[0].port, equals(6543));
+
+        // A host with an explicit port keeps it.
+        expect(result.endpoints[1].host, equals('host2'));
+        expect(result.endpoints[1].port, equals(5434));
+
+        expect(result.endpoints[2].host, equals('host3'));
+        expect(result.endpoints[2].port, equals(6543));
+      });
+
       test('multiple host query parameters', () {
         final result = parseConnectionString(
           'postgresql:///mydb?host=host1:5433&host=host2:5434&host=host3',
