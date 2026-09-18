@@ -15,6 +15,7 @@
 - Fix a malformed numeric field in a server error message, or a malformed SCRAM iteration count, crashing the connection instead of surfacing as a `PgException`.
 - Remove an unconditional `print()` warning for the deprecated `read` type-substitution alias.
 - Reduce date/timestamp binary encode and decode overhead by reusing the cached Y2K epoch instead of constructing a new `DateTime` on every call.
+- Fix logical replication tuple values arriving undecoded (raw bytes) with `typeOid` always `null`; the live decode path now resolves types and decodes binary columns.
 
 ## 3.5.13
 
