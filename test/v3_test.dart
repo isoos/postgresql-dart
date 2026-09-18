@@ -100,6 +100,24 @@ void main() {
       await connection.channels.notify(channel);
     });
 
+    test('notify recovers from a transient prepare failure', () async {
+      const channel = 'test_channel_2';
+      await connection.execute('BEGIN');
+      try {
+        await connection.execute('SELECT no_such_column');
+      } catch (_) {}
+      // The transaction is now aborted, so preparing the notify statement
+      // fails on this first attempt.
+      await expectLater(
+        connection.channels.notify(channel),
+        throwsA(isA<PgException>()),
+      );
+      await connection.execute('ROLLBACK');
+
+      // A prior failed attempt must not permanently break notify().
+      await connection.channels.notify(channel);
+    });
+
     test('can use same variable multiple times', () async {
       final stmt = await connection.prepare(
         Sql(r'SELECT $1 AS a, $1 + 2 AS b', types: [Type.integer]),
