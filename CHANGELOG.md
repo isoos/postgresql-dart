@@ -15,6 +15,7 @@
 - Fix text-format BC dates/timestamps encoding one year off and being unable to decode at all (`DateTime.parse` doesn't understand Postgres's `BC` suffix).
 - Fix a pool connection leak: a connect attempt that timed out kept running in the background, and its socket was never closed if it succeeded afterwards.
 - Fix text-format list/array parameters not supporting `DateTime` elements (e.g. an untyped `List<DateTime>` bind parameter), throwing `Could not infer array type` instead of encoding a Postgres array literal.
+- Fix `Pool.close()` potentially returning before a connect attempt that timed out (but was still resolving in the background) had actually finished closing.
 
 ## 3.5.14
 

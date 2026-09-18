@@ -22,6 +22,11 @@ class PoolImplementation<L> implements Pool<L> {
   final ResolvedPoolSettings _settings;
 
   final _connections = <_PoolConnection>[];
+  // Connect attempts that the pool gave up waiting for (see
+  // `_selectOrCreate`) but that are still resolving in the background -
+  // `close()` needs to wait for these too, since they aren't in
+  // `_connections` and nothing else would ever await their cleanup.
+  final _pendingLateConnects = <Future<void>>{};
   late final _maxConnectionCount = _settings.maxConnectionCount;
   late final _semaphore = pool.Pool(_maxConnectionCount);
   late final _connectLock = pool.Pool(1);
@@ -47,9 +52,12 @@ class PoolImplementation<L> implements Pool<L> {
     // `_connections` yet - invisible to the snapshot below unless we wait
     // for it here. `_connectLock` serializes connection creation, so
     // acquiring and releasing it once guarantees any such in-flight creation
-    // has either finished (and added itself to `_connections`) or bailed out
-    // (since `_selectOrCreate` itself checks `_closing`) before we proceed.
+    // has either finished (and added itself to `_connections`), bailed out
+    // (since `_selectOrCreate` itself checks `_closing`), or - if it had
+    // already timed out from the pool's perspective - registered itself in
+    // `_pendingLateConnects` before releasing the lock.
     await _connectLock.withResource(() {});
+    await Future.wait([..._pendingLateConnects]);
 
     // Connections are closed when they are returned to the pool if it's closed.
     // We still need to close statements that are currently unused.
@@ -254,12 +262,15 @@ class PoolImplementation<L> implements Pool<L> {
           // `.timeout()` doesn't cancel `connectFuture` - if it later
           // succeeds anyway, close the resulting connection instead of
           // leaking its socket (it was never added to `_connections`, so
-          // nothing else would ever close it).
-          unawaited(
-            connectFuture
-                .then((c) => c.close(force: true))
-                .catchError((_) {}),
-          );
+          // nothing else would ever close it). Track it in
+          // `_pendingLateConnects` so `close()` can wait for this cleanup
+          // too, instead of potentially returning before it's done.
+          late final Future<void> cleanup;
+          cleanup = connectFuture
+              .then((c) => c.close(force: true))
+              .catchError((_) {})
+              .whenComplete(() => _pendingLateConnects.remove(cleanup));
+          _pendingLateConnects.add(cleanup);
           rethrow;
         }
 
