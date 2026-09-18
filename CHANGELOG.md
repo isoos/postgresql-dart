@@ -11,6 +11,7 @@
 - A failed one-shot query no longer sends a redundant `Close` for the unnamed statement it never named; failure and success now cost the same single exchange.
 - Fix `port` connection-string query parameter being ignored whenever a host was already present in the URI (e.g. `postgresql://host/db?port=9876`).
 - Fix pooled connections being reused across requests with different `typeRegistry` or `securityContext` settings.
+- Fix `Channels.notify()` permanently failing after one transient error; a failed attempt to prepare the notify statement is no longer cached.
 
 ## 3.5.13
 

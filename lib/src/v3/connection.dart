@@ -1297,9 +1297,17 @@ class _Channels implements Channels {
 
   @override
   Future<void> notify(String channel, [String? payload]) async {
-    final statement = await (_notifyStatement ??= _connection.prepare(
-      Sql(r'SELECT pg_notify($1, $2)', types: [Type.text, Type.text]),
-    ));
+    final Statement statement;
+    try {
+      statement = await (_notifyStatement ??= _connection.prepare(
+        Sql(r'SELECT pg_notify($1, $2)', types: [Type.text, Type.text]),
+      ));
+    } catch (_) {
+      // Don't cache a failed prepare - a transient failure would otherwise
+      // permanently break notify() on this connection.
+      _notifyStatement = null;
+      rethrow;
+    }
 
     await statement.run([channel, payload]);
   }
