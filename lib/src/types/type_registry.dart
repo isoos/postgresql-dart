@@ -330,10 +330,9 @@ extension TypeRegistryExt on TypeRegistry {
   }
 
   Type? resolveSubstitution(String name) {
+    // Deprecated alias, kept for backwards compatibility. Use `real` instead
+    // of `read` - this alias will be removed in a future release.
     if (name == 'read') {
-      print(
-        'WARNING: Use `real` instead of `read` - will be removed in a future release.',
-      );
       return Type.real;
     }
     return _bySubstitutionName[name];
