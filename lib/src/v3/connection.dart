@@ -589,7 +589,14 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
             message.state == ReadyForQueryMessageState.transaction) {
           _activeTransaction?._transactionException = null;
         }
-        await _pending!.handleMessage(message);
+        try {
+          await _pending!.handleMessage(message);
+        } on Object catch (e) {
+          // handleMessage isn't otherwise observed - this runs as a stream's
+          // data handler - so a throw here would escape as an unhandled
+          // exception instead of a catchable connection failure.
+          _closeAfterError(e is PgException ? e : PgException('$e'));
+        }
       }
     } finally {
       _serverMessages.resume();
@@ -1479,9 +1486,17 @@ class _AuthenticationProcedure extends _PendingOperation {
     AuthenticationMessage message,
     AuthenticationScheme scheme,
   ) {
+    final password = connection._endpoint.password;
+    if (password == null) {
+      throw PgException(
+        'The server requested ${scheme.name} authentication, but no '
+        'password was provided.',
+      );
+    }
+
     final authConnection = PostgresAuthConnection(
       connection._endpoint.username ?? '',
-      connection._endpoint.password ?? '',
+      password,
       connection._channel.sink.add,
     );
 
