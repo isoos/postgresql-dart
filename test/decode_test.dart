@@ -1,4 +1,5 @@
 import 'package:postgres/postgres.dart';
+import 'package:postgres/src/types/text_codec.dart';
 import 'package:test/test.dart';
 
 import 'docker.dart';
@@ -57,6 +58,34 @@ void main() {
       final rs = await conn.execute("SELECT '1999-01-08'::DATE");
       final item = rs.single.single as DateTime;
       expect(item.toIso8601String(), '1999-01-08T00:00:00.000Z');
+    });
+
+    test('BC date decodes to the correct astronomical year', () async {
+      // 11 BC is Dart's astronomical year -10 (year 0 = 1 BC).
+      final rs = await conn.execute("SELECT '0011-01-08 BC'::DATE");
+      final item = rs.single.single as DateTime;
+      expect(item, DateTime.utc(-10, 1, 8));
+    });
+
+    test('BC timestamp decodes to the correct astronomical year', () async {
+      final rs = await conn.execute(
+        "SELECT '0011-01-08 04:05:06 BC'::TIMESTAMP WITHOUT TIME ZONE",
+      );
+      final item = rs.single.single as DateTime;
+      expect(item, DateTime.utc(-10, 1, 8, 4, 5, 6));
+    });
+
+    test('BC date round-trips through simple query protocol encoding', () async {
+      // Encoded as a text literal (simple query protocol doesn't support
+      // bind parameters) and decoded back - both directions must agree with
+      // the original astronomical-year value.
+      final value = DateTime.utc(-10, 1, 8);
+      final encoded = const PostgresTextEncoder().convert(value);
+      final rs = await conn.execute(
+        'SELECT $encoded::date',
+        queryMode: QueryMode.simple,
+      );
+      expect(rs.single.single, value);
     });
 
     test('json', () async {

@@ -179,8 +179,19 @@ class PostgresTextEncoder {
       }
     }
 
-    if (string.substring(0, 1) == '-') {
-      string = '${string.substring(1)} BC';
+    if (value.year <= 0) {
+      // Postgres has no year 0 and expects a "BC" suffix instead of a
+      // leading minus sign for years before 1 AD. Dart's astronomical year
+      // numbering (year 0 = 1 BC, year -1 = 2 BC, ...) must be converted to
+      // Postgres's BC year (`1 - year`) - just moving the sign into a
+      // suffix without adjusting the year would be off by one for every BC
+      // date.
+      final bcYear = 1 - value.year;
+      // `toIso8601String()` pads the year to at least 4 digits, optionally
+      // preceded by a sign; skip index 0 so a leading '-' isn't mistaken for
+      // the date separator, and use the tail (month/day/time/offset) as-is.
+      final rest = string.substring(string.indexOf('-', 1));
+      string = '${bcYear.toString().padLeft(4, '0')}$rest BC';
     } else if (string.substring(0, 1) == '+') {
       string = string.substring(1);
     }
@@ -266,6 +277,30 @@ class PostgresTextEncoder {
   }
 }
 
+/// Parses a date/timestamp string as sent by Postgres, including its `BC`
+/// suffix convention for years before 1 AD (which `DateTime.parse` doesn't
+/// understand on its own).
+DateTime _parseDateTimeText(String text) {
+  const bcSuffix = ' BC';
+  if (!text.endsWith(bcSuffix)) {
+    return DateTime.parse(text);
+  }
+
+  final withoutSuffix = text.substring(0, text.length - bcSuffix.length);
+  final yearEnd = withoutSuffix.indexOf('-');
+  final bcYear = int.parse(withoutSuffix.substring(0, yearEnd));
+  final rest = withoutSuffix.substring(yearEnd);
+
+  // Postgres's BC year (`1` for 1 BC, `2` for 2 BC, ...) is the inverse of
+  // Dart's astronomical year numbering (year 0 = 1 BC, year -1 = 2 BC, ...).
+  final astronomicalYear = 1 - bcYear;
+  final yearString = astronomicalYear < 0
+      ? '-${(-astronomicalYear).toString().padLeft(4, '0')}'
+      : astronomicalYear.toString().padLeft(4, '0');
+
+  return DateTime.parse('$yearString$rest');
+}
+
 class PostgresTextDecoder {
   static Object? convert(CodecContext context, int typeOid, Uint8List di) {
     String asText() => context.encoding.decode(di);
@@ -298,7 +333,7 @@ class PostgresTextDecoder {
 
       case TypeOid.timestampWithTimezone:
       case TypeOid.timestampWithoutTimezone:
-        final raw = DateTime.parse(asText());
+        final raw = _parseDateTimeText(asText());
         return DateTime.utc(
           raw.year,
           raw.month,
@@ -314,7 +349,7 @@ class PostgresTextDecoder {
         return asText();
 
       case TypeOid.date:
-        final raw = DateTime.parse(asText());
+        final raw = _parseDateTimeText(asText());
         return DateTime.utc(raw.year, raw.month, raw.day);
 
       case TypeOid.json:
