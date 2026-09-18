@@ -91,7 +91,11 @@ class _ScramSha256Authenticator {
 
     _serverNonce = parts['r'];
     _salt = parts['s'];
-    _iterations = int.parse(parts['i'] ?? '0');
+    final iterations = int.tryParse(parts['i'] ?? '');
+    if (iterations == null || iterations <= 0) {
+      throw PgException('Invalid SCRAM iteration count from server.');
+    }
+    _iterations = iterations;
 
     if (_serverNonce == null || !_serverNonce!.startsWith(_clientNonce)) {
       throw PgException('Server nonce does not start with client nonce');

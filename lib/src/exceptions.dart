@@ -183,7 +183,7 @@ ServerException buildExceptionFromErrorFields(List<ErrorField> errorFields) {
 
   int? findInt(int identifier) {
     final i = findString(identifier);
-    return i == null ? null : int.parse(i);
+    return i == null ? null : int.tryParse(i);
   }
 
   return ServerException._(
