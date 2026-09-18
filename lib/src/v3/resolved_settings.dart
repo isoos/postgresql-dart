@@ -92,6 +92,11 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
       onOpen = settings?.onOpen ?? fallback?.onOpen;
 
   bool isMatchingConnection(ResolvedConnectionSettings other) {
+    // `onOpen` deliberately isn't compared: it only runs once, when a
+    // connection is first opened (see its doc comment), so it has no
+    // bearing on whether an already-open connection is safe to reuse - a
+    // fresh closure per call (a natural Dart pattern) would otherwise
+    // silently defeat pooling for otherwise-identical settings.
     return isMatchingSession(other) &&
         applicationName == other.applicationName &&
         timeZone == other.timeZone &&
@@ -100,8 +105,7 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
         securityContext == other.securityContext &&
         transformer == other.transformer &&
         replicationMode == other.replicationMode &&
-        typeRegistry == other.typeRegistry &&
-        onOpen == other.onOpen;
+        typeRegistry == other.typeRegistry;
   }
 }
 
