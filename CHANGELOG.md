@@ -12,6 +12,7 @@
 - Fix `port` connection-string query parameter being ignored whenever a host was already present in the URI (e.g. `postgresql://host/db?port=9876`).
 - Fix pooled connections being reused across requests with different `typeRegistry` or `securityContext` settings.
 - Fix `Channels.notify()` permanently failing after one transient error; a failed attempt to prepare the notify statement is no longer cached.
+- Fix a malformed numeric field in a server error message, or a malformed SCRAM iteration count, crashing the connection instead of surfacing as a `PgException`.
 
 ## 3.5.13
 
