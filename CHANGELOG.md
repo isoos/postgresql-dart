@@ -3,6 +3,7 @@
 ## 3.5.15
 
 - Fix the hard-timeout fallback deadlocking the connection.
+- Fix the `Sql.indexed` operator-tokenizing bug silently dropping the `:type` annotation.
 
 ## 3.5.14
 

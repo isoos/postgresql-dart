@@ -259,6 +259,19 @@ void main() {
         expect(desc.transformedSql, 'SELECT arr $operator \$1');
         expect(desc.parameterTypes, hasLength(1));
       });
+
+      test(
+        'indexed mode keeps a typed anonymous variable next to $operator',
+        () {
+          // A colon-typed variable is unambiguous even without a name, so it
+          // must not be reinterpreted as literal operator text.
+          final desc = InternalQueryDescription.indexed(
+            'SELECT @:jsonb$operator @2',
+          );
+          expect(desc.transformedSql, 'SELECT \$1$operator \$2');
+          expect(desc.parameterTypes, [Type.jsonb, null]);
+        },
+      );
     }
   });
 

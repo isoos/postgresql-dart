@@ -373,13 +373,20 @@ class VariableTokenizer {
       return;
     }
 
-    if (nameBuffer.isEmpty && mode == TokenizerMode.indexed) {
+    if (nameBuffer.isEmpty &&
+        mode == TokenizerMode.indexed &&
+        !consumedColonForType) {
       // Indexed mode treats a bare variable code unit as "next positional
       // index" (see the doc comment on `_conflictsWithOperator`), which
       // conflicts with `@>`, `<@`, `@?` and `@@`. Since those are far more
       // common than a genuine auto-incrementing variable placed directly
       // next to `<`/`>`/`?`/the substitution character itself, treat this
       // as literal syntax instead in that case.
+      //
+      // This only applies when no type was given: `@:jsonb` is unambiguously
+      // a variable declaration (the operators don't have a `:type` syntax),
+      // so it must never be reinterpreted as literal text even if followed
+      // by `<`/`>`/`?`/the substitution character.
       final followedByDoubled = !_isAtEnd && _peek() == _variableCodeUnit;
       if (_conflictsWithOperator(startPosition, followedByDoubled)) {
         _rewrittenSql.writeCharCode(_variableCodeUnit);
