@@ -13,6 +13,7 @@
 - Fix `runTx` discarding the original exception when the rollback it triggers also fails, and add timeouts to the internal commit/rollback and to `cancelPendingStatement()` so a hung server can't deadlock the connection.
 - Fix `Pool.close()` potentially missing a connection that was still being created, the pool's `connectTimeout` budget being applied twice, `Pool.prepare()` keeping a broken connection in circulation after a failure, and per-call `onOpen` closures silently defeating connection reuse.
 - Fix text-format BC dates/timestamps encoding one year off and being unable to decode at all (`DateTime.parse` doesn't understand Postgres's `BC` suffix).
+- Fix a pool connection leak: a connect attempt that timed out kept running in the background, and its socket was never closed if it succeeded afterwards.
 
 ## 3.5.14
 
