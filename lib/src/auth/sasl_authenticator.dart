@@ -16,9 +16,11 @@ final _random = Random.secure();
 class PostgresSaslAuthenticator extends PostgresAuthenticator {
   PostgresSaslAuthenticator(super.connection);
 
+  // connection.password is guaranteed non-null here: PgConnectionImplementation
+  // validates it before constructing any authenticator.
   late final _authenticator = _ScramSha256Authenticator(
     username: connection.username ?? '',
-    password: connection.password ?? '',
+    password: connection.password!,
   );
 
   @override

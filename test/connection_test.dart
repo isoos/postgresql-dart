@@ -115,8 +115,8 @@ void main() {
     });
 
     test('Connect with no auth throws for non trusted users', () async {
-      try {
-        conn = await Connection.open(
+      await expectLater(
+        Connection.open(
           Endpoint(
             host: 'localhost',
             database: 'dart_test',
@@ -124,14 +124,15 @@ void main() {
             username: 'dart',
           ),
           settings: ConnectionSettings(sslMode: SslMode.disable),
-        );
-      } catch (e) {
-        expect(e, isA<PgException>());
-        expect(
-          (e as PgException).message,
-          contains('password authentication failed for user "'),
-        );
-      }
+        ),
+        throwsA(
+          isA<PgException>().having(
+            (e) => e.message,
+            'message',
+            contains('no password was provided'),
+          ),
+        ),
+      );
       conn = await server.newConnection();
     });
 

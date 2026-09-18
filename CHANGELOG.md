@@ -19,6 +19,7 @@
 - Fix binary range decoding inferring a bound's byte length from the rest of the buffer instead of validating the explicit length prefix Postgres sends.
 - `TypeRegistry.decode()` now returns `FutureOr<Object?>` instead of `Future<Object?>`, avoiding a `Future` allocation per column for the common synchronous codec case; this removes real overhead from the row-decoding hot path.
 - Fix `connectTimeout`/`queryTimeout: Duration.zero` (or negative) meaning "wait forever" instead of failing fast; such values are now rejected at settings construction, matching the connection-string parser's existing validation.
+- Connecting without a password now fails immediately with a clear `PgException` instead of silently authenticating with an empty one; also fixes a pending-operation error (e.g. this one) escaping as an unhandled exception instead of a catchable connection failure.
 
 ## 3.5.13
 
