@@ -336,7 +336,8 @@ class RelationMessage implements LogicalReplicationMessage {
       final flags = reader.readUint8();
       final name = reader.readNullTerminatedString();
       final typeOid = reader.readUint32();
-      final typeModifier = reader.readUint32();
+      // Signed (`atttypmod`); most columns have no modifier, encoded as -1.
+      final typeModifier = reader.readInt32();
       columns.add(
         RelationMessageColumn(
           flags: flags,
@@ -792,19 +793,23 @@ class DeleteMessage implements LogicalReplicationMessage {
 }
 
 // see https://www.postgresql.org/docs/current/protocol-logicalrep-message-formats.html
+//
+// These are OR-able bits (e.g. `TRUNCATE ... RESTART IDENTITY CASCADE` sets
+// both), so a truncate's options must be represented as a set rather than a
+// single value - otherwise a combination other than a single flag (or none)
+// can't be represented.
 enum TruncateOptions {
   cascade(1),
-  restartIdentity(2),
-  none(0);
+  restartIdentity(2);
 
   final int value;
   const TruncateOptions(this.value);
 
-  static TruncateOptions fromValue(int value) {
-    return TruncateOptions.values.firstWhere(
-      (element) => element.value == value,
-      orElse: () => none,
-    );
+  static Set<TruncateOptions> fromValue(int value) {
+    return {
+      for (final option in TruncateOptions.values)
+        if (value & option.value != 0) option,
+    };
   }
 }
 
@@ -814,13 +819,13 @@ class TruncateMessage implements LogicalReplicationMessage {
 
   late final int relationNum;
 
-  late final TruncateOptions option;
+  late final Set<TruncateOptions> options;
 
   final relationIds = <int>[];
 
   TruncateMessage._parse(PgByteDataReader reader) {
     relationNum = reader.readUint32();
-    option = TruncateOptions.fromValue(reader.readUint8());
+    options = TruncateOptions.fromValue(reader.readUint8());
     for (var i = 0; i < relationNum; i++) {
       final id = reader.readUint32();
       relationIds.add(id);
@@ -829,7 +834,7 @@ class TruncateMessage implements LogicalReplicationMessage {
 
   @override
   String toString() =>
-      'TruncateMessage(relationNum: $relationNum, option: $option, relationIds: $relationIds)';
+      'TruncateMessage(relationNum: $relationNum, options: $options, relationIds: $relationIds)';
 }
 
 /// Extension contain commonly used methods within this file
