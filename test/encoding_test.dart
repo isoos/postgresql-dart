@@ -977,10 +977,7 @@ void main() {
     });
 
     test('Encode lists containing null elements', () {
-      expect(
-        encoder.convert([null, 1, 2], escapeStrings: false),
-        '{NULL,1,2}',
-      );
+      expect(encoder.convert([null, 1, 2], escapeStrings: false), '{NULL,1,2}');
       expect(
         encoder.convert(['a', null, 'b'], escapeStrings: false),
         '{"a",NULL,"b"}',

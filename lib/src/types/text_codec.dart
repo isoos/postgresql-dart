@@ -276,9 +276,7 @@ class PostgresTextEncoder {
 
     if (type == DateTime) {
       return '{${value.map((s) => encodeElement(s, (v) {
-        final escaped = _dateTimeToText(
-          v as DateTime,
-        ).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+        final escaped = _dateTimeToText(v as DateTime).replaceAll(r'\', r'\\').replaceAll('"', r'\"');
         return '"$escaped"';
       })).join(',')}}';
     }

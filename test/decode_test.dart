@@ -75,18 +75,21 @@ void main() {
       expect(item, DateTime.utc(-10, 1, 8, 4, 5, 6));
     });
 
-    test('BC date round-trips through simple query protocol encoding', () async {
-      // Encoded as a text literal (simple query protocol doesn't support
-      // bind parameters) and decoded back - both directions must agree with
-      // the original astronomical-year value.
-      final value = DateTime.utc(-10, 1, 8);
-      final encoded = const PostgresTextEncoder().convert(value);
-      final rs = await conn.execute(
-        'SELECT $encoded::date',
-        queryMode: QueryMode.simple,
-      );
-      expect(rs.single.single, value);
-    });
+    test(
+      'BC date round-trips through simple query protocol encoding',
+      () async {
+        // Encoded as a text literal (simple query protocol doesn't support
+        // bind parameters) and decoded back - both directions must agree with
+        // the original astronomical-year value.
+        final value = DateTime.utc(-10, 1, 8);
+        final encoded = const PostgresTextEncoder().convert(value);
+        final rs = await conn.execute(
+          'SELECT $encoded::date',
+          queryMode: QueryMode.simple,
+        );
+        expect(rs.single.single, value);
+      },
+    );
 
     test('json', () async {
       final rs = await conn.execute("SELECT '{\"a\": 1}'::JSON");
