@@ -140,8 +140,7 @@ Future<ServerMessage> _parseCopyDataMessage(
   if (code == ReplicationMessageId.primaryKeepAlive) {
     return PrimaryKeepAliveMessage.parse(reader);
   } else if (code == ReplicationMessageId.xLogData) {
-    // ignore: deprecated_member_use_from_same_package
-    return XLogDataMessage.parse(
+    return await parseXLogDataMessage(
       reader.read(length - 1),
       reader.encoding,
       codecContext: reader.codecContext,

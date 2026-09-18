@@ -167,7 +167,16 @@ void _testReplication(bool binary) {
 
         final matchers = [
           isA<BeginMessage>(),
-          isA<InsertMessage>(),
+          isA<InsertMessage>()
+              // The `value` text column must be decoded, not left as raw
+              // bytes (only observable in binary mode), and typeOid must be
+              // resolved for every column (both modes).
+              .having((m) => m.tuple.columns[1].value, 'value column', 'test')
+              .having(
+                (m) => m.tuple.columns.map((c) => c.typeOid),
+                'column typeOids',
+                everyElement(isNotNull),
+              ),
           isA<CommitMessage>(),
         ];
 
