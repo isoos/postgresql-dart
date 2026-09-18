@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:buffer/buffer.dart';
 
 import '../exceptions.dart';
@@ -293,32 +295,44 @@ class TypeRegistry {
     throw PgException("Could not infer type of value '${input.value}'.");
   }
 
-  Future<Object?> decode(EncodedValue value, CodecContext context) async {
+  /// Decodes [value], returning a plain (non-`Future`) result whenever the
+  /// resolved [Codec] decodes synchronously - which is the common case for
+  /// all built-in types. Only a [Codec] that itself returns a `Future` (e.g.
+  /// one doing genuine async work) causes this to return a `Future` too.
+  FutureOr<Object?> decode(EncodedValue value, CodecContext context) {
     final typeOid = value.typeOid;
     if (typeOid == null) {
       throw ArgumentError('`EncodedValue.typeOid` was not provided.');
     }
 
-    // check for codec
-    final codec = _codecs[typeOid];
-    if (codec != null) {
-      final r = await codec.decode(value, context);
+    Object? finish(Object? r) {
       if (r != value && r is! UndecodedBytes) {
         return r;
       }
+
+      // fallback decoding
+      final bytes = value.bytes;
+      if (bytes == null) {
+        return null;
+      }
+      return UndecodedBytes(
+        typeOid: typeOid,
+        bytes: bytes,
+        isBinary: value.isBinary,
+        encoding: context.encoding,
+      );
     }
 
-    // fallback decoding
-    final bytes = value.bytes;
-    if (bytes == null) {
-      return null;
+    // check for codec
+    final codec = _codecs[typeOid];
+    if (codec == null) {
+      return finish(value);
     }
-    return UndecodedBytes(
-      typeOid: typeOid,
-      bytes: bytes,
-      isBinary: value.isBinary,
-      encoding: context.encoding,
-    );
+    final r = codec.decode(value, context);
+    if (r is Future) {
+      return r.then(finish);
+    }
+    return finish(r);
   }
 }
 

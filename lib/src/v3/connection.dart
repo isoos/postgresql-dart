@@ -1050,17 +1050,21 @@ class _PgResultStreamSubscription
           final schema = _resultSchema!;
 
           final columnCount = message.values.length;
-          final futures = <Future>[];
+          // Codec.decode is synchronous for all built-in types, so most rows
+          // never touch Future machinery at all - only columns that actually
+          // decode asynchronously get collected and awaited below.
+          final values = List<Object?>.filled(columnCount, null);
+          List<(int, Future<Object?>)>? pending;
           List<bool>? sqlNulls;
           final context = session._connection.codecContext;
-          for (var i = 0; i < message.values.length; i++) {
+          for (var i = 0; i < columnCount; i++) {
             final field = schema.columns[i];
             final input = message.values[i];
             if (input == null) {
               sqlNulls ??= List<bool>.filled(columnCount, false);
               sqlNulls[i] = true;
             }
-            final futureValue = context.typeRegistry.decode(
+            final decoded = context.typeRegistry.decode(
               EncodedValue(
                 input,
                 format: EncodingFormat.fromBinaryFlag(field.isBinaryEncoding),
@@ -1068,9 +1072,18 @@ class _PgResultStreamSubscription
               ),
               context,
             );
-            futures.add(futureValue);
+            if (decoded is Future<Object?>) {
+              (pending ??= []).add((i, decoded));
+            } else {
+              values[i] = decoded;
+            }
           }
-          final values = await Future.wait(futures);
+          if (pending != null) {
+            final resolved = await Future.wait(pending.map((e) => e.$2));
+            for (var j = 0; j < pending.length; j++) {
+              values[pending[j].$1] = resolved[j];
+            }
+          }
 
           final row = ResultRow(
             schema: schema,

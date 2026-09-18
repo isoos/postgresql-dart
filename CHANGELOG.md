@@ -17,6 +17,7 @@
 - Reduce date/timestamp binary encode and decode overhead by reusing the cached Y2K epoch instead of constructing a new `DateTime` on every call.
 - Fix logical replication tuple values arriving undecoded (raw bytes) with `typeOid` always `null`; the live decode path now resolves types and decodes binary columns.
 - Fix binary range decoding inferring a bound's byte length from the rest of the buffer instead of validating the explicit length prefix Postgres sends.
+- `TypeRegistry.decode()` now returns `FutureOr<Object?>` instead of `Future<Object?>`, avoiding a `Future` allocation per column for the common synchronous codec case; this removes real overhead from the row-decoding hot path.
 
 ## 3.5.13
 
