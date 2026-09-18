@@ -151,6 +151,20 @@ void main() {
     });
   });
 
+  withPostgresServer(
+    'md5 auth with non-ASCII password',
+    (server) {
+      test('Connect with md5 auth using a non-ASCII password', () async {
+        final conn = await server.newConnection(sslMode: SslMode.disable);
+        expect(await conn.execute('select 1'), hasLength(1));
+        await conn.close();
+      });
+    },
+    // Exercises the MD5 authenticator's password/username hashing with
+    // multi-byte UTF-8 characters (accented Latin and CJK).
+    pgPassword: 'pw-héllo-日本語',
+  );
+
   withPostgresServer('Successful queries over time', initSqls: oldSchemaInit, (
     server,
   ) {

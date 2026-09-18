@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:buffer/buffer.dart';
 import 'package:crypto/crypto.dart';
 
@@ -35,10 +37,13 @@ class AuthMD5Message extends ClientMessage {
     String password,
     List<int> saltBytes,
   ) {
-    final passwordHash = md5.convert('$password$username'.codeUnits).toString();
-    final saltString = String.fromCharCodes(saltBytes);
+    // PostgreSQL computes this over the byte encoding of the credentials
+    // (UTF-8), not over UTF-16 code units - using `.codeUnits` directly
+    // would produce a different hash than the server for any non-ASCII
+    // password or username.
+    final passwordHash = md5.convert(utf8.encode('$password$username')).toString();
     final md5Hash = md5
-        .convert('$passwordHash$saltString'.codeUnits)
+        .convert([...utf8.encode(passwordHash), ...saltBytes])
         .toString();
     return AuthMD5Message._('md5$md5Hash');
   }
