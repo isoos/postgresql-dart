@@ -50,19 +50,21 @@ void main() {
     tearDown(() => connection.close());
 
     /// What was sent, up to and including the execute.
-    Iterable<ClientMessage> throughExecute() =>
-        sent.takeWhile((message) => message is! ExecuteMessage).followedBy([
-          sent.whereType<ExecuteMessage>().first,
-        ]);
+    Iterable<ClientMessage> throughExecute() => sent
+        .takeWhile((message) => message is! ExecuteMessage)
+        .followedBy([sent.whereType<ExecuteMessage>().first]);
 
-    test('a parameterised query parses and binds without a sync between', () async {
-      await connection.execute(r'SELECT $1::int AS value', parameters: [1]);
+    test(
+      'a parameterised query parses and binds without a sync between',
+      () async {
+        await connection.execute(r'SELECT $1::int AS value', parameters: [1]);
 
-      expect(
-        throughExecute().map((message) => message.runtimeType).toList(),
-        [ParseMessage, BindMessage, DescribeMessage, ExecuteMessage],
-      );
-    });
+        expect(
+          throughExecute().map((message) => message.runtimeType).toList(),
+          [ParseMessage, BindMessage, DescribeMessage, ExecuteMessage],
+        );
+      },
+    );
 
     test('a query without parameters is one exchange too', () async {
       await connection.execute('SELECT 1 AS value');
@@ -70,42 +72,56 @@ void main() {
       expect(
         throughExecute().whereType<SyncMessage>(),
         isEmpty,
-        reason: 'a sync before the execute would end the transaction that parsed',
+        reason:
+            'a sync before the execute would end the transaction that parsed',
       );
     });
 
-    test('the statement it parses is the unnamed one, which cannot collide', () async {
-      await connection.execute(r'SELECT $1::int AS value', parameters: [1]);
+    test(
+      'the statement it parses is the unnamed one, which cannot collide',
+      () async {
+        await connection.execute(r'SELECT $1::int AS value', parameters: [1]);
 
-      expect(sent.whereType<ParseMessage>().single.statementName, isEmpty);
-    });
+        expect(sent.whereType<ParseMessage>().single.statementName, isEmpty);
+      },
+    );
 
-    test('a one-shot query does not close the statement it never named', () async {
-      await connection.execute(r'SELECT $1::int AS value', parameters: [1]);
+    test(
+      'a one-shot query does not close the statement it never named',
+      () async {
+        await connection.execute(r'SELECT $1::int AS value', parameters: [1]);
 
-      expect(
-        sent.whereType<CloseMessage>(),
-        isEmpty,
-        reason: 'the next parse replaces the unnamed statement, so closing it is an exchange that changes nothing',
-      );
-    });
+        expect(
+          sent.whereType<CloseMessage>(),
+          isEmpty,
+          reason:
+              'the next parse replaces the unnamed statement, so closing it is an exchange that changes nothing',
+        );
+      },
+    );
 
-    test('a named statement is still closed, because its name has to become free again', () async {
-      final statement = await connection.prepare(r'SELECT $1::int AS value');
-      await statement.dispose();
+    test(
+      'a named statement is still closed, because its name has to become free again',
+      () async {
+        final statement = await connection.prepare(r'SELECT $1::int AS value');
+        await statement.dispose();
 
-      expect(sent.whereType<CloseMessage>(), isNotEmpty);
-    });
+        expect(sent.whereType<CloseMessage>(), isNotEmpty);
+      },
+    );
 
-    test('a statement kept for reuse is still named and still parsed on its own', () async {
-      final statement = await connection.prepare(r'SELECT $1::int AS value');
-      addTearDown(statement.dispose);
+    test(
+      'a statement kept for reuse is still named and still parsed on its own',
+      () async {
+        final statement = await connection.prepare(r'SELECT $1::int AS value');
+        addTearDown(statement.dispose);
 
-      final parse = sent.whereType<ParseMessage>().single;
-      expect(parse.statementName, isNotEmpty);
-      // Nothing binds it yet, so its exchange ends where it was sent.
-      expect(sent.whereType<BindMessage>(), isEmpty);
-    });
+        final parse = sent.whereType<ParseMessage>().single;
+        expect(parse.statementName, isNotEmpty);
+        // Nothing binds it yet, so its exchange ends where it was sent.
+        expect(sent.whereType<BindMessage>(), isEmpty);
+      },
+    );
 
     test('the results are what was asked for', () async {
       final result = await connection.execute(

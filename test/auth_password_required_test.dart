@@ -27,28 +27,31 @@ void main() {
     pgPassword: _password,
     pgHbaConfContent: _scramSha256HbaConf,
     (server) {
-      test('connecting without a password fails clearly and promptly', () async {
-        final endpoint = Endpoint(
-          host: 'localhost',
-          database: 'postgres',
-          username: _username,
-          port: await server.port,
-        );
+      test(
+        'connecting without a password fails clearly and promptly',
+        () async {
+          final endpoint = Endpoint(
+            host: 'localhost',
+            database: 'postgres',
+            username: _username,
+            port: await server.port,
+          );
 
-        await expectLater(
-          Connection.open(
-            endpoint,
-            settings: ConnectionSettings(sslMode: SslMode.disable),
-          ).timeout(Duration(seconds: 10)),
-          throwsA(
-            isA<PgException>().having(
-              (e) => e.message,
-              'message',
-              contains('no password was provided'),
+          await expectLater(
+            Connection.open(
+              endpoint,
+              settings: ConnectionSettings(sslMode: SslMode.disable),
+            ).timeout(Duration(seconds: 10)),
+            throwsA(
+              isA<PgException>().having(
+                (e) => e.message,
+                'message',
+                contains('no password was provided'),
+              ),
             ),
-          ),
-        );
-      });
+          );
+        },
+      );
     },
   );
 }

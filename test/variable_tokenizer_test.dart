@@ -247,23 +247,18 @@ void main() {
       });
 
       test('indexed mode can use $operator next to a bare variable', () {
-        final desc = InternalQueryDescription.indexed(
-          'SELECT @1 $operator @2',
-        );
+        final desc = InternalQueryDescription.indexed('SELECT @1 $operator @2');
         expect(desc.transformedSql, 'SELECT \$1 $operator \$2');
       });
 
-      test(
-        'indexed mode does not mistake $operator for an auto-incrementing '
-        'variable',
-        () {
-          final desc = InternalQueryDescription.indexed(
-            'SELECT arr $operator @1',
-          );
-          expect(desc.transformedSql, 'SELECT arr $operator \$1');
-          expect(desc.parameterTypes, hasLength(1));
-        },
-      );
+      test('indexed mode does not mistake $operator for an auto-incrementing '
+          'variable', () {
+        final desc = InternalQueryDescription.indexed(
+          'SELECT arr $operator @1',
+        );
+        expect(desc.transformedSql, 'SELECT arr $operator \$1');
+        expect(desc.parameterTypes, hasLength(1));
+      });
     }
   });
 
