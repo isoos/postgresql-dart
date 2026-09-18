@@ -16,6 +16,7 @@
 - Remove an unconditional `print()` warning for the deprecated `read` type-substitution alias.
 - Reduce date/timestamp binary encode and decode overhead by reusing the cached Y2K epoch instead of constructing a new `DateTime` on every call.
 - Fix logical replication tuple values arriving undecoded (raw bytes) with `typeOid` always `null`; the live decode path now resolves types and decodes binary columns.
+- Fix binary range decoding inferring a bound's byte length from the rest of the buffer instead of validating the explicit length prefix Postgres sends.
 
 ## 3.5.13
 
