@@ -14,6 +14,7 @@
 - Fix `Channels.notify()` permanently failing after one transient error; a failed attempt to prepare the notify statement is no longer cached.
 - Fix a malformed numeric field in a server error message, or a malformed SCRAM iteration count, crashing the connection instead of surfacing as a `PgException`.
 - Remove an unconditional `print()` warning for the deprecated `read` type-substitution alias.
+- Reduce date/timestamp binary encode and decode overhead by reusing the cached Y2K epoch instead of constructing a new `DateTime` on every call.
 
 ## 3.5.13
 

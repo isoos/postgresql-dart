@@ -17,3 +17,13 @@ int dateTimeToMicrosecondsSinceY2k(DateTime time) {
   final microsecSinceUnixEpoch = time.toUtc().microsecondsSinceEpoch;
   return microsecSinceUnixEpoch - _microsecFromUnixEpochToY2K;
 }
+
+final _y2k = DateTime.utc(2000);
+
+DateTime dateTimeFromDaysSinceY2k(int daysSinceY2K) {
+  return _y2k.add(Duration(days: daysSinceY2K));
+}
+
+int dateTimeToDaysSinceY2k(DateTime time) {
+  return time.toUtc().difference(_y2k).inDays;
+}

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:buffer/buffer.dart';
 
 import '../buffer.dart';
+import '../time_converters.dart';
 import '../types.dart';
 import 'codec.dart';
 import 'geo_types.dart';
@@ -137,7 +138,7 @@ class PostgresBinaryEncoder {
         {
           if (input is DateTime) {
             final bd = ByteData(4);
-            bd.setInt32(0, input.toUtc().difference(DateTime.utc(2000)).inDays);
+            bd.setInt32(0, dateTimeToDaysSinceY2k(input));
             return bd.buffer.asUint8List();
           }
           throw FormatException(
@@ -161,10 +162,7 @@ class PostgresBinaryEncoder {
         {
           if (input is DateTime) {
             final bd = ByteData(8);
-            bd.setInt64(
-              0,
-              input.toUtc().difference(DateTime.utc(2000)).inMicroseconds,
-            );
+            bd.setInt64(0, dateTimeToMicrosecondsSinceY2k(input));
             return bd.buffer.asUint8List();
           }
           throw FormatException(
@@ -176,10 +174,7 @@ class PostgresBinaryEncoder {
         {
           if (input is DateTime) {
             final bd = ByteData(8);
-            bd.setInt64(
-              0,
-              input.toUtc().difference(DateTime.utc(2000)).inMicroseconds,
-            );
+            bd.setInt64(0, dateTimeToMicrosecondsSinceY2k(input));
             return bd.buffer.asUint8List();
           }
           throw FormatException(
@@ -463,9 +458,7 @@ class PostgresBinaryEncoder {
               _castOrThrowList<DateTime>(input),
               TypeOid.date,
               (_) => 4,
-              (writer, item) => writer.writeInt32(
-                item.toUtc().difference(DateTime.utc(2000)).inDays,
-              ),
+              (writer, item) => writer.writeInt32(dateTimeToDaysSinceY2k(item)),
               encoding,
             );
           }
@@ -497,9 +490,8 @@ class PostgresBinaryEncoder {
               _castOrThrowList<DateTime>(input),
               TypeOid.timestamp,
               (_) => 8,
-              (writer, item) => writer.writeInt64(
-                item.toUtc().difference(DateTime.utc(2000)).inMicroseconds,
-              ),
+              (writer, item) =>
+                  writer.writeInt64(dateTimeToMicrosecondsSinceY2k(item)),
               encoding,
             );
           }
@@ -515,9 +507,8 @@ class PostgresBinaryEncoder {
               _castOrThrowList<DateTime>(input),
               TypeOid.timestampTz,
               (_) => 8,
-              (writer, item) => writer.writeInt64(
-                item.toUtc().difference(DateTime.utc(2000)).inMicroseconds,
-              ),
+              (writer, item) =>
+                  writer.writeInt64(dateTimeToMicrosecondsSinceY2k(item)),
               encoding,
             );
           }
@@ -886,9 +877,7 @@ class PostgresBinaryDecoder {
         return Time.fromMicroseconds(buffer.getInt64(0));
       case TypeOid.timestampWithoutTimezone:
       case TypeOid.timestampWithTimezone:
-        return DateTime.utc(
-          2000,
-        ).add(Duration(microseconds: buffer.getInt64(0)));
+        return dateTimeFromMicrosecondsSinceY2k(buffer.getInt64(0));
 
       case TypeOid.interval:
         return Interval(
@@ -901,7 +890,7 @@ class PostgresBinaryDecoder {
         return _decodeNumeric(input);
 
       case TypeOid.date:
-        return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0)));
+        return dateTimeFromDaysSinceY2k(buffer.getInt32(0));
 
       case TypeOid.jsonb:
         {
@@ -1014,8 +1003,7 @@ class PostgresBinaryDecoder {
       case TypeOid.dateArray:
         return readListBytes<DateTime>(
           input,
-          (reader, _) =>
-              DateTime.utc(2000).add(Duration(days: reader.readInt32())),
+          (reader, _) => dateTimeFromDaysSinceY2k(reader.readInt32()),
         ).items;
       case TypeOid.timeArray:
         return readListBytes<Time>(
@@ -1026,9 +1014,7 @@ class PostgresBinaryDecoder {
       case TypeOid.timestampTzArray:
         return readListBytes<DateTime>(
           input,
-          (reader, _) => DateTime.utc(
-            2000,
-          ).add(Duration(microseconds: reader.readInt64())),
+          (reader, _) => dateTimeFromMicrosecondsSinceY2k(reader.readInt64()),
         ).items;
 
       case TypeOid.varCharArray:
