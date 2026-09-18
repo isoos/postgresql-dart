@@ -6,6 +6,13 @@ import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
 
+Duration _requirePositive(String name, Duration value) {
+  if (value <= Duration.zero) {
+    throw ArgumentError('$name must be positive, got $value.');
+  }
+  return value;
+}
+
 class ResolvedSessionSettings implements SessionSettings {
   @override
   final Duration connectTimeout;
@@ -17,14 +24,18 @@ class ResolvedSessionSettings implements SessionSettings {
   final bool ignoreSuperfluousParameters;
 
   ResolvedSessionSettings(SessionSettings? settings, SessionSettings? fallback)
-    : connectTimeout =
-          settings?.connectTimeout ??
-          fallback?.connectTimeout ??
-          Duration(seconds: 15),
-      queryTimeout =
-          settings?.queryTimeout ??
-          fallback?.queryTimeout ??
-          Duration(minutes: 5),
+    : connectTimeout = _requirePositive(
+        'connectTimeout',
+        settings?.connectTimeout ??
+            fallback?.connectTimeout ??
+            Duration(seconds: 15),
+      ),
+      queryTimeout = _requirePositive(
+        'queryTimeout',
+        settings?.queryTimeout ??
+            fallback?.queryTimeout ??
+            Duration(minutes: 5),
+      ),
       queryMode =
           settings?.queryMode ?? fallback?.queryMode ?? QueryMode.extended,
       ignoreSuperfluousParameters =

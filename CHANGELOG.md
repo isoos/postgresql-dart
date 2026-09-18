@@ -18,6 +18,7 @@
 - Fix logical replication tuple values arriving undecoded (raw bytes) with `typeOid` always `null`; the live decode path now resolves types and decodes binary columns.
 - Fix binary range decoding inferring a bound's byte length from the rest of the buffer instead of validating the explicit length prefix Postgres sends.
 - `TypeRegistry.decode()` now returns `FutureOr<Object?>` instead of `Future<Object?>`, avoiding a `Future` allocation per column for the common synchronous codec case; this removes real overhead from the row-decoding hot path.
+- Fix `connectTimeout`/`queryTimeout: Duration.zero` (or negative) meaning "wait forever" instead of failing fast; such values are now rejected at settings construction, matching the connection-string parser's existing validation.
 
 ## 3.5.13
 
