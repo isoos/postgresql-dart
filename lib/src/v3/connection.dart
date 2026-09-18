@@ -367,36 +367,48 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     var secure = false;
 
     if (settings.sslMode != SslMode.disable) {
-      // Query if SSL is possible by sending a SSLRequest message
-      final byteBuffer = ByteData(8);
-      byteBuffer.setUint32(0, 8);
-      byteBuffer.setUint32(4, 80877103);
-      socket.add(byteBuffer.buffer.asUint8List());
+      try {
+        // Query if SSL is possible by sending a SSLRequest message
+        final byteBuffer = ByteData(8);
+        byteBuffer.setUint32(0, 8);
+        byteBuffer.setUint32(4, 80877103);
+        socket.add(byteBuffer.buffer.asUint8List());
 
-      final byte = await sslCompleter.future.timeout(settings.connectTimeout);
-
-      if (byte == $S) {
-        // SSL is supported, upgrade!
-        subscription.pause();
-
-        socket = await SecureSocket.secure(
-          socket,
-          context: settings.securityContext,
-          onBadCertificate: settings.sslMode.ignoreCertificateIssues
-              ? (_) => true
-              : (c) => throw BadCertificateException(c),
-        ).timeout(settings.connectTimeout);
-        secure = true;
-
-        // We can listen to the secured socket again, the existing subscription is
-        // ignored.
-        adaptedStream = socket;
-      } else {
-        // This server does not support SSL
-        throw PgException(
-          'Server does not support SSL, but it was required (default configuration). '
-          'To disable secure connections, use `ConnectionSettings(sslMode: SslMode.disable)`.',
+        final byte = await sslCompleter.future.timeout(
+          settings.connectTimeout,
         );
+
+        if (byte == $S) {
+          // SSL is supported, upgrade!
+          subscription.pause();
+
+          socket = await SecureSocket.secure(
+            socket,
+            context: settings.securityContext,
+            onBadCertificate: settings.sslMode.ignoreCertificateIssues
+                ? (_) => true
+                : (c) => throw BadCertificateException(c),
+          ).timeout(settings.connectTimeout);
+          secure = true;
+
+          // We can listen to the secured socket again, the existing subscription is
+          // ignored.
+          adaptedStream = socket;
+        } else {
+          // This server does not support SSL
+          throw PgException(
+            'Server does not support SSL, but it was required (default configuration). '
+            'To disable secure connections, use `ConnectionSettings(sslMode: SslMode.disable)`.',
+          );
+        }
+      } catch (_) {
+        // The SSL handshake failed (timeout, bad cert, or the server doesn't
+        // support SSL) - at this point `PgConnectionImplementation` hasn't
+        // been constructed yet, so `connect()`'s own cleanup can't reach
+        // this socket. Close it here instead of leaking it.
+        socket.destroy();
+        unawaited(subscription.cancel());
+        rethrow;
       }
     } else {
       // We've listened to the stream already and sockets are single-subscription
