@@ -8,6 +8,7 @@
 - Fix MD5 authentication hashing credentials as UTF-16 instead of UTF-8, breaking non-ASCII passwords.
 - Fix list parameters silently mis-encoding `null` elements, and range decoding crashing on an unrecognized flag byte instead of failing gracefully.
 - Fix `RelationMessage.typeModifier` and `FieldDescription.typeSize` decoding as unsigned instead of signed, and `TruncateMessage` (now `.options`) being unable to represent combined `CASCADE`/`RESTART IDENTITY` flags.
+- Fix a socket leak when the SSL handshake fails (timeout, bad certificate, or the server doesn't support SSL).
 
 ## 3.5.14
 
