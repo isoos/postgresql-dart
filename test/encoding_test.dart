@@ -1027,7 +1027,10 @@ void main() {
           6,
           999,
         ),
-        '0010-02-03T04:05:06.123$tzOffsetDelimiter BC': DateTime(
+        // Dart's astronomical year numbering (year 0 = 1 BC, year -1 = 2 BC,
+        // ...) is the inverse of Postgres's BC year numbering, so the BC
+        // year here is `1 - astronomicalYear`: year -10 -> 11 BC.
+        '0011-02-03T04:05:06.123$tzOffsetDelimiter BC': DateTime(
           -10,
           DateTime.february,
           3,
@@ -1036,7 +1039,7 @@ void main() {
           6,
           123,
         ),
-        '0010-02-03T04:05:06.000$tzOffsetDelimiter BC': DateTime(
+        '0011-02-03T04:05:06.000$tzOffsetDelimiter BC': DateTime(
           -10,
           DateTime.february,
           3,
@@ -1045,7 +1048,7 @@ void main() {
           6,
           0,
         ),
-        '012345-02-03T04:05:06.000$tzOffsetDelimiter BC': DateTime(
+        '12346-02-03T04:05:06.000$tzOffsetDelimiter BC': DateTime(
           -12345,
           DateTime.february,
           3,
