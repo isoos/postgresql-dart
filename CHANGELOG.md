@@ -4,6 +4,7 @@
 
 - Fix the hard-timeout fallback deadlocking the connection.
 - Fix the `Sql.indexed` operator-tokenizing bug silently dropping the `:type` annotation.
+- Fix `port` query parameter being ignored for comma-separated hosts in connection strings.
 
 ## 3.5.14
 
