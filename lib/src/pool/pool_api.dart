@@ -20,8 +20,6 @@ class PoolSettings extends ConnectionSettings {
 
   /// The maximum number of queries to be run on a connection.
   /// New sessions won't be scheduled after this limit is reached.
-  ///
-  /// NOTE: not yet implemented
   final int? maxQueryCount;
 
   const PoolSettings({
