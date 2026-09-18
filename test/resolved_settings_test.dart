@@ -33,6 +33,26 @@ void main() {
       expect(a.isMatchingConnection(b), isFalse);
       expect(a.isMatchingConnection(a), isTrue);
     });
+
+    test('connections with different (but otherwise equal) onOpen closures '
+        'still match', () {
+      // A fresh closure per call is a natural Dart pattern - `onOpen` only
+      // runs once, at connection creation, so it must not prevent reuse of
+      // an already-open connection. `typeRegistry` is shared explicitly
+      // since two default `TypeRegistry()` instances aren't `==` to each
+      // other, which would otherwise mask what this test is checking.
+      final typeRegistry = TypeRegistry();
+      final a = ResolvedConnectionSettings(
+        ConnectionSettings(onOpen: (c) async {}, typeRegistry: typeRegistry),
+        null,
+      );
+      final b = ResolvedConnectionSettings(
+        ConnectionSettings(onOpen: (c) async {}, typeRegistry: typeRegistry),
+        null,
+      );
+
+      expect(a.isMatchingConnection(b), isTrue);
+    });
   });
 
   group('ResolvedSessionSettings rejects non-positive timeouts', () {

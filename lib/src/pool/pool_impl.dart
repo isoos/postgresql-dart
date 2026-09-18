@@ -41,6 +41,16 @@ class PoolImplementation<L> implements Pool<L> {
     _closing = true;
     final semaphoreFuture = _semaphore.close();
 
+    // A `withConnection` call that already acquired a semaphore permit
+    // before `_closing` was set may still be inside `_selectOrCreate`,
+    // creating a brand new connection that hasn't been added to
+    // `_connections` yet - invisible to the snapshot below unless we wait
+    // for it here. `_connectLock` serializes connection creation, so
+    // acquiring and releasing it once guarantees any such in-flight creation
+    // has either finished (and added itself to `_connections`) or bailed out
+    // (since `_selectOrCreate` itself checks `_closing`) before we proceed.
+    await _connectLock.withResource(() {});
+
     // Connections are closed when they are returned to the pool if it's closed.
     // We still need to close statements that are currently unused.
     final snapshot = [..._connections];
@@ -91,10 +101,14 @@ class PoolImplementation<L> implements Pool<L> {
             final statement = await connection.prepare(query);
             poolStatement = _PoolStatement(statement);
           } on Object catch (e, s) {
-            // Could not prepare the statement, inform the caller and stop occupying
-            // the connection.
+            // Could not prepare the statement, inform the caller and stop
+            // occupying the connection. Rethrow (after completing the
+            // completer below) so `withConnection`'s own error handling
+            // marks the connection as not to be reused - matching every
+            // other pool operation (`execute`/`run`/`runTx`), which already
+            // discard the connection on any exception from `fn`.
             statementCompleter.completeError(e, s);
-            return;
+            rethrow;
           }
 
           // Otherwise, make the future returned by prepare complete with the
@@ -147,6 +161,7 @@ class PoolImplementation<L> implements Pool<L> {
     ConnectionSettings? settings,
     L? locality,
   }) async {
+    final connectSw = Stopwatch()..start();
     final resource = await _semaphore.requestWithTimeout(
       _settings.connectTimeout,
     );
@@ -158,10 +173,14 @@ class PoolImplementation<L> implements Pool<L> {
       final selection = await _selector(context);
 
       // Find an existing connection that is currently unused, or open another
-      // one.
+      // one. Only the time left over from the semaphore wait above is
+      // available here - otherwise this call could wait up to roughly twice
+      // the configured `connectTimeout` before failing.
+      final remainingTimeout = _settings.connectTimeout - connectSw.elapsed;
       connection = await _selectOrCreate(
         selection.endpoint,
         ResolvedConnectionSettings(settings, _settings),
+        remainingTimeout,
       );
 
       sw.start();
@@ -193,6 +212,7 @@ class PoolImplementation<L> implements Pool<L> {
   Future<_PoolConnection> _selectOrCreate(
     Endpoint endpoint,
     ResolvedConnectionSettings settings,
+    Duration timeout,
   ) async {
     final oldc = _connections.firstWhereOrNull(
       (c) => c._mayReuse(endpoint, settings),
@@ -205,8 +225,11 @@ class PoolImplementation<L> implements Pool<L> {
     }
 
     return await _connectLock.withRequestTimeout(
-      timeout: _settings.connectTimeout,
+      timeout: timeout,
       (remainingTimeout) async {
+        if (_closing) {
+          throw PgException('The pool is closing, cannot open a connection.');
+        }
         while (_connections.length >= _maxConnectionCount) {
           final candidates = _connections
               .where((c) => c._isInUse == false)
