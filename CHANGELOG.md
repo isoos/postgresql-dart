@@ -9,6 +9,7 @@
 - Fix list parameters silently mis-encoding `null` elements, and range decoding crashing on an unrecognized flag byte instead of failing gracefully.
 - Fix `RelationMessage.typeModifier` and `FieldDescription.typeSize` decoding as unsigned instead of signed, and `TruncateMessage` (now `.options`) being unable to represent combined `CASCADE`/`RESTART IDENTITY` flags.
 - Fix a socket leak when the SSL handshake fails (timeout, bad certificate, or the server doesn't support SSL).
+- Fix dollar-quoted strings with a lettered tag (e.g. `$body$...$body$`) not being recognized in `Sql.indexed` queries.
 
 ## 3.5.14
 

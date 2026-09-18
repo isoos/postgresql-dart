@@ -235,6 +235,17 @@ void main() {
       expect(desc.namedVariables?.keys, ['1']);
     });
 
+    test('dollar quoted string with a lettered tag in indexed mode', () {
+      // Indexed mode's variable-name characters are digits-only, but a
+      // dollar-quote tag follows normal identifier rules regardless of mode.
+      final desc = InternalQueryDescription.indexed(
+        r'SELECT $body$ text with @1 inside $body$',
+      );
+
+      expect(desc.transformedSql, r'SELECT $body$ text with @1 inside $body$');
+      expect(desc.parameterTypes, isEmpty);
+    });
+
     // https://www.postgresql.org/docs/current/functions-json.html
     final operators = ['@>', '<@', '@?', '@@'];
     for (final operator in operators) {

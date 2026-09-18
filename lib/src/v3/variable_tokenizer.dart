@@ -222,7 +222,13 @@ class VariableTokenizer {
       if (char == $dollar) {
         escapeSequenceBuilder.writeCharCode(char);
         break;
-      } else if (_canAppearInVariable(char)) {
+      } else if (_canAppearInTypeName(char)) {
+        // Dollar-quote tag characters follow the same rules as an unquoted
+        // identifier (letters, digits, underscore) regardless of tokenizer
+        // mode - unlike `_canAppearInVariable`, which in indexed mode only
+        // allows digits (for auto-incrementing `@1`/`@2` variables) and
+        // would otherwise mistake a lettered tag like `$body$` for "not a
+        // dollar-quoted string".
         escapeSequenceBuilder.writeCharCode(char);
       } else {
         // Not a dollar-quoted string literal.
