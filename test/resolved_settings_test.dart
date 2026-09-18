@@ -34,4 +34,38 @@ void main() {
       expect(a.isMatchingConnection(a), isTrue);
     });
   });
+
+  group('ResolvedSessionSettings rejects non-positive timeouts', () {
+    test('zero connectTimeout throws', () {
+      expect(
+        () => ResolvedSessionSettings(
+          SessionSettings(connectTimeout: Duration.zero),
+          null,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('negative queryTimeout throws', () {
+      expect(
+        () => ResolvedSessionSettings(
+          SessionSettings(queryTimeout: Duration(seconds: -1)),
+          null,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('positive timeouts are accepted', () {
+      final settings = ResolvedSessionSettings(
+        SessionSettings(
+          connectTimeout: Duration(seconds: 1),
+          queryTimeout: Duration(seconds: 1),
+        ),
+        null,
+      );
+      expect(settings.connectTimeout, Duration(seconds: 1));
+      expect(settings.queryTimeout, Duration(seconds: 1));
+    });
+  });
 }
