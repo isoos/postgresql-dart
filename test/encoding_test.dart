@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:postgres/postgres.dart';
+import 'package:postgres/src/types/binary_codec.dart';
 import 'package:postgres/src/types/text_codec.dart';
 import 'package:postgres/src/types/type_registry.dart';
 import 'package:test/test.dart';
@@ -975,6 +976,25 @@ void main() {
       expect(encoder.convert(Uint8List(0), escapeStrings: false), r'\x');
     });
 
+    test('Encode lists containing null elements', () {
+      expect(
+        encoder.convert([null, 1, 2], escapeStrings: false),
+        '{NULL,1,2}',
+      );
+      expect(
+        encoder.convert(['a', null, 'b'], escapeStrings: false),
+        '{"a",NULL,"b"}',
+      );
+      expect(
+        encoder.convert([null, null], escapeStrings: false),
+        '{NULL,NULL}',
+      );
+      expect(
+        encoder.convert([null, true, false], escapeStrings: false),
+        '{NULL,true,false}',
+      );
+    });
+
     test('Encode DateTime', () {
       // Get users current timezone
       final tz = DateTime(2001, 2, 3).timeZoneOffset;
@@ -1119,6 +1139,23 @@ void main() {
       } on PgException catch (e) {
         expect(e.toString(), contains('Could not infer type'));
       }
+    });
+  });
+
+  group('Binary decoders', () {
+    test('Range with an unrecognized flag byte decodes as empty instead of '
+        'throwing', () {
+      final context = CodecContext.withDefaults();
+      // Flag 32 (`RANGE_LB_NULL`) is a documented-but-"NOT USED" bit and
+      // isn't one of the flag combinations this package's range decoder
+      // handles.
+      final bytes = Uint8List.fromList([32]);
+      final result = PostgresBinaryDecoder.convert(
+        context,
+        TypeOid.integerRange,
+        bytes,
+      );
+      expect(result, IntRange.empty());
     });
   });
 }

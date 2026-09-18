@@ -1175,9 +1175,13 @@ class PostgresBinaryDecoder {
     int elementTypeOid,
   ) {
     final flag = buffer.getInt8(0);
-    final bounds = Bounds.fromFlag(flag);
+    // `Bounds.fromFlag` throws for a flag it doesn't recognize, so it must
+    // only be called for the flags handled below - otherwise a malformed or
+    // unexpected flag byte would crash decoding instead of hitting the
+    // `default: return null` fallback.
     switch (flag) {
       case 0 || 2 || 4 || 6:
+        final bounds = Bounds.fromFlag(flag);
         final lowerLength = buffer.getInt32(1);
         final lowerBytes = dinput.sublist(5, 5 + lowerLength);
         final lower = _decodeRangeElement(context, elementTypeOid, lowerBytes);
@@ -1188,16 +1192,19 @@ class PostgresBinaryDecoder {
         final upper = _decodeRangeElement(context, elementTypeOid, upperBytes);
         return (lower, upper, bounds);
       case 8 || 12:
+        final bounds = Bounds.fromFlag(flag);
         final upperLength = buffer.getInt32(1);
         final bytes = dinput.sublist(5, 5 + upperLength);
         final upper = _decodeRangeElement(context, elementTypeOid, bytes);
         return (null, upper, bounds);
       case 16 || 18:
+        final bounds = Bounds.fromFlag(flag);
         final lowerLength = buffer.getInt32(1);
         final bytes = dinput.sublist(5, 5 + lowerLength);
         final lower = _decodeRangeElement(context, elementTypeOid, bytes);
         return (lower, null, bounds);
       case 24:
+        final bounds = Bounds.fromFlag(flag);
         return (null, null, bounds);
       default:
         return null;
