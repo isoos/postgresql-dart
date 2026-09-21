@@ -210,8 +210,12 @@ final class DateRange extends DiscreteRange<DateTime> {
   /// Remove hours, minutes, seconds, milliseconds and microseconds from [DateTime]
   DateTime? _removeTime(DateTime? dt) {
     if (dt == null) return null;
-    final days = dt.microsecondsSinceEpoch ~/ Duration.microsecondsPerDay;
-    final microseconds = days * Duration.microsecondsPerDay;
+    // Floor division via `%` (Dart's int `%` is Euclidean and always
+    // non-negative for a positive divisor), not truncating `~/`: for a
+    // pre-epoch DateTime with a non-midnight time, `~/` would round towards
+    // 1970-01-01 instead of down to the correct day.
+    final us = dt.microsecondsSinceEpoch;
+    final microseconds = us - us % Duration.microsecondsPerDay;
     return DateTime.fromMicrosecondsSinceEpoch(microseconds, isUtc: true);
   }
 
