@@ -3,6 +3,7 @@
 ## 3.5.16
 
 - Fix `DateRange` truncating pre-1970 bounds with a time component to the wrong day.
+- Fix the pool reusing an idle connection without checking whether `close()` was already called, and `Statement.dispose()` throwing if called twice.
 
 ## 3.5.15
 
