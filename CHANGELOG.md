@@ -8,6 +8,7 @@
 - SASL: compare the SCRAM server signature in constant time, and reject a server that doesn't offer `SCRAM-SHA-256`.
 - Fix a malformed message frame with a length `< 4` crashing the parser instead of failing gracefully, and remove a broken, unused `bytesToMessageParser`.
 - Fix dollar-quoted strings with a self-overlapping tag sometimes missing their real closing delimiter, and a non-digit name after an indexed-mode marker silently producing malformed SQL instead of an error.
+- Fix `tsvector`/`tsquery` throwing instead of degrading gracefully when decoded in text format.
 
 ## 3.5.15
 

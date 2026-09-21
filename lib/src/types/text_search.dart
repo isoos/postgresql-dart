@@ -103,7 +103,7 @@ class TsVectorCodec extends Codec {
   }
 
   @override
-  TsVector? decode(EncodedValue input, CodecContext context) {
+  Object? decode(EncodedValue input, CodecContext context) {
     final bytes = input.bytes;
     if (bytes == null) {
       return null;
@@ -126,7 +126,14 @@ class TsVectorCodec extends Codec {
       }
       return TsVector(words: lexemes);
     } else {
-      throw UnimplementedError();
+      // Text-format decoding isn't implemented; degrade gracefully like
+      // every other codec's text fallback instead of throwing.
+      return UndecodedBytes(
+        typeOid: input.typeOid!,
+        bytes: bytes,
+        isBinary: false,
+        encoding: context.encoding,
+      );
     }
   }
 }
@@ -203,7 +210,7 @@ class TsQueryCodec extends Codec {
   }
 
   @override
-  TsQuery? decode(EncodedValue input, CodecContext context) {
+  Object? decode(EncodedValue input, CodecContext context) {
     final bytes = input.bytes;
     if (bytes == null) {
       return null;
@@ -280,7 +287,14 @@ class TsQueryCodec extends Codec {
         'Unable to parse TsQuery: ${items.join(', ')} ${input.bytes}',
       );
     } else {
-      throw UnimplementedError();
+      // Text-format decoding isn't implemented; degrade gracefully like
+      // every other codec's text fallback instead of throwing.
+      return UndecodedBytes(
+        typeOid: input.typeOid!,
+        bytes: bytes,
+        isBinary: false,
+        encoding: context.encoding,
+      );
     }
   }
 }
