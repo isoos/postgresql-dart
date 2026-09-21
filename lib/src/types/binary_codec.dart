@@ -392,7 +392,7 @@ class PostgresBinaryEncoder {
           if (input is List) {
             return _writeListBytes<bool>(
               _castOrThrowList<bool>(input),
-              16,
+              TypeOid.boolean,
               (_) => 1,
               (writer, item) => writer.writeUint8(item ? 1 : 0),
               encoding,
@@ -424,7 +424,7 @@ class PostgresBinaryEncoder {
           if (input is List) {
             return _writeListBytes<int>(
               _castOrThrowList<int>(input),
-              23,
+              TypeOid.integer,
               (_) => 4,
               (writer, item) => writer.writeInt32(item),
               encoding,
@@ -440,7 +440,7 @@ class PostgresBinaryEncoder {
           if (input is List) {
             return _writeListBytes<int>(
               _castOrThrowList<int>(input),
-              20,
+              TypeOid.bigInteger,
               (_) => 8,
               (writer, item) => writer.writeInt64(item),
               encoding,
@@ -525,7 +525,7 @@ class PostgresBinaryEncoder {
             ).map((v) => v == null ? null : encoding.encode(v)).toList();
             return _writeListBytes<List<int>>(
               bytesArray,
-              1043,
+              TypeOid.varChar,
               (item) => item.length,
               (writer, item) => writer.write(item),
               encoding,
@@ -544,7 +544,7 @@ class PostgresBinaryEncoder {
             ).map((v) => v == null ? null : encoding.encode(v)).toList();
             return _writeListBytes<List<int>>(
               bytesArray,
-              25,
+              TypeOid.text,
               (item) => item.length,
               (writer, item) => writer.write(item),
               encoding,
@@ -560,7 +560,7 @@ class PostgresBinaryEncoder {
           if (input is List) {
             return _writeListBytes<double>(
               _castOrThrowList<double>(input),
-              701,
+              TypeOid.double,
               (_) => 8,
               (writer, item) => writer.writeFloat64(item),
               encoding,
@@ -581,7 +581,7 @@ class PostgresBinaryEncoder {
             }).toList();
             return _writeListBytes<List<int>>(
               objectsArray,
-              3802,
+              TypeOid.jsonb,
               (item) => item.length + 1,
               (writer, item) {
                 writer.writeUint8(1);

@@ -9,6 +9,7 @@
 - Fix a malformed message frame with a length `< 4` crashing the parser instead of failing gracefully, and remove a broken, unused `bytesToMessageParser`.
 - Fix dollar-quoted strings with a self-overlapping tag sometimes missing their real closing delimiter, and a non-digit name after an indexed-mode marker silently producing malformed SQL instead of an error.
 - Fix `tsvector`/`tsquery` throwing instead of degrading gracefully when decoded in text format.
+- Use named `TypeOid` constants instead of raw literals in binary array encoders.
 
 ## 3.5.15
 
