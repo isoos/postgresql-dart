@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.16
+
+- Fix `DateRange` truncating pre-1970 bounds with a time component to the wrong day.
+
 ## 3.5.15
 
 - Fix the hard-timeout fallback deadlocking the connection.
