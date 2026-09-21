@@ -222,6 +222,9 @@ class PoolImplementation<L> implements Pool<L> {
     ResolvedConnectionSettings settings,
     Duration timeout,
   ) async {
+    if (_closing) {
+      throw PgException('The pool is closing, cannot open a connection.');
+    }
     final oldc = _connections.firstWhereOrNull(
       (c) => c._mayReuse(endpoint, settings),
     );
@@ -409,6 +412,7 @@ class _PoolStatement implements Statement {
 
   @override
   Future<void> dispose() async {
+    if (_disposed.isCompleted) return;
     _disposed.complete();
     await _underlying.dispose();
   }
