@@ -6,6 +6,7 @@ import 'package:charcode/ascii.dart';
 import 'package:postgres/src/types/codec.dart';
 
 import 'buffer.dart';
+import 'exceptions.dart';
 import 'messages/server_messages.dart';
 import 'messages/shared_messages.dart';
 
@@ -43,12 +44,6 @@ class _BytesFrame {
   _BytesFrame(this.type, this.length, this.bytes);
 }
 
-StreamTransformer<Uint8List, ServerMessage> bytesToMessageParser() {
-  return StreamTransformer<Uint8List, ServerMessage>.fromHandlers(
-    handleData: (data, sink) {},
-  );
-}
-
 final _emptyData = Uint8List(0);
 
 class _BytesToFrameParser
@@ -71,6 +66,11 @@ class _BytesToFrameParser
         if (type == null && reader.remainingLength >= _headerByteSize) {
           type = reader.readUint8();
           expectedLength = reader.readUint32() - 4;
+          if (expectedLength < 0) {
+            throw PgException(
+              'Invalid message frame: length must be at least 4 bytes.',
+            );
+          }
         }
 
         // special case
