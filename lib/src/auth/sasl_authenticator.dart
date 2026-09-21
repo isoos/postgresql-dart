@@ -28,7 +28,18 @@ class PostgresSaslAuthenticator extends PostgresAuthenticator {
     ClientMessage? msg;
     switch (message.type) {
       case AuthenticationMessageType.sasl:
-        // Server sends list of supported mechanisms
+        // Server sends a list of supported mechanisms, as null-terminated
+        // strings terminated by a final null byte.
+        final mechanisms = utf8
+            .decode(message.bytes)
+            .split('\x00')
+            .where((m) => m.isNotEmpty);
+        if (!mechanisms.contains('SCRAM-SHA-256')) {
+          throw PgException(
+            'Server does not support the SCRAM-SHA-256 SASL mechanism '
+            '(offered: ${mechanisms.join(', ')}).',
+          );
+        }
         final bytesToSend = _authenticator.generateClientFirstMessage();
         msg = SaslClientFirstMessage(bytesToSend, 'SCRAM-SHA-256');
         break;
@@ -160,11 +171,21 @@ class _ScramSha256Authenticator {
     final serverKey = _hmac(saltedPassword, utf8.encode('Server Key'));
     final serverSignature = _hmac(serverKey, utf8.encode(_authMessage!));
 
-    // Verify server signature
+    // Verify server signature (constant-time to avoid leaking timing
+    // information about the expected signature to a MITM).
     final expectedSignature = base64.encode(serverSignature);
-    if (serverSignatureB64 != expectedSignature) {
+    if (!_constantTimeEquals(serverSignatureB64, expectedSignature)) {
       throw PgException('Server signature verification failed');
     }
+  }
+
+  bool _constantTimeEquals(String a, String b) {
+    if (a.length != b.length) return false;
+    var diff = 0;
+    for (var i = 0; i < a.length; i++) {
+      diff |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
+    }
+    return diff == 0;
   }
 
   /// Parse SASL message into key-value pairs
