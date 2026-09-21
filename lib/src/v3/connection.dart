@@ -380,13 +380,34 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
           // SSL is supported, upgrade!
           subscription.pause();
 
-          socket = await SecureSocket.secure(
+          // `.timeout()` below doesn't cancel the handshake - if it later
+          // succeeds anyway (after we've given up on it), close the
+          // resulting secure socket instead of leaking it, since nothing
+          // else would ever reach it.
+          var gaveUpOnHandshake = false;
+          final secureFuture = SecureSocket.secure(
             socket,
             context: settings.securityContext,
             onBadCertificate: settings.sslMode.ignoreCertificateIssues
                 ? (_) => true
                 : (c) => throw BadCertificateException(c),
-          ).timeout(settings.connectTimeout);
+          );
+          unawaited(
+            secureFuture
+                .then((s) {
+                  if (gaveUpOnHandshake) {
+                    s.destroy();
+                  }
+                })
+                .catchError((_) {}),
+          );
+          socket = await secureFuture.timeout(
+            settings.connectTimeout,
+            onTimeout: () {
+              gaveUpOnHandshake = true;
+              throw TimeoutException('SSL handshake timed out');
+            },
+          );
           secure = true;
 
           // We can listen to the secured socket again, the existing subscription is
@@ -634,6 +655,15 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
   }) {
+    if (_activeTransaction != null) {
+      // `_operationLock` is not reentrant: acquiring it below while this
+      // connection's own `runTx` call is still on the stack (holding that
+      // same lock) would deadlock silently instead of failing fast.
+      throw PgException(
+        'Attempting to call `runTx` on a connection while inside another '
+        '`runTx` call on the same connection.',
+      );
+    }
     final rsettings = ResolvedTransactionSettings(settings, _settings);
     // Keep this database is locked while the transaction is active. We do that
     // because on a protocol level, the entire connection is in a transaction.
