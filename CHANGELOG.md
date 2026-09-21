@@ -4,6 +4,7 @@
 
 - Fix `DateRange` truncating pre-1970 bounds with a time component to the wrong day.
 - Fix the pool reusing an idle connection without checking whether `close()` was already called, and `Statement.dispose()` throwing if called twice.
+- Fix `runTx` deadlocking instead of failing fast when called again from within its own callback, and an SSL handshake that times out but succeeds later leaking its socket.
 
 ## 3.5.15
 
