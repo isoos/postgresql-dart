@@ -256,8 +256,7 @@ class VariableTokenizer {
         tail.removeAt(0);
       }
 
-      if (tail.length == endSequence.length &&
-          _listEquals(tail, endSequence)) {
+      if (tail.length == endSequence.length && _listEquals(tail, endSequence)) {
         // The entire end sequence has been matched, so the literal is over.
         return;
       }
