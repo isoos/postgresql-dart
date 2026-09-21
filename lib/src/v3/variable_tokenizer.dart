@@ -238,29 +238,37 @@ class VariableTokenizer {
 
     // Now, we interpret everything as a string literal until we see the escape
     // sequence again.
-    final endSequence = escapeSequenceBuilder.toString();
-    var matchedCharactersOfEndSequence = 0;
+    final endSequence = escapeSequenceBuilder.toString().codeUnits;
+    // The last `endSequence.length` code units read, to check for a match.
+    // A plain "reset to 0 on mismatch" counter (without this sliding window)
+    // can miss a real closing tag: e.g. for tag `$aa$` and remaining body
+    // `$a$aa$`, matching against offset 0 fails at position 2 (`$` where `a`
+    // was expected) and resets to 0 - permanently skipping the `$` at
+    // position 2, which is actually where the real closing `$aa$` begins.
+    final tail = <int>[];
 
     while (!_isAtEnd) {
       final char = _consume();
       _rewrittenSql.writeCharCode(char);
 
-      final nextCharInEndSequence = endSequence.codeUnitAt(
-        matchedCharactersOfEndSequence,
-      );
+      tail.add(char);
+      if (tail.length > endSequence.length) {
+        tail.removeAt(0);
+      }
 
-      if (char == nextCharInEndSequence) {
-        matchedCharactersOfEndSequence++;
-
-        if (matchedCharactersOfEndSequence == endSequence.length) {
-          // The entire end sequence has been matched, so the literal is over.
-          return;
-        }
-      } else {
-        // Okay, this didn't write the full escape sequence.
-        matchedCharactersOfEndSequence = 0;
+      if (tail.length == endSequence.length &&
+          _listEquals(tail, endSequence)) {
+        // The entire end sequence has been matched, so the literal is over.
+        return;
       }
     }
+  }
+
+  static bool _listEquals(List<int> a, List<int> b) {
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   /// After reading the start of a string literal, this method reads the
@@ -377,6 +385,21 @@ class VariableTokenizer {
       // original syntax.
       _rewrittenSql.writeCharCode(_variableCodeUnit);
       return;
+    }
+
+    if (nameBuffer.isEmpty &&
+        mode == TokenizerMode.indexed &&
+        !consumedColonForType &&
+        !_isAtEnd &&
+        _canAppearInTypeName(_peek())) {
+      // A non-digit name character right after the marker in indexed mode
+      // (e.g. `?abc` with a custom `?` substitution) used to silently fall
+      // through to "bare auto-incrementing variable", leaving `abc` behind
+      // as literal, uninterpreted SQL text (producing garbage like `$1abc`).
+      error(
+        'Indexed variables only support digits as names, found '
+        '`${String.fromCharCode(_peek())}`.',
+      );
     }
 
     if (nameBuffer.isEmpty &&
