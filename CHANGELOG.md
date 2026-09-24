@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.17
+
+- Fix `runTx` throwing instead of waiting when called while another transaction is active on the same connection. Only a call from within the transaction's own callback fails fast now.
+
 ## 3.5.16
 
 - Fix `DateRange` truncating pre-1970 bounds with a time component to the wrong day.

@@ -22,6 +22,8 @@ import 'protocol.dart';
 import 'query_description.dart';
 import 'resolved_settings.dart';
 
+final _runTxZoneKey = Object();
+
 const _debugLog = false;
 
 String _identifier(String source) {
@@ -655,10 +657,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
   }) {
-    if (_activeTransaction != null) {
-      // `_operationLock` is not reentrant: acquiring it below while this
-      // connection's own `runTx` call is still on the stack (holding that
-      // same lock) would deadlock silently instead of failing fast.
+    final enclosingTransactions =
+        Zone.current[_runTxZoneKey] as Set<PgConnectionImplementation>?;
+    if (enclosingTransactions != null && enclosingTransactions.contains(this)) {
+      // `_operationLock` is not reentrant: acquiring it below from inside this
+      // connection's own `runTx` callback (which holds that same lock) would
+      // deadlock silently instead of failing fast. A call from outside the
+      // callback is not re-entrant and queues on the lock instead.
       throw PgException(
         'Attempting to call `runTx` on a connection while inside another '
         '`runTx` call on the same connection.',
@@ -692,7 +697,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       try {
         await transaction.execute(Sql(beginQuery), queryMode: QueryMode.simple);
 
-        final result = await fn(transaction);
+        final result = await runZoned(
+          () => fn(transaction),
+          zoneValues: {
+            _runTxZoneKey: {...?enclosingTransactions, this},
+          },
+        );
         if (transaction.mayCommit) {
           await transaction._sendAndMarkClosed('COMMIT;');
         } else if (!transaction._sessionClosed) {

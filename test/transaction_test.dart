@@ -108,6 +108,51 @@ void main() {
       },
     );
 
+    test(
+      'runTx called while another transaction is active waits for it',
+      () async {
+        final firstStarted = Completer<void>();
+        final order = <int>[];
+
+        final first = conn.runTx((c) async {
+          await c.execute('INSERT INTO t (id) VALUES (1)');
+          firstStarted.complete();
+          await c.execute('SELECT pg_sleep(0.1)');
+          order.add(1);
+        });
+
+        await firstStarted.future;
+        await conn.runTx((c) async {
+          await c.execute('INSERT INTO t (id) VALUES (2)');
+          order.add(2);
+        });
+        await first;
+
+        expect(order, [1, 2]);
+        expect(await conn.execute('SELECT id FROM t ORDER BY id'), [
+          [1],
+          [2],
+        ]);
+      },
+    );
+
+    test('runTx called from within its own callback fails fast', () async {
+      await expectLater(
+        conn.runTx((c) => conn.runTx((c2) => c2.execute('SELECT 1'))),
+        throwsA(
+          isA<PgException>().having(
+            (e) => e.message,
+            'message',
+            contains('inside another `runTx`'),
+          ),
+        ),
+      );
+
+      expect(await conn.execute('SELECT 1'), [
+        [1],
+      ]);
+    });
+
     test('May intentionally rollback transaction', () async {
       final rollback = Exception();
 
