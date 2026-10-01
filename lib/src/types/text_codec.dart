@@ -292,8 +292,7 @@ class PostgresTextEncoder {
   }
 }
 
-/// Whether [text] is Postgres's text representation of an infinite
-/// date/timestamp value, which has no finite `DateTime` equivalent.
+/// Whether [text] is Postgres's `infinity`/`-infinity` date/timestamp text.
 bool _isInfinityDateTimeText(String text) =>
     text == 'infinity' || text == '-infinity';
 
@@ -356,8 +355,7 @@ class PostgresTextDecoder {
         {
           final text = asText();
           if (_isInfinityDateTimeText(text)) {
-            // `infinity`/`-infinity` has no finite `DateTime` equivalent;
-            // degrade gracefully instead of throwing from `DateTime.parse`.
+            // No finite `DateTime` equivalent.
             return UndecodedBytes(
               typeOid: typeOid,
               bytes: di,
@@ -385,8 +383,7 @@ class PostgresTextDecoder {
         {
           final text = asText();
           if (_isInfinityDateTimeText(text)) {
-            // `infinity`/`-infinity` has no finite `DateTime` equivalent;
-            // degrade gracefully instead of throwing from `DateTime.parse`.
+            // No finite `DateTime` equivalent.
             return UndecodedBytes(
               typeOid: typeOid,
               bytes: di,

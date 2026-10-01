@@ -3,8 +3,12 @@
 ## 3.5.18
 
 - Fix the statement after a failed one sometimes returning no rows.
-- Fix decoding a `timestamp`/`timestamptz`/`date` value of `infinity`/`-infinity` throwing (binary format) or silently returning the wrong, finite date (binary `date`) or throwing (text format), instead of degrading gracefully like other codecs' unrepresentable-value fallback.
-- Fix binary decoding and encoding of multi-dimensional arrays: a 2+ dimensional array was previously misread (decode) or couldn't be constructed at all.
+- Fix `timestamp`/`timestamptz`/`date` `infinity`/`-infinity` decoding: threw, or (binary `date`) silently returned the wrong finite date, instead of degrading gracefully.
+- Fix binary multi-dimensional array decode/encode: 2+ dimensional arrays were misread, or couldn't be encoded at all.
+- Fix a double-complete crash (and the cleanup it skipped) when a statement's normal completion raced a concurrent connection close.
+- Fix a second `Channels[channel]` listener hanging forever instead of erroring when the in-flight `LISTEN` it joined fails; fix a related crash in unsubscribe.
+- Fix `runTx` leaving `_activeTransaction` set forever if neither COMMIT nor ROLLBACK ran.
+- Fix an unexpected-message error being dropped or overwritten instead of reported to the caller.
 
 ## 3.5.17
 
