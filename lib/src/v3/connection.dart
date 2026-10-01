@@ -957,6 +957,10 @@ class _PgResultStreamSubscription
   ResultSchema? _resultSchema;
   _BoundStatement? _boundStatement;
 
+  /// Errors for this statement, reported once the statement has ended and
+  /// released the connection (see [_finish]).
+  final _errors = <(Object, StackTrace)>[];
+
   @override
   PgConnectionImplementation get connection => session._connection;
 
@@ -1035,10 +1039,28 @@ class _PgResultStreamSubscription
       // _withResource can fail if the connection or the session is already
       // closed. This error should be reported to the user!
       if (!_done.isCompleted) {
-        _controller.addError(e, s);
-        await _completeQuery();
+        _errors.add((e, s));
+        _completeQuery();
       }
     }
+    await _finish();
+  }
+
+  /// Reports the outcome to the listener once [_scheduleStatement]'s
+  /// [_withResource] has returned: the statement has ended, and the
+  /// connection no longer has it pending.
+  ///
+  /// The server sends a failed statement's [ErrorResponseMessage] before the
+  /// [ReadyForQueryMessage] that ends it. A listener told of the error at the
+  /// first message could start a statement on another session (each session
+  /// has its own lock) while this one is still pending: that statement would
+  /// trip the `_pending` assertion in [_withResource], or, with asserts
+  /// disabled, take this statement's [ReadyForQueryMessage] as its own end.
+  Future<void> _finish() async {
+    for (final (error, stackTrace) in _errors) {
+      _controller.addError(error, stackTrace);
+    }
+    await _controller.close();
   }
 
   @override
@@ -1047,7 +1069,7 @@ class _PgResultStreamSubscription
   @override
   Future<ResultSchema> get schema => _schema.future;
 
-  Future<void> _completeQuery() async {
+  void _completeQuery() {
     // Make sure the affectedRows and schema futures complete with something
     // after the query is done, even if we didn't get a row description
     // message.
@@ -1057,8 +1079,8 @@ class _PgResultStreamSubscription
     if (!_schema.isCompleted) {
       _schema.complete(ResultSchema(const []));
     }
+    // The listener hears of it in [_finish], once the connection is free.
     _done.complete();
-    await _controller.close();
   }
 
   StackTrace _trace() => Chain([
@@ -1070,14 +1092,16 @@ class _PgResultStreamSubscription
   @override
   void handleConnectionClosed(PgException? dueToException) {
     if (dueToException != null) {
-      _controller.addError(dueToException, _trace());
+      _errors.add((dueToException, _trace()));
     }
     _completeQuery();
   }
 
   @override
   void handleError(PgException exception) {
-    _controller.addError(exception, _trace());
+    // We're not done yet: the ReadyForQueryMessage ending the statement
+    // follows, and the error is reported after it (see [_finish]).
+    _errors.add((exception, _trace()));
   }
 
   @override
@@ -1161,7 +1185,7 @@ class _PgResultStreamSubscription
         if (message.state == ReadyForQueryMessageState.transaction) {
           _boundStatement?.statement._addPortalToClose(_portalName);
         }
-        await _completeQuery();
+        _completeQuery();
       case CopyBothResponseMessage():
         // This message indicates a successful start for Streaming Replication.
         // Hence, in this context, the query is complete. And from here on,
@@ -1170,7 +1194,7 @@ class _PgResultStreamSubscription
         // queries, the server messages will be blocked.
         // TODO(osaxma): Prevent executing queries when Streaming Replication
         //               is ongoing
-        await _completeQuery();
+        _completeQuery();
       case EmptyQueryResponseMessage():
         break;
       default:

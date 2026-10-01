@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.18
+
+- Fix the statement after a failed one sometimes returning no rows.
+
 ## 3.5.17
 
 - Fix `runTx` throwing instead of waiting when called while another transaction is active on the same connection. Only a call from within the transaction's own callback fails fast now.
