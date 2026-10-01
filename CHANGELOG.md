@@ -4,6 +4,7 @@
 
 - Fix the statement after a failed one sometimes returning no rows.
 - Fix decoding a `timestamp`/`timestamptz`/`date` value of `infinity`/`-infinity` throwing (binary format) or silently returning the wrong, finite date (binary `date`) or throwing (text format), instead of degrading gracefully like other codecs' unrepresentable-value fallback.
+- Fix binary decoding and encoding of multi-dimensional arrays: a 2+ dimensional array was previously misread (decode) or couldn't be constructed at all.
 
 ## 3.5.17
 
