@@ -458,6 +458,79 @@ void main() {
       );
     });
 
+    // Postgres array columns aren't dimension-typed: a column declared e.g.
+    // `int4[]` can hold a 1-D or N-D array interchangeably, and the same
+    // type OID (`_int4`/`_bool`/`_varchar`) is used regardless.
+    test(
+      '2D/3D integerArray round-trips through binary encode/decode',
+      () async {
+        await expectReversible('_int4', [
+          [
+            [1, 2],
+            [3, 4],
+          ],
+          [
+            [null, -1],
+            [0, 200],
+          ],
+          [
+            [
+              [1, 2],
+              [3, 4],
+            ],
+            [
+              [5, 6],
+              [7, 8],
+            ],
+          ],
+        ], skipNegative: true);
+      },
+    );
+
+    test('2D booleanArray round-trips through binary encode/decode', () async {
+      await expectReversible('_bool', [
+        [
+          [true, false],
+          [false, true],
+        ],
+      ], skipNegative: true);
+    });
+
+    test('2D doubleArray round-trips through binary encode/decode', () async {
+      await expectReversible('_float8', [
+        [
+          [1.5, 2.5],
+          [3.5, 4.5],
+        ],
+      ], skipNegative: true);
+    });
+
+    test('2D varCharArray round-trips through binary encode/decode', () async {
+      await expectReversible('_varchar', [
+        [
+          ['a', 'b'],
+          ['c', null],
+        ],
+      ], skipNegative: true);
+    });
+
+    test('irregular (non-rectangular) array parameters throw instead of '
+        'sending malformed bytes', () async {
+      final type = TypeRegistry().resolveSubstitution('_int4')!;
+      await expectLater(
+        conn.execute(
+          Sql(r'SELECT $1', types: [type]),
+          parameters: [
+            [
+              [1, 2],
+              [3],
+            ],
+          ],
+        ),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
     test('jsonbArray', () async {
       await expectReversible('_jsonb', [
         null,
@@ -1176,6 +1249,49 @@ void main() {
       expect(result, IntRange.empty());
     });
 
+    Uint8List int32be(int value) =>
+        (ByteData(4)..setInt32(0, value)).buffer.asUint8List();
+    Uint8List concatInt32s(List<int> values) =>
+        Uint8List.fromList(values.expand(int32be).toList());
+
+    test('Decodes a 2-dimensional int4[] (hand-built wire bytes, not '
+        'round-tripped through this package\'s own encoder) into nested '
+        'lists instead of misreading the second dimension\'s header as '
+        'element data', () {
+      final context = CodecContext.withDefaults();
+      // Postgres's wire format for `'{{1,2},{3,4}}'::int4[]`:
+      //   ndim=2, flags=0, elemtype=23 (int4)
+      //   dim0: size=2, lowerbound=1
+      //   dim1: size=2, lowerbound=1
+      //   elements (row-major): len=4,1 len=4,2 len=4,3 len=4,4
+      final bytes = concatInt32s([
+        2, 0, TypeOid.integer, // header: ndim, flags, elemtype
+        2, 1, // dim0: size, lower bound
+        2, 1, // dim1: size, lower bound
+        4, 1, 4, 2, 4, 3, 4, 4, // elements: (len, value) x4
+      ]);
+      final result = PostgresBinaryDecoder.convert(
+        context,
+        TypeOid.integerArray,
+        bytes,
+      );
+      expect(result, [
+        [1, 2],
+        [3, 4],
+      ]);
+    });
+
+    test('Decodes an empty array (ndim=0) as an empty list', () {
+      final context = CodecContext.withDefaults();
+      final bytes = concatInt32s([0, 0, TypeOid.integer]);
+      final result = PostgresBinaryDecoder.convert(
+        context,
+        TypeOid.integerArray,
+        bytes,
+      );
+      expect(result, <int>[]);
+    });
+
     Uint8List int64Bytes(int value) =>
         (ByteData(8)..setInt64(0, value)).buffer.asUint8List();
     Uint8List int32Bytes(int value) =>
@@ -1185,24 +1301,21 @@ void main() {
       TypeOid.timestampWithoutTimezone,
       TypeOid.timestampWithTimezone,
     ]) {
-      test(
-        'timestamp (oid $typeOid) infinity decodes as UndecodedBytes '
-        'instead of throwing',
-        () {
-          final context = CodecContext.withDefaults();
-          for (final micros in [
-            9223372036854775807, // infinity
-            -9223372036854775807 - 1, // -infinity
-          ]) {
-            final result = PostgresBinaryDecoder.convert(
-              context,
-              typeOid,
-              int64Bytes(micros),
-            );
-            expect(result, isA<UndecodedBytes>());
-          }
-        },
-      );
+      test('timestamp (oid $typeOid) infinity decodes as UndecodedBytes '
+          'instead of throwing', () {
+        final context = CodecContext.withDefaults();
+        for (final micros in [
+          9223372036854775807, // infinity
+          -9223372036854775807 - 1, // -infinity
+        ]) {
+          final result = PostgresBinaryDecoder.convert(
+            context,
+            typeOid,
+            int64Bytes(micros),
+          );
+          expect(result, isA<UndecodedBytes>());
+        }
+      });
     }
 
     test('date infinity decodes as UndecodedBytes instead of silently '
@@ -1228,21 +1341,18 @@ void main() {
       TypeOid.timestampWithTimezone,
       TypeOid.date,
     ]) {
-      test(
-        'date/timestamp (oid $typeOid) infinity decodes as UndecodedBytes '
-        'instead of throwing',
-        () {
-          final context = CodecContext.withDefaults();
-          for (final text in ['infinity', '-infinity']) {
-            final result = PostgresTextDecoder.convert(
-              context,
-              typeOid,
-              Uint8List.fromList(utf8.encode(text)),
-            );
-            expect(result, isA<UndecodedBytes>());
-          }
-        },
-      );
+      test('date/timestamp (oid $typeOid) infinity decodes as UndecodedBytes '
+          'instead of throwing', () {
+        final context = CodecContext.withDefaults();
+        for (final text in ['infinity', '-infinity']) {
+          final result = PostgresTextDecoder.convert(
+            context,
+            typeOid,
+            Uint8List.fromList(utf8.encode(text)),
+          );
+          expect(result, isA<UndecodedBytes>());
+        }
+      });
     }
   });
 }

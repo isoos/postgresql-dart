@@ -245,12 +245,15 @@ class PostgresBinaryEncoder {
       case TypeOid.byteArrayArray:
         {
           if (input is List) {
+            // `allowNested: false`: each element is itself a `List<int>`
+            // (one `bytea` value's raw bytes), not a nested sub-array.
             return _writeListBytes<List<int>>(
-              _castOrThrowList<List<int>>(input),
+              input,
               TypeOid.byteArray,
               (item) => item.length,
               (writer, item) => writer.write(item),
               encoding,
+              allowNested: false,
             );
           }
           throw FormatException(
@@ -272,7 +275,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<String>(
-              _castOrThrowList<String>(input),
+              input,
               TypeOid.uuid,
               (_) => 16,
               (writer, item) => writer.write(_encodeUuid(item)),
@@ -391,7 +394,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<bool>(
-              _castOrThrowList<bool>(input),
+              input,
               TypeOid.boolean,
               (_) => 1,
               (writer, item) => writer.writeUint8(item ? 1 : 0),
@@ -407,7 +410,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<int>(
-              _castOrThrowList<int>(input),
+              input,
               TypeOid.smallInteger,
               (_) => 2,
               (writer, item) => writer.writeInt16(item),
@@ -423,7 +426,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<int>(
-              _castOrThrowList<int>(input),
+              input,
               TypeOid.integer,
               (_) => 4,
               (writer, item) => writer.writeInt32(item),
@@ -439,7 +442,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<int>(
-              _castOrThrowList<int>(input),
+              input,
               TypeOid.bigInteger,
               (_) => 8,
               (writer, item) => writer.writeInt64(item),
@@ -455,7 +458,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<DateTime>(
-              _castOrThrowList<DateTime>(input),
+              input,
               TypeOid.date,
               (_) => 4,
               (writer, item) => writer.writeInt32(dateTimeToDaysSinceY2k(item)),
@@ -471,7 +474,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<Time>(
-              _castOrThrowList<Time>(input),
+              input,
               TypeOid.time,
               (_) => 8,
               (writer, item) => writer.writeInt64(item.microseconds),
@@ -487,7 +490,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<DateTime>(
-              _castOrThrowList<DateTime>(input),
+              input,
               TypeOid.timestamp,
               (_) => 8,
               (writer, item) =>
@@ -504,7 +507,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<DateTime>(
-              _castOrThrowList<DateTime>(input),
+              input,
               TypeOid.timestampTz,
               (_) => 8,
               (writer, item) =>
@@ -520,10 +523,15 @@ class PostgresBinaryEncoder {
       case TypeOid.varCharArray:
         {
           if (input is List) {
+            // Nesting is detected on the original `String` elements (never
+            // ambiguous with a sub-array), *before* they're converted to
+            // the `List<int>` leaf bytes `_writeFlatListBytes` writes.
+            final unnested = _unnestArray(input);
             final bytesArray = _castOrThrowList<String>(
-              input,
+              unnested.flat,
             ).map((v) => v == null ? null : encoding.encode(v)).toList();
-            return _writeListBytes<List<int>>(
+            return _writeFlatListBytes<List<int>>(
+              unnested.dimSizes,
               bytesArray,
               TypeOid.varChar,
               (item) => item.length,
@@ -539,10 +547,15 @@ class PostgresBinaryEncoder {
       case TypeOid.textArray:
         {
           if (input is List) {
+            // Nesting is detected on the original `String` elements (never
+            // ambiguous with a sub-array), *before* they're converted to
+            // the `List<int>` leaf bytes `_writeFlatListBytes` writes.
+            final unnested = _unnestArray(input);
             final bytesArray = _castOrThrowList<String>(
-              input,
+              unnested.flat,
             ).map((v) => v == null ? null : encoding.encode(v)).toList();
-            return _writeListBytes<List<int>>(
+            return _writeFlatListBytes<List<int>>(
+              unnested.dimSizes,
               bytesArray,
               TypeOid.text,
               (item) => item.length,
@@ -559,7 +572,7 @@ class PostgresBinaryEncoder {
         {
           if (input is List) {
             return _writeListBytes<double>(
-              _castOrThrowList<double>(input),
+              input,
               TypeOid.double,
               (_) => 8,
               (writer, item) => writer.writeFloat64(item),
@@ -579,6 +592,9 @@ class PostgresBinaryEncoder {
               if (item is TypedValue && item.isSqlNull) return null;
               return encoder.encode(item);
             }).toList();
+            // `allowNested: false`: each element's own JSON value may
+            // legitimately be a Dart `List` (a JSON array), which must not
+            // be misread as a nested SQL sub-array.
             return _writeListBytes<List<int>>(
               objectsArray,
               TypeOid.jsonb,
@@ -588,6 +604,7 @@ class PostgresBinaryEncoder {
                 writer.write(item);
               },
               encoding,
+              allowNested: false,
             );
           }
           throw FormatException(
@@ -659,8 +676,62 @@ class PostgresBinaryEncoder {
     return input.cast<V?>();
   }
 
-  Uint8List _writeListBytes<V>(
-    List<V?> value,
+  /// Walks a (possibly nested) `List` representing a Postgres array
+  /// parameter and returns the size of each dimension (outermost first)
+  /// together with the flattened, row-major leaf elements.
+  ///
+  /// Every sibling at a given depth must have the same length (Postgres
+  /// arrays are rectangular) or a [FormatException] is thrown. Pass
+  /// [maxDepth] to stop descending after a fixed number of dimensions -
+  /// needed for array types whose own leaf element is itself a Dart `List`
+  /// (e.g. `bytea[]`, `jsonb[]`), so an opaque leaf value isn't misread as a
+  /// nested sub-array.
+  ({List<int> dimSizes, List<Object?> flat}) _unnestArray(
+    List value, {
+    int? maxDepth,
+  }) {
+    final dimSizes = <int>[value.length];
+    if (maxDepth == null || maxDepth > 1) {
+      var probe = value.isEmpty ? null : value.first;
+      while (probe is List &&
+          (maxDepth == null || dimSizes.length < maxDepth)) {
+        dimSizes.add(probe.length);
+        probe = probe.isEmpty ? null : probe.first;
+      }
+    }
+
+    final flat = <Object?>[];
+    void walk(List list, int level) {
+      if (list.length != dimSizes[level]) {
+        throw FormatException(
+          'Irregular (non-rectangular) array: expected ${dimSizes[level]} '
+          'element(s) at dimension $level, got ${list.length}.',
+        );
+      }
+      if (level == dimSizes.length - 1) {
+        flat.addAll(list);
+        return;
+      }
+      for (final item in list) {
+        if (item is! List) {
+          throw FormatException(
+            'Irregular array: expected a nested list at dimension '
+            '${level + 1}.',
+          );
+        }
+        walk(item, level + 1);
+      }
+    }
+
+    walk(value, 0);
+    return (dimSizes: dimSizes, flat: flat);
+  }
+
+  /// Writes a Postgres binary array frame for pre-flattened, pre-typed
+  /// elements, given the already-computed size of each dimension.
+  Uint8List _writeFlatListBytes<V>(
+    List<int> dimSizes,
+    List<V?> flat,
     int type,
     int Function(V item) lengthEncoder,
     void Function(PgByteDataWriter writer, V item) valueEncoder,
@@ -668,13 +739,15 @@ class PostgresBinaryEncoder {
   ) {
     final writer = PgByteDataWriter(encoding: encoding);
 
-    writer.writeInt32(1); // dimension
-    writer.writeInt32(0); // ign
-    writer.writeInt32(type); // type
-    writer.writeInt32(value.length); // size
-    writer.writeInt32(1); // index
+    writer.writeInt32(dimSizes.length); // ndim
+    writer.writeInt32(0); // flags (has-null bit not tracked by this encoder)
+    writer.writeInt32(type); // element type
+    for (final size in dimSizes) {
+      writer.writeInt32(size);
+      writer.writeInt32(1); // lower bound
+    }
 
-    for (final i in value) {
+    for (final i in flat) {
       if (i == null) {
         writer.writeInt32(-1);
         continue;
@@ -685,6 +758,32 @@ class PostgresBinaryEncoder {
     }
 
     return writer.toBytes();
+  }
+
+  /// Encodes [value] - a flat or (for most element types) arbitrarily
+  /// nested `List` - as a Postgres binary array.
+  ///
+  /// Set [allowNested] to `false` for array types whose own leaf element is
+  /// itself a Dart `List` (e.g. `bytea[]`, `jsonb[]`), so that such a value
+  /// is always treated as a single, flat dimension instead of being
+  /// misread as a nested sub-array.
+  Uint8List _writeListBytes<V>(
+    List value,
+    int type,
+    int Function(V item) lengthEncoder,
+    void Function(PgByteDataWriter writer, V item) valueEncoder,
+    Encoding encoding, {
+    bool allowNested = true,
+  }) {
+    final unnested = _unnestArray(value, maxDepth: allowNested ? null : 1);
+    return _writeFlatListBytes<V>(
+      unnested.dimSizes,
+      _castOrThrowList<V>(unnested.flat),
+      type,
+      lengthEncoder,
+      valueEncoder,
+      encoding,
+    );
   }
 
   /// Encode String / double / int to numeric / decimal  without loosing precision.
@@ -1109,25 +1208,38 @@ class PostgresBinaryDecoder {
     );
   }
 
-  static ({List<V?> items, List<bool> sqlNulls}) readListBytes<V>(
+  static ({List<Object?> items, List<bool> sqlNulls}) readListBytes<V>(
     Uint8List data,
     V Function(ByteDataReader reader, int length) valueDecoder,
   ) {
-    if (data.length < 16) {
-      return (items: [], sqlNulls: []);
+    if (data.length < 12) {
+      return (items: <Object?>[], sqlNulls: <bool>[]);
     }
 
     final reader = ByteDataReader()..add(data);
-    reader.read(12); // header
+    final ndim = reader.readInt32();
+    reader.read(8); // flags (has-null) + element type oid
+
+    if (ndim <= 0) {
+      return (items: <Object?>[], sqlNulls: <bool>[]);
+    }
+
+    // One (dimension size, lower bound) pair per dimension. The lower bound
+    // (the array's starting index, usually 1) isn't representable in a
+    // Dart `List` and is discarded, same as this always did for the single
+    // dimension of a 1-D array.
+    final dimSizes = List<int>.generate(ndim, (_) {
+      final size = reader.readInt32();
+      reader.read(4); // lower bound
+      return size;
+    });
+
+    final totalCount = dimSizes.fold<int>(1, (acc, s) => acc * s);
 
     final decoded = <V?>[];
-    final size = reader.readInt32();
-
-    reader.read(4); // index
-
     final sqlNulls = <bool>[];
     bool hasNull = false;
-    for (var i = 0; i < size; i++) {
+    for (var i = 0; i < totalCount; i++) {
       final len = reader.readInt32();
       if (len == -1) {
         decoded.add(null);
@@ -1141,7 +1253,26 @@ class PostgresBinaryDecoder {
       }
     }
 
-    return (items: hasNull ? decoded : decoded.cast<V>(), sqlNulls: sqlNulls);
+    final flat = hasNull ? decoded : decoded.cast<V>();
+    if (ndim == 1) {
+      return (items: flat, sqlNulls: sqlNulls);
+    }
+
+    // Nest the flat, row-major element list into `ndim` levels of lists
+    // matching Postgres's reported per-dimension sizes. The wire format
+    // varies the last dimension fastest, so dimensions are folded from the
+    // inside out.
+    List<Object?> grouped = flat;
+    for (var d = dimSizes.length - 1; d > 0; d--) {
+      final groupSize = dimSizes[d];
+      final next = <Object?>[];
+      for (var i = 0; i < grouped.length; i += groupSize) {
+        next.add(grouped.sublist(i, i + groupSize));
+      }
+      grouped = next;
+    }
+
+    return (items: grouped, sqlNulls: sqlNulls);
   }
 
   /// Decode numeric / decimal to String without loosing precision.
