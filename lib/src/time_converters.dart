@@ -28,18 +28,8 @@ int dateTimeToDaysSinceY2k(DateTime time) {
   return time.toUtc().difference(_y2k).inDays;
 }
 
-/// PostgreSQL's binary sentinel for a `timestamp`/`timestamptz` value of
-/// `infinity` (the maximum representable `int64` microsecond offset).
+/// Binary sentinels for `timestamp`/`timestamptz`/`date` `infinity` values.
 const timestampPosInfinityMicros = 9223372036854775807;
-
-/// PostgreSQL's binary sentinel for a `timestamp`/`timestamptz` value of
-/// `-infinity` (the minimum representable `int64` microsecond offset).
 const timestampNegInfinityMicros = -9223372036854775807 - 1;
-
-/// PostgreSQL's binary sentinel for a `date` value of `infinity` (the
-/// maximum representable `int32` day offset).
 const datePosInfinityDays = 2147483647;
-
-/// PostgreSQL's binary sentinel for a `date` value of `-infinity` (the
-/// minimum representable `int32` day offset).
 const dateNegInfinityDays = -2147483648;

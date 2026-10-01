@@ -100,6 +100,33 @@ void main() {
       await connection.channels.notify(channel);
     });
 
+    test('a second listener joining while the first LISTEN is still in '
+        'flight also sees the error if that LISTEN fails, instead of '
+        'hanging forever', () async {
+      const channel = 'test_channel_3';
+      final errors = <Object>[];
+
+      // Both join before the scheduled LISTEN for sub1 runs, so sub2
+      // piggybacks on it instead of sending its own.
+      final sub1 = connection.channels[channel].listen(
+        (_) {},
+        onError: errors.add,
+      );
+      final sub2 = connection.channels[channel].listen(
+        (_) {},
+        onError: errors.add,
+      );
+
+      // No `await` above, so this closes (synchronously, deterministically)
+      // before that LISTEN runs, making it fail.
+      await connection.close(force: true);
+      await pumpEventQueue();
+
+      expect(errors, hasLength(2));
+      await sub1.cancel();
+      await sub2.cancel();
+    });
+
     test('notify recovers from a transient prepare failure', () async {
       const channel = 'test_channel_2';
       await connection.execute('BEGIN');

@@ -741,6 +741,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         }
 
         rethrow;
+      } finally {
+        // Backstop in case neither COMMIT nor ROLLBACK ran (so
+        // `_sendAndMarkClosed`'s own cleanup never fired): otherwise
+        // `_activeTransaction` stays set, blocking every later call.
+        transaction._closeSession();
+        _connection._activeTransaction = null;
       }
     });
   }
@@ -761,7 +767,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       _isClosing = true;
       try {
         if (interruptRunning) {
-          _pending?.handleConnectionClosed(cause);
+          // Own try/catch: a bug here must not skip the socket/session
+          // cleanup below.
+          try {
+            _pending?.handleConnectionClosed(cause);
+          } catch (err) {
+            // silenced, see above
+          }
         } else {
           // Wait for the previous operation to complete by using the lock
           await _operationLock.withResource(() {
@@ -1070,6 +1082,11 @@ class _PgResultStreamSubscription
   Future<ResultSchema> get schema => _schema.future;
 
   void _completeQuery() {
+    // Idempotent: can race with handleConnectionClosed (e.g. a concurrent
+    // close()), which would otherwise double-complete `_done`.
+    if (_done.isCompleted) {
+      return;
+    }
     // Make sure the affectedRows and schema futures complete with something
     // after the query is done, even if we didn't get a row description
     // message.
@@ -1200,7 +1217,13 @@ class _PgResultStreamSubscription
       default:
         // Unexpected message - either a severe bug in this package or in the
         // connection. We better close it.
-        session._connection._closeAfterError();
+        //
+        // Record and complete first: `_closeAfterError` calls back into
+        // `handleConnectionClosed`, which would otherwise drop this error.
+        final exception = PgException('Unexpected message $message');
+        _errors.add((exception, _trace()));
+        _completeQuery();
+        session._connection._closeAfterError(exception);
     }
   }
 
@@ -1335,7 +1358,7 @@ class _Channels implements Channels {
 
   void _subscribe(
     String channel,
-    MultiStreamController firstListener,
+    MultiStreamController<String> firstListener,
     Trace callerTrace,
   ) {
     Future(() async {
@@ -1344,11 +1367,18 @@ class _Channels implements Channels {
         ignoreRows: true,
       );
     }).onError<Object>((error, stackTrace) {
-      _activeListeners[channel]?.remove(firstListener);
-
-      firstListener
-        ..addError(error, Chain([Trace.from(stackTrace), callerTrace]))
-        ..close();
+      // Not just `firstListener`: later listeners that joined while this
+      // LISTEN was in flight never got subscribed either - error out all
+      // of them instead of leaving those hanging forever.
+      final listeners =
+          _activeListeners.remove(channel) ??
+          <MultiStreamController<String>>[firstListener];
+      final chain = Chain([Trace.from(stackTrace), callerTrace]);
+      for (final listener in listeners) {
+        listener
+          ..addError(error, chain)
+          ..close();
+      }
     });
   }
 
@@ -1356,7 +1386,13 @@ class _Channels implements Channels {
     String channel,
     MultiStreamController listener,
   ) async {
-    final listeners = _activeListeners[channel]!..remove(listener);
+    // The entry may already be gone (a failed LISTEN or cancelAll() clears
+    // it); nothing left to unsubscribe in that case.
+    final listeners = _activeListeners[channel];
+    if (listeners == null) {
+      return;
+    }
+    listeners.remove(listener);
 
     if (listeners.isEmpty) {
       _activeListeners.remove(channel);
@@ -1542,6 +1578,11 @@ class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
 
   @override
   void handleConnectionClosed(PgException? dueToException) {
+    // Idempotent: handleMessage's unexpected-message branch may have
+    // already completed this and set a more specific `result`.
+    if (doneWithOperation.isCompleted) {
+      return;
+    }
     result = async.Result.error(
       dueToException ??
           PgException('Connection closed while waiting for message'),
@@ -1565,12 +1606,20 @@ class _WaitForMessage<T extends ServerMessage> extends _PendingOperation {
     } else if (message is ReadyForQueryMessage) {
       // This is the message we've been waiting for, the server is signalling
       // that it's ready for another message - so we can release the lock.
-      doneWithOperation.complete();
+      if (!doneWithOperation.isCompleted) {
+        doneWithOperation.complete();
+      }
     } else {
       result = async.Result.error(
         StateError('Unexpected message $message'),
         trace,
       );
+
+      // Complete first, or `_closeAfterError` below would overwrite this
+      // `StateError` with a generic "connection closed" one.
+      if (!doneWithOperation.isCompleted) {
+        doneWithOperation.complete();
+      }
 
       // If we get here, we clearly have a misunderstanding about the
       // protocol or something is very seriously broken. Treat this as a
@@ -1615,6 +1664,10 @@ class _AuthenticationProcedure extends _PendingOperation {
 
   @override
   void handleConnectionClosed(PgException? dueToException) {
+    // Idempotent: handleError below may have already completed `_done`.
+    if (_done.isCompleted) {
+      return;
+    }
     _done.completeError(
       dueToException ?? PgException('Connection closed during authentication'),
       _trace,
