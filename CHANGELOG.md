@@ -3,6 +3,7 @@
 ## 3.5.18
 
 - Fix the statement after a failed one sometimes returning no rows.
+- Fix decoding a `timestamp`/`timestamptz`/`date` value of `infinity`/`-infinity` throwing (binary format) or silently returning the wrong, finite date (binary `date`) or throwing (text format), instead of degrading gracefully like other codecs' unrepresentable-value fallback.
 
 ## 3.5.17
 

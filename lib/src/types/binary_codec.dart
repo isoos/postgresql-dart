@@ -877,7 +877,20 @@ class PostgresBinaryDecoder {
         return Time.fromMicroseconds(buffer.getInt64(0));
       case TypeOid.timestampWithoutTimezone:
       case TypeOid.timestampWithTimezone:
-        return dateTimeFromMicrosecondsSinceY2k(buffer.getInt64(0));
+        final micros = buffer.getInt64(0);
+        if (micros == timestampPosInfinityMicros ||
+            micros == timestampNegInfinityMicros) {
+          // `infinity`/`-infinity` has no finite `DateTime` equivalent;
+          // degrade gracefully instead of overflowing
+          // `DateTime.fromMicrosecondsSinceEpoch`.
+          return UndecodedBytes(
+            typeOid: typeOid,
+            bytes: input,
+            isBinary: true,
+            encoding: context.encoding,
+          );
+        }
+        return dateTimeFromMicrosecondsSinceY2k(micros);
 
       case TypeOid.interval:
         return Interval(
@@ -890,7 +903,19 @@ class PostgresBinaryDecoder {
         return _decodeNumeric(input);
 
       case TypeOid.date:
-        return dateTimeFromDaysSinceY2k(buffer.getInt32(0));
+        final days = buffer.getInt32(0);
+        if (days == datePosInfinityDays || days == dateNegInfinityDays) {
+          // `infinity`/`-infinity` has no finite `DateTime` equivalent;
+          // degrade gracefully instead of silently returning a
+          // wildly-wrong-but-finite date.
+          return UndecodedBytes(
+            typeOid: typeOid,
+            bytes: input,
+            isBinary: true,
+            encoding: context.encoding,
+          );
+        }
+        return dateTimeFromDaysSinceY2k(days);
 
       case TypeOid.jsonb:
         {
