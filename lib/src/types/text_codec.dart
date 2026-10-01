@@ -292,6 +292,11 @@ class PostgresTextEncoder {
   }
 }
 
+/// Whether [text] is Postgres's text representation of an infinite
+/// date/timestamp value, which has no finite `DateTime` equivalent.
+bool _isInfinityDateTimeText(String text) =>
+    text == 'infinity' || text == '-infinity';
+
 /// Parses a date/timestamp string as sent by Postgres, including its `BC`
 /// suffix convention for years before 1 AD (which `DateTime.parse` doesn't
 /// understand on its own).
@@ -348,24 +353,50 @@ class PostgresTextDecoder {
 
       case TypeOid.timestampWithTimezone:
       case TypeOid.timestampWithoutTimezone:
-        final raw = _parseDateTimeText(asText());
-        return DateTime.utc(
-          raw.year,
-          raw.month,
-          raw.day,
-          raw.hour,
-          raw.minute,
-          raw.second,
-          raw.millisecond,
-          raw.microsecond,
-        );
+        {
+          final text = asText();
+          if (_isInfinityDateTimeText(text)) {
+            // `infinity`/`-infinity` has no finite `DateTime` equivalent;
+            // degrade gracefully instead of throwing from `DateTime.parse`.
+            return UndecodedBytes(
+              typeOid: typeOid,
+              bytes: di,
+              isBinary: false,
+              encoding: context.encoding,
+            );
+          }
+          final raw = _parseDateTimeText(text);
+          return DateTime.utc(
+            raw.year,
+            raw.month,
+            raw.day,
+            raw.hour,
+            raw.minute,
+            raw.second,
+            raw.millisecond,
+            raw.microsecond,
+          );
+        }
 
       case TypeOid.numeric:
         return asText();
 
       case TypeOid.date:
-        final raw = _parseDateTimeText(asText());
-        return DateTime.utc(raw.year, raw.month, raw.day);
+        {
+          final text = asText();
+          if (_isInfinityDateTimeText(text)) {
+            // `infinity`/`-infinity` has no finite `DateTime` equivalent;
+            // degrade gracefully instead of throwing from `DateTime.parse`.
+            return UndecodedBytes(
+              typeOid: typeOid,
+              bytes: di,
+              isBinary: false,
+              encoding: context.encoding,
+            );
+          }
+          final raw = _parseDateTimeText(text);
+          return DateTime.utc(raw.year, raw.month, raw.day);
+        }
 
       case TypeOid.json:
       case TypeOid.jsonb:

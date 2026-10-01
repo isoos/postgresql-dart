@@ -1175,5 +1175,74 @@ void main() {
       );
       expect(result, IntRange.empty());
     });
+
+    Uint8List int64Bytes(int value) =>
+        (ByteData(8)..setInt64(0, value)).buffer.asUint8List();
+    Uint8List int32Bytes(int value) =>
+        (ByteData(4)..setInt32(0, value)).buffer.asUint8List();
+
+    for (final typeOid in [
+      TypeOid.timestampWithoutTimezone,
+      TypeOid.timestampWithTimezone,
+    ]) {
+      test(
+        'timestamp (oid $typeOid) infinity decodes as UndecodedBytes '
+        'instead of throwing',
+        () {
+          final context = CodecContext.withDefaults();
+          for (final micros in [
+            9223372036854775807, // infinity
+            -9223372036854775807 - 1, // -infinity
+          ]) {
+            final result = PostgresBinaryDecoder.convert(
+              context,
+              typeOid,
+              int64Bytes(micros),
+            );
+            expect(result, isA<UndecodedBytes>());
+          }
+        },
+      );
+    }
+
+    test('date infinity decodes as UndecodedBytes instead of silently '
+        'returning the wrong date', () {
+      final context = CodecContext.withDefaults();
+      for (final days in [
+        2147483647, // infinity
+        -2147483648, // -infinity
+      ]) {
+        final result = PostgresBinaryDecoder.convert(
+          context,
+          TypeOid.date,
+          int32Bytes(days),
+        );
+        expect(result, isA<UndecodedBytes>());
+      }
+    });
+  });
+
+  group('Text decoders', () {
+    for (final typeOid in [
+      TypeOid.timestampWithoutTimezone,
+      TypeOid.timestampWithTimezone,
+      TypeOid.date,
+    ]) {
+      test(
+        'date/timestamp (oid $typeOid) infinity decodes as UndecodedBytes '
+        'instead of throwing',
+        () {
+          final context = CodecContext.withDefaults();
+          for (final text in ['infinity', '-infinity']) {
+            final result = PostgresTextDecoder.convert(
+              context,
+              typeOid,
+              Uint8List.fromList(utf8.encode(text)),
+            );
+            expect(result, isA<UndecodedBytes>());
+          }
+        },
+      );
+    }
   });
 }
