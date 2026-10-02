@@ -445,6 +445,17 @@ void main() {
       );
     });
 
+    test('an empty array decodes as a list of its element type, as a '
+        'non-empty one does', () async {
+      final row = (await conn.execute(
+        "SELECT '{}'::text[], '{a}'::text[], '{}'::int4[], '{}'::bool[]",
+      )).single;
+      expect(row[0], isA<List<String>>());
+      expect(row[1], isA<List<String>>());
+      expect(row[2], isA<List<int>>());
+      expect(row[3], isA<List<bool>>());
+    });
+
     test('textArray', () async {
       await expectReversible(
         '_text',
@@ -1292,19 +1303,21 @@ void main() {
       expect(result, <int>[]);
     });
 
-    for (final (typeOid, matcher) in [
-      (TypeOid.integerArray, isA<List<int>>()),
-      (TypeOid.bigIntegerArray, isA<List<int>>()),
-      (TypeOid.textArray, isA<List<String>>()),
-      (TypeOid.varCharArray, isA<List<String>>()),
-      (TypeOid.booleanArray, isA<List<bool>>()),
-      (TypeOid.doubleArray, isA<List<double>>()),
-      (TypeOid.uuidArray, isA<List<String>>()),
+    for (final (typeOid, elementOid, matcher) in [
+      (TypeOid.integerArray, TypeOid.integer, isA<List<int>>()),
+      (TypeOid.bigIntegerArray, TypeOid.bigInteger, isA<List<int>>()),
+      (TypeOid.textArray, TypeOid.text, isA<List<String>>()),
+      (TypeOid.varCharArray, TypeOid.varChar, isA<List<String>>()),
+      (TypeOid.booleanArray, TypeOid.boolean, isA<List<bool>>()),
+      (TypeOid.doubleArray, TypeOid.double, isA<List<double>>()),
+      (TypeOid.uuidArray, TypeOid.uuid, isA<List<String>>()),
     ]) {
       test('An empty array (oid $typeOid) keeps its element type, so a cast '
           'that holds for a non-empty one holds for it too', () {
         final context = CodecContext.withDefaults();
-        final bytes = concatInt32s([0, 0, 0]);
+        // Postgres's wire format for an empty array: ndim=0, flags=0,
+        // elemtype, and no dimensions.
+        final bytes = concatInt32s([0, 0, elementOid]);
         final result = PostgresBinaryDecoder.convert(context, typeOid, bytes);
         expect(result, matcher);
       });
