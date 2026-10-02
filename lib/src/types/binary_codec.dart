@@ -1193,8 +1193,9 @@ class PostgresBinaryDecoder {
     Uint8List data,
     V Function(ByteDataReader reader, int length) valueDecoder,
   ) {
+    // An empty array keeps its element type, as a non-empty one does.
     if (data.length < 12) {
-      return (items: <Object?>[], sqlNulls: <bool>[]);
+      return (items: <V>[], sqlNulls: <bool>[]);
     }
 
     final reader = ByteDataReader()..add(data);
@@ -1202,7 +1203,7 @@ class PostgresBinaryDecoder {
     reader.read(8); // flags (has-null) + element type oid
 
     if (ndim <= 0) {
-      return (items: <Object?>[], sqlNulls: <bool>[]);
+      return (items: <V>[], sqlNulls: <bool>[]);
     }
 
     // One (size, lower bound) pair per dimension; the lower bound has no

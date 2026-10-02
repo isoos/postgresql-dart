@@ -1292,6 +1292,24 @@ void main() {
       expect(result, <int>[]);
     });
 
+    for (final (typeOid, matcher) in [
+      (TypeOid.integerArray, isA<List<int>>()),
+      (TypeOid.bigIntegerArray, isA<List<int>>()),
+      (TypeOid.textArray, isA<List<String>>()),
+      (TypeOid.varCharArray, isA<List<String>>()),
+      (TypeOid.booleanArray, isA<List<bool>>()),
+      (TypeOid.doubleArray, isA<List<double>>()),
+      (TypeOid.uuidArray, isA<List<String>>()),
+    ]) {
+      test('An empty array (oid $typeOid) keeps its element type, so a cast '
+          'that holds for a non-empty one holds for it too', () {
+        final context = CodecContext.withDefaults();
+        final bytes = concatInt32s([0, 0, 0]);
+        final result = PostgresBinaryDecoder.convert(context, typeOid, bytes);
+        expect(result, matcher);
+      });
+    }
+
     Uint8List int64Bytes(int value) =>
         (ByteData(8)..setInt64(0, value)).buffer.asUint8List();
     Uint8List int32Bytes(int value) =>
