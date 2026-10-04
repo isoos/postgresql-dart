@@ -13,6 +13,8 @@ import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
 import '../auth/auth.dart';
+import '../connection/channels.dart';
+import '../connection/message_builder.dart';
 import '../exceptions.dart';
 import '../messages/logical_replication_messages.dart';
 import '../types/type_registry.dart';
@@ -25,14 +27,6 @@ import 'resolved_settings.dart';
 final _runTxZoneKey = Object();
 
 const _debugLog = false;
-
-String _identifier(String source) {
-  // To avoid complex ambiguity rules, we always wrap identifier in double
-  // quotes. That means the only character we need to escape are double quotes
-  // in the source.
-  final escaped = source.replaceAll('"', '""');
-  return '"$escaped"';
-}
 
 abstract class _PgSessionBase implements Session {
   /// The lock to guard operations that must run sequentially, like sending
@@ -191,7 +185,7 @@ abstract class _PgSessionBase implements Session {
         '',
         this,
         Trace.from(stackTrace),
-        parse: _parseMessageFor(description, '', variables),
+        parse: buildParseMessage(description, '', variables),
       );
       // Nothing to close, success or failure: the unnamed statement is
       // replaced by the next parse that leaves the name empty, so closing it
@@ -220,7 +214,7 @@ abstract class _PgSessionBase implements Session {
     );
 
     await _sendAndWaitForQuery<ParseCompleteMessage>(
-      _parseMessageFor(description, name, fallbackTypes),
+      buildParseMessage(description, name, fallbackTypes),
       stackTrace: stackTrace,
     );
 
@@ -493,7 +487,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   var _portalCounter = 0;
   var _queryCount = 0;
 
-  late final _channels = _Channels(this);
+  late final _channels = ChannelsImplementation(this);
 
   @internal
   int get queryCount => _queryCount;
@@ -1279,15 +1273,17 @@ class _PgResultStreamSubscription
             if (!identical(connection._pending, this) || _done.isCompleted) {
               return;
             }
-            _pendingCancellation = connection.cancelPendingStatement().catchError(
-              (_) {
-                // Cancel failed: the backend may still be running us, so the
-                // connection is in an unknown state - close rather than reuse.
-                connection._closeAfterError(
-                  PgException('Query cancellation failed; connection closed.'),
-                );
-              },
-            );
+            _pendingCancellation = connection
+                .cancelPendingStatement()
+                .catchError((_) {
+                  // Cancel failed: the backend may still be running us, so the
+                  // connection is in an unknown state - close rather than reuse.
+                  connection._closeAfterError(
+                    PgException(
+                      'Query cancellation failed; connection closed.',
+                    ),
+                  );
+                });
           });
     try {
       var future = asFuture();
@@ -1366,153 +1362,6 @@ class _PgResultStreamSubscription
   @override
   void resume() {
     _source.resume();
-  }
-}
-
-class _Channels implements Channels {
-  final PgConnectionImplementation _connection;
-
-  final _activeListeners = <String, List<MultiStreamController<String>>>{};
-  final _all = StreamController<Notification>.broadcast();
-
-  // We are using the pg_notify function in a prepared select statement to
-  // efficiently implement [notify]. The future is cached so the statement is
-  // only prepared once.
-  Future<Statement>? _notifyStatement;
-
-  _Channels(this._connection);
-
-  @override
-  Stream<Notification> get all => _all.stream;
-
-  @override
-  Stream<String> operator [](String channel) {
-    return Stream.multi((newListener) {
-      newListener.onCancel = () => _unsubscribe(channel, newListener);
-
-      final existingListeners = _activeListeners.putIfAbsent(channel, () => []);
-      final needsSubscription = existingListeners.isEmpty;
-      existingListeners.add(newListener);
-
-      if (needsSubscription) {
-        // Captured here, synchronously, because the LISTEN call below runs
-        // in a deferred callback - by the time it can fail, the call stack
-        // no longer contains whoever subscribed to this stream, so a stack
-        // trace captured from within `_subscribe()` would only show internal
-        // frames (see the equivalent comment on `connect()`).
-        _subscribe(channel, newListener, Trace.current());
-      }
-    }, isBroadcast: true);
-  }
-
-  void _subscribe(
-    String channel,
-    MultiStreamController<String> firstListener,
-    Trace callerTrace,
-  ) {
-    Future(() async {
-      await _connection.execute(
-        Sql('LISTEN ${_identifier(channel)}'),
-        ignoreRows: true,
-      );
-    }).onError<Object>((error, stackTrace) {
-      // Not just `firstListener`: later listeners that joined while this
-      // LISTEN was in flight never got subscribed either - error out all
-      // of them instead of leaving those hanging forever.
-      final listeners =
-          _activeListeners.remove(channel) ??
-          <MultiStreamController<String>>[firstListener];
-      final chain = Chain([Trace.from(stackTrace), callerTrace]);
-      for (final listener in listeners) {
-        listener
-          ..addError(error, chain)
-          ..close();
-      }
-    });
-  }
-
-  Future<void> _unsubscribe(
-    String channel,
-    MultiStreamController listener,
-  ) async {
-    // The entry may already be gone (a failed LISTEN or cancelAll() clears
-    // it); nothing left to unsubscribe in that case.
-    final listeners = _activeListeners[channel];
-    if (listeners == null) {
-      return;
-    }
-    listeners.remove(listener);
-
-    if (listeners.isEmpty) {
-      _activeListeners.remove(channel);
-
-      // This runs as a `StreamSubscription.onCancel` callback, which can be
-      // triggered by the connection closing while this listener is being
-      // torn down - there is nothing to unlisten on a connection that's
-      // already going away, so that race is not a real failure.
-      if (!_connection.isOpen) {
-        return;
-      }
-      try {
-        await _connection.execute(
-          Sql('UNLISTEN ${_identifier(channel)}'),
-          ignoreRows: true,
-        );
-      } on PgException {
-        if (_connection.isOpen) {
-          rethrow;
-        }
-      }
-    }
-  }
-
-  void deliverNotification(NotificationResponseMessage msg) {
-    _all.add(
-      Notification(
-        processId: msg.processId,
-        channel: msg.channel,
-        payload: msg.payload,
-      ),
-    );
-    final listeners = _activeListeners[msg.channel] ?? const [];
-
-    for (final listener in listeners) {
-      listener.add(msg.payload);
-    }
-  }
-
-  @override
-  Future<void> cancelAll() async {
-    await _connection.execute(Sql('UNLISTEN *'));
-
-    // Take a snapshot before closing: closing a listener does not trigger
-    // its `onCancel` (that only fires when the consumer cancels), so we
-    // clear the map ourselves instead of relying on `_unsubscribe`.
-    final listeners = _activeListeners.values.toList();
-    _activeListeners.clear();
-
-    for (final entry in listeners) {
-      for (final listener in entry) {
-        await listener.close();
-      }
-    }
-  }
-
-  @override
-  Future<void> notify(String channel, [String? payload]) async {
-    final Statement statement;
-    try {
-      statement = await (_notifyStatement ??= _connection.prepare(
-        Sql(r'SELECT pg_notify($1, $2)', types: [Type.text, Type.text]),
-      ));
-    } catch (_) {
-      // Don't cache a failed prepare - a transient failure would otherwise
-      // permanently break notify() on this connection.
-      _notifyStatement = null;
-      rethrow;
-    }
-
-    await statement.run([channel, payload]);
   }
 }
 
@@ -1773,64 +1622,6 @@ class _AuthenticationProcedure extends _PendingOperation {
       }
     } else if (message is ReadyForQueryMessage) {
       _done.complete();
-    }
-  }
-}
-
-/// Merges inline SQL type annotations with runtime [TypedValue] types for use
-/// in a [ParseMessage].
-///
-/// Inline annotations (from `:type` syntax) take precedence. For positions
-/// without an annotation, the [TypedValue.type] is used as a hint so that
-/// PostgreSQL can resolve polymorphic operators (e.g. `@>`, `&&`, `<@`).
-List<int?>? _mergeTypeOids(
-  List<Type?>? paramTypes,
-  List<TypedValue>? fallbackTypes,
-) {
-  if (fallbackTypes == null || fallbackTypes.isEmpty) {
-    return paramTypes?.map((e) => e?.oid).toList();
-  }
-  final length = paramTypes?.length ?? fallbackTypes.length;
-  final result = <int?>[];
-  for (var i = 0; i < length; i++) {
-    final fromAnnotation = (paramTypes != null && i < paramTypes.length)
-        ? paramTypes[i]?.oid
-        : null;
-    if (fromAnnotation != null) {
-      result.add(fromAnnotation);
-    } else {
-      final type = i < fallbackTypes.length ? fallbackTypes[i].type : null;
-      result.add((type != null && type != Type.unspecified) ? type.oid : null);
-    }
-  }
-  return result;
-}
-
-ParseMessage _parseMessageFor(
-  InternalQueryDescription description,
-  String statementName, [
-  List<TypedValue>? fallbackTypes,
-]) {
-  return ParseMessage(
-    description.transformedSql,
-    statementName: statementName,
-    typeOids: _mergeTypeOids(description.parameterTypes, fallbackTypes),
-  );
-}
-
-extension on TransactionSettings {
-  bool get shouldExpandBegin =>
-      isolationLevel != null || accessMode != null || deferrable != null;
-
-  void expandBegin(StringBuffer sb) {
-    if (isolationLevel != null) {
-      sb.write(isolationLevel!.queryPart);
-    }
-    if (accessMode != null) {
-      sb.write(accessMode!.queryPart);
-    }
-    if (deferrable != null) {
-      sb.write(deferrable!.queryPart);
     }
   }
 }
