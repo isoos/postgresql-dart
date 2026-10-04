@@ -274,20 +274,36 @@ class TypeRegistry {
     _encoders.addAll([...?encoders, _defaultTextEncoder]);
   }
 
-  Future<EncodedValue?> encode(TypedValue input, CodecContext context) async {
-    // check for codec
+  /// Encodes [input], returning a plain (non-`Future`) result whenever the
+  /// resolved [Codec] (and the fallback encoders) run synchronously - which is
+  /// the common case for all built-in types.
+  FutureOr<EncodedValue?> encode(TypedValue input, CodecContext context) {
     final typeOid = input.type.oid;
     final codec = typeOid == null ? null : _codecs[typeOid];
     if (codec != null) {
-      final r = await codec.encode(input, context);
+      final r = codec.encode(input, context);
+      if (r is Future<EncodedValue?>) {
+        return r.then((v) => v ?? _fallbackEncode(input, context));
+      }
       if (r != null) {
         return r;
       }
     }
+    return _fallbackEncode(input, context);
+  }
 
-    // fallback encoders
-    for (final encoder in _encoders) {
-      final encoded = await encoder(input, context);
+  /// Tries the fallback [_encoders] in order, starting at [from], staying
+  /// synchronous until an encoder returns a `Future`.
+  FutureOr<EncodedValue?> _fallbackEncode(
+    TypedValue input,
+    CodecContext context, [
+    int from = 0,
+  ]) {
+    for (var i = from; i < _encoders.length; i++) {
+      final encoded = _encoders[i](input, context);
+      if (encoded is Future<EncodedValue?>) {
+        return encoded.then((v) => v ?? _fallbackEncode(input, context, i + 1));
+      }
       if (encoded != null) {
         return encoded;
       }

@@ -104,27 +104,31 @@ class BytesToMessageParser
   BytesToMessageParser(this._codecContext);
 
   @override
-  Stream<ServerMessage> bind(Stream<Uint8List> stream) {
-    return stream.transform(_BytesToFrameParser(_codecContext)).asyncMap((
-      frame,
-    ) async {
+  Stream<ServerMessage> bind(Stream<Uint8List> stream) async* {
+    final frames = stream.transform(_BytesToFrameParser(_codecContext));
+    await for (final frame in frames) {
       // special case
       if (frame.type == SharedMessageId.copyDone) {
         // unlike other messages, CopyDoneMessage only takes the length as an
         // argument (must be the full length including the length bytes)
-        return CopyDoneMessage(frame.length + 4);
+        yield CopyDoneMessage(frame.length + 4);
+        continue;
       }
 
       final msgMaker = _messageTypeMap[frame.type];
       if (msgMaker == null) {
-        return UnknownMessage(frame.type, frame.bytes);
+        yield UnknownMessage(frame.type, frame.bytes);
+        continue;
       }
 
-      return await msgMaker(
+      // Most parsers are synchronous; only await the few that aren't, so the
+      // common message never pays for an extra Future hop.
+      final msg = msgMaker(
         PgByteDataReader(codecContext: _codecContext)..add(frame.bytes),
         frame.bytes.length,
       );
-    });
+      yield msg is Future<ServerMessage> ? await msg : msg;
+    }
   }
 }
 

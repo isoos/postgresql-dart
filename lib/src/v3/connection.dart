@@ -1005,17 +1005,31 @@ class _PgResultStreamSubscription
     _scheduleStatement(() async {
       connection._pending = this;
 
-      final encodedFutures = <Future<EncodedValue?>>[];
       final context = connection.codecContext;
-      for (final e in statement.parameters) {
+      final params = statement.parameters;
+      // Encoding is synchronous for all built-in types, so most binds never
+      // touch Future machinery - only parameters that encode asynchronously
+      // get collected and awaited below.
+      final encodedValues = List<EncodedValue?>.filled(params.length, null);
+      List<(int, Future<EncodedValue?>)>? pending;
+      for (var i = 0; i < params.length; i++) {
+        final e = params[i];
         if (e.isSqlNull) {
-          encodedFutures.add(Future.value(null));
           continue;
         }
-        final f = context.typeRegistry.encode(e, context);
-        encodedFutures.add(f);
+        final encoded = context.typeRegistry.encode(e, context);
+        if (encoded is Future<EncodedValue?>) {
+          (pending ??= []).add((i, encoded));
+        } else {
+          encodedValues[i] = encoded;
+        }
       }
-      final encodedValues = await Future.wait(encodedFutures);
+      if (pending != null) {
+        final resolved = await Future.wait(pending.map((e) => e.$2));
+        for (var j = 0; j < pending.length; j++) {
+          encodedValues[pending[j].$1] = resolved[j];
+        }
+      }
 
       connection._send(
         AggregatedClientMessage([
