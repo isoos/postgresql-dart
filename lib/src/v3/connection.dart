@@ -798,6 +798,10 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   @internal
   Future<void> cancelPendingStatement() async {
+    // A CancelRequest cancels whatever the backend runs when it arrives, so
+    // remember the operation we meant to cancel and re-check it below. Null
+    // means a statement is still scheduling; cancel whatever runs by then.
+    final owner = _pending;
     if (_backendKeyMessage == null) {
       throw PgException(
         'Unable to cancel pending statement: no backend key available.',
@@ -810,6 +814,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     );
     channel = _debugChannel(channel);
     try {
+      // Don't cancel an unrelated statement if ours finished (and the
+      // connection moved on) while this side-channel was connecting.
+      if (_isClosing || (owner != null && !identical(_pending, owner))) return;
       channel.sink.add(
         CancelRequestMessage(
           processId: _backendKeyMessage!.processId,
@@ -969,6 +976,11 @@ class _PgResultStreamSubscription
   ResultSchema? _resultSchema;
   _BoundStatement? _boundStatement;
 
+  /// A timeout's CancelRequest timer and the cancel it started; the operation
+  /// lock is held until the cancel drains (see [_drainCancellation]).
+  Timer? _cancelTimer;
+  Future<void>? _pendingCancellation;
+
   /// Errors for this statement, reported once the statement has ended and
   /// released the connection (see [_finish]).
   final _errors = <(Object, StackTrace)>[];
@@ -1022,6 +1034,7 @@ class _PgResultStreamSubscription
       );
 
       await _done.future;
+      await _drainCancellation();
     });
   }
 
@@ -1040,8 +1053,19 @@ class _PgResultStreamSubscription
 
       connection._send(QueryMessage(sql));
       await _done.future;
+      await _drainCancellation();
       cleanup?.call();
     });
+  }
+
+  /// Holds the operation lock until this statement's CancelRequest has drained,
+  /// so a late cancel can't hit the next statement reusing this backend (#471).
+  /// A forced close skips the wait so a stuck side-channel can't block teardown.
+  Future<void> _drainCancellation() async {
+    _cancelTimer?.cancel();
+    if (!connection._isClosing) {
+      await _pendingCancellation;
+    }
   }
 
   void _scheduleStatement(Future<void> Function() sendAndWait) async {
@@ -1231,14 +1255,25 @@ class _PgResultStreamSubscription
     required List<ResultRow> items,
     required Duration? timeout,
   }) async {
-    final cancelTimer = timeout == null
+    _cancelTimer = timeout == null
         ? null
         : Timer(timeout, () {
-            // Best effort: a cancel request is not guaranteed to reach or be
-            // honored by the server, and it may itself fail (e.g. no backend
-            // key, connection issues). Either way, the hard timeout below
-            // guarantees this call doesn't hang forever.
-            unawaited(connection.cancelPendingStatement().catchError((_) {}));
+            // Best effort: the cancel may not reach the server or may fail; the
+            // hard timeout below still guarantees this call won't hang forever.
+            // Only cancel if we're still the pending statement; keep the future
+            // so the lock is held until it drains (see [_drainCancellation]).
+            if (!identical(connection._pending, this) || _done.isCompleted) {
+              return;
+            }
+            _pendingCancellation = connection.cancelPendingStatement().catchError(
+              (_) {
+                // Cancel failed: the backend may still be running us, so the
+                // connection is in an unknown state - close rather than reuse.
+                connection._closeAfterError(
+                  PgException('Query cancellation failed; connection closed.'),
+                );
+              },
+            );
           });
     try {
       var future = asFuture();
@@ -1278,7 +1313,7 @@ class _PgResultStreamSubscription
         schema: await schema,
       );
     } finally {
-      cancelTimer?.cancel();
+      _cancelTimer?.cancel();
     }
   }
 
