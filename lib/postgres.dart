@@ -546,6 +546,7 @@ class ConnectionSettings extends SessionSettings {
     super.queryTimeout,
     super.queryMode,
     super.ignoreSuperfluousParameters,
+    super.ignoreStackTraces,
   });
 }
 
@@ -569,11 +570,17 @@ class SessionSettings {
   /// parameters are found.
   final bool? ignoreSuperfluousParameters;
 
+  /// When set to `true`, statement execution uses `StackTrace.empty` instead
+  /// of capturing `StackTrace.current`, trading caller-pointing error traces
+  /// for lower CPU overhead in high-throughput scenarios. Defaults to `false`.
+  final bool? ignoreStackTraces;
+
   const SessionSettings({
     this.connectTimeout,
     this.queryTimeout,
     this.queryMode,
     this.ignoreSuperfluousParameters,
+    this.ignoreStackTraces,
   });
 }
 
@@ -698,5 +705,6 @@ class TransactionSettings extends SessionSettings {
     super.queryTimeout,
     super.queryMode,
     super.ignoreSuperfluousParameters,
+    super.ignoreStackTraces,
   });
 }
