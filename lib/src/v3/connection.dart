@@ -179,7 +179,7 @@ abstract class _PgSessionBase implements Session {
       // loses the statement or leaves it behind for someone else to collide
       // with. So the parse travels with the bind and the execute, as one
       // exchange, under the unnamed statement that belongs to it.
-      final stackTrace = StackTrace.current;
+      final stackTrace = _settings.captureStackTrace();
       final prepared = _PreparedStatement(
         description,
         '',
@@ -204,7 +204,7 @@ abstract class _PgSessionBase implements Session {
     Object query, [
     List<TypedValue>? fallbackTypes,
   ]) async {
-    final stackTrace = StackTrace.current;
+    final stackTrace = _settings.captureStackTrace();
     final trace = Trace.from(stackTrace);
     final conn = _connection;
     final name = 's/${conn._statementCounter++}';
@@ -875,7 +875,7 @@ class _PreparedStatement extends Statement {
 
   @override
   Future<Result> run(Object? parameters, {Duration? timeout}) async {
-    final stackTrace = StackTrace.current;
+    final stackTrace = _session._settings.captureStackTrace();
     final trace = Trace.from(stackTrace);
     _session._connection._queryCount++;
     timeout ??= _session._settings.queryTimeout;
@@ -995,7 +995,9 @@ class _PgResultStreamSubscription
        ignoreRows = false,
        _boundStatement = statement,
        _parentTrace = statement.statement._trace,
-       _callerTrace = callerTrace ?? Trace.current() {
+       _callerTrace =
+           callerTrace ??
+           statement.statement._effectiveSession._settings.captureTrace() {
     _scheduleStatement(() async {
       connection._pending = this;
 
@@ -1055,7 +1057,7 @@ class _PgResultStreamSubscription
     Trace? callerTrace,
     void Function()? cleanup,
   }) : _parentTrace = null,
-       _callerTrace = callerTrace ?? Trace.current() {
+       _callerTrace = callerTrace ?? session._settings.captureTrace() {
     _scheduleStatement(() async {
       connection._pending = this;
 

@@ -65,6 +65,7 @@ class PostgresServer {
     ReplicationMode replicationMode = ReplicationMode.none,
     SslMode? sslMode,
     QueryMode? queryMode,
+    bool? ignoreStackTraces,
   }) async {
     return await PgConnectionImplementation.connect(
       await endpoint(),
@@ -75,6 +76,7 @@ class PostgresServer {
         transformer: loggingTransformer('conn'),
         sslMode: sslMode,
         queryMode: queryMode,
+        ignoreStackTraces: ignoreStackTraces,
       ),
       incomingBytesTransformer: _splitAndDelayBytes
           ? _transformIncomingBytes()

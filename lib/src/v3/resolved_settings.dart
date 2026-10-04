@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:postgres/messages.dart';
+import 'package:stack_trace/stack_trace.dart';
 import 'package:stream_channel/stream_channel.dart';
 
 import '../../postgres.dart';
@@ -22,6 +23,8 @@ class ResolvedSessionSettings implements SessionSettings {
   final QueryMode queryMode;
   @override
   final bool ignoreSuperfluousParameters;
+  @override
+  final bool ignoreStackTraces;
 
   ResolvedSessionSettings(SessionSettings? settings, SessionSettings? fallback)
     : connectTimeout = _requirePositive(
@@ -41,14 +44,25 @@ class ResolvedSessionSettings implements SessionSettings {
       ignoreSuperfluousParameters =
           settings?.ignoreSuperfluousParameters ??
           fallback?.ignoreSuperfluousParameters ??
-          false;
+          false,
+      ignoreStackTraces =
+          settings?.ignoreStackTraces ?? fallback?.ignoreStackTraces ?? false;
 
   bool isMatchingSession(ResolvedSessionSettings other) {
     return connectTimeout == other.connectTimeout &&
         queryTimeout == other.queryTimeout &&
         queryMode == other.queryMode &&
-        ignoreSuperfluousParameters == other.ignoreSuperfluousParameters;
+        ignoreSuperfluousParameters == other.ignoreSuperfluousParameters &&
+        ignoreStackTraces == other.ignoreStackTraces;
   }
+
+  /// `StackTrace.current`, or `StackTrace.empty` if [ignoreStackTraces].
+  StackTrace captureStackTrace() =>
+      ignoreStackTraces ? StackTrace.empty : StackTrace.current;
+
+  /// `Trace.current()`, or an empty [Trace] if [ignoreStackTraces].
+  Trace captureTrace() =>
+      ignoreStackTraces ? Trace.from(StackTrace.empty) : Trace.current();
 }
 
 class ResolvedConnectionSettings extends ResolvedSessionSettings

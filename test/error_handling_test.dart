@@ -41,6 +41,34 @@ void main() {
       }
     });
 
+    test('ignoreStackTraces drops the caller-side frames', () async {
+      final conn = await server.newConnection(ignoreStackTraces: true);
+      addTearDown(() async => conn.close());
+
+      // execute() goes through _PgResultStreamSubscription, whose error
+      // handler always adds one real frame at the point of failure - so the
+      // trace isn't literally empty, but it must no longer contain the
+      // caller's frame (this test file) that `StackTrace.current` would
+      // otherwise have captured in `execute()`/`run()`.
+      try {
+        await conn.execute('SELECT hello');
+        fail('Should not reach');
+      } catch (e, st) {
+        expect(e.toString(), contains('column "hello" does not exist'));
+        expect(st.toString(), isNot(contains('test/error_handling_test.dart')));
+      }
+
+      // prepare() rethrows the exact StackTrace it was given (no extra frame
+      // added), so with ignoreStackTraces it's `StackTrace.empty` itself.
+      try {
+        await conn.prepare('SELECT hello2');
+        fail('Should not reach');
+      } catch (e, st) {
+        expect(e.toString(), contains('column "hello2" does not exist'));
+        expect(st, same(StackTrace.empty));
+      }
+    });
+
     test('TimeoutException', () async {
       final c = await server.newConnection(queryMode: QueryMode.simple);
       await c.execute('SET statement_timeout = 1000;');
