@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.19
+
+- Fix empty arrays decoding as `List<Object?>` instead of a list of their element type (a 3.5.18 regression).
+
 ## 3.5.18
 
 - Fix the statement after a failed one sometimes returning no rows.
