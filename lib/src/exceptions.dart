@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 import 'messages/server_messages.dart';
 
@@ -69,6 +70,11 @@ class PgException implements Exception {
   final String message;
 
   PgException(this.message, {this.severity = Severity.error});
+
+  /// Whether this error leaves the connection unusable.
+  @internal
+  bool get willAbortConnection =>
+      severity == Severity.fatal || severity == Severity.panic;
 
   @override
   String toString() => '$severity $message';
