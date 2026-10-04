@@ -6,6 +6,7 @@
 - Fix a query's timeout cancel request cancelling the next statement that reused the same connection.
 - Fix the pool closing a healthy connection after an ordinary (non-fatal) query error instead of reusing it.
 - Avoid an extra async hop per server message and per synchronously-encoded query parameter.
+- Decode `numeric` values in linear time instead of quadratic for high-precision numbers.
 
 ## 3.5.18
 
