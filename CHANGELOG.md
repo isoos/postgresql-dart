@@ -3,6 +3,7 @@
 ## 3.5.19
 
 - Fix empty arrays decoding as `List<Object?>` instead of a list of their element type (a 3.5.18 regression).
+- Fix a query's timeout cancel request cancelling the next statement that reused the same connection.
 
 ## 3.5.18
 
