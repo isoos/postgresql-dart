@@ -1804,12 +1804,6 @@ ParseMessage _parseMessageFor(
   );
 }
 
-extension on PgException {
-  bool get willAbortConnection {
-    return severity == Severity.fatal || severity == Severity.panic;
-  }
-}
-
 extension on TransactionSettings {
   bool get shouldExpandBegin =>
       isolationLevel != null || accessMode != null || deferrable != null;

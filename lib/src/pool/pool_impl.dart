@@ -194,8 +194,10 @@ class PoolImplementation<L> implements Pool<L> {
       sw.start();
       try {
         return await fn(connection);
-      } catch (_) {
-        reuse = false;
+      } catch (e) {
+        // A non-fatal server error (e.g. a constraint violation) leaves the
+        // connection usable; only drop it when the error compromised it.
+        reuse = e is PgException && !e.willAbortConnection;
         rethrow;
       }
     } finally {
