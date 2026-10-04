@@ -1268,36 +1268,40 @@ class PostgresBinaryDecoder {
     if (signByte == 0xd000) return 'Infinity';
     if (signByte == 0xf000) return '-Infinity';
     final sign = signByte == 0x4000 ? '-' : '';
-    var intPart = '';
-    var fractPart = '';
+    // Buffers, not `+=` in the loop, so building the digits stays linear.
+    final intPart = StringBuffer();
+    final fractPart = StringBuffer();
 
     final fractOmitted = -(weight + 1);
     if (fractOmitted > 0) {
       // If value < 0, the leading zeros in fractional part were omitted.
-      fractPart += '0000' * fractOmitted;
+      fractPart.write('0000' * fractOmitted);
     }
 
     for (var i = 0; i < nDigits; i++) {
+      final digits = reader.readInt16().toString().padLeft(4, '0');
       if (weight >= 0) {
-        intPart += reader.readInt16().toString().padLeft(4, '0');
+        intPart.write(digits);
       } else {
-        fractPart += reader.readInt16().toString().padLeft(4, '0');
+        fractPart.write(digits);
       }
       weight--;
     }
 
     if (weight >= 0) {
       // Trailing zeros were omitted
-      intPart += '0000' * (weight + 1);
+      intPart.write('0000' * (weight + 1));
     }
 
-    var result = '$sign${intPart.replaceAll(_leadingZerosRegExp, '')}';
+    var result =
+        '$sign${intPart.toString().replaceAll(_leadingZerosRegExp, '')}';
     if (result.isEmpty) {
       result = '0'; // Show at least 0, if no int value is given.
     }
     if (dScale > 0) {
       // Only add fractional digits, if dScale allows
-      result += '.${fractPart.padRight(dScale, '0').substring(0, dScale)}';
+      result +=
+          '.${fractPart.toString().padRight(dScale, '0').substring(0, dScale)}';
     }
     return result;
   }
