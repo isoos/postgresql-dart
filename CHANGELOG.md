@@ -5,6 +5,7 @@
 - Fix empty arrays decoding as `List<Object?>` instead of a list of their element type (a 3.5.18 regression).
 - Fix a query's timeout cancel request cancelling the next statement that reused the same connection.
 - Fix the pool closing a healthy connection after an ordinary (non-fatal) query error instead of reusing it.
+- Avoid an extra async hop per server message and per synchronously-encoded query parameter.
 
 ## 3.5.18
 
