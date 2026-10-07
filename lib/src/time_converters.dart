@@ -29,7 +29,11 @@ int dateTimeToDaysSinceY2k(DateTime time) {
 }
 
 /// Binary sentinels for `timestamp`/`timestamptz`/`date` `infinity` values.
-const timestampPosInfinityMicros = 9223372036854775807;
-const timestampNegInfinityMicros = -9223372036854775807 - 1;
+///
+/// The 64-bit ones are built from their 32-bit halves: JavaScript cannot
+/// represent them exactly, and a literal that it cannot represent does not
+/// compile there.
+const timestampPosInfinityMicros = 0x7FFFFFFF * 0x100000000 + 0xFFFFFFFF;
+const timestampNegInfinityMicros = -timestampPosInfinityMicros - 1;
 const datePosInfinityDays = 2147483647;
 const dateNegInfinityDays = -2147483648;

@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.5.20
+
+- Fix the package no longer compiling to JavaScript (a 3.5.18 regression).
+
 ## 3.5.19
 
 - Add `SessionSettings.ignoreStackTraces` to skip `StackTrace.current` capture on statement execution.
