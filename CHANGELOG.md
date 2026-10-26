@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Enable TCP_NODELAY on TCP connections before PostgreSQL startup and TLS negotiation when supported.
+
 ## 3.5.20
 
 - Fix the package no longer compiling to JavaScript (a 3.5.18 regression).

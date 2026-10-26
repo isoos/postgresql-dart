@@ -323,6 +323,21 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       timeout: settings.connectTimeout,
     );
 
+    if (!endpoint.isUnixSocket) {
+      try {
+        // Disable Nagle's algorithm before the first write, including the SSL
+        // request and TLS handshake. A false result means the platform cannot
+        // set this optional optimization; the connection is still usable.
+        socket.setOption(SocketOption.tcpNoDelay, true);
+      } on UnsupportedError {
+        // Some socket implementations do not support this option.
+      } catch (_) {
+        // No channel owns the socket yet if configuring it fails.
+        socket.destroy();
+        rethrow;
+      }
+    }
+
     final sslCompleter = Completer<int>();
     // ignore: cancel_subscriptions
     final subscription = socket.listen(
