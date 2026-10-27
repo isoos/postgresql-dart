@@ -185,6 +185,20 @@ void main() {
       ]);
     });
 
+    test('sends comments in mapped queries to the server', () async {
+      const sql =
+          'SELECT current_query(), @a:int4 /* x /* @b */ @c */ -- line @d\n'
+          " /*controller='Foo'*/";
+      final rows = await connection.execute(
+        Sql.named(sql),
+        parameters: {'a': 1},
+      );
+
+      expect(rows, [
+        [sql.replaceFirst('@a:int4', r'$1'), 1],
+      ]);
+    });
+
     group('throws error', () {
       setUp(() async {
         await connection.execute(

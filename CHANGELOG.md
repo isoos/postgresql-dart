@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.5.21
+
+- Keep SQL comments in `Sql.named` / `Sql.indexed` queries (e.g. [SQLCommenter](https://google.github.io/sqlcommenter/) tags) instead of stripping them.
+- Fix comments joining adjacent tokens (e.g. `SELECT a/*c*/FROM t` was sent as `SELECT aFROM t`).
+- Fix nested block comments: `/* a /* b */ @c */` no longer treats `@c` as a variable.
+- An unterminated block comment (including an unclosed nested one) is now reported by the server instead of being silently dropped.
+
 ## 3.5.20
 
 - Fix the package no longer compiling to JavaScript (a 3.5.18 regression).
