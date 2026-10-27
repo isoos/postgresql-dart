@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Enable TCP_NODELAY on TCP connections before PostgreSQL startup and TLS negotiation when supported.
+- Close extended-query portals in the Execute/Sync exchange, avoiding a separate cleanup exchange inside transactions and cleanup errors after queued queries commit or roll back.
 
 ## 3.5.20
 
