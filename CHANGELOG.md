@@ -5,6 +5,8 @@
 - `Sql.named` / `Sql.indexed` now keep SQL comments instead of stripping them. Comments that vary per call make each query text distinct.
 - Fix comments joining adjacent tokens (`SELECT a/*c*/FROM t` was sent as `SELECT aFROM t`) and handle nested block comments.
 - **Behavior change:** an unterminated block comment is now reported by the server instead of being silently dropped.
+- Enable TCP_NODELAY on TCP connections before PostgreSQL startup and TLS negotiation when supported.
+- Close extended-query portals in the Execute/Sync exchange, avoiding a separate cleanup exchange inside transactions and cleanup errors after queued queries commit or roll back.
 
 ## 3.5.20
 
