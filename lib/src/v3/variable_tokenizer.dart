@@ -111,8 +111,8 @@ class VariableTokenizer {
 
   /// Reads the [_source] and transforms it.
   ///
-  /// Comments are removed, and variable declarations are read and transformed
-  /// into proper Postgres variables.
+  /// Variable declarations are transformed into proper Postgres variables.
+  /// Comments are kept verbatim, but variables inside them are ignored.
   void tokenize() {
     nextToken:
     while (!_isAtEnd) {
@@ -126,6 +126,7 @@ class VariableTokenizer {
         case $slash:
           // `/*`, block comment
           if (_consumeIfMatches($asterisk)) {
+            _rewrittenSql.write('/*');
             _blockComment();
             continue nextToken;
           }
@@ -133,6 +134,7 @@ class VariableTokenizer {
         case $minus:
           // `--`, line comment
           if (_consumeIfMatches($minus)) {
+            _rewrittenSql.write('--');
             _lineComment();
             continue nextToken;
           }
@@ -182,24 +184,29 @@ class VariableTokenizer {
     }
   }
 
-  /// After reading the start of a block comment, this methods skips the until
-  /// we find its end.
+  /// After reading `/*`, copies the comment up to its closing `*/`.
+  /// Like postgres, block comments nest.
   void _blockComment() {
-    // Look for `*/` sequence to end the comment
+    var depth = 1;
     while (!_isAtEnd) {
       final char = _consume();
-      if (char == $asterisk) {
-        if (_consumeIfMatches($slash)) return;
+      _rewrittenSql.writeCharCode(char);
+      if (char == $slash && _consumeIfMatches($asterisk)) {
+        _rewrittenSql.writeCharCode($asterisk);
+        depth++;
+      } else if (char == $asterisk && _consumeIfMatches($slash)) {
+        _rewrittenSql.writeCharCode($slash);
+        depth--;
+        if (depth == 0) return;
       }
     }
   }
 
-  /// After reading the start of a line comment, this method skips the current
-  /// source line.
+  /// After reading `--`, copies the rest of the line, including its line break.
   void _lineComment() {
-    // Consume the rest of the line without adding it.
     while (!_isAtEnd) {
       final char = _consume();
+      _rewrittenSql.writeCharCode(char);
       if (char == $cr || char == $lf) return;
     }
   }

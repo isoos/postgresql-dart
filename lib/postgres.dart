@@ -115,13 +115,19 @@ class Sql {
   /// SELECT name AS "@handle" FROM users WHERE id = @id; -- select @users
   /// ```
   ///
+  /// Comments are sent to the server unchanged (e.g. for
+  /// [SQLCommenter](https://google.github.io/sqlcommenter/) tags). A comment
+  /// that varies per call makes each query text distinct, which affects
+  /// `pg_stat_statements` and server-side prepared statements.
+  ///
   /// Note that this syntax is a feature of this package and not directly
   /// understood by postgres. This requires the package to scan the [sql] for
   /// variables, which adds a small overhead over when compared to a direct
   /// [Sql] query.
   /// Also, the scanner might interpret queries incorrectly in the case of
   /// malformed [sql] (like an unterminated string literal or comment). In that
-  /// case, the transformation might not recognize all variables.
+  /// case, the transformation might not recognize all variables, and the
+  /// server reports an unterminated block comment as an error.
   factory Sql.named(String sql, {String substitution}) = SqlImpl.named;
 }
 
