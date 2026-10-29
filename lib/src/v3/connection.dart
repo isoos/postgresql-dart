@@ -325,8 +325,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     if (!endpoint.isUnixSocket) {
       try {
         // Disable Nagle's algorithm before the first write, including the SSL
-        // request and TLS handshake. A false result means the platform cannot
-        // set this optional optimization; the connection is still usable.
+        // request and TLS handshake. The VM reports a failure to set it by
+        // throwing, never by returning false.
         socket.setOption(SocketOption.tcpNoDelay, true);
       } on UnsupportedError {
         // Some socket implementations do not support this option.
