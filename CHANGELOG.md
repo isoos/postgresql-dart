@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.6.0
+
+- `Sql.named` / `Sql.indexed` now keep SQL comments instead of stripping them. Comments that vary per call make each query text distinct.
+- Fix comments joining adjacent tokens (`SELECT a/*c*/FROM t` was sent as `SELECT aFROM t`) and handle nested block comments.
+- **Behavior change:** an unterminated block comment is now reported by the server instead of being silently dropped.
+
 ## 3.5.20
 
 - Fix the package no longer compiling to JavaScript (a 3.5.18 regression).

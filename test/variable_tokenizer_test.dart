@@ -121,7 +121,7 @@ void main() {
       );
       expect(
         desc.transformedSql,
-        'SELECT id  ::  text, b::\nint8 FROM foo WHERE a = \$1::int8',
+        'SELECT id /**/ :: /**/ text, b::\nint8 FROM foo WHERE a = \$1/**/::/**/int8',
       );
       expect(desc.namedVariables?.keys, ['x']);
       expect(desc.parameterTypes, [Type.bigInteger]);
@@ -166,10 +166,85 @@ void main() {
     });
   });
 
+  group('comments', () {
+    test('keeps SQLCommenter tags', () {
+      // https://google.github.io/sqlcommenter/spec/
+      final desc = InternalQueryDescription.named(
+        "SELECT * FROM t WHERE id = @id /*controller='Foo',route='%2Fbar'*/",
+      );
+      expect(
+        desc.transformedSql,
+        r"SELECT * FROM t WHERE id = $1 /*controller='Foo',route='%2Fbar'*/",
+      );
+      expect(desc.namedVariables?.keys, ['id']);
+    });
+
+    test('keeps adjacent tokens apart', () {
+      final desc = InternalQueryDescription.named(
+        'SELECT @x/*c*/FROM t--c\nWHERE',
+      );
+      expect(desc.transformedSql, 'SELECT \$1/*c*/FROM t--c\nWHERE');
+      expect(desc.namedVariables?.keys, ['x']);
+    });
+
+    test('ends line comments at CR, CRLF or the end of the query', () {
+      final desc = InternalQueryDescription.named(
+        'SELECT @x -- @c\r, @y -- @c\r\n, @z -- @c',
+      );
+      expect(
+        desc.transformedSql,
+        'SELECT \$1 -- @c\r, \$2 -- @c\r\n, \$3 -- @c',
+      );
+      expect(desc.namedVariables?.keys, ['x', 'y', 'z']);
+    });
+
+    test('nests block comments like postgres', () {
+      final desc = InternalQueryDescription.named(
+        "SELECT @x /* a /* b */ @c don't */, @y",
+      );
+      expect(desc.transformedSql, r"SELECT $1 /* a /* b */ @c don't */, $2");
+      expect(desc.namedVariables?.keys, ['x', 'y']);
+    });
+
+    test('keeps unterminated block comments for the server to report', () {
+      for (final sql in ['SELECT @1 /* @2', 'SELECT @1 /* a /* b */ @2']) {
+        final desc = InternalQueryDescription.named(sql);
+        expect(desc.transformedSql, sql.replaceFirst('@1', r'$1'), reason: sql);
+        expect(desc.namedVariables?.keys, ['1'], reason: sql);
+      }
+    });
+  });
+
+  group('comments next to literals', () {
+    test('around strings, identifiers and dollar quotes', () {
+      final desc = InternalQueryDescription.named(
+        "SELECT 'a'/*@c*/, \"b\"--@d\n, \$\$x\$\$/*@e*/, @x /*é😀*/",
+      );
+      expect(
+        desc.transformedSql,
+        "SELECT 'a'/*@c*/, \"b\"--@d\n, \$\$x\$\$/*@e*/, \$1 /*é😀*/",
+      );
+      expect(desc.namedVariables?.keys, ['x']);
+    });
+
+    test('comment markers inside literals are not comments', () {
+      final desc = InternalQueryDescription.named(
+        "SELECT '/*', @x, '*/', '--', @y",
+      );
+      expect(desc.transformedSql, r"SELECT '/*', $1, '*/', '--', $2");
+      expect(desc.namedVariables?.keys, ['x', 'y']);
+    });
+
+    test('line comment on the last line without line break', () {
+      final desc = InternalQueryDescription.named('SELECT @x--tag');
+      expect(desc.transformedSql, r'SELECT $1--tag');
+    });
+  });
+
   group('ignores', () {
     test('line comments', () {
       final desc = InternalQueryDescription.named('SELECT @1, -- @2 \n @3');
-      expect(desc.transformedSql, r'SELECT $1,  $2');
+      expect(desc.transformedSql, 'SELECT \$1, -- @2 \n \$2');
       expect(desc.namedVariables?.keys, ['1', '3']);
     });
 
@@ -177,7 +252,7 @@ void main() {
       final desc = InternalQueryDescription.named(
         'SELECT @1 /* this is ignored: @2 */, @3',
       );
-      expect(desc.transformedSql, r'SELECT $1 , $2');
+      expect(desc.transformedSql, r'SELECT $1 /* this is ignored: @2 */, $2');
       expect(desc.namedVariables?.keys, ['1', '3']);
     });
 
