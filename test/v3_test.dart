@@ -199,6 +199,30 @@ void main() {
       ]);
     });
 
+    test('sends comments in prepared mapped queries to the server', () async {
+      const sql =
+          "SELECT current_query(), @a:int4 -- é😀 @d\n/*controller='Foo'*/";
+      final stmt = await connection.prepare(Sql.named(sql));
+      try {
+        final rows = await stmt.run({'a': 1});
+        expect(rows, [
+          [sql.replaceFirst('@a:int4', r'$1'), 1],
+        ]);
+      } finally {
+        await stmt.dispose();
+      }
+    });
+
+    test('reports unterminated block comments', () async {
+      await expectLater(
+        connection.execute(
+          Sql.named('SELECT @a:int4 /* @b'),
+          parameters: {'a': 1},
+        ),
+        throwsA(isA<ServerException>()),
+      );
+    });
+
     group('throws error', () {
       setUp(() async {
         await connection.execute(

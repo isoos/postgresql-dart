@@ -215,6 +215,32 @@ void main() {
     });
   });
 
+  group('comments next to literals', () {
+    test('around strings, identifiers and dollar quotes', () {
+      final desc = InternalQueryDescription.named(
+        "SELECT 'a'/*@c*/, \"b\"--@d\n, \$\$x\$\$/*@e*/, @x /*é😀*/",
+      );
+      expect(
+        desc.transformedSql,
+        "SELECT 'a'/*@c*/, \"b\"--@d\n, \$\$x\$\$/*@e*/, \$1 /*é😀*/",
+      );
+      expect(desc.namedVariables?.keys, ['x']);
+    });
+
+    test('comment markers inside literals are not comments', () {
+      final desc = InternalQueryDescription.named(
+        "SELECT '/*', @x, '*/', '--', @y",
+      );
+      expect(desc.transformedSql, r"SELECT '/*', $1, '*/', '--', $2");
+      expect(desc.namedVariables?.keys, ['x', 'y']);
+    });
+
+    test('line comment on the last line without line break', () {
+      final desc = InternalQueryDescription.named('SELECT @x--tag');
+      expect(desc.transformedSql, r'SELECT $1--tag');
+    });
+  });
+
   group('ignores', () {
     test('line comments', () {
       final desc = InternalQueryDescription.named('SELECT @1, -- @2 \n @3');

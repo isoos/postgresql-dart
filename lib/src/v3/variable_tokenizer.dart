@@ -111,9 +111,8 @@ class VariableTokenizer {
 
   /// Reads the [_source] and transforms it.
   ///
-  /// Variable declarations are read and transformed into proper Postgres
-  /// variables. Comments are kept verbatim (so that tags like the ones added by
-  /// SQLCommenter reach the server), but variables inside them are ignored.
+  /// Variable declarations are transformed into proper Postgres variables.
+  /// Comments are kept verbatim, but variables inside them are ignored.
   void tokenize() {
     nextToken:
     while (!_isAtEnd) {
@@ -185,11 +184,8 @@ class VariableTokenizer {
     }
   }
 
-  /// After reading the start of a block comment, this method copies the
-  /// comment until we find its end.
-  ///
-  /// Like postgres, block comments can be nested, so the comment only ends
-  /// once every `/*` has been closed by a matching `*/`.
+  /// After reading `/*`, copies the comment up to its closing `*/`.
+  /// Like postgres, block comments nest.
   void _blockComment() {
     var depth = 1;
     while (!_isAtEnd) {
@@ -206,8 +202,7 @@ class VariableTokenizer {
     }
   }
 
-  /// After reading the start of a line comment, this method copies the rest of
-  /// the current source line, including the line break that ends it.
+  /// After reading `--`, copies the rest of the line, including its line break.
   void _lineComment() {
     while (!_isAtEnd) {
       final char = _consume();
