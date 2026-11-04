@@ -7,6 +7,7 @@
 - **Behavior change:** an unterminated block comment is now reported by the server instead of being silently dropped.
 - Enable TCP_NODELAY on TCP connections before PostgreSQL startup and TLS negotiation when supported.
 - **Behavior change:** Close extended-query portals in the execute/sync exchange, avoiding a separate cleanup exchange inside transactions and cleanup errors after queued queries commit or roll back.
+- **Behavior change:** TCP keep-alive is now on by default (OS timings, not for Unix sockets). Configure with `ConnectionSettings.keepAlive` / `PoolSettings.keepAlive` or the URL parameters.
 
 ## 3.5.20
 

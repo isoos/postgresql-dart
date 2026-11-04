@@ -96,6 +96,10 @@ These parameters are supported by `Connection.openFromUrl()`:
 | `sslrootcert` | String | Path to root certificate | `sslrootcert=/path/to/ca.pem` |
 | `replication` | String | Replication mode | `database` (logical), `true`/`physical`, `false`/`no_select` (none) |
 | `query_timeout` | Integer | Query timeout in seconds | `query_timeout=300` |
+| `keepalives` | Boolean | TCP keep-alive (enabled by default, ignored on Unix sockets) | `keepalives=0`, `keepalives=1` (also `true`/`false`, `on`/`off`, `yes`/`no`) |
+| `keepalives_idle` | Integer | Seconds of inactivity before the first keep-alive probe (`0` = OS default) | `keepalives_idle=60` |
+| `keepalives_interval` | Integer | Seconds between keep-alive probes (`0` = OS default) | `keepalives_interval=10` |
+| `keepalives_count` | Integer | Unanswered probes before the connection is considered dead (`0` = OS default) | `keepalives_count=5` |
 
 ### Pool-Specific Parameters
 

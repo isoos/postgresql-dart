@@ -41,6 +41,7 @@ class PoolSettings extends ConnectionSettings {
     super.ignoreStackTraces,
     super.onOpen,
     super.typeRegistry,
+    super.keepAlive,
   });
 }
 
@@ -92,6 +93,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
         replicationMode: parsed.replicationMode,
         securityContext: parsed.securityContext,
         sslMode: parsed.sslMode,
+        keepAlive: parsed.keepAlive,
         maxConnectionAge: parsed.maxConnectionAge,
         maxConnectionCount: parsed.maxConnectionCount,
         maxSessionUse: parsed.maxSessionUse,
