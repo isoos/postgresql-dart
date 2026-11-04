@@ -157,12 +157,15 @@ class ResolvedPoolSettings extends ResolvedConnectionSettings
   final Duration maxSessionUse;
   @override
   final int maxQueryCount;
+  @override
+  final bool resetSession;
 
   ResolvedPoolSettings(PoolSettings? settings)
     : maxConnectionCount = settings?.maxConnectionCount ?? 1,
       maxConnectionAge = settings?.maxConnectionAge ?? Duration(hours: 12),
       maxSessionUse = settings?.maxSessionUse ?? Duration(hours: 4),
       maxQueryCount = settings?.maxQueryCount ?? 100000,
+      resetSession = settings?.resetSession ?? true,
       super(settings, null);
 }
 

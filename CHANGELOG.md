@@ -7,6 +7,7 @@
 - `Sql.named` / `Sql.indexed` now keep SQL comments instead of stripping them. Comments that vary per call make each query text distinct. An unterminated block comment is now reported by the server instead of being silently dropped.
 - Extended-query portals are now closed in the execute/sync exchange, avoiding a separate cleanup exchange inside transactions and cleanup errors after queued queries commit or roll back.
 - TCP keep-alive is now on by default (OS timings, not for Unix sockets). Configure with `ConnectionSettings.keepAlive` / `PoolSettings.keepAlive` or the URL parameters.
+- Pool connections whose session state may have changed are reset with `DISCARD ALL` before reuse.
 
 **Other changes:**
 

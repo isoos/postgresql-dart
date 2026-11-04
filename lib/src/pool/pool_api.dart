@@ -22,11 +22,21 @@ class PoolSettings extends ConnectionSettings {
   /// New sessions won't be scheduled after this limit is reached.
   final int? maxQueryCount;
 
+  /// Whether a connection whose session state may have been changed (e.g. by
+  /// `SET`, `LISTEN`, `PREPARE`, temporary tables or advisory locks) is reset
+  /// with `DISCARD ALL` before being reused, so the state doesn't leak to the
+  /// next user. The reset happens when the connection is next reused, or right
+  /// away if it may hold session-level advisory locks. Connections that ran no
+  /// such statement are not touched.
+  /// Defaults to `true`.
+  final bool? resetSession;
+
   const PoolSettings({
     this.maxConnectionCount,
     this.maxConnectionAge,
     this.maxSessionUse,
     this.maxQueryCount,
+    this.resetSession,
     super.applicationName,
     super.connectTimeout,
     super.sslMode,

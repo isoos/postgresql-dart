@@ -28,14 +28,11 @@ void main() {
     });
 
     test('execute re-uses free connection', () async {
-      // The temporary table is only visible to the connection creating it, so
-      // this asserts that all statements are running on the same underlying
-      // connection.
-      await pool.execute('CREATE TEMPORARY TABLE foo (bar INTEGER);');
-
-      await pool.execute('INSERT INTO foo VALUES (1), (2), (3);');
-      final results = await pool.execute('SELECT * FROM foo');
-      expect(results, hasLength(3));
+      // Clean connections are reused as-is, so all statements run in the same
+      // backend process.
+      final pid1 = (await pool.execute('SELECT pg_backend_pid()')).single[0];
+      final pid2 = (await pool.execute('SELECT pg_backend_pid()')).single[0];
+      expect(pid2, pid1);
     });
 
     test('can use transactions', () async {
