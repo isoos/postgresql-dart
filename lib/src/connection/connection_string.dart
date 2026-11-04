@@ -12,6 +12,7 @@ import '../../postgres.dart';
   ReplicationMode? replicationMode,
   SecurityContext? securityContext,
   SslMode? sslMode,
+  KeepAliveSettings? keepAlive,
   // non-standard parameters
   Duration? queryTimeout,
   // pool parameters
@@ -94,6 +95,10 @@ parseConnectionString(
     'connect_timeout',
     'database',
     'host',
+    'keepalives',
+    'keepalives_count',
+    'keepalives_idle',
+    'keepalives_interval',
     'password',
     'port',
     'replication',
@@ -276,6 +281,19 @@ parseConnectionString(
     maxQueryCount = count;
   }
 
+  KeepAliveSettings? keepAlive;
+  if (params.containsKey('keepalives') ||
+      params.containsKey('keepalives_idle') ||
+      params.containsKey('keepalives_interval') ||
+      params.containsKey('keepalives_count')) {
+    keepAlive = KeepAliveSettings(
+      enabled: _parseKeepAliveEnabled(params['keepalives']),
+      idle: _parseKeepAliveSeconds('keepalives_idle', params),
+      interval: _parseKeepAliveSeconds('keepalives_interval', params),
+      count: _parseKeepAliveCount(params),
+    );
+  }
+
   final endpoints = hosts
       .map(
         (h) => Endpoint(
@@ -292,6 +310,7 @@ parseConnectionString(
   return (
     endpoints: endpoints,
     sslMode: sslMode,
+    keepAlive: keepAlive,
     securityContext: securityContext,
     connectTimeout: connectTimeout,
     applicationName: applicationName,
@@ -304,6 +323,50 @@ parseConnectionString(
     maxQueryCount: maxQueryCount,
   );
 }
+
+bool? _parseKeepAliveEnabled(String? value) {
+  switch (value) {
+    case null:
+      return null;
+    case '1':
+    case 'true':
+    case 'on':
+    case 'yes':
+      return true;
+    case '0':
+    case 'false':
+    case 'off':
+    case 'no':
+      return false;
+    default:
+      throw ArgumentError(
+        'Invalid keepalives value: $value. Expected: 1/true/on/yes, 0/false/off/no',
+      );
+  }
+}
+
+/// Parses a non-negative integer where `0` means the operating system default.
+int? _parseKeepAliveInt(String name, Map<String, String> params) {
+  final value = params[name];
+  if (value == null) {
+    return null;
+  }
+  final parsed = int.tryParse(value);
+  if (parsed == null || parsed < 0) {
+    throw ArgumentError(
+      'Invalid $name value: $value. Expected non-negative integer.',
+    );
+  }
+  return parsed == 0 ? null : parsed;
+}
+
+Duration? _parseKeepAliveSeconds(String name, Map<String, String> params) {
+  final seconds = _parseKeepAliveInt(name, params);
+  return seconds == null ? null : Duration(seconds: seconds);
+}
+
+int? _parseKeepAliveCount(Map<String, String> params) =>
+    _parseKeepAliveInt('keepalives_count', params);
 
 String? _parseUsername(String userInfo) {
   final colonIndex = userInfo.indexOf(':');

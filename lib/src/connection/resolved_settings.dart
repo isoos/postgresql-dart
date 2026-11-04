@@ -14,6 +14,26 @@ Duration _requirePositive(String name, Duration value) {
   return value;
 }
 
+KeepAliveSettings _resolveKeepAlive(
+  KeepAliveSettings? settings,
+  KeepAliveSettings? fallback,
+) {
+  final idle = settings?.idle ?? fallback?.idle;
+  final interval = settings?.interval ?? fallback?.interval;
+  final count = settings?.count ?? fallback?.count;
+  if (idle != null) _requirePositive('keepAlive.idle', idle);
+  if (interval != null) _requirePositive('keepAlive.interval', interval);
+  if (count != null && count <= 0) {
+    throw ArgumentError('keepAlive.count must be positive, got $count.');
+  }
+  return KeepAliveSettings(
+    enabled: settings?.enabled ?? fallback?.enabled ?? true,
+    idle: idle,
+    interval: interval,
+    count: count,
+  );
+}
+
 class ResolvedSessionSettings implements SessionSettings {
   @override
   final Duration connectTimeout;
@@ -85,6 +105,8 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
   final TypeRegistry typeRegistry;
   @override
   final Future<void> Function(Connection connection)? onOpen;
+  @override
+  final KeepAliveSettings keepAlive;
 
   ResolvedConnectionSettings(
     ConnectionSettings? super.settings,
@@ -103,7 +125,8 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
       // TODO: consider merging the type registries
       typeRegistry =
           settings?.typeRegistry ?? fallback?.typeRegistry ?? TypeRegistry(),
-      onOpen = settings?.onOpen ?? fallback?.onOpen;
+      onOpen = settings?.onOpen ?? fallback?.onOpen,
+      keepAlive = _resolveKeepAlive(settings?.keepAlive, fallback?.keepAlive);
 
   bool isMatchingConnection(ResolvedConnectionSettings other) {
     // `onOpen` deliberately isn't compared: it only runs once, when a
@@ -119,7 +142,8 @@ class ResolvedConnectionSettings extends ResolvedSessionSettings
         securityContext == other.securityContext &&
         transformer == other.transformer &&
         replicationMode == other.replicationMode &&
-        typeRegistry == other.typeRegistry;
+        typeRegistry == other.typeRegistry &&
+        keepAlive == other.keepAlive;
   }
 }
 

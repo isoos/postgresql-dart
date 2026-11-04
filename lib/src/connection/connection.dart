@@ -21,6 +21,7 @@ import '../types/type_registry.dart';
 import 'channels.dart';
 import 'connection_info.dart';
 import 'database_info.dart';
+import 'keep_alive.dart';
 import 'resolved_settings.dart';
 
 final _runTxZoneKey = Object();
@@ -335,6 +336,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         socket.destroy();
         rethrow;
       }
+    }
+
+    if (!endpoint.isUnixSocket) {
+      // Must happen before the TLS upgrade: SecureSocket has no setRawOption.
+      applyKeepAlive(socket, settings.keepAlive);
     }
 
     final sslCompleter = Completer<int>();

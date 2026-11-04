@@ -268,6 +268,7 @@ abstract class Connection implements Session, SessionExecutor {
         queryTimeout: parsed.queryTimeout,
         securityContext: parsed.securityContext,
         sslMode: parsed.sslMode,
+        keepAlive: parsed.keepAlive,
       ),
     );
   }
@@ -538,6 +539,13 @@ class ConnectionSettings extends SessionSettings {
   /// This callback function will be called after opening the connection.
   final Future<void> Function(Connection connection)? onOpen;
 
+  /// TCP keep-alive settings of the underlying socket, used to detect
+  /// connections that became unresponsive while idle.
+  ///
+  /// Keep-alive is enabled by default, using the operating system's timings.
+  /// It has no effect on Unix-domain socket connections.
+  final KeepAliveSettings? keepAlive;
+
   const ConnectionSettings({
     this.applicationName,
     this.timeZone,
@@ -548,12 +556,59 @@ class ConnectionSettings extends SessionSettings {
     this.typeRegistry,
     this.securityContext,
     this.onOpen,
+    this.keepAlive,
     super.connectTimeout,
     super.queryTimeout,
     super.queryMode,
     super.ignoreSuperfluousParameters,
     super.ignoreStackTraces,
   });
+}
+
+/// TCP keep-alive settings.
+///
+/// When enabled, the operating system sends probes on an idle connection and
+/// closes it if the peer stops acknowledging them. This detects half-dead
+/// connections (e.g. after a network drop or a NAT/load balancer timeout)
+/// that would otherwise stay open indefinitely.
+///
+/// Any timing or count that is not set keeps the operating system's default
+/// (on Linux, the first probe is sent only after 2 hours of inactivity).
+/// Timings are rounded up to whole seconds.
+///
+/// Options that the platform does not support are ignored.
+class KeepAliveSettings {
+  /// Whether TCP keep-alive is enabled. Defaults to `true`.
+  final bool? enabled;
+
+  /// Idle time before the first probe is sent.
+  final Duration? idle;
+
+  /// Time between probes when the previous one was not acknowledged.
+  final Duration? interval;
+
+  /// Number of unacknowledged probes after which the connection is dropped.
+  final int? count;
+
+  const KeepAliveSettings({this.enabled, this.idle, this.interval, this.count});
+
+  /// Keep-alive turned off.
+  const KeepAliveSettings.disabled()
+    : enabled = false,
+      idle = null,
+      interval = null,
+      count = null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is KeepAliveSettings &&
+      enabled == other.enabled &&
+      idle == other.idle &&
+      interval == other.interval &&
+      count == other.count;
+
+  @override
+  int get hashCode => Object.hash(enabled, idle, interval, count);
 }
 
 class SessionSettings {

@@ -166,6 +166,94 @@ void main() {
       });
     });
 
+    group('Keep-alive', () {
+      test('unset leaves keepAlive null', () {
+        expect(
+          parseConnectionString('postgresql://localhost/test').keepAlive,
+          isNull,
+        );
+      });
+
+      test('all parameters', () {
+        final k = parseConnectionString(
+          'postgresql://localhost/test'
+          '?keepalives=1&keepalives_idle=60&keepalives_interval=10'
+          '&keepalives_count=5',
+        ).keepAlive!;
+        expect(k.enabled, isTrue);
+        expect(k.idle, Duration(seconds: 60));
+        expect(k.interval, Duration(seconds: 10));
+        expect(k.count, 5);
+      });
+
+      test('keepalives=0 disables', () {
+        final k = parseConnectionString(
+          'postgresql://localhost/test?keepalives=0',
+        ).keepAlive!;
+        expect(k.enabled, isFalse);
+      });
+
+      test('boolean spellings', () {
+        for (final v in ['true', 'on', 'yes']) {
+          expect(
+            parseConnectionString(
+              'postgresql://localhost/test?keepalives=$v',
+            ).keepAlive!.enabled,
+            isTrue,
+          );
+        }
+        for (final v in ['false', 'off', 'no']) {
+          expect(
+            parseConnectionString(
+              'postgresql://localhost/test?keepalives=$v',
+            ).keepAlive!.enabled,
+            isFalse,
+          );
+        }
+      });
+
+      test('timings only keep keep-alive enabled by default', () {
+        final k = parseConnectionString(
+          'postgresql://localhost/test?keepalives_idle=30',
+        ).keepAlive!;
+        expect(k.enabled, isNull);
+        expect(k.idle, Duration(seconds: 30));
+      });
+
+      test('0 means the OS default', () {
+        final k = parseConnectionString(
+          'postgresql://localhost/test'
+          '?keepalives_idle=0&keepalives_interval=0&keepalives_count=0',
+        ).keepAlive!;
+        expect(k.idle, isNull);
+        expect(k.interval, isNull);
+        expect(k.count, isNull);
+      });
+
+      test('invalid values throw ArgumentError', () {
+        for (final q in [
+          'keepalives=maybe',
+          'keepalives_idle=abc',
+          'keepalives_interval=-1',
+          'keepalives_count=1.5',
+        ]) {
+          expect(
+            () => parseConnectionString('postgresql://localhost/test?$q'),
+            throwsArgumentError,
+            reason: q,
+          );
+        }
+      });
+
+      test('is accepted with pool settings', () {
+        final k = parseConnectionString(
+          'postgresql://localhost/test?keepalives_count=4',
+          enablePoolSettings: true,
+        ).keepAlive!;
+        expect(k.count, 4);
+      });
+    });
+
     group('Encoding and replication', () {
       test('client_encoding UTF8', () {
         final result = parseConnectionString(
