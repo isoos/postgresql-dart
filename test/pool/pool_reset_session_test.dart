@@ -78,5 +78,44 @@ void main() {
       await pool.execute("SET application_name = 'leaked'");
       expect(await appName(pool), 'leaked');
     });
+
+    group('idle check', () {
+      Future<Pool> openIdle(Duration? idleCheckAfter) async =>
+          Pool.withEndpoints(
+            [await server.endpoint()],
+            settings: PoolSettings(
+              maxConnectionCount: 1,
+              idleCheckAfter: idleCheckAfter,
+            ),
+          );
+
+      test('idle connection that is still alive is reused', () async {
+        final pool = await openIdle(Duration(milliseconds: 1));
+        addTearDown(pool.close);
+        final pid = (await pool.execute('SELECT pg_backend_pid()')).single[0];
+        await Future.delayed(Duration(milliseconds: 20));
+        expect((await pool.execute('SELECT pg_backend_pid()')).single[0], pid);
+      });
+
+      test('terminated idle connection is replaced', () async {
+        final pool = await openIdle(Duration(milliseconds: 1));
+        addTearDown(pool.close);
+        final pid = (await pool.execute('SELECT pg_backend_pid()')).single[0];
+        final other = await Connection.open(await server.endpoint());
+        addTearDown(other.close);
+        await other.execute('SELECT pg_terminate_backend($pid)');
+        await Future.delayed(Duration(milliseconds: 50));
+        final next = (await pool.execute('SELECT pg_backend_pid()')).single[0];
+        expect(next, isNot(pid));
+      });
+
+      test('can be disabled', () async {
+        final pool = await openIdle(Duration.zero);
+        addTearDown(pool.close);
+        final pid = (await pool.execute('SELECT pg_backend_pid()')).single[0];
+        await Future.delayed(Duration(milliseconds: 20));
+        expect((await pool.execute('SELECT pg_backend_pid()')).single[0], pid);
+      });
+    });
   });
 }

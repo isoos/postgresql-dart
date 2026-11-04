@@ -241,9 +241,7 @@ class PoolImplementation<L> implements Pool<L> {
       // NOTE: It is important to update the _isInUse flag here, otherwise
       //       race conditions may create conflicts.
       oldc._isInUse = true;
-      if (_settings.resetSession &&
-          oldc._connection.isSessionDirty &&
-          !await oldc._tryResetSession(timeout)) {
+      if (!await oldc._tryPrepareForReuse(timeout)) {
         await oldc._dispose(force: true);
       } else {
         return oldc;
@@ -345,10 +343,28 @@ class _PoolConnection implements Connection {
     return false;
   }
 
-  Future<bool> _tryResetSession([Duration? timeout]) async {
+  /// Resets a dirty session or, for a connection that has been idle for long,
+  /// checks that it is still alive. Returns `false` if the connection should
+  /// not be used.
+  Future<bool> _tryPrepareForReuse(Duration timeout) {
+    final settings = _pool._settings;
+    if (settings.resetSession && _connection.isSessionDirty) {
+      return _tryResetSession(timeout);
+    }
+    final idleCheckAfter = settings.idleCheckAfter;
+    if (idleCheckAfter > Duration.zero &&
+        DateTime.now().difference(_lastReturned) >= idleCheckAfter) {
+      return _tryRun(_connection.ping(), timeout);
+    }
+    return Future.value(true);
+  }
+
+  Future<bool> _tryResetSession([Duration? timeout]) =>
+      _tryRun(_connection.resetSession(), timeout);
+
+  Future<bool> _tryRun(Future<void> action, Duration? timeout) async {
     try {
-      final reset = _connection.resetSession();
-      await (timeout == null ? reset : reset.timeout(timeout));
+      await (timeout == null ? action : action.timeout(timeout));
       return true;
     } catch (_) {
       return false;
