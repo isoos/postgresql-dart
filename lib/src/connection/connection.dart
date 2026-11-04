@@ -553,6 +553,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   @internal
   bool get isSessionDirty => _sessionDirty;
 
+  /// Verifies that the server still answers on this connection.
+  @internal
+  Future<void> ping() async {
+    await execute(Sql('SELECT 1'), queryMode: QueryMode.simple);
+  }
+
   /// Returns the server session to its initial state (`DISCARD ALL`), then
   /// runs `onOpen` again, as it would on a fresh connection.
   @internal

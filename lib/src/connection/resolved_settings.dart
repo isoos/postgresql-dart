@@ -159,6 +159,8 @@ class ResolvedPoolSettings extends ResolvedConnectionSettings
   final int maxQueryCount;
   @override
   final bool resetSession;
+  @override
+  final Duration idleCheckAfter;
 
   ResolvedPoolSettings(PoolSettings? settings)
     : maxConnectionCount = settings?.maxConnectionCount ?? 1,
@@ -166,6 +168,7 @@ class ResolvedPoolSettings extends ResolvedConnectionSettings
       maxSessionUse = settings?.maxSessionUse ?? Duration(hours: 4),
       maxQueryCount = settings?.maxQueryCount ?? 100000,
       resetSession = settings?.resetSession ?? true,
+      idleCheckAfter = settings?.idleCheckAfter ?? Duration.zero,
       super(settings, null);
 }
 

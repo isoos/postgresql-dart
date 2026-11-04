@@ -31,12 +31,24 @@ class PoolSettings extends ConnectionSettings {
   /// Defaults to `true`.
   final bool? resetSession;
 
+  /// A connection that has been idle in the pool for at least this long is
+  /// checked with a cheap round trip before it is reused. A connection that
+  /// turns out to be dead (e.g. dropped by a server restart or a NAT timeout)
+  /// is discarded and replaced instead of failing the caller's first query.
+  /// The check is skipped when [resetSession] already runs a reset, which
+  /// serves as the check.
+  ///
+  /// Disabled by default: when not set or [Duration.zero], connections are not
+  /// checked before reuse.
+  final Duration? idleCheckAfter;
+
   const PoolSettings({
     this.maxConnectionCount,
     this.maxConnectionAge,
     this.maxSessionUse,
     this.maxQueryCount,
     this.resetSession,
+    this.idleCheckAfter,
     super.applicationName,
     super.connectTimeout,
     super.sslMode,
