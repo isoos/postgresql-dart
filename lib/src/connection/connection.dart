@@ -135,6 +135,7 @@ abstract class _PgSessionBase implements Session {
       query,
       typeRegistry: _connection._settings.typeRegistry,
     );
+    _connection._trackSessionState(description.transformedSql);
     final variables = description.bindParameters(
       parameters,
       ignoreSuperfluous: _settings.ignoreSuperfluousParameters,
@@ -212,6 +213,7 @@ abstract class _PgSessionBase implements Session {
       query,
       typeRegistry: _connection._settings.typeRegistry,
     );
+    conn._trackSessionState(description.transformedSql);
 
     await _sendAndWaitForQuery<ParseCompleteMessage>(
       buildParseMessage(description, name, fallbackTypes),
@@ -270,6 +272,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
       if (connection._settings.onOpen != null) {
         await connection._settings.onOpen!(connection);
       }
+      connection._sessionDirty = false;
+      connection._holdsSessionLocks = false;
     } catch (e, s) {
       // Startup (or onOpen) failed - the socket and its listener must not be
       // left dangling, otherwise this becomes an unreferenced connection
@@ -511,6 +515,58 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
 
   @internal
   int get queryCount => _queryCount;
+
+  bool _sessionDirty = false;
+  bool _holdsSessionLocks = false;
+
+  // Statements that may leave state behind on the server session. This is
+  // deliberately broad: a false positive only costs one extra reset.
+  static final _statefulSql = RegExp(
+    r'\b(set|listen|prepare|declare|load|set_config|temp|temporary|lo_\w+|'
+    r'pg_(try_)?advisory_lock\w*)\b',
+    caseSensitive: false,
+  );
+
+  // Session-level advisory locks (the transaction-level `_xact_` variants
+  // release themselves) keep blocking other sessions until released.
+  static final _sessionLockSql = RegExp(
+    r'\bpg_(try_)?advisory_lock\w*',
+    caseSensitive: false,
+  );
+
+  void _trackSessionState(String sql) {
+    if (!_sessionDirty && _statefulSql.hasMatch(sql)) {
+      _sessionDirty = true;
+    }
+    if (!_holdsSessionLocks && _sessionLockSql.hasMatch(sql)) {
+      _holdsSessionLocks = true;
+    }
+  }
+
+  /// Whether a statement ran that may have taken a session-level advisory
+  /// lock, which must not be held while the connection sits idle.
+  @internal
+  bool get mayHoldSessionLocks => _holdsSessionLocks;
+
+  /// Whether a statement ran that may have changed the server session state
+  /// (settings, listeners, temp objects, advisory locks...).
+  @internal
+  bool get isSessionDirty => _sessionDirty;
+
+  /// Returns the server session to its initial state (`DISCARD ALL`), then
+  /// runs `onOpen` again, as it would on a fresh connection.
+  @internal
+  Future<void> resetSession() async {
+    await execute(Sql('DISCARD ALL'), queryMode: QueryMode.simple);
+    _sessionDirty = false;
+    _holdsSessionLocks = false;
+    final onOpen = _settings.onOpen;
+    if (onOpen != null) {
+      await onOpen(this);
+    }
+    _sessionDirty = false;
+    _holdsSessionLocks = false;
+  }
 
   @override
   Channels get channels => _channels;

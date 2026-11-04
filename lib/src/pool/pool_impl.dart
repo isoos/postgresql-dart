@@ -210,6 +210,13 @@ class PoolImplementation<L> implements Pool<L> {
         connection._elapsedInUse += sw.elapsed;
         if (_closing || !reuse || !connection.isOpen) {
           await connection._dispose();
+        } else if (_settings.resetSession &&
+            connection._connection.mayHoldSessionLocks &&
+            !await connection._tryResetSession()) {
+          // Session-level advisory locks must not stay held while idle, so
+          // this one is reset right away. Everything else is deferred until
+          // the connection is actually reused.
+          await connection._dispose(force: true);
         } else {
           // Allow the connection to be re-used later.
           connection._isInUse = false;
@@ -234,7 +241,13 @@ class PoolImplementation<L> implements Pool<L> {
       // NOTE: It is important to update the _isInUse flag here, otherwise
       //       race conditions may create conflicts.
       oldc._isInUse = true;
-      return oldc;
+      if (_settings.resetSession &&
+          oldc._connection.isSessionDirty &&
+          !await oldc._tryResetSession(timeout)) {
+        await oldc._dispose(force: true);
+      } else {
+        return oldc;
+      }
     }
 
     return await _connectLock.withRequestTimeout(timeout: timeout, (
@@ -330,6 +343,16 @@ class _PoolConnection implements Connection {
       return true;
     }
     return false;
+  }
+
+  Future<bool> _tryResetSession([Duration? timeout]) async {
+    try {
+      final reset = _connection.resetSession();
+      await (timeout == null ? reset : reset.timeout(timeout));
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _dispose({bool force = false}) async {
