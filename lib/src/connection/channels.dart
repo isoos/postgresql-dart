@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:stack_trace/stack_trace.dart';
 
 import '../../postgres.dart';
-import '../v3/protocol.dart';
+import '../protocol/protocol.dart';
 
 String _identifier(String source) {
   // To avoid complex ambiguity rules, we always wrap identifier in double

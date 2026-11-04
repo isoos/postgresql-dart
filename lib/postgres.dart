@@ -4,17 +4,20 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
-import 'package:postgres/src/connection_string.dart';
-import 'package:postgres/src/v3/connection_info.dart';
+import 'package:postgres/src/connection/connection_info.dart';
+import 'package:postgres/src/connection/connection_string.dart';
 import 'package:stream_channel/stream_channel.dart';
 
-import 'src/replication.dart';
-import 'src/types.dart';
+import 'src/connection/connection.dart';
+import 'src/connection/replication.dart';
+import 'src/protocol/protocol.dart';
+import 'src/query/query_description.dart';
 import 'src/types/type_registry.dart';
-import 'src/v3/connection.dart';
-import 'src/v3/protocol.dart';
-import 'src/v3/query_description.dart';
+import 'src/types/types.dart';
 
+export 'src/connection/connection_info.dart' show ConnectionInfo;
+export 'src/connection/database_info.dart' show DatabaseInfo;
+export 'src/connection/replication.dart';
 export 'src/exceptions.dart'
     show
         BadCertificateException,
@@ -24,8 +27,6 @@ export 'src/exceptions.dart'
         UniqueViolationException,
         ForeignKeyViolationException;
 export 'src/pool/pool_api.dart';
-export 'src/replication.dart';
-export 'src/types.dart';
 export 'src/types/codec.dart'
     show Codec, CodecContext, EncodedValue, EncoderFn, EncodingFormat;
 export 'src/types/geo_types.dart';
@@ -33,8 +34,7 @@ export 'src/types/range_types.dart';
 export 'src/types/text_search.dart'
     show TsVector, TsWord, TsWordPos, TsWeight, TsQuery;
 export 'src/types/type_registry.dart' show TypeRegistry;
-export 'src/v3/connection_info.dart' show ConnectionInfo;
-export 'src/v3/database_info.dart' show DatabaseInfo;
+export 'src/types/types.dart';
 
 /// A description of a SQL query as interpreted by this package.
 ///

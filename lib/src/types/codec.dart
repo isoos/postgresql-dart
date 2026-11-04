@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import '../buffer.dart';
-import '../types.dart';
-import '../v3/connection_info.dart';
-import '../v3/database_info.dart';
+import '../connection/connection_info.dart';
+import '../connection/database_info.dart';
+import '../protocol/buffer.dart';
 import 'type_registry.dart';
+import 'types.dart';
 
 /// Represents the [bytes] of a received (field) or sent (parameter) value.
 ///

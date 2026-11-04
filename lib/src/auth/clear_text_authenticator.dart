@@ -1,6 +1,6 @@
-import '../buffer.dart';
-import '../messages/client_messages.dart';
-import '../messages/server_messages.dart';
+import '../protocol/buffer.dart';
+import '../protocol/messages/client_messages.dart';
+import '../protocol/messages/server_messages.dart';
 import 'auth.dart';
 
 class ClearAuthenticator extends PostgresAuthenticator {
