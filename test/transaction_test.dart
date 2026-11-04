@@ -211,19 +211,40 @@ void main() {
       ]);
     });
 
-    test('A transaction has to await extended queries', () async {
+    test(
+      'Given a transaction with a queued extended query, '
+      'when its callback returns without awaiting the query, '
+      'then the query and its portal cleanup finish before commit.',
+      () async {
+        late Future<Result> query;
+
+        await conn.runTx((session) async {
+          query = session.execute('INSERT INTO t VALUES (1) RETURNING id');
+        });
+        final result = await query;
+        final committed = await conn.execute('SELECT id FROM t');
+
+        expect(result, [
+          [1],
+        ]);
+        expect(committed, [
+          [1],
+        ]);
+      },
+    );
+
+    test('Given a completed transaction, '
+        'when an extended query is started on its session, '
+        'then the closed session rejects the query.', () async {
+      late TxSession finished;
       await conn.runTx((session) async {
-        expect(
-          session.execute('select 1;'),
-          throwsA(
-            isA<PgException>().having(
-              (e) => e.message,
-              'message',
-              contains('did you forget to await a statement?'),
-            ),
-          ),
-        );
+        finished = session;
       });
+
+      await expectLater(
+        finished.execute('SELECT 1'),
+        throwsA(isA<PgException>()),
+      );
     });
 
     test(
@@ -302,30 +323,28 @@ void main() {
     );
 
     test(
-      'A transaction with a rollback and non-await queries rolls back transaction',
+      'Given queued extended queries in a transaction, '
+      'when the callback throws without awaiting them, '
+      'then completed queries roll back without late cleanup errors.',
       () async {
-        final rs = await conn.execute('select 1');
         final rollback = Exception();
-        final errs = [];
+        late List<Future<Result>> queries;
 
         await expectLater(
           conn.runTx((ctx) async {
-            Result errsAdd(e) {
-              errs.add(e);
-              return rs;
-            }
-
-            ctx.execute('INSERT INTO t (id) VALUES (1)').catchError(errsAdd);
-            ctx.execute('INSERT INTO t (id) VALUES (2)').catchError(errsAdd);
+            queries = [
+              ctx.execute('INSERT INTO t (id) VALUES (1)')..ignore(),
+              ctx.execute('INSERT INTO t (id) VALUES (2)')..ignore(),
+            ];
             throw rollback;
           }),
           throwsA(rollback),
         );
-
+        final completed = await Future.wait(queries);
         final total = await conn.execute('SELECT id FROM t');
-        expect(total, []);
 
-        expect(errs.length, 2);
+        expect(total, []);
+        expect(completed.map((result) => result.affectedRows), [1, 1]);
       },
     );
 

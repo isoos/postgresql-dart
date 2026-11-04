@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:async/async.dart';
 import 'package:postgres/postgres.dart';
@@ -86,19 +87,20 @@ void main() {
       },
     );
 
-    test(
-      'a one-shot query does not close the statement it never named',
-      () async {
-        await connection.execute(r'SELECT $1::int AS value', parameters: [1]);
+    test('Given a one-shot query, '
+        'when it completes, '
+        'then it closes its portal but not the unnamed statement.', () async {
+      await connection.execute(r'SELECT $1::int AS value', parameters: [1]);
 
-        expect(
-          sent.whereType<CloseMessage>(),
-          isEmpty,
-          reason:
-              'the next parse replaces the unnamed statement, so closing it is an exchange that changes nothing',
-        );
-      },
-    );
+      expect(
+        sent.whereType<CloseMessage>().map(
+          (message) => message.asBytes(encoding: utf8)[5],
+        ),
+        [80], // The wire discriminator is P (portal), never S (statement).
+        reason:
+            'the next parse replaces the unnamed statement, so closing it is an exchange that changes nothing',
+      );
+    });
 
     test(
       'a named statement is still closed, because its name has to become free again',
