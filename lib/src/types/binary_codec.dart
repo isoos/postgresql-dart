@@ -1,16 +1,16 @@
-import 'dart:convert' hide Codec;
 import 'dart:convert' as convert;
+import 'dart:convert' hide Codec;
 import 'dart:typed_data';
 
 import 'package:buffer/buffer.dart';
 
-import '../buffer.dart';
-import '../time_converters.dart';
-import '../types.dart';
+import '../protocol/buffer.dart';
 import 'codec.dart';
 import 'geo_types.dart';
 import 'range_types.dart';
+import 'time_converters.dart';
 import 'type_registry.dart';
+import 'types.dart';
 
 final _bool0 = Uint8List(1)..[0] = 0;
 final _bool1 = Uint8List(1)..[0] = 1;

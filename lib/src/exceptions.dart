@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
-import 'messages/server_messages.dart';
+import 'protocol/messages/server_messages.dart';
 
 /// The severity level of a [PgException].
 ///

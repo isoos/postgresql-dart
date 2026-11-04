@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
-import 'package:postgres/src/connection_string.dart';
+import 'package:postgres/src/connection/connection_string.dart';
 
 import '../../postgres.dart';
 import 'pool_impl.dart';

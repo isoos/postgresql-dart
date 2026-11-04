@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../exceptions.dart';
-import '../types.dart';
 import 'codec.dart';
 import 'geo_types.dart';
 import 'type_registry.dart';
+import 'types.dart';
 
 class PostgresTextEncoder {
   const PostgresTextEncoder();

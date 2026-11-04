@@ -5,8 +5,8 @@ import 'package:pool/pool.dart' as pool;
 import 'package:postgres/src/utils/package_pool_ext.dart';
 
 import '../../postgres.dart';
-import '../v3/connection.dart';
-import '../v3/resolved_settings.dart';
+import '../connection/connection.dart';
+import '../connection/resolved_settings.dart';
 
 EndpointSelector roundRobinSelector(List<Endpoint> endpoints) {
   int nextIndex = 0;
