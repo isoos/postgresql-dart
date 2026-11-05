@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.6.1
+
+**Behavior changes:**
+
+- `Pool.execute` throws a `PgException` if the statement leaves a transaction open (e.g. `BEGIN`).
+  Any connection returned with an open transaction will be closed instead of reusing it.
+
 ## 3.6.0
 
 **Behavior changes:**
