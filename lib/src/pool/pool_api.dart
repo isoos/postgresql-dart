@@ -83,6 +83,11 @@ class PoolSettings extends ConnectionSettings {
 /// This interface implements [Session] and [SessionExecutor] as a convenience
 /// API that internally acquires a pooled connection via [withConnection] for
 /// each operation.
+///
+/// Each such operation is independent and may run on a different connection,
+/// so it must not leave a transaction open: `execute('BEGIN')` throws a
+/// [PgException] and the connection is closed (rolling the transaction back).
+/// Use [runTx] or [withConnection] for multi-statement transactions.
 abstract class Pool<L> implements Session, SessionExecutor {
   factory Pool.withSelector(
     EndpointSelector<L> selector, {
@@ -128,7 +133,8 @@ abstract class Pool<L> implements Session, SessionExecutor {
   /// calls [fn] with it.
   ///
   /// The connection must not be used after [fn] returns as it could be used by
-  /// another [withConnection] call later.
+  /// another [withConnection] call later. A connection returned with a
+  /// transaction still open is closed instead of being reused.
   Future<R> withConnection<R>(
     Future<R> Function(Connection connection) fn, {
     ConnectionSettings? settings,

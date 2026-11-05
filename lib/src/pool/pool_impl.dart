@@ -85,15 +85,26 @@ class PoolImplementation<L> implements Pool<L> {
     QueryMode? queryMode,
     Duration? timeout,
   }) {
-    return withConnection(
-      (connection) => connection.execute(
+    return withConnection((connection) async {
+      final result = await connection.execute(
         query,
         parameters: parameters,
         ignoreRows: ignoreRows,
         queryMode: queryMode,
         timeout: timeout,
-      ),
-    );
+      );
+      // The connection goes back to the pool after this call, so a
+      // transaction opened here could never be continued or committed.
+      // `withConnection` drops the connection, which rolls it back.
+      if ((connection as _PoolConnection)._connection.isNotIdle) {
+        throw PgException(
+          'The statement left a transaction open on a pooled connection, '
+          'which was closed and rolled back. Use Pool\'s `run`, `runTx` or '
+          '`withConnection` for multi-statement transactions.',
+        );
+      }
+      return result;
+    });
   }
 
   @override
@@ -210,6 +221,9 @@ class PoolImplementation<L> implements Pool<L> {
         connection._elapsedInUse += sw.elapsed;
         if (_closing || !reuse || !connection.isOpen) {
           await connection._dispose();
+        } else if (connection._connection.isNotIdle) {
+          // Never hand an open transaction to the next user of the pool.
+          await connection._dispose(force: true);
         } else if (_settings.resetSession &&
             connection._connection.mayHoldSessionLocks &&
             !await connection._tryResetSession()) {

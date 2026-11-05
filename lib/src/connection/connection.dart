@@ -516,6 +516,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   @internal
   int get queryCount => _queryCount;
 
+  // Last transaction status reported by the server (`ReadyForQuery`).
+  String _transactionStatus = ReadyForQueryMessageState.idle;
+
   bool _sessionDirty = false;
   bool _holdsSessionLocks = false;
 
@@ -664,6 +667,10 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         if (embedded is RelationMessage) {
           _databaseInfo.addRelationMessage(embedded);
         }
+      }
+
+      if (message is ReadyForQueryMessage) {
+        _transactionStatus = message.state;
       }
 
       if (message is ParameterStatusMessage) {
@@ -1682,4 +1689,12 @@ class _AuthenticationProcedure extends _PendingOperation {
       _done.complete();
     }
   }
+}
+
+/// Not exported from `package:postgres/postgres.dart`.
+extension PgConnectionTransactionExt on PgConnectionImplementation {
+  /// Whether the server reported an open (or failed) transaction block after
+  /// the last completed statement.
+  bool get isNotIdle =>
+      _transactionStatus != ReadyForQueryMessageState.idle;
 }
