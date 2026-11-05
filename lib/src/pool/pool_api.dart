@@ -27,7 +27,9 @@ class PoolSettings extends ConnectionSettings {
   /// with `DISCARD ALL` before being reused, so the state doesn't leak to the
   /// next user. The reset happens when the connection is next reused, or right
   /// away if it may hold session-level advisory locks. Connections that ran no
-  /// such statement are not touched.
+  /// such statement are not touched, and a connection inside a transaction
+  /// driven statement by statement (`BEGIN` ... `COMMIT` issued through the
+  /// pool) is reset only once the transaction has ended.
   /// Defaults to `true`.
   final bool? resetSession;
 

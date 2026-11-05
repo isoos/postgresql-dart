@@ -212,10 +212,13 @@ class PoolImplementation<L> implements Pool<L> {
           await connection._dispose();
         } else if (_settings.resetSession &&
             connection._connection.mayHoldSessionLocks &&
+            !connection._connection.isInTransaction &&
             !await connection._tryResetSession()) {
           // Session-level advisory locks must not stay held while idle, so
-          // this one is reset right away. Everything else is deferred until
-          // the connection is actually reused.
+          // this one is reset right away - unless a transaction driven
+          // statement by statement is still open (see `_tryPrepareForReuse`).
+          // Everything else is deferred until the connection is actually
+          // reused.
           await connection._dispose(force: true);
         } else {
           // Allow the connection to be re-used later.
@@ -347,6 +350,14 @@ class _PoolConnection implements Connection {
   /// checks that it is still alive. Returns `false` if the connection should
   /// not be used.
   Future<bool> _tryPrepareForReuse(Duration timeout) {
+    if (_connection.isInTransaction) {
+      // A transaction driven statement by statement (`BEGIN` ... `COMMIT`
+      // issued through the pool) is still open. `DISCARD ALL` is refused
+      // inside a transaction block and a ping fails in an aborted one; either
+      // would drop the connection and lose the transaction. Leave it alone: a
+      // dirty session is reset once the transaction has ended.
+      return Future.value(true);
+    }
     final settings = _pool._settings;
     if (settings.resetSession && _connection.isSessionDirty) {
       return _tryResetSession(timeout);

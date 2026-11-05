@@ -520,9 +520,12 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   bool _holdsSessionLocks = false;
 
   // Statements that may leave state behind on the server session. This is
-  // deliberately broad: a false positive only costs one extra reset.
+  // deliberately broad: a false positive only costs one extra reset. `SET` is
+  // matched only as a statement (at the start, or after `;` and comments),
+  // not as the clause of `UPDATE ... SET` or `ON CONFLICT DO UPDATE SET`.
   static final _statefulSql = RegExp(
-    r'\b(set|listen|prepare|declare|load|set_config|temp|temporary|lo_\w+|'
+    r'(?:^|;)(?:\s|--[^\n]*\n?|/\*[\s\S]*?\*/)*set\b|'
+    r'\b(listen|prepare|declare|load|set_config|temp|temporary|lo_\w+|'
     r'pg_(try_)?advisory_lock\w*)\b',
     caseSensitive: false,
   );
@@ -552,6 +555,14 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   /// (settings, listeners, temp objects, advisory locks...).
   @internal
   bool get isSessionDirty => _sessionDirty;
+
+  String _transactionStatus = ReadyForQueryMessageState.idle;
+
+  /// Whether the server last reported an open (or failed) transaction block,
+  /// e.g. one driven statement by statement with `BEGIN` ... `COMMIT`.
+  @internal
+  bool get isInTransaction =>
+      _transactionStatus != ReadyForQueryMessageState.idle;
 
   /// Verifies that the server still answers on this connection.
   @internal
@@ -664,6 +675,10 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         if (embedded is RelationMessage) {
           _databaseInfo.addRelationMessage(embedded);
         }
+      }
+
+      if (message is ReadyForQueryMessage) {
+        _transactionStatus = message.state;
       }
 
       if (message is ParameterStatusMessage) {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.6.1
+
+- Fix the pool session reset (`DISCARD ALL`) running inside a transaction driven statement by statement (`BEGIN` ... `COMMIT` issued through the pool), which dropped the connection and lost the transaction. The reset (and the idle check) now wait until the transaction has ended.
+- `UPDATE ... SET` no longer marks a pool connection's session as changed: `SET` counts only as a statement, not as a clause.
+
 ## 3.6.0
 
 **Behavior changes:**
