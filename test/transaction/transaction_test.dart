@@ -153,6 +153,35 @@ void main() {
       ]);
     });
 
+    test('runTx refuses an open or failed transaction and leaves it', () async {
+      for (final failed in [false, true]) {
+        await conn.execute('BEGIN');
+        if (failed) {
+          await expectLater(conn.execute('SELECT 1/0'), throwsA(anything));
+        }
+        final status = failed
+            ? TransactionStatus.error
+            : TransactionStatus.transaction;
+        expect(conn.transactionStatus, status);
+        await expectLater(
+          conn.runTx((s) => s.execute('SELECT 1')),
+          throwsA(
+            isA<PgException>().having(
+              (e) => e.message,
+              'message',
+              contains('open or failed transaction'),
+            ),
+          ),
+        );
+        expect(conn.transactionStatus, status);
+        await conn.execute('ROLLBACK');
+        expect(conn.transactionStatus, TransactionStatus.idle);
+        expect(await conn.execute('SELECT 1'), [
+          [1],
+        ]);
+      }
+    });
+
     test('May intentionally rollback transaction', () async {
       final rollback = Exception();
 
@@ -901,7 +930,7 @@ void main() {
       },
     );
 
-    test('failed BEGIN during runTx clears active transaction state', () async {
+    test('runTx on a failed transaction leaves it for the caller', () async {
       await conn.execute('BEGIN');
       try {
         await conn.execute('SELECT 1 FROM _nonexistent_xyz_ LIMIT 1');
@@ -915,6 +944,10 @@ void main() {
         }),
         throwsA(isA<PgException>()),
       );
+
+      // The caller's failed transaction is left untouched until it ends it.
+      expect(conn.transactionStatus, TransactionStatus.error);
+      await conn.execute('ROLLBACK');
 
       final rows = await conn.execute('SELECT 1');
       expect(rows, [

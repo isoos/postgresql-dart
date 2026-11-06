@@ -742,6 +742,19 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     return Future<R>(() => fn(session)).whenComplete(session._closeSession);
   }
 
+  /// `runTx` needs an idle connection: a transaction opened directly on it
+  /// (open or failed) is the caller's own, so it is refused and left alone,
+  /// neither nested in, rolled back nor run inside.
+  void _checkIdle() {
+    if (isNotIdle) {
+      throw PgException(
+        'The connection already has an open or failed transaction (e.g. from a '
+        '`BEGIN` executed directly on it); finish it with `COMMIT` or '
+        '`ROLLBACK` first.',
+      );
+    }
+  }
+
   @override
   Future<R> runTx<R>(
     Future<R> Function(TxSession session) fn, {
@@ -767,6 +780,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     // those outer calls while the transaction is active and resume them by
     // returning the operation lock in the end.
     return _operationLock.withResource(() async {
+      // The connection may have been closed while this call was queued.
+      _checkActive();
+      _checkIdle();
       // The transaction has its own _operationLock, which means that it (and
       // only it) can be used to run statements while it's active.
       final transaction = _connection._activeTransaction = _TransactionSession(
