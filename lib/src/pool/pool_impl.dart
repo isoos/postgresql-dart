@@ -400,6 +400,9 @@ class _PoolConnection implements Connection {
   ConnectionInfo get info => _connection.info;
 
   @override
+  TransactionStatus get transactionStatus => _connection.transactionStatus;
+
+  @override
   Channels get channels {
     throw UnsupportedError(
       'Channels are not supported in pools because they would require keeping '

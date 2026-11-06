@@ -519,6 +519,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   // Last transaction status reported by the server (`ReadyForQuery`).
   String _transactionStatus = ReadyForQueryMessageState.idle;
 
+  @override
+  TransactionStatus get transactionStatus => switch (_transactionStatus) {
+    ReadyForQueryMessageState.transaction => TransactionStatus.transaction,
+    ReadyForQueryMessageState.error => TransactionStatus.error,
+    _ => TransactionStatus.idle,
+  };
+
   bool _sessionDirty = false;
   bool _holdsSessionLocks = false;
 
@@ -1695,6 +1702,5 @@ class _AuthenticationProcedure extends _PendingOperation {
 extension PgConnectionTransactionExt on PgConnectionImplementation {
   /// Whether the server reported an open (or failed) transaction block after
   /// the last completed statement.
-  bool get isNotIdle =>
-      _transactionStatus != ReadyForQueryMessageState.idle;
+  bool get isNotIdle => transactionStatus != TransactionStatus.idle;
 }
