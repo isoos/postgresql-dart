@@ -793,6 +793,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
             _runTxZoneKey: {...?enclosingTransactions, this},
           },
         );
+        // Safeguard: the server's own view, in case no error was recorded.
+        final serverFailed =
+            _connection.transactionStatus == TransactionStatus.error;
         if (transaction.mayCommit) {
           await transaction._sendAndMarkClosed('COMMIT;');
         } else if (!transaction._sessionClosed) {
@@ -811,6 +814,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         // will always be rolled back.
         if (transaction._transactionException case final PgException e) {
           throw e;
+        }
+        if (serverFailed) {
+          throw PgException(
+            'The transaction was in a failed state and has been rolled back.',
+          );
         }
 
         return result;
@@ -1514,7 +1522,8 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
   bool get mayCommit =>
       !_closing &&
       _connection._activeTransaction == this &&
-      _transactionException == null;
+      _transactionException == null &&
+      _connection.transactionStatus != TransactionStatus.error;
 }
 
 abstract class _PendingOperation {
