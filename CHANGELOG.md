@@ -1,12 +1,13 @@
 # Changelog
 
-## 3.6.1
+## 3.7.0
 
 **Behavior changes:**
 
 - `Pool.execute` throws a `PgException` if the statement leaves a transaction open (e.g. `BEGIN`).
   Any connection returned with an open transaction will be closed instead of reusing it.
-- `runTx` also consults the server-reported transaction status: a transaction in a failed state is rolled back and a `PgException` is thrown.
+- `Connection.runTx` also consults the server-reported transaction status: a transaction in a failed state is rolled back and a `PgException` is thrown.
+- `Connection.runTx` requires an idle connection: if a transaction (open or failed) was already started directly on the `Connection` (e.g. `BEGIN`), it throws a `PgException` and leaves that transaction alone.
 
 **Other changes:**
 

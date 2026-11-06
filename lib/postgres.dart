@@ -227,6 +227,10 @@ abstract class SessionExecutor {
   ///
   /// Note that other invocations on a [Connection] are blocked while a
   /// transaction is active.
+  ///
+  /// It requires an idle connection: if a transaction (open or failed) was
+  /// already started directly on the [Connection] (e.g. an earlier `BEGIN`), a
+  /// [PgException] is thrown and that transaction is not touched.
   Future<R> runTx<R>(
     Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
