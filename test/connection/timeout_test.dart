@@ -171,6 +171,55 @@ void main() {
       await expectLater(f, throwsA(isA<StateError>()));
     });
 
+    test('queue wait counts against queryTimeout', () async {
+      final c = await PgConnectionImplementation.connect(
+        await server.endpoint(),
+        connectionSettings: ConnectionSettings(
+          sslMode: SslMode.disable,
+          queryTimeout: Duration(seconds: 1),
+        ),
+      );
+      addTearDown(() => c.close(force: true));
+      await c.execute('CREATE TABLE qt_probe (id INT)');
+      addTearDown(() => conn.execute('DROP TABLE IF EXISTS qt_probe'));
+
+      final running = c.execute(
+        'SELECT pg_sleep(0.7)',
+        timeout: Duration(seconds: 5),
+      );
+      final sw = Stopwatch()..start();
+      // Plain and parameterized (extended protocol) statements.
+      final plain = c.execute(
+        'INSERT INTO qt_probe VALUES (1)',
+        timeout: Duration(milliseconds: 100),
+      );
+      final param = c.execute(
+        r'INSERT INTO qt_probe VALUES ($1)',
+        parameters: [2],
+        timeout: Duration(milliseconds: 100),
+      );
+      for (final f in [plain, param]) {
+        await expectLater(
+          f,
+          throwsA(
+            isA<PgException>().having(
+              (e) => e.message,
+              'message',
+              contains('timed out while waiting'),
+            ),
+          ),
+        );
+      }
+      // Failed at the timeout, not when the running statement released the lock.
+      expect(sw.elapsedMilliseconds, lessThan(600));
+      await running;
+      expect(c.isOpen, isTrue);
+      // The timed-out statements were never sent.
+      expect(await c.execute('SELECT count(*) FROM qt_probe'), [
+        [0],
+      ]);
+    });
+
     test('Query that fails does not timeout', () async {
       final rs = await conn.execute('SELECT 1');
       Exception? caught;
