@@ -1061,6 +1061,14 @@ class _PgResultStreamSubscription
   int _affectedRowsSoFar = 0;
   final _schema = Completer<ResultSchema>();
   final _done = Completer<void>();
+
+  /// Whether the statement has acquired the operation lock (stopped queueing).
+  var _started = false;
+
+  /// Set when the timeout expired while the statement was still queued: it is
+  /// then never sent, and this completer fails the caller right away.
+  var _queueTimedOut = false;
+  final _queueTimeout = Completer<Never>();
   ResultSchema? _resultSchema;
 
   /// A timeout's CancelRequest timer and the cancel it started; the operation
@@ -1176,7 +1184,16 @@ class _PgResultStreamSubscription
 
   void _scheduleStatement(Future<void> Function() sendAndWait) async {
     try {
-      await session._withResource(sendAndWait);
+      await session._withResource(() {
+        if (_queueTimedOut) {
+          // The caller has already been failed by [_queueTimeout]: just end
+          // the statement without sending it.
+          _completeQuery();
+          return null;
+        }
+        _started = true;
+        return sendAndWait();
+      });
     } catch (e, s) {
       // _withResource can fail if the connection or the session is already
       // closed. This error should be reported to the user!
@@ -1359,9 +1376,23 @@ class _PgResultStreamSubscription
     required List<ResultRow> items,
     required Duration? timeout,
   }) async {
+    var future = asFuture();
     _cancelTimer = timeout == null
         ? null
         : Timer(timeout, () {
+            if (!_started) {
+              // Still queued (e.g. behind a transaction): nothing to cancel on
+              // the server, and the running statement is not ours. Fail now and
+              // make sure the statement is never sent.
+              _queueTimedOut = true;
+              _queueTimeout.completeError(
+                PgException(
+                  'Query timed out while waiting for the connection to become '
+                  'available.',
+                ),
+              );
+              return;
+            }
             // Best effort: the cancel may not reach the server or may fail; the
             // hard timeout below still guarantees this call won't hang forever.
             // Only cancel if we're still the pending statement; keep the future
@@ -1382,7 +1413,6 @@ class _PgResultStreamSubscription
                 });
           });
     try {
-      var future = asFuture();
       if (timeout != null) {
         // Give the cancel request above a chance to complete gracefully
         // (which surfaces a proper "query canceled" PgException) before
@@ -1390,7 +1420,7 @@ class _PgResultStreamSubscription
         future = future.timeout(timeout + connection._settings.connectTimeout);
       }
       try {
-        await future;
+        await Future.any([future, _queueTimeout.future]);
       } on TimeoutException catch (e) {
         // A graceful cancel surfaces as a `_PgQueryCancelledException`,
         // which (for backwards compatibility) also implements
