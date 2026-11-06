@@ -930,7 +930,7 @@ void main() {
       },
     );
 
-    test('failed BEGIN during runTx clears active transaction state', () async {
+    test('runTx on a failed transaction leaves it for the caller', () async {
       await conn.execute('BEGIN');
       try {
         await conn.execute('SELECT 1 FROM _nonexistent_xyz_ LIMIT 1');
@@ -944,6 +944,10 @@ void main() {
         }),
         throwsA(isA<PgException>()),
       );
+
+      // The caller's failed transaction is left untouched until it ends it.
+      expect(conn.transactionStatus, TransactionStatus.error);
+      await conn.execute('ROLLBACK');
 
       final rows = await conn.execute('SELECT 1');
       expect(rows, [
