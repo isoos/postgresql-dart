@@ -240,6 +240,31 @@ abstract class SessionExecutor {
   Future<void> close({bool force = false});
 }
 
+/// The transaction status of a [Connection], as reported by the server in the
+/// `ReadyForQuery` message that ends each query cycle.
+enum TransactionStatus {
+  /// Idle: not in a transaction block (protocol byte `I`).
+  ///
+  /// Each statement runs in its own implicit transaction, which is committed
+  /// or rolled back by the server when the statement finishes.
+  idle,
+
+  /// In a transaction block (protocol byte `T`).
+  ///
+  /// A `BEGIN` (or `START TRANSACTION`) was executed and no error has occurred
+  /// since. Changes are visible only to this session until `COMMIT`.
+  transaction,
+
+  /// In a failed transaction block (protocol byte `E`).
+  ///
+  /// A statement failed inside a transaction block. The server rejects further
+  /// statements until the block is ended with `ROLLBACK` (or `ROLLBACK TO` a
+  /// savepoint that restores a healthy state). A `COMMIT` in this state does
+  /// not raise an error: the server performs a rollback and reports the
+  /// `ROLLBACK` command tag, so nothing is committed.
+  error,
+}
+
 abstract class Connection implements Session, SessionExecutor {
   static Future<Connection> open(
     Endpoint endpoint, {
@@ -276,6 +301,29 @@ abstract class Connection implements Session, SessionExecutor {
   ConnectionInfo get info;
 
   Channels get channels;
+
+  /// Whether the server considers this connection to be inside a transaction,
+  /// as of the last completed statement.
+  ///
+  /// This is useful when you manage `BEGIN` / `COMMIT` yourself. If a statement
+  /// fails inside a transaction, the server answers a later `COMMIT` with a
+  /// rollback and no error, so the call looks successful even though nothing
+  /// was saved. Check the status before committing:
+  ///
+  /// ```dart
+  /// if (connection.transactionStatus == TransactionStatus.error) {
+  ///   await connection.execute('ROLLBACK');
+  ///   // handle the failure
+  /// } else {
+  ///   await connection.execute('COMMIT');
+  /// }
+  /// ```
+  ///
+  /// The value only changes when a statement completes, so it can be out of
+  /// date while one is still running. Seeing [TransactionStatus.idle] after a
+  /// `COMMIT` does not prove the commit happened; look at the status from
+  /// before the `COMMIT` too.
+  TransactionStatus get transactionStatus;
 }
 
 abstract class ResultStream implements Stream<ResultRow> {

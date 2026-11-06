@@ -519,6 +519,13 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   // Last transaction status reported by the server (`ReadyForQuery`).
   String _transactionStatus = ReadyForQueryMessageState.idle;
 
+  @override
+  TransactionStatus get transactionStatus => switch (_transactionStatus) {
+    ReadyForQueryMessageState.transaction => TransactionStatus.transaction,
+    ReadyForQueryMessageState.error => TransactionStatus.error,
+    _ => TransactionStatus.idle,
+  };
+
   bool _sessionDirty = false;
   bool _holdsSessionLocks = false;
 
@@ -786,6 +793,9 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
             _runTxZoneKey: {...?enclosingTransactions, this},
           },
         );
+        // Safeguard: the server's own view, in case no error was recorded.
+        final serverFailed =
+            _connection.transactionStatus == TransactionStatus.error;
         if (transaction.mayCommit) {
           await transaction._sendAndMarkClosed('COMMIT;');
         } else if (!transaction._sessionClosed) {
@@ -804,6 +814,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         // will always be rolled back.
         if (transaction._transactionException case final PgException e) {
           throw e;
+        }
+        if (serverFailed) {
+          throw PgException(
+            'The transaction was in a failed state and has been rolled back.',
+          );
         }
 
         return result;
@@ -1507,7 +1522,8 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
   bool get mayCommit =>
       !_closing &&
       _connection._activeTransaction == this &&
-      _transactionException == null;
+      _transactionException == null &&
+      _connection.transactionStatus != TransactionStatus.error;
 }
 
 abstract class _PendingOperation {
@@ -1695,6 +1711,5 @@ class _AuthenticationProcedure extends _PendingOperation {
 extension PgConnectionTransactionExt on PgConnectionImplementation {
   /// Whether the server reported an open (or failed) transaction block after
   /// the last completed statement.
-  bool get isNotIdle =>
-      _transactionStatus != ReadyForQueryMessageState.idle;
+  bool get isNotIdle => transactionStatus != TransactionStatus.idle;
 }
