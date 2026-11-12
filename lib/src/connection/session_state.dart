@@ -33,18 +33,35 @@ enum SqlSessionState {
 ///   scanned as it is, which can only err towards a reset.
 @internal
 SqlSessionState classifySessionState(String sql) {
-  final skipQuoted =
-      (sql.contains("'") || sql.contains('"')) &&
-      !sql.contains('--') &&
-      !sql.contains('/*') &&
-      !sql.contains(r'\') &&
-      !sql.contains(r'$');
-  return _Scanner(sql, skipQuoted).run();
+  return _Scanner(sql, _canSkipQuoted(sql)).run();
+}
+
+/// Whether [sql] has quotes, and none of comments, backslashes or dollar
+/// quotes. One pass over the code units: a `String.contains` per marker cost
+/// more than the scan itself.
+bool _canSkipQuoted(String sql) {
+  var quotes = false;
+  final n = sql.length;
+  for (var k = 0; k < n; k++) {
+    switch (sql.codeUnitAt(k)) {
+      case _singleQuote || _doubleQuote:
+        quotes = true;
+      case _backslash || _dollar:
+        return false;
+      case _dash when k + 1 < n && sql.codeUnitAt(k + 1) == _dash:
+        return false;
+      case _slash when k + 1 < n && sql.codeUnitAt(k + 1) == _star:
+        return false;
+    }
+  }
+  return quotes;
 }
 
 const _a = 0x61, _z = 0x7a, _upperA = 0x41, _upperZ = 0x5a;
 const _zero = 0x30, _nine = 0x39, _underscore = 0x5f, _dot = 0x2e;
 const _singleQuote = 0x27, _doubleQuote = 0x22;
+const _backslash = 0x5c, _dollar = 0x24, _dash = 0x2d, _slash = 0x2f;
+const _star = 0x2a;
 
 bool _isWordChar(int c) =>
     (c >= _a && c <= _z) ||
