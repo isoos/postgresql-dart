@@ -153,6 +153,63 @@ void main() {
       ]);
     });
 
+    test(
+      'runTx called from within its own callback after a rollback fails fast',
+      () async {
+        await expectLater(
+          conn.runTx((c) async {
+            await c.rollback();
+            await conn.runTx((c2) => c2.execute('SELECT 2'));
+          }),
+          throwsA(
+            isA<PgException>().having(
+              (e) => e.message,
+              'message',
+              contains('inside another `runTx`'),
+            ),
+          ),
+        );
+
+        expect(await conn.execute('SELECT 1'), [
+          [1],
+        ]);
+      },
+    );
+
+    test('runTx started from a callback while its transaction is active fails '
+        'fast', () async {
+      await conn.runTx((c) async {
+        expect(
+          () => conn.runTx((c2) => c2.execute('SELECT 2')),
+          throwsA(
+            isA<PgException>().having(
+              (e) => e.message,
+              'message',
+              contains('inside another `runTx`'),
+            ),
+          ),
+        );
+      });
+    });
+
+    test('runTx started from a callback after its transaction ended is not '
+        'treated as reentrant', () async {
+      final transactionEnded = Completer<void>();
+      late Future<Result> later;
+      await conn.runTx((c) async {
+        // Inherits the callback's zone, but calls runTx only after the
+        // transaction has committed.
+        later = transactionEnded.future.then(
+          (_) => conn.runTx((c2) => c2.execute('SELECT 2')),
+        );
+      });
+      transactionEnded.complete();
+
+      expect(await later, [
+        [2],
+      ]);
+    });
+
     test('runTx refuses an open or failed transaction and leaves it', () async {
       for (final failed in [false, true]) {
         await conn.execute('BEGIN');

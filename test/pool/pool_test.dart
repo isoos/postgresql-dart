@@ -61,6 +61,27 @@ void main() {
       expect(rows, hasLength(3));
     });
 
+    test('runTx started from a transaction callback after it ended can reuse '
+        'its connection', () async {
+      final singleConnectionPool = Pool.withEndpoints([
+        await server.endpoint(),
+      ], settings: PoolSettings(maxConnectionCount: 1));
+      addTearDown(singleConnectionPool.close);
+
+      final transactionEnded = Completer<void>();
+      late Future<Result> later;
+      await singleConnectionPool.runTx((s) async {
+        later = transactionEnded.future.then(
+          (_) => singleConnectionPool.runTx((s2) => s2.execute('SELECT 2')),
+        );
+      });
+      transactionEnded.complete();
+
+      expect(await later, [
+        [2],
+      ]);
+    });
+
     test('can use prepared statements', () async {
       await pool.execute(
         'CREATE TABLE IF NOT EXISTS test.statements (bar INTEGER);',
