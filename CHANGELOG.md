@@ -13,6 +13,7 @@
 **Other changes:**
 
 - `Connection.transactionStatus` exposing the transaction state reported by the server.
+- Fix `runTx` refusing a call from work its callback started, once that `runTx` has returned (a 3.5.17 regression, also through a `Pool`). Such a call now waits for the connection like any other. A call made before it returns still fails fast.
 
 ## 3.6.0
 

@@ -761,12 +761,15 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     TransactionSettings? settings,
   }) {
     final enclosingTransactions =
-        Zone.current[_runTxZoneKey] as Set<PgConnectionImplementation>?;
-    if (enclosingTransactions != null && enclosingTransactions.contains(this)) {
-      // `_operationLock` is not reentrant: acquiring it below from inside this
-      // connection's own `runTx` callback (which holds that same lock) would
-      // deadlock silently instead of failing fast. A call from outside the
-      // callback is not re-entrant and queues on the lock instead.
+        Zone.current[_runTxZoneKey] as Set<_TransactionSession>?;
+    if (enclosingTransactions != null &&
+        enclosingTransactions.any(
+          (t) => identical(t._connection, this) && t._runTxPending,
+        )) {
+      // `_operationLock` is not re-entrant: acquiring it below while a `runTx`
+      // of this connection that this call runs inside still holds it would
+      // deadlock silently instead of failing fast. Any other call queues on
+      // the lock, including one from that callback's zone after it returned.
       throw PgException(
         'Attempting to call `runTx` on a connection while inside another '
         '`runTx` call on the same connection.',
@@ -806,7 +809,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         final result = await runZoned(
           () => fn(transaction),
           zoneValues: {
-            _runTxZoneKey: {...?enclosingTransactions, this},
+            _runTxZoneKey: {...?enclosingTransactions, transaction},
           },
         );
         // Safeguard: the server's own view, in case no error was recorded.
@@ -860,6 +863,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         // `_sendAndMarkClosed`'s own cleanup never fired): otherwise
         // `_activeTransaction` stays set, blocking every later call.
         transaction._closeSession();
+        transaction._runTxPending = false;
         _connection._activeTransaction = null;
       }
     });
@@ -1508,6 +1512,12 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
 
   bool _closing = false;
   PgException? _transactionException;
+
+  /// Whether the `runTx` call that created this session has not returned yet.
+  ///
+  /// That call holds the connection's operation lock until then, also after
+  /// the transaction itself was ended, for example by [rollback].
+  bool _runTxPending = true;
 
   _TransactionSession(this._connection, this._settings);
 

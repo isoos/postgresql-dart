@@ -228,6 +228,11 @@ abstract class SessionExecutor {
   /// Note that other invocations on a [Connection] are blocked while a
   /// transaction is active.
   ///
+  /// Calling `runTx` on the same [Connection] from inside [fn], or from work
+  /// [fn] started, throws a [PgException] until this `runTx` call has returned,
+  /// as waiting for the connection could deadlock. After that, a call from work
+  /// [fn] started waits for the connection like any other.
+  ///
   /// It requires an idle connection: if a transaction (open or failed) was
   /// already started directly on the [Connection] (e.g. an earlier `BEGIN`), a
   /// [PgException] is thrown and that transaction is not touched.
