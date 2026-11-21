@@ -17,10 +17,12 @@ extension PackagePoolExt on Pool {
       }
     });
 
-    final resourceFuture = request();
-
-    scheduleMicrotask(() {
-      resourceFuture.then(
+    // request() throws synchronously on a closed pool; Future.sync turns that
+    // into an error future, so it takes the onError path below (which cancels
+    // the timer) like any asynchronous failure. The listener must be attached
+    // right away: an error future without one is reported as uncaught.
+    unawaited(
+      Future.sync(request).then(
         (resource) {
           timer.cancel();
           if (completer.isCompleted) {
@@ -29,14 +31,14 @@ extension PackagePoolExt on Pool {
           }
           completer.complete(resource);
         },
-        onError: (e, st) {
+        onError: (Object e, StackTrace st) {
           timer.cancel();
           if (!completer.isCompleted) {
             completer.completeError(e, st);
           }
         },
-      );
-    });
+      ),
+    );
 
     // Errors are rethrown here, in the function the caller awaits, so that
     // their stack trace is the caller's awaiter chain. Capturing that up
