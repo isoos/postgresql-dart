@@ -206,36 +206,41 @@ class PoolImplementation<L> implements Pool<L> {
       try {
         return await fn(connection);
       } catch (e) {
-        // A non-fatal server error (e.g. a constraint violation) leaves the
-        // connection usable; only drop it when the error compromised it.
-        reuse = e is PgException && !e.willAbortConnection;
+        // Only drop the connection if the error compromised it; other broken
+        // states are caught by the `isOpen` / `isNotIdle` checks below.
+        reuse = !(e is PgException && e.willAbortConnection);
         rethrow;
       }
     } finally {
-      resource.release();
       sw.stop();
 
-      // If the pool has been closed, this connection needs to be closed as
-      // well.
-      if (connection != null) {
-        connection._elapsedInUse += sw.elapsed;
-        if (_closing || !reuse || !connection.isOpen) {
-          await connection._dispose();
-        } else if (connection._connection.isNotIdle) {
-          // Never hand an open transaction to the next user of the pool.
-          await connection._dispose(force: true);
-        } else if (_settings.resetSession &&
-            connection._connection.mayHoldSessionLocks &&
-            !await connection._tryResetSession()) {
-          // Session-level advisory locks must not stay held while idle, so
-          // this one is reset right away. Everything else is deferred until
-          // the connection is actually reused.
-          await connection._dispose(force: true);
-        } else {
-          // Allow the connection to be re-used later.
-          connection._isInUse = false;
-          connection._lastReturned = DateTime.now();
+      // Release the semaphore only after the connection is handed back or
+      // disposed, otherwise a waiter may see no free connection (StateError).
+      try {
+        // If the pool has been closed, this connection needs to be closed as
+        // well.
+        if (connection != null) {
+          connection._elapsedInUse += sw.elapsed;
+          if (_closing || !reuse || !connection.isOpen) {
+            await connection._dispose();
+          } else if (connection._connection.isNotIdle) {
+            // Never hand an open transaction to the next user of the pool.
+            await connection._dispose(force: true);
+          } else if (_settings.resetSession &&
+              connection._connection.mayHoldSessionLocks &&
+              !await connection._tryResetSession()) {
+            // Session-level advisory locks must not stay held while idle, so
+            // this one is reset right away. Everything else is deferred until
+            // the connection is actually reused.
+            await connection._dispose(force: true);
+          } else {
+            // Allow the connection to be re-used later.
+            connection._isInUse = false;
+            connection._lastReturned = DateTime.now();
+          }
         }
+      } finally {
+        resource.release();
       }
     }
   }

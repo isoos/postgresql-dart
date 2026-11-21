@@ -9,9 +9,11 @@
 - `Connection.runTx` also consults the server-reported transaction status: a transaction in a failed state is rolled back and a `PgException` is thrown.
 - `Connection.runTx` requires an idle connection: if a transaction (open or failed) was already started directly on the `Connection` (e.g. `BEGIN`), it throws a `PgException` and leaves that transaction alone.
 - The `queryTimeout` setting also covers the wait for the connection: a statement still queued behind a running operation when it expires fails with a `PgException` and is never sent, without affecting the running operation.
+- Pool operations now may keep the connection after the callback throws a non-`PgException`, as long as the connection is still open and idle.
 
 **Other changes:**
 
+- Fix a pool race where a caller waiting for a connection could fail with a `StateError` while another caller's connection was being reset on return.
 - `Connection.transactionStatus` exposing the transaction state reported by the server.
 - Acquiring a pool connection no longer captures a stack trace up front: it is built only when the acquire times out or fails.
 - Fix `runTx` refusing a call from work its callback started, once that `runTx` has returned (a 3.5.17 regression, also through a `Pool`). Such a call now waits for the connection like any other. A call made before it returns still fails fast.
