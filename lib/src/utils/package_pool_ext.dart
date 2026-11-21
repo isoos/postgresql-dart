@@ -5,7 +5,6 @@ import 'package:stack_trace/stack_trace.dart';
 
 extension PackagePoolExt on Pool {
   Future<PoolResource> requestWithTimeout(Duration timeout) async {
-    final stack = StackTrace.current;
     final completer = Completer<PoolResource>();
 
     // Timer handles Duration.zero (and negative durations) by firing on the
@@ -14,18 +13,17 @@ extension PackagePoolExt on Pool {
     // "wait forever".
     final timer = Timer(timeout, () {
       if (!completer.isCompleted) {
-        completer.completeError(
-          TimeoutException('Failed to acquire pool lock.'),
-          stack,
-        );
+        completer.completeError(const _AcquireTimedOut());
       }
     });
 
-    final resourceFuture = request();
-
-    scheduleMicrotask(() {
-      resourceFuture.then(
-        (resource) async {
+    // request() throws synchronously on a closed pool; Future.sync turns that
+    // into an error future, so it takes the onError path below (which cancels
+    // the timer) like any asynchronous failure. The listener must be attached
+    // right away: an error future without one is reported as uncaught.
+    unawaited(
+      Future.sync(request).then(
+        (resource) {
           timer.cancel();
           if (completer.isCompleted) {
             resource.release();
@@ -33,19 +31,26 @@ extension PackagePoolExt on Pool {
           }
           completer.complete(resource);
         },
-        onError: (e, st) {
+        onError: (Object e, StackTrace st) {
           timer.cancel();
           if (!completer.isCompleted) {
-            completer.completeError(
-              e,
-              Chain([Trace.from(st), Trace.from(stack)]),
-            );
+            completer.completeError(e, st);
           }
         },
-      );
-    });
+      ),
+    );
 
-    return completer.future;
+    // Errors are rethrown here, in the function the caller awaits, so that
+    // their stack trace is the caller's awaiter chain. Capturing that up
+    // front instead cost a StackTrace.current on every acquire, which was a
+    // large part of the cost of a pooled query.
+    try {
+      return await completer.future;
+    } on _AcquireTimedOut {
+      throw TimeoutException('Failed to acquire pool lock.');
+    } catch (e, st) {
+      Error.throwWithStackTrace(e, Chain([Trace.from(st), Trace.current()]));
+    }
   }
 
   Future<T> withRequestTimeout<T>(
@@ -61,4 +66,10 @@ extension PackagePoolExt on Pool {
       resource.release();
     }
   }
+}
+
+/// Completes a pool request whose wait timed out; replaced with a
+/// [TimeoutException] in [PackagePoolExt.requestWithTimeout].
+class _AcquireTimedOut {
+  const _AcquireTimedOut();
 }
