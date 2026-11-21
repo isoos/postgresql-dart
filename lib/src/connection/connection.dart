@@ -24,8 +24,28 @@ import 'database_info.dart';
 import 'keep_alive.dart';
 import 'resolved_settings.dart';
 
-final _runTxZoneKey = Object();
-final _runZoneKey = Object();
+/// Zone key of the [_LockScope]s whose `run` or `runTx` callback the current
+/// zone is inside.
+final _lockScopeKey = Object();
+
+/// The span of a `run` or `runTx` call on [connection], during which it holds
+/// the connection's operation lock.
+class _LockScope {
+  final PgConnectionImplementation connection;
+
+  /// The name of the call, for error messages.
+  final String kind;
+
+  /// The transaction of a `runTx` call, `null` for `run`.
+  final _TransactionSession? transaction;
+
+  /// Whether the call has not returned yet. Zones that outlive the call (e.g.
+  /// work started by the callback) still reference the scope, but do not hold
+  /// the lock anymore.
+  bool active = true;
+
+  _LockScope(this.connection, this.kind, [this.transaction]);
+}
 
 const _debugLog = false;
 
@@ -119,7 +139,7 @@ abstract class _PgSessionBase implements Session {
     // `run` and `runTx` hold the connection's lock: inside their callbacks only
     // the session they passed may be used. Calls from outside simply queue.
     if (this == _connection) {
-      _connection._checkNotInsideRunOrTx('execute query');
+      _connection._checkNotInsideLockScope('execute query');
     }
   }
 
@@ -503,9 +523,6 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   bool _isClosing = false;
   bool _socketIsBroken = false;
 
-  /// Whether a `run` callback currently holds the connection's lock.
-  bool _runActive = false;
-
   _PendingOperation? _pending;
   // Errors happening while a transaction is active will roll back the
   // transaction and should be reporte to the user.
@@ -740,13 +757,11 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     // queued in the order they were made, like `runTx` calls.
     try {
       _checkActive();
-      // The lock is not re-entrant: fail fast instead of deadlocking. Calls
-      // from outside the callbacks queue on the lock.
-      _checkNotInsideRunOrTx('call `run`');
+      _checkNotInsideLockScope('call `run`');
     } on PgException catch (e, st) {
       return Future<R>.error(e, st);
     }
-    final enclosingRuns = Zone.current[_runZoneKey] as Set<Object>?;
+    final enclosing = Zone.current[_lockScopeKey] as Set<_LockScope>?;
     // Like `runTx`, the whole call holds the connection's lock, so other calls
     // queue until the callback has returned.
     return _operationLock.withResource(() async {
@@ -757,19 +772,19 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         this,
         ResolvedSessionSettings(settings, _settings),
       );
+      final scope = _LockScope(this, 'run');
       final R result;
-      _runActive = true;
       try {
         result = await runZoned(
           () => fn(session),
           zoneValues: {
-            _runZoneKey: {...?enclosingRuns, this},
+            _lockScopeKey: {...?enclosing, scope},
           },
         );
       } finally {
         // Closed before the check, so [fn] can't leak further statements.
         session._closeSession();
-        _runActive = false;
+        scope.active = false;
       }
       // A closing connection has no transaction to report.
       if (!_isClosing && isNotIdle) {
@@ -782,37 +797,29 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     });
   }
 
-  /// Whether the current zone is inside a `run` callback of this connection.
-  /// Zones that outlive the callback do not count.
-  bool get _isInsideRun =>
-      _runActive &&
-      ((Zone.current[_runZoneKey] as Set<Object>?)?.contains(this) ?? false);
-
-  /// The transaction of this connection whose `runTx` callback the current zone
-  /// is inside, or `null`. Zones that outlive the `runTx` call do not count.
-  _TransactionSession? get _insideTransaction {
-    final transactions =
-        Zone.current[_runTxZoneKey] as Set<_TransactionSession>?;
-    if (transactions == null) return null;
-    for (final t in transactions) {
-      if (identical(t._connection, this) && t._runTxPending) return t;
+  /// The active `run` or `runTx` scope of this connection that the current zone
+  /// is inside, or `null`. Zones that outlive the call do not count.
+  _LockScope? get _insideLockScope {
+    final scopes = Zone.current[_lockScopeKey] as Set<_LockScope>?;
+    if (scopes == null) return null;
+    for (final scope in scopes) {
+      if (scope.active && identical(scope.connection, this)) return scope;
     }
     return null;
   }
 
+  /// The transaction of this connection whose `runTx` callback the current zone
+  /// is inside, or `null`.
+  _TransactionSession? get _insideTransaction => _insideLockScope?.transaction;
+
   /// Fails fast if the current zone is inside a `run` or `runTx` callback of
   /// this connection, which hold the lock until they return.
-  void _checkNotInsideRunOrTx(String action) {
-    if (_insideTransaction != null) {
+  void _checkNotInsideLockScope(String action) {
+    final scope = _insideLockScope;
+    if (scope != null) {
       throw PgException(
-        'Attempting to $action on connection while inside a `runTx` call: '
-        'use the session passed to the callback.',
-      );
-    }
-    if (_isInsideRun) {
-      throw PgException(
-        'Attempting to $action on connection while inside a `run` call: '
-        'use the session passed to the callback.',
+        'Attempting to $action on connection while inside a `${scope.kind}` '
+        'call: use the session passed to the callback.',
       );
     }
   }
@@ -834,13 +841,20 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
     Future<R> Function(TxSession session) fn, {
     TransactionSettings? settings,
   }) {
-    final enclosingTransactions =
-        Zone.current[_runTxZoneKey] as Set<_TransactionSession>?;
+    // The fail-fast checks and the lock request are synchronous, so calls are
+    // queued in the order they were made, like `run` calls.
+    //
     // `_operationLock` is not re-entrant: acquiring it below while a `run` or
     // `runTx` of this connection that this call runs inside still holds it
     // would deadlock silently instead of failing fast. Any other call queues on
     // the lock, including one from that callback's zone after it returned.
-    _checkNotInsideRunOrTx('call `runTx`');
+    try {
+      _checkActive();
+      _checkNotInsideLockScope('call `runTx`');
+    } on PgException catch (e, st) {
+      return Future<R>.error(e, st);
+    }
+    final enclosing = Zone.current[_lockScopeKey] as Set<_LockScope>?;
     final rsettings = ResolvedTransactionSettings(settings, _settings);
     // Keep this database is locked while the transaction is active. We do that
     // because on a protocol level, the entire connection is in a transaction.
@@ -859,6 +873,8 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         rsettings,
       );
 
+      final scope = _LockScope(this, 'runTx', transaction);
+
       late String beginQuery;
       if (rsettings.shouldExpandBegin) {
         final sb = StringBuffer('BEGIN');
@@ -875,7 +891,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         final result = await runZoned(
           () => fn(transaction),
           zoneValues: {
-            _runTxZoneKey: {...?enclosingTransactions, transaction},
+            _lockScopeKey: {...?enclosing, scope},
           },
         );
         // Safeguard: the server's own view, in case no error was recorded.
@@ -929,7 +945,7 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
         // `_sendAndMarkClosed`'s own cleanup never fired): otherwise
         // `_activeTransaction` stays set, blocking every later call.
         transaction._closeSession();
-        transaction._runTxPending = false;
+        scope.active = false;
         _connection._activeTransaction = null;
       }
     });
@@ -1578,12 +1594,6 @@ class _TransactionSession extends _PgSessionBase implements TxSession {
 
   bool _closing = false;
   PgException? _transactionException;
-
-  /// Whether the `runTx` call that created this session has not returned yet.
-  ///
-  /// That call holds the connection's operation lock until then, also after
-  /// the transaction itself was ended, for example by [rollback].
-  bool _runTxPending = true;
 
   _TransactionSession(this._connection, this._settings);
 

@@ -143,7 +143,7 @@ abstract class Pool<L> implements Session, SessionExecutor {
 
   /// Like [Connection.run], on a pooled connection.
   ///
-  /// A connection left with a transaction open is closed, which rolls it back.
+  /// A connection left with a transaction open is closed, and the call throws.
   @override
   Future<R> run<R>(
     Future<R> Function(Session session) fn, {
