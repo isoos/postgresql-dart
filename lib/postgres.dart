@@ -216,8 +216,9 @@ abstract class SessionExecutor {
   /// Returns the result of invoking [fn], or rethrows its error. Updates are
   /// not reverted on error, unless the executor discards the connection.
   ///
-  /// The session closes once [fn] returns. See [Connection.run] and
-  /// [Pool.run] for the exact semantics.
+  /// The session closes once [fn] returns. Throws a [PgException] if [fn]
+  /// leaves a transaction open: use [runTx] for transactions. See
+  /// [Connection.run] and [Pool.run] for the exact semantics.
   Future<R> run<R>(
     Future<R> Function(Session session) fn, {
     SessionSettings? settings,
