@@ -31,6 +31,202 @@ void main() {
       expect(p.applicationName, 'test_app');
     });
 
+    test('run: concurrent sessions do not overlap', () async {
+      final sw = Stopwatch()..start();
+      final results = await Future.wait([
+        for (var i = 0; i < 5; i++)
+          connection.run(
+            (s) async =>
+                (await s.execute('SELECT $i, pg_sleep(0.1)')).single[0],
+          ),
+      ]);
+      expect(results, [0, 1, 2, 3, 4]);
+      // Serialized: at least the sum of the sleeps, not just the longest.
+      expect(sw.elapsedMilliseconds, greaterThanOrEqualTo(450));
+    });
+
+    test('run: session is closed after run returns', () async {
+      late Session leaked;
+      await connection.run((s) async => leaked = s);
+      expect(leaked.isOpen, isFalse);
+      await expectLater(
+        leaked.execute('SELECT 1'),
+        throwsA(isA<PgException>()),
+      );
+      await connection.execute('SELECT 1');
+    });
+
+    test(
+      'run: refuses statements during runTx, and a closed connection',
+      () async {
+        await connection.runTx((tx) async {
+          await expectLater(
+            connection.run((s) => s.execute('SELECT 1')),
+            throwsA(isA<PgException>()),
+          );
+        });
+        await connection.run((s) => s.execute('SELECT 1'));
+        await connection.close();
+        await expectLater(
+          connection.run((s) async {}),
+          throwsA(isA<PgException>()),
+        );
+      },
+    );
+
+    test('run: requires an idle connection', () async {
+      await connection.execute('BEGIN');
+      await expectLater(
+        connection.run((s) => s.execute('SELECT 1')),
+        throwsA(isA<PgException>()),
+      );
+      await connection.execute('ROLLBACK');
+      await connection.run((s) => s.execute('SELECT 1'));
+    });
+
+    test('run: concurrent calls check idleness under the lock', () async {
+      final first = connection.run((s) => s.execute('BEGIN'));
+      final second = connection.run((s) => s.execute('SELECT 1'));
+      // `first` leaves a transaction open, `second` is refused or fails.
+      await Future.wait([
+        expectLater(first, throwsA(isA<PgException>())),
+        expectLater(second, throwsA(isA<PgException>())),
+      ]);
+      await connection.execute('ROLLBACK');
+      await connection.run((s) => s.execute('SELECT 1'));
+    });
+
+    test('run: leaving a transaction open throws', () async {
+      await expectLater(
+        connection.run((s) => s.execute('BEGIN')),
+        throwsA(isA<PgException>()),
+      );
+      // The transaction is left untouched.
+      expect(connection.transactionStatus, TransactionStatus.transaction);
+      await connection.execute('ROLLBACK');
+      await connection.run((s) => s.execute('SELECT 1'));
+    });
+
+    test('run: a throwing callback leaves its transaction alone', () async {
+      await expectLater(
+        connection.run((s) async {
+          await s.execute('BEGIN');
+          throw StateError('boom');
+        }),
+        throwsA(isA<StateError>()),
+      );
+      expect(connection.transactionStatus, TransactionStatus.transaction);
+      await connection.execute('ROLLBACK');
+      await connection.run((s) => s.execute('SELECT 1'));
+    });
+
+    test('run: calls do not interleave their statements', () async {
+      final log = <String>[];
+      await Future.wait([
+        for (final name in ['a', 'b'])
+          connection.run((s) async {
+            await s.execute('BEGIN');
+            log.add('$name:begin');
+            await s.execute('SELECT pg_sleep(0.05)');
+            await s.execute('COMMIT');
+            log.add('$name:commit');
+          }),
+      ]);
+      expect(log, ['a:begin', 'a:commit', 'b:begin', 'b:commit']);
+    });
+
+    test('run: nested run on the same connection throws', () async {
+      await expectLater(
+        connection.run((s) => connection.run((s2) => s2.execute('SELECT 1'))),
+        throwsA(isA<PgException>()),
+      );
+      await connection.run((s) => s.execute('SELECT 1'));
+    });
+
+    test('run: a callback that commits is fine', () async {
+      await connection.run((s) async {
+        await s.execute('BEGIN');
+        await s.execute('COMMIT');
+      });
+    });
+
+    test('run: queryTimeout applies to its statements', () async {
+      await expectLater(
+        connection.run(
+          settings: SessionSettings(queryTimeout: Duration(milliseconds: 200)),
+          (s) => s.execute('SELECT pg_sleep(2)'),
+        ),
+        throwsA(isA<PgException>()),
+      );
+      await connection.execute('SELECT 1');
+    });
+
+    test('run: other calls on the connection wait for it', () async {
+      final log = <String>[];
+      final running = connection.run((s) async {
+        await s.execute('SELECT pg_sleep(0.2)');
+        log.add('run');
+      });
+      final tx = connection.runTx((tx) async => log.add('runTx'));
+      final plain = connection.execute('SELECT 1').then((_) => log.add('exec'));
+      await Future.wait([running, tx, plain]);
+      expect(log, ['run', 'runTx', 'exec']);
+    });
+
+    test('run: using the connection or runTx inside it throws', () async {
+      await connection.run((s) async {
+        await expectLater(
+          connection.execute('SELECT 1'),
+          throwsA(isA<PgException>()),
+        );
+        await expectLater(
+          () => connection.runTx((tx) async {}),
+          throwsA(isA<PgException>()),
+        );
+        await s.execute('SELECT 1');
+      });
+      await connection.execute('SELECT 1');
+    });
+
+    test('runTx: calls from outside wait for it', () async {
+      final log = <String>[];
+      final tx = connection.runTx((tx) async {
+        await tx.execute('SELECT pg_sleep(0.2)');
+        log.add('runTx');
+      });
+      final running = connection.run((s) async => log.add('run'));
+      final plain = connection.execute('SELECT 1').then((_) => log.add('exec'));
+      await Future.wait([tx, running, plain]);
+      expect(log, ['runTx', 'run', 'exec']);
+    });
+
+    test('runTx: run or execute from inside it throws', () async {
+      await connection.runTx((tx) async {
+        await expectLater(
+          connection.run((s) async {}),
+          throwsA(isA<PgException>()),
+        );
+        await expectLater(
+          connection.execute('SELECT 1'),
+          throwsA(isA<PgException>()),
+        );
+        await tx.execute('SELECT 1');
+      });
+    });
+
+    test('run: outside zone waits while a run is active', () async {
+      final log = <String>[];
+      final running = connection.run((s) async {
+        await s.execute('SELECT pg_sleep(0.2)');
+        log.add('run');
+      });
+      final outside = Zone.root.run(
+        () => connection.execute('SELECT 1').then((_) => log.add('exec')),
+      );
+      await Future.wait([running, outside]);
+      expect(log, ['run', 'exec']);
+    });
+
     test('simple queries', () async {
       final rs = await connection.execute("SELECT 'dart', 42, NULL");
       expect(rs, [

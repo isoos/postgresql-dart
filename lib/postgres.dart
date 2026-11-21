@@ -213,8 +213,11 @@ abstract class SessionExecutor {
   /// Obtains a [Session] capable of running statements and calls [fn] with
   /// it.
   ///
-  /// Returns the result (either the value or an error) of invoking [fn]. No
-  /// updates will be reverted in the event of an error.
+  /// Returns the result of invoking [fn], or rethrows its error. Updates are
+  /// not reverted on error, unless the executor discards the connection.
+  ///
+  /// The session closes once [fn] returns. See [Connection.run] and
+  /// [Pool.run] for the exact semantics.
   Future<R> run<R>(
     Future<R> Function(Session session) fn, {
     SessionSettings? settings,
@@ -310,6 +313,20 @@ abstract class Connection implements Session, SessionExecutor {
   ConnectionInfo get info;
 
   Channels get channels;
+
+  /// Calls [fn] with a [Session] on this connection.
+  ///
+  /// Like `runTx`, holds the connection until [fn] returns: outside calls wait,
+  /// use of the [Connection] inside [fn] throws.
+  ///
+  /// Throws a [PgException] if the connection is closed or not idle, or if [fn]
+  /// returns with a transaction open (which is not rolled back). An error
+  /// thrown by [fn] is rethrown as is.
+  @override
+  Future<R> run<R>(
+    Future<R> Function(Session session) fn, {
+    SessionSettings? settings,
+  });
 
   /// Whether the server considers this connection to be inside a transaction,
   /// as of the last completed statement.
