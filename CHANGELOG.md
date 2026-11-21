@@ -13,7 +13,7 @@
 **Other changes:**
 
 - `Connection.transactionStatus` exposing the transaction state reported by the server.
-- Acquiring a pool connection captures a stack trace only when the acquire fails.
+- Acquiring a pool connection no longer captures a stack trace up front: it is built only when the acquire times out or fails.
 
 ## 3.6.0
 

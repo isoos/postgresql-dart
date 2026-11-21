@@ -73,5 +73,42 @@ void main() {
       expect(sw.elapsedMilliseconds, greaterThan(500));
       expect(sw.elapsedMilliseconds, lessThan(1500));
     });
+
+    test('acquire timeout stack trace includes the caller', () async {
+      final pool = Pool(1);
+      final other = await pool.request();
+      Future<void> acquireFromCaller() async {
+        await pool.requestWithTimeout(Duration.zero);
+      }
+
+      StackTrace? trace;
+      try {
+        await acquireFromCaller();
+        fail('expected a TimeoutException');
+      } on TimeoutException catch (e, st) {
+        expect(e.message, 'Failed to acquire pool lock.');
+        trace = st;
+      }
+      other.release();
+      await pool.close();
+      expect(trace.toString(), contains('acquireFromCaller'));
+    });
+
+    test('acquire on a closed pool fails with a StateError', () async {
+      final pool = Pool(1);
+      await pool.close();
+      Future<void> acquireFromCaller() async {
+        await pool.requestWithTimeout(Duration(seconds: 1));
+      }
+
+      StackTrace? trace;
+      try {
+        await acquireFromCaller();
+        fail('expected a StateError');
+      } on StateError catch (_, st) {
+        trace = st;
+      }
+      expect(trace.toString(), contains('acquireFromCaller'));
+    });
   });
 }

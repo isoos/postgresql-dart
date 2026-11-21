@@ -21,7 +21,7 @@ extension PackagePoolExt on Pool {
 
     scheduleMicrotask(() {
       resourceFuture.then(
-        (resource) async {
+        (resource) {
           timer.cancel();
           if (completer.isCompleted) {
             resource.release();
