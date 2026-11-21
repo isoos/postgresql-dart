@@ -23,6 +23,7 @@ import 'connection_info.dart';
 import 'database_info.dart';
 import 'keep_alive.dart';
 import 'resolved_settings.dart';
+import 'session_state.dart';
 
 final _runTxZoneKey = Object();
 
@@ -529,26 +530,14 @@ class PgConnectionImplementation extends _PgSessionBase implements Connection {
   bool _sessionDirty = false;
   bool _holdsSessionLocks = false;
 
-  // Statements that may leave state behind on the server session. This is
-  // deliberately broad: a false positive only costs one extra reset.
-  static final _statefulSql = RegExp(
-    r'\b(set|listen|prepare|declare|load|set_config|temp|temporary|lo_\w+|'
-    r'pg_(try_)?advisory_lock\w*)\b',
-    caseSensitive: false,
-  );
-
-  // Session-level advisory locks (the transaction-level `_xact_` variants
-  // release themselves) keep blocking other sessions until released.
-  static final _sessionLockSql = RegExp(
-    r'\bpg_(try_)?advisory_lock\w*',
-    caseSensitive: false,
-  );
-
   void _trackSessionState(String sql) {
-    if (!_sessionDirty && _statefulSql.hasMatch(sql)) {
-      _sessionDirty = true;
-    }
-    if (!_holdsSessionLocks && _sessionLockSql.hasMatch(sql)) {
+    // Once both flags are set there is nothing left to learn until the
+    // connection is reset.
+    if (_sessionDirty && _holdsSessionLocks) return;
+    final state = classifySessionState(sql);
+    if (state == SqlSessionState.none) return;
+    _sessionDirty = true;
+    if (state == SqlSessionState.sessionLock) {
       _holdsSessionLocks = true;
     }
   }

@@ -72,6 +72,27 @@ void main() {
       expect((await pool.execute('SELECT pg_backend_pid()')).single[0], pid);
     });
 
+    test(
+      'UPDATE and literals with session keywords do not cause a reset',
+      () async {
+        var opened = 0;
+        final pool = Pool.withEndpoints(
+          [await server.endpoint()],
+          settings: PoolSettings(
+            maxConnectionCount: 1,
+            onOpen: (c) async => opened++,
+          ),
+        );
+        addTearDown(pool.close);
+        await pool.execute('CREATE TABLE IF NOT EXISTS t_no_reset (a text)');
+        await pool.execute("INSERT INTO t_no_reset VALUES ('set the table')");
+        await pool.execute("UPDATE t_no_reset SET a = 'load'");
+        await pool.execute('SELECT * FROM t_no_reset');
+        expect(opened, 1);
+        await pool.execute('DROP TABLE t_no_reset');
+      },
+    );
+
     test('can be disabled', () async {
       final pool = await open(resetSession: false);
       addTearDown(pool.close);
