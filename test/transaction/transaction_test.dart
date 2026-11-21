@@ -143,7 +143,7 @@ void main() {
           isA<PgException>().having(
             (e) => e.message,
             'message',
-            contains('inside another `runTx`'),
+            contains('inside a `runTx` call'),
           ),
         ),
       );
@@ -165,7 +165,7 @@ void main() {
             isA<PgException>().having(
               (e) => e.message,
               'message',
-              contains('inside another `runTx`'),
+              contains('inside a `runTx` call'),
             ),
           ),
         );
@@ -186,7 +186,7 @@ void main() {
             isA<PgException>().having(
               (e) => e.message,
               'message',
-              contains('inside another `runTx`'),
+              contains('inside a `runTx` call'),
             ),
           ),
         );
