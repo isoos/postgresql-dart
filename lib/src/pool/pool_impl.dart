@@ -93,14 +93,14 @@ class PoolImplementation<L> implements Pool<L> {
         queryMode: queryMode,
         timeout: timeout,
       );
-      // The connection goes back to the pool after this call, so a
-      // transaction opened here could never be continued or committed.
-      // `withConnection` drops the connection, which rolls it back.
+      // A transaction left open can't be continued once the connection is
+      // back in the pool. `withConnection` drops (and rolls back) any
+      // connection that is not idle, and the exception tells the caller.
       if ((connection as _PoolConnection)._connection.isNotIdle) {
         throw PgException(
           'The statement left a transaction open on a pooled connection, '
-          'which was closed and rolled back. Use Pool\'s `run`, `runTx` or '
-          '`withConnection` for multi-statement transactions.',
+          'which was closed and rolled back. Use `runTx` or `withConnection` '
+          'for multi-statement transactions.',
         );
       }
       return result;
@@ -156,6 +156,8 @@ class PoolImplementation<L> implements Pool<L> {
     SessionSettings? settings,
     L? locality,
   }) {
+    // A transaction left open makes `connection.run` throw. Either way,
+    // `withConnection` drops the connection if it is not idle.
     return withConnection(
       (connection) => connection.run(fn, settings: settings),
       locality: locality,

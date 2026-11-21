@@ -133,6 +133,56 @@ void main() {
       );
     });
 
+    test('run returns its value and the connection is reused', () async {
+      final db = Pool.withEndpoints([
+        await server.endpoint(),
+      ], settings: PoolSettings(maxConnectionCount: 1));
+
+      final pid1 = await db.run(
+        (s) async => (await s.execute('SELECT pg_backend_pid()')).single[0],
+      );
+      final pid2 = await db.run(
+        (s) async => (await s.execute('SELECT pg_backend_pid()')).single[0],
+      );
+      expect(pid1, pid2);
+      await db.close();
+    });
+
+    test(
+      'run leaving a transaction open throws and drops the connection',
+      () async {
+        final db = Pool.withEndpoints([
+          await server.endpoint(),
+        ], settings: PoolSettings(maxConnectionCount: 1));
+
+        await expectLater(
+          db.run((s) => s.execute('BEGIN')),
+          throwsA(isA<PgException>()),
+        );
+        expect(await db.execute('SELECT 1'), hasLength(1));
+        await db.close();
+      },
+    );
+
+    test(
+      'run throwing after BEGIN rethrows and drops the connection',
+      () async {
+        final db = Pool.withEndpoints([
+          await server.endpoint(),
+        ], settings: PoolSettings(maxConnectionCount: 1));
+
+        await expectLater(
+          db.run((s) async {
+            await s.execute('BEGIN');
+            throw StateError('boom');
+          }),
+          throwsA(isA<StateError>()),
+        );
+        expect(await db.execute('SELECT 1'), hasLength(1));
+        await db.close();
+      },
+    );
+
     test('bad query does not lock up pool instance', () async {
       final db = Pool.withEndpoints([
         await server.endpoint(),

@@ -6,6 +6,9 @@
 
 - `Pool.execute` throws a `PgException` if the statement leaves a transaction open (e.g. `BEGIN`).
   Any connection returned with an open transaction will be closed instead of reusing it.
+- `Connection.run` and `Pool.run` throw a `PgException` if the callback leaves a transaction open; the pool closes that connection.
+- `Connection.run` requires an idle connection and holds it like `runTx`: outside calls wait, use of the `Connection` inside the callback throws.
+- Outside calls made during a `runTx` now wait instead of throwing.
 - `Connection.runTx` also consults the server-reported transaction status: a transaction in a failed state is rolled back and a `PgException` is thrown.
 - `Connection.runTx` requires an idle connection: if a transaction (open or failed) was already started directly on the `Connection` (e.g. `BEGIN`), it throws a `PgException` and leaves that transaction alone.
 - The `queryTimeout` setting also covers the wait for the connection: a statement still queued behind a running operation when it expires fails with a `PgException` and is never sent, without affecting the running operation.
